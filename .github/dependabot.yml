@@ -1,0 +1,14 @@
+version: 2
+updates:
+  # Keep GitHub Actions versions current so runner/Node deprecations surface as
+  # a PR instead of a silent warning in the log. (SwiftLint is pinned via an env
+  # var in ci.yml and bumped by hand — Dependabot doesn't track raw download
+  # URLs.)
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    labels:
+      - dependencies

@@ -57,7 +57,9 @@ swift test --skip-build
   fakes. New service seams should follow this pattern.
 - **Record significant decisions in `DECISIONS.md`** — a dated entry explaining *why*, not just
   what. Read it before proposing architectural changes; it's the project's memory.
-- **Style** is enforced by the checked-in `.swiftformat` and `.swiftlint.yml`.
+- **Style** is enforced by the checked-in `.swiftformat` and `.swiftlint.yml`. CI runs
+  SwiftLint **0.65.0** with `--strict` (warnings fail the build), pinned in `.github/workflows/ci.yml`;
+  install that version locally (e.g. `mise use swiftlint@0.65.0`) so your results match CI.
 - Directory errors are typed (`throws(RadioDirectoryError)`); user-facing failures should carry
   the error, not a bare `String`.
 

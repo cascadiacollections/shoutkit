@@ -5,17 +5,29 @@ on:
     branches: [main]
   pull_request:
 
+# Least privilege: CI only needs to read the checked-out code. No job here
+# writes to the repo, comments, or publishes.
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  # Pin SwiftLint so `--strict` is deterministic — an upstream release adding a
+  # new rule can't fail CI without a deliberate bump here. Keep in sync with the
+  # version contributors run locally (see CONTRIBUTING).
+  SWIFTLINT_VERSION: "0.65.0"
 
 jobs:
   host-tests:
     name: Package tests (macOS host)
     # Needs Xcode 26 / Swift 6.2. Pin a newer image if this one lags.
     runs-on: macos-26
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Select latest Xcode
         run: |
@@ -37,8 +49,9 @@ jobs:
   build:
     name: Build app + compile Playback tests (iOS Simulator)
     runs-on: macos-26
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Select latest Xcode
         run: |
@@ -56,11 +69,20 @@ jobs:
   lint:
     name: SwiftLint
     runs-on: macos-26
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Install SwiftLint
-        run: brew install swiftlint
+      # Download the pinned portable binary rather than `brew install` (faster,
+      # version-pinned, and no Homebrew tap-trust noise in the log).
+      - name: Install SwiftLint ${{ env.SWIFTLINT_VERSION }}
+        run: |
+          curl -fsSL -o swiftlint.zip \
+            "https://github.com/realm/SwiftLint/releases/download/${SWIFTLINT_VERSION}/portable_swiftlint.zip"
+          unzip -q swiftlint.zip -d swiftlint-bin
+          echo "$PWD/swiftlint-bin" >> "$GITHUB_PATH"
 
+      # --strict promotes warnings to errors: the tree is lint-clean today, and
+      # this keeps it that way (new warnings fail the build instead of rotting).
       - name: Lint
-        run: swiftlint lint --reporter github-actions-logging
+        run: swiftlint lint --strict --reporter github-actions-logging
