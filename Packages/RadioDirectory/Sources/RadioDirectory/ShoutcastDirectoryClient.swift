@@ -62,6 +62,10 @@ public actor ShoutcastDirectoryClient: RadioDirectoryProviding {
 
     public func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
         let data = try await request(url: endpoints.tuneInURL(stationID: station.id), requiresAPIKey: false)
+        // Playlists are short ASCII/UTF-8 text; decode totally (lossy on stray
+        // bytes) rather than failably — PlaylistParser rejects anything without a
+        // valid stream URL regardless.
+        // swiftlint:disable:next optional_data_string_conversion
         let playlist = String(decoding: data, as: UTF8.self)
         let streamURL = try PlaylistParser.firstStreamURL(in: playlist)
 
@@ -142,7 +146,11 @@ public struct ShoutcastEndpoints: Sendable {
         tuneInBaseURL: URL(string: "https://yp.shoutcast.com/sbin/tunein-station.pls") ?? URL(fileURLWithPath: "/")
     )
 
-    public func legacyURL(endpoint: String, apiKey: String, queryItems: [URLQueryItem]) throws(RadioDirectoryError) -> URL {
+    public func legacyURL(
+        endpoint: String,
+        apiKey: String,
+        queryItems: [URLQueryItem]
+    ) throws(RadioDirectoryError) -> URL {
         let endpointURL = legacyBaseURL.appendingPathComponent(endpoint)
         var components = URLComponents(url: endpointURL, resolvingAgainstBaseURL: false)
         components?.queryItems = [URLQueryItem(name: "k", value: apiKey)] + queryItems
@@ -209,7 +217,10 @@ public enum RadioDirectoryError: Error, Equatable, LocalizedError, Sendable {
             message
         case let .transport(message):
             // System-provided (URLSession's localizedDescription) when non-nil.
-            message ?? String(localized: "The station directory could not be reached. Check your connection.", bundle: .module)
+            message ?? String(
+                localized: "The station directory could not be reached. Check your connection.",
+                bundle: .module
+            )
         }
     }
 

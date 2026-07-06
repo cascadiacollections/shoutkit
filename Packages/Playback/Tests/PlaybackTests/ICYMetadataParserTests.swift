@@ -82,7 +82,9 @@ struct ICYMetadataParserTests {
     // MARK: - Triton-style HLS cue metadata (TrackId=…,length=…,text=…)
 
     @Test func cueMetadataExtractsTextAsCombinedArtistTitle() {
-        let info = ICYMetadataParser.parseTrack(from: "TrackId=8462532111,length=180,text=Journey - Don't Stop Believin")
+        let info = ICYMetadataParser.parseTrack(
+            from: "TrackId=8462532111,length=180,text=Journey - Don't Stop Believin"
+        )
         #expect(info.artist == "Journey")
         #expect(info.title == "Don't Stop Believin")
     }
@@ -152,7 +154,8 @@ struct ICYMetadataParserTests {
 
     @Test func nestedSongBlockInsideStreamTitleExtractsTitleAndArtist() {
         let info = ICYMetadataParser.parseTrack(
-            from: "StreamTitle=' - title=\"Boom Boom Pow\",artist=\"Black Eyed Peas\",song_spot=\"M\" MediaBaseId=\"1187579\" itunesTrackId=\"0\" amgTrackId=\"-1\"';StreamUrl='';"
+            from: "StreamTitle=' - title=\"Boom Boom Pow\",artist=\"Black Eyed Peas\","
+                + "song_spot=\"M\" MediaBaseId=\"1187579\" itunesTrackId=\"0\" amgTrackId=\"-1\"';StreamUrl='';"
         )
         #expect(info.artist == "Black Eyed Peas")
         #expect(info.title == "Boom Boom Pow")

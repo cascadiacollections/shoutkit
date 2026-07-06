@@ -83,7 +83,8 @@ public final class NowPlayingCenter: NowPlayingPresenting {
             Task { @MainActor in self?.onStop?() }
             return .success
         }))
-        targets.append((center.togglePlayPauseCommand, center.togglePlayPauseCommand.addTarget { @Sendable [weak self] _ in
+        let toggleCommand = center.togglePlayPauseCommand
+        targets.append((toggleCommand, toggleCommand.addTarget { @Sendable [weak self] _ in
             guard hasActiveItem.withLock({ $0 }) else { return .noActionableNowPlayingItem }
             Task { @MainActor in self?.onToggle?() }
             return .success

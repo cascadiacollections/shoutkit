@@ -36,8 +36,12 @@ public struct BrowseLandingView: View {
         case .loading:
             loadingState
         case .empty:
-            ContentUnavailableView("No Stations", systemImage: "radio", description: Text("Pull to refresh or try again soon."))
-                .frame(maxWidth: .infinity, minHeight: 260)
+            ContentUnavailableView(
+                "No Stations",
+                systemImage: "radio",
+                description: Text("Pull to refresh or try again soon.")
+            )
+            .frame(maxWidth: .infinity, minHeight: 260)
         case let .failed(error):
             ContentUnavailableView {
                 Label("Directory Unavailable", systemImage: "wifi.exclamationmark")

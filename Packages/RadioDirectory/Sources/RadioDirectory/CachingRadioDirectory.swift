@@ -17,7 +17,15 @@ public actor CachingRadioDirectory: RadioDirectoryProviding {
     private var genresCache: (value: [Genre], fetchedAt: Date)?
     private var genresInFlight: Task<Result<[Genre], RadioDirectoryError>, Never>?
 
-    private var topStationsCache: (value: [Station], fetchedLimit: Int, fetchedAt: Date)?
+    /// A cached top-stations fetch, retained with the limit it was fetched at so
+    /// a larger fetch can serve any smaller request.
+    private struct TopStationsCache {
+        let value: [Station]
+        let fetchedLimit: Int
+        let fetchedAt: Date
+    }
+
+    private var topStationsCache: TopStationsCache?
     private var topStationsInFlight: (task: Task<Result<[Station], RadioDirectoryError>, Never>, limit: Int)?
 
     public init(
@@ -89,7 +97,7 @@ public actor CachingRadioDirectory: RadioDirectoryProviding {
         topStationsInFlight = nil
 
         if case let .success(stations) = result {
-            topStationsCache = (stations, limit, now())
+            topStationsCache = TopStationsCache(value: stations, fetchedLimit: limit, fetchedAt: now())
         }
         return try Array(result.get().prefix(limit))
     }

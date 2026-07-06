@@ -41,8 +41,12 @@ public struct SearchView: View {
         case .empty:
             ContentUnavailableView.search
         case let .failed(error):
-            ContentUnavailableView("Search Unavailable", systemImage: "wifi.exclamationmark", description: Text(error.localizedDescription))
-                .frame(maxWidth: .infinity, minHeight: 200)
+            ContentUnavailableView(
+                "Search Unavailable",
+                systemImage: "wifi.exclamationmark",
+                description: Text(error.localizedDescription)
+            )
+            .frame(maxWidth: .infinity, minHeight: 200)
         }
     }
 

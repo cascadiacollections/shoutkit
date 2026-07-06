@@ -73,9 +73,9 @@ func dropsStationsWithoutNameOrStreamURL() throws {
 func genreFallsBackToCountryThenPlaceholder() throws {
     let json = """
     [
-        {"stationuuid": "a", "name": "Tagged", "url": "https://x.example/a", "tags": "jazz,smooth", "country": "France"},
-        {"stationuuid": "b", "name": "Country Only", "url": "https://x.example/b", "tags": "", "country": "France"},
-        {"stationuuid": "c", "name": "Bare", "url": "https://x.example/c"}
+        {"stationuuid":"a","name":"Tagged","url":"https://x.example/a","tags":"jazz,smooth","country":"France"},
+        {"stationuuid":"b","name":"Country Only","url":"https://x.example/b","tags":"","country":"France"},
+        {"stationuuid":"c","name":"Bare","url":"https://x.example/c"}
     ]
     """
 
