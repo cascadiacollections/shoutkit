@@ -1,0 +1,58 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Couldn't Load Genre" : {
+
+    },
+    "Directory Unavailable" : {
+
+    },
+    "Featured Station" : {
+
+    },
+    "Featured station, %@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Featured station, %1$@, %2$@"
+          }
+        }
+      }
+    },
+    "Genres" : {
+
+    },
+    "No Stations" : {
+
+    },
+    "No stations in this genre yet." : {
+
+    },
+    "Nothing here yet" : {
+
+    },
+    "Pause" : {
+
+    },
+    "Play" : {
+
+    },
+    "Popular Stations" : {
+
+    },
+    "Pull to refresh or try again soon." : {
+
+    },
+    "Recently Played" : {
+
+    },
+    "Try Again" : {
+
+    },
+    "Tuning in…" : {
+
+    }
+  },
+  "version" : "1.1"
+}

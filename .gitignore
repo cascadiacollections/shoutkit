@@ -1,0 +1,9 @@
+.DS_Store
+DerivedData/
+build/
+.build/
+*.xcuserstate
+xcuserdata/
+
+# Local secrets. Copy the template and keep real keys untracked.
+ShoutKitApp/Config/Secrets.xcconfig

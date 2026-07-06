@@ -1,0 +1,63 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "About" : {
+
+    },
+    "Done" : {
+
+    },
+    "Feedback & Support" : {
+
+    },
+    "License text unavailable — see the project repository." : {
+
+    },
+    "Licenses" : {
+
+    },
+    "Privacy" : {
+
+    },
+    "Radio-Browser" : {
+
+    },
+    "Report an Issue" : {
+
+    },
+    "Report Plays to Radio-Browser" : {
+
+    },
+    "Reusable Packages — MIT" : {
+
+    },
+    "Settings" : {
+
+    },
+    "ShoutKit App — GPL-3.0" : {
+
+    },
+    "ShoutKit is free software — everything works whether or not you donate. On beta builds you can also send feedback by taking a screenshot in TestFlight." : {
+
+    },
+    "Source Code" : {
+
+    },
+    "Station discovery is powered by Radio-Browser, a free, community-run directory." : {
+
+    },
+    "Support ShoutKit" : {
+
+    },
+    "The app and its feature packages are GPL-3.0; the reusable RadioDirectory, Playback, Persistence, and DesignSystem packages are MIT. The ShoutKit name and icon are trademarks and not covered by these licenses." : {
+
+    },
+    "Version" : {
+
+    },
+    "When on, playing a Radio-Browser station sends its public station ID (nothing about you or your device) so the community directory can rank popularity. ShoutKit has no analytics, no ads, and no accounts." : {
+
+    }
+  },
+  "version" : "1.1"
+}

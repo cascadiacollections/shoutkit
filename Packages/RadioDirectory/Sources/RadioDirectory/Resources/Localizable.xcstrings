@@ -1,0 +1,30 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Add SHOUTCAST_DEV_KEY to Secrets.xcconfig to fetch live stations." : {
+
+    },
+    "The Radio-Browser response could not be parsed." : {
+
+    },
+    "The SHOUTcast XML response could not be parsed." : {
+
+    },
+    "The station did not return a playable stream." : {
+
+    },
+    "The station directory could not be reached. Check your connection." : {
+
+    },
+    "The station directory returned an invalid response." : {
+
+    },
+    "The station directory returned HTTP %lld." : {
+
+    },
+    "The station directory URL could not be built." : {
+
+    }
+  },
+  "version" : "1.1"
+}

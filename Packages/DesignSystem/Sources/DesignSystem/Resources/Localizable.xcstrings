@@ -1,0 +1,28 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "Add to Favorites" : {
+
+    },
+    "Pauses playback" : {
+
+    },
+    "Plays this station" : {
+
+    },
+    "Remove Favorite" : {
+
+    }
+  },
+  "version" : "1.1"
+}

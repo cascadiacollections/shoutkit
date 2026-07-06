@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host-tests:
+    name: Package tests (macOS host)
+    # Needs Xcode 26 / Swift 6.2. Pin a newer image if this one lags.
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select latest Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
+          swift --version
+
+      - name: RadioDirectory tests
+        working-directory: Packages/RadioDirectory
+        run: swift test
+
+      - name: Playback tests
+        working-directory: Packages/Playback
+        run: swift test
+
+      - name: Persistence tests
+        working-directory: Packages/Persistence
+        run: swift test
+
+  build:
+    name: Build app + compile Playback tests (iOS Simulator)
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select latest Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
+          xcodebuild -version
+
+      # Also compiles the UIKit-gated production types (AVPlayerAudioOutput,
+      # NowPlayingCenter) that the host test job never sees.
+      - name: Build app
+        run: |
+          xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build
+
+  lint:
+    name: SwiftLint
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Lint
+        run: swiftlint lint --reporter github-actions-logging

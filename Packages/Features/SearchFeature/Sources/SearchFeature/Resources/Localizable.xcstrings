@@ -1,0 +1,24 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Browse by Genre" : {
+
+    },
+    "Find your sound" : {
+
+    },
+    "Search for stations by name or genre." : {
+
+    },
+    "Search Unavailable" : {
+
+    },
+    "Searching" : {
+
+    },
+    "Stations, genres" : {
+
+    }
+  },
+  "version" : "1.1"
+}

@@ -1,0 +1,54 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%lld minutes" : {
+
+    },
+    "Add favorite" : {
+
+    },
+    "AirPlay and output devices" : {
+
+    },
+    "Cancel Timer" : {
+
+    },
+    "Connecting" : {
+
+    },
+    "Live" : {
+
+    },
+    "Not playing" : {
+
+    },
+    "Not Playing" : {
+
+    },
+    "Nothing Playing" : {
+
+    },
+    "Open Now Playing" : {
+
+    },
+    "Pause" : {
+
+    },
+    "Play" : {
+
+    },
+    "Remove favorite" : {
+
+    },
+    "Sleep timer" : {
+
+    },
+    "Sleep timer running" : {
+
+    },
+    "Stop" : {
+
+    }
+  },
+  "version" : "1.1"
+}

@@ -1,0 +1,38 @@
+{
+  "configurations" : [
+    {
+      "id" : "8F0C2B44-2C3A-4C1B-9E64-1A2B3C4D5E6F",
+      "name" : "Default",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:Packages/RadioDirectory",
+        "identifier" : "RadioDirectoryTests",
+        "name" : "RadioDirectoryTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Packages/Playback",
+        "identifier" : "PlaybackTests",
+        "name" : "PlaybackTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Packages/Persistence",
+        "identifier" : "PersistenceTests",
+        "name" : "PersistenceTests"
+      }
+    }
+  ],
+  "version" : 1
+}

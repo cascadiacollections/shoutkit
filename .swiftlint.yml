@@ -1,0 +1,22 @@
+included:
+  - ShoutKitApp
+  - Packages
+excluded:
+  - .build
+  - "**/.build"
+  - DerivedData
+disabled_rules:
+  - trailing_comma
+# no_extension_access_modifier is deliberately not opted into: the codebase
+# convention is `public extension Type { ... }`.
+opt_in_rules:
+  - empty_count
+  - fatal_error_message
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+line_length:
+  warning: 120
+  error: 140
+force_cast: error
+force_try: error
+force_unwrapping: error

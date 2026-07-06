@@ -1,0 +1,18 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Favorites" : {
+
+    },
+    "No Favorites Yet" : {
+
+    },
+    "Recently Played" : {
+
+    },
+    "Stations you favorite and recently play will appear here." : {
+
+    }
+  },
+  "version" : "1.1"
+}
