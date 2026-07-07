@@ -1,0 +1,23 @@
+# https://editorconfig.org — baseline whitespace rules for any editor.
+# Swift style itself is enforced by .swiftformat / .swiftlint.yml; this just
+# covers the basics those don't (and non-Swift files) for editors without them.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{yml,yaml,json}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false  # two trailing spaces are a hard line break
+
+[*.pbxproj]
+indent_style = tab
+insert_final_newline = false
+trim_trailing_whitespace = false
