@@ -12,11 +12,15 @@ public struct NowPlayingView: View {
     @Environment(\.sleepTimer) private var sleepTimer
     @Environment(\.dismiss) private var dismiss
 
+    /// Control tint elected from the artwork palette so the transport
+    /// controls sit in the same color world as the ambient backdrop.
+    @State private var artworkAccent: Color?
+
     public init() {}
 
     public var body: some View {
         ZStack {
-            backgroundGradient
+            AmbientArtworkBackdrop(artworkURL: playback?.currentStation?.artworkURL)
 
             if let playback, let station = playback.currentStation {
                 content(playback: playback, station: station)
@@ -25,26 +29,28 @@ public struct NowPlayingView: View {
             }
         }
         .presentationDragIndicator(.visible)
+        .tint(accent)
+        .task(id: playback?.currentStation?.artworkURL) {
+            let loaded = await ArtworkLoader.load(playback?.currentStation?.artworkURL)
+            withAnimation(.easeInOut(duration: 0.6)) {
+                artworkAccent = loaded?.accentColor
+            }
+        }
     }
 
-    private var backgroundGradient: some View {
-        LinearGradient.shoutKitSpotlight
-            .opacity(0.35)
-            .overlay(.ultraThinMaterial)
-            .ignoresSafeArea()
+    private var accent: Color {
+        artworkAccent ?? .shoutKitAccent
     }
 
     private func content(playback: PlaybackController, station: Station) -> some View {
         VStack(spacing: ShoutKitSpacing.large) {
             grabberSpacer
 
-            StationArtworkView(
+            HeroArtworkView(
                 artworkURL: station.artworkURL,
-                size: 260,
-                cornerRadius: ShoutKitRadius.large,
+                size: 272,
                 isPlaying: isPlaying(playback)
             )
-            .shadow(color: .black.opacity(0.25), radius: 24, y: 12)
             .padding(.top, ShoutKitSpacing.medium)
 
             VStack(spacing: ShoutKitSpacing.extraSmall) {
@@ -137,7 +143,7 @@ public struct NowPlayingView: View {
             }
             .buttonStyle(.glass)
             .buttonBorderShape(.circle)
-            .tint(library.isFavorite(station) ? .shoutKitHighlight : .primary)
+            .tint(library.isFavorite(station) ? (artworkAccent ?? .shoutKitHighlight) : .primary)
             .accessibilityLabel(library.isFavorite(station) ? "Remove favorite" : "Add favorite")
         } else {
             Color.clear.frame(width: 44, height: 44)
@@ -148,7 +154,7 @@ public struct NowPlayingView: View {
         HStack {
             sleepTimerButton
             Spacer()
-            RoutePickerView(tintColor: .secondaryLabel, activeTintColor: UIColor(Color.shoutKitAccent))
+            RoutePickerView(tintColor: .secondaryLabel, activeTintColor: UIColor(accent))
                 .frame(width: 44, height: 44)
                 .accessibilityLabel("AirPlay and output devices")
             Spacer()

@@ -1,5 +1,38 @@
 # Decisions
 
+## 2026-07-06 (Now Playing artwork: ambient acrylic backdrop + Liquid Glass hero)
+
+- **Now Playing's artwork treatment moved into DesignSystem as two composable components**
+  instead of view-local styling in `NowPlayingView`: `AmbientArtworkBackdrop` (station artwork
+  blurred/saturated under `.ultraThinMaterial` with a legibility scrim — the "acrylic" ambient
+  layer, falling back to the brand spotlight gradient when artwork is absent and to a flat
+  background under Reduce Transparency) and `HeroArtworkView` (artwork tile on a
+  `.glassEffect(.clear)` ledge with a specular rim, spring-scaling with playback state;
+  Reduce Motion drops the animation). `HeroArtworkView` composes the existing
+  `StationArtworkView` as its tile core, so rows, cards, mini player, and the Live Activity
+  are untouched.
+- **No `#available(iOS 27)` guard needed**: a scan of the iOS 27 SDK's SwiftUI
+  `.swiftinterface` shows no new glass/acrylic API in 27 — the Liquid Glass family
+  (`Glass`, `glassEffect`, `GlassEffectContainer`) is unchanged from iOS 26 and available at
+  the packages' iOS 26 floor. The "modern" treatment is compositional, not a new API.
+- **Directory artwork is treated as a color source, not a bitmap to stretch.** Live
+  measurement of Radio Browser's top-clicked stations put the median favicon at ~180px
+  (60% ≤192px) with no dimension metadata or icon proxy in the API, and no free high-res
+  CDN alternative (Google s2 caps at what sites publish; Clearbit's logo API is sunset). So
+  both components consume a shared `ArtworkLoader` (plain `URLSession` + shared `URLCache`,
+  replacing `AsyncImage`, which exposes neither pixel size nor the bitmap) that returns the
+  decoded image, its pixel size, and a 3×3 box-filtered color grid. The backdrop blur-washes
+  artwork ≥512px and otherwise renders the grid as a `MeshGradient` (resolution-independent
+  "acrylic", never a smeared solid); the hero caps its tile at ~2.5× the bitmap's native
+  points (floor 120pt) so tiny icons read as a crisp badge on the glass plate rather than an
+  upscaled blur. Palette samples get a mild saturation boost and brightness clamp so flat
+  favicon backgrounds can't wash the mesh out. The loader also elects an `accentColor` —
+  the most vibrant sample (saturation weighted toward mid brightness), re-clamped to a band
+  where white glyphs stay legible — which `NowPlayingView` applies as a local `.tint` over
+  the root brand tint, so transport controls, the Live badge, sleep timer, AirPlay active
+  state, and the favorited heart sit in the artwork's color world; monochrome artwork
+  yields `nil` and the screen falls back to brand colors.
+
 ## 2026-07-06 (iOS 27 adoption strategy + NowPlaying framework)
 
 - **Ship beta 1 on the iOS 26 deployment target; adopt iOS 27 APIs behind `#available`.** WWDC26
