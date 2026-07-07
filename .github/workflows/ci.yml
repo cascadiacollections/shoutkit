@@ -59,12 +59,16 @@ jobs:
           xcodebuild -version
 
       # Also compiles the UIKit-gated production types (AVPlayerAudioOutput,
-      # NowPlayingCenter) that the host test job never sees.
+      # NowPlayingCenter) that the host test job never sees. GIT_COMMIT_SHA is
+      # stamped into the app's Info.plist (surfaced in Settings → About) so a
+      # distributed build maps back to an exact source revision; archive/release
+      # builds must pass it the same way.
       - name: Build app
         run: |
           xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
             -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO build
+            CODE_SIGNING_ALLOWED=NO \
+            GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" build
 
   lint:
     name: SwiftLint

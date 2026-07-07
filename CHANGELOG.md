@@ -7,6 +7,9 @@ All notable changes to ShoutKit are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Settings → About shows the build's short git commit next to the version (`0.2.0 (12) · a1b2c3d`),
+  so a beta tester's screenshot maps to an exact source revision for bug repro. Stamped at build
+  time via the `GIT_COMMIT_SHA` setting; the line stays clean (no commit) for local dev builds
 - On iOS 27, lock screen / Control Center / Dynamic Island playback now uses the new NowPlaying
   framework (`MediaSession` + `RadioContent`, WWDC26) with system-managed artwork loading;
   iOS 26 devices keep the proven MediaPlayer path. Selected at runtime — deployment target is

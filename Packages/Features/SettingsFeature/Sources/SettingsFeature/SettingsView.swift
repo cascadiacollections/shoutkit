@@ -72,6 +72,7 @@ public struct SettingsView: View {
     private var aboutSection: some View {
         Section {
             LabeledContent("Version", value: AppInfo.versionString)
+                .textSelection(.enabled)
             Link(destination: ProjectLinks.repository) {
                 Label("Source Code", systemImage: "chevron.left.forwardslash.chevron.right")
             }
