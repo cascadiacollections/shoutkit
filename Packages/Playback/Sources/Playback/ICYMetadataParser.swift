@@ -47,7 +47,6 @@ public enum ICYMetadataParser {
     /// the station name).
     private static let adCueMarkers: Set<String> = ["spot block start", "spot block end"]
     private static let advertisementCueMarkers: Set<String> = [
-        "spot block",
         "commercial break",
         "ad break"
     ]

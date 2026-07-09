@@ -8,6 +8,9 @@ import RadioDirectory
 @MainActor
 @Observable
 public final class PlaybackController {
+    private static let ambientFallbackGenres = ["Ambient", "Nature"]
+    private static let ambientFallbackQueries = ["ambient", "nature", "sleep", "meditation"]
+
     public private(set) var state: PlaybackState = .idle
 
     public private(set) var nowPlaying: NowPlayingMetadata?
@@ -185,7 +188,7 @@ public final class PlaybackController {
         isLoadingAmbientFallback = false
 
         guard let fallback else {
-            ambientFallbackError = "Could not find an ambient station to switch to right now."
+            ambientFallbackError = "No ambient stations are available right now. Please try again later."
             return
         }
 
@@ -287,17 +290,14 @@ public final class PlaybackController {
     }
 
     private func ambientFallbackStation(excluding stationID: Station.ID?) async -> Station? {
-        if let stations = try? await directory.stations(inGenre: "Ambient", limit: 5),
-           let station = firstAmbientFallbackCandidate(in: stations, excluding: stationID) {
-            return station
+        for genre in Self.ambientFallbackGenres {
+            if let stations = try? await directory.stations(inGenre: genre, limit: 5),
+               let station = firstAmbientFallbackCandidate(in: stations, excluding: stationID) {
+                return station
+            }
         }
 
-        if let stations = try? await directory.stations(inGenre: "Nature", limit: 5),
-           let station = firstAmbientFallbackCandidate(in: stations, excluding: stationID) {
-            return station
-        }
-
-        for query in ["ambient", "nature", "sleep", "meditation"] {
+        for query in Self.ambientFallbackQueries {
             if let stations = try? await directory.searchStations(matching: query, limit: 5),
                let station = firstAmbientFallbackCandidate(in: stations, excluding: stationID) {
                 return station
