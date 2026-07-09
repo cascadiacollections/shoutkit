@@ -4,8 +4,7 @@ import Persistence
 import RadioDirectory
 import SwiftData
 
-@MainActor
-final class StationLaunchCoordinator {
+actor StationLaunchCoordinator {
     static let notificationName = Notification.Name("StationLaunchCoordinator.requested")
     static let shared = StationLaunchCoordinator()
 
@@ -187,7 +186,7 @@ struct PlayStationIntent: AppIntent {
     func perform() async throws -> some IntentResult & ProvidesDialog {
         // Share the same launch surface as promos, notifications, and URL-based
         // entry points so every extension path opens the app to the same station.
-        StationLaunchCoordinator.shared.request(StationLink(station: station.station))
+        await StationLaunchCoordinator.shared.request(StationLink(station: station.station))
         return .result(dialog: "Playing \(station.name)")
     }
 }

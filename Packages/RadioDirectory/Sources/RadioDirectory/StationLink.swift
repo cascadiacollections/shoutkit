@@ -27,6 +27,8 @@ public struct StationLink: Equatable, Sendable {
         }
 
         let items = components.queryItems ?? []
+        // Promos/notifications may only know the stream URL. In that case use it
+        // as a stable synthetic id so the app can still route and play the target.
         let stationID = Self.value(in: items, named: "id")
             ?? Self.value(in: items, named: "stationID")
             ?? Self.value(in: items, named: "stationId")
@@ -71,7 +73,7 @@ public struct StationLink: Equatable, Sendable {
         components.queryItems = queryItems
 
         guard let url = components.url else {
-            preconditionFailure("StationLink produced an invalid shoutkit URL.")
+            preconditionFailure("StationLink produced an invalid shoutkit URL for station '\(station.id)'.")
         }
 
         return url

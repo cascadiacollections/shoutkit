@@ -43,22 +43,27 @@ struct RootView: View {
                     hasCompletedFirstRun = true
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: StationLaunchCoordinator.notificationName)) { notification in
-                guard let request = notification.object as? StationLaunchRequest else { return }
-                handle(request)
-            }
             .task {
                 // Every feature view optional-chains these, so a missing injection
                 // fails silently (taps do nothing) rather than crashing — easy to
                 // miss outside of active testing. Catch it loudly in Debug.
                 assertEnvironmentInjected(playback != nil, "PlaybackController was not injected at the app root")
                 assertEnvironmentInjected(library != nil, "LibraryStore was not injected at the app root")
-                if let request = StationLaunchCoordinator.shared.activateListener() {
+                if let request = await StationLaunchCoordinator.shared.activateListener() {
+                    handle(request)
+                }
+
+                for await notification in NotificationCenter.default.notifications(
+                    named: StationLaunchCoordinator.notificationName
+                ) {
+                    guard let request = notification.object as? StationLaunchRequest else { continue }
                     handle(request)
                 }
             }
             .onDisappear {
-                StationLaunchCoordinator.shared.deactivateListener()
+                Task {
+                    await StationLaunchCoordinator.shared.deactivateListener()
+                }
             }
     }
 
