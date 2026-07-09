@@ -188,7 +188,7 @@ public final class PlaybackController {
         isLoadingAmbientFallback = false
 
         guard let fallback else {
-            ambientFallbackError = "No ambient stations are available right now. Please try again later."
+            ambientFallbackError = "No ambient stations are available right now."
             return
         }
 

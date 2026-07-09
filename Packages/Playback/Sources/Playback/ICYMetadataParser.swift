@@ -214,7 +214,6 @@ public enum ICYMetadataParser {
 
     private static func normalizedCueText(_ text: String) -> String {
         var normalized = ""
-        normalized.reserveCapacity(text.count)
         var previousWasWhitespace = false
 
         for character in text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
