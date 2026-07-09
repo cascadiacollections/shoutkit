@@ -255,7 +255,7 @@ public final class PlaybackController {
                 let resolvedURL = await provider(artist, title)
                 guard Task.isCancelled == false, let self else { return }
                 // Only apply if the track hasn't changed while we awaited.
-                guard self.nowPlaying?.title == title, self.nowPlaying?.artist == artist else { return }
+                guard self.nowPlaying?.title == title && self.nowPlaying?.artist == artist else { return }
                 self.albumArtURL = resolvedURL
                 guard let station = self.activeStation, let resolvedURL else { return }
                 let isStillPlaying: Bool

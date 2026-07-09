@@ -9,9 +9,10 @@ import Foundation
 public enum AlbumArtLookup {
     /// Shared URL session configured with a short timeout; artwork is a
     /// nicety, not a requirement, so we fail fast rather than block the UI.
+    private static let requestTimeout: TimeInterval = 8
     private static let session: URLSession = {
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 8
+        config.timeoutIntervalForRequest = requestTimeout
         return URLSession(configuration: config)
     }()
 
