@@ -236,8 +236,11 @@ public final class PlaybackController {
         }
     }
 
-    // MARK: - Wiring
+}
 
+// MARK: - Wiring
+
+extension PlaybackController {
     private func configureOutput() {
         output.onStatusChange = { [weak self] status in
             self?.handleStatusChange(status)
