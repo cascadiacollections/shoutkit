@@ -8,9 +8,6 @@ import RadioDirectory
 @MainActor
 @Observable
 public final class PlaybackController {
-    private static let ambientFallbackGenres = ["Ambient", "Nature"]
-    private static let ambientFallbackQueries = ["ambient", "nature", "sleep", "meditation"]
-
     public private(set) var state: PlaybackState = .idle
 
     public private(set) var nowPlaying: NowPlayingMetadata?
@@ -184,7 +181,7 @@ public final class PlaybackController {
         isLoadingAmbientFallback = true
         ambientFallbackError = nil
         let currentStationID = activeStation?.id
-        let fallback = await ambientFallbackStation(excluding: currentStationID)
+        let fallback = await AmbientFallbackFinder.findStation(in: directory, excluding: currentStationID)
         isLoadingAmbientFallback = false
 
         // The lookup raced user intent: if the ad break ended, playback was
@@ -224,49 +221,56 @@ public final class PlaybackController {
     private func configureOutput() {
         output.onStatusChange = { [weak self] status in
             guard let self, let station = self.activeStation else { return }
-            switch status {
-            case .buffering:
-                self.state = .buffering(station)
-            case .playing:
-                self.state = .playing(station)
-                self.nowPlayingCenter.update(station: station, track: self.nowPlaying, isPlaying: true)
-            case .paused:
-                self.state = .paused(station)
-                self.nowPlayingCenter.update(station: station, track: self.nowPlaying, isPlaying: false)
-            case let .failed(message):
-                self.state = .failed(message)
-            case .interruptionBegan:
-                self.handleInterruptionBegan(station: station)
-            case let .interruptionEnded(shouldResume):
-                if self.resumeAfterInterruption, shouldResume {
-                    self.resume()
-                }
-                self.resumeAfterInterruption = false
-            }
+            self.handleStatusChange(status, station: station)
         }
 
         output.onTrackInfo = { [weak self] info in
             guard let self, let station = self.activeStation else { return }
-            if info.isAdvertisement {
-                self.isAdPlaying = true
-                self.nowPlaying = nil
-                let isPlaying = if case .playing = self.state { true } else { false }
-                self.nowPlayingCenter.update(station: station, track: nil, isPlaying: isPlaying)
-                return
-            }
-
-            self.isAdPlaying = false
-            let metadata = NowPlayingMetadata(
-                stationID: station.id,
-                title: info.title,
-                artist: info.artist,
-                receivedAt: Date()
-            )
-            self.nowPlaying = metadata
-
-            let isPlaying = if case .playing = self.state { true } else { false }
-            self.nowPlayingCenter.update(station: station, track: metadata, isPlaying: isPlaying)
+            self.handleTrackInfo(info, station: station)
         }
+    }
+
+    private func handleStatusChange(_ status: AudioStatus, station: Station) {
+        switch status {
+        case .buffering:
+            state = .buffering(station)
+        case .playing:
+            state = .playing(station)
+            nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: true)
+        case .paused:
+            state = .paused(station)
+            nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false)
+        case let .failed(message):
+            state = .failed(message)
+        case .interruptionBegan:
+            handleInterruptionBegan(station: station)
+        case let .interruptionEnded(shouldResume):
+            if resumeAfterInterruption, shouldResume {
+                resume()
+            }
+            resumeAfterInterruption = false
+        }
+    }
+
+    private func handleTrackInfo(_ info: AudioTrackInfo, station: Station) {
+        let isPlaying = if case .playing = state { true } else { false }
+
+        if info.isAdvertisement {
+            isAdPlaying = true
+            nowPlaying = nil
+            nowPlayingCenter.update(station: station, track: nil, isPlaying: isPlaying)
+            return
+        }
+
+        isAdPlaying = false
+        let metadata = NowPlayingMetadata(
+            stationID: station.id,
+            title: info.title,
+            artist: info.artist,
+            receivedAt: Date()
+        )
+        nowPlaying = metadata
+        nowPlayingCenter.update(station: station, track: metadata, isPlaying: isPlaying)
     }
 
     private func handleInterruptionBegan(station: Station) {
@@ -294,55 +298,6 @@ public final class PlaybackController {
         nowPlayingCenter.onToggle = { [weak self] in self?.togglePlayPause() }
     }
 
-    private func ambientFallbackStation(excluding stationID: Station.ID?) async -> Station? {
-        // Genre lookups are the best matches, then the broader searches. All
-        // of them fan out concurrently — the user is sitting through an ad
-        // while this runs — but the winner is still the first hit in
-        // priority order. Failed lookups just yield no candidates.
-        enum Lookup: Sendable {
-            case genre(String)
-            case search(String)
-        }
-        let lookups = Self.ambientFallbackGenres.map(Lookup.genre)
-            + Self.ambientFallbackQueries.map(Lookup.search)
-
-        let directory = self.directory
-        let ranked = await withTaskGroup(of: (Int, [Station]).self) { group in
-            for (priority, lookup) in lookups.enumerated() {
-                group.addTask {
-                    let stations: [Station]
-                    switch lookup {
-                    case let .genre(genre):
-                        stations = (try? await directory.stations(inGenre: genre, limit: 5)) ?? []
-                    case let .search(query):
-                        stations = (try? await directory.searchStations(matching: query, limit: 5)) ?? []
-                    }
-                    return (priority, stations)
-                }
-            }
-
-            var collected = Array(repeating: [Station](), count: lookups.count)
-            for await (priority, stations) in group {
-                collected[priority] = stations
-            }
-            return collected
-        }
-
-        for stations in ranked {
-            if let station = firstAmbientFallbackCandidate(in: stations, excluding: stationID) {
-                return station
-            }
-        }
-
-        return nil
-    }
-
-    private func firstAmbientFallbackCandidate(
-        in stations: [Station],
-        excluding stationID: Station.ID?
-    ) -> Station? {
-        stations.first { $0.id != stationID }
-    }
 }
 
 #if canImport(UIKit)

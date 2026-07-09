@@ -68,31 +68,7 @@ public enum ICYMetadataParser {
         guard depth < maxNestingDepth else { return suppressed }
 
         if let fields = fields(from: rawMetadata) {
-            // A combined field's value may itself be another wire-format
-            // layer (iHeart nests cue blocks inside StreamTitle) — recurse.
-            for key in combinedTitleKeys {
-                if let combined = fields[key] {
-                    return parse(combined, depth: depth + 1)
-                }
-            }
-
-            if fields["title"] != nil || fields["artist"] != nil {
-                // Normalize empty values to nil *before* the ad check: an ad
-                // cue often arrives with a present-but-empty artist field
-                // (`title="Commercial Break",artist=`), which must not defeat
-                // suppression.
-                let title = nonEmptyTrimmed(fields["title"])
-                let artist = nonEmptyTrimmed(fields["artist"])
-                if let title, artist == nil, isAdvertisementMarker(title) {
-                    return suppressedAdBreak
-                }
-                return AudioTrackInfo(title: title, artist: artist)
-            }
-
-            // Recognized wire format (e.g. cue metadata with only
-            // TrackId/length), but no title-bearing key — suppress rather
-            // than display an unrecognized key dump.
-            return suppressed
+            return parse(fields: fields, depth: depth)
         }
 
         let info = splitArtistTitle(rawMetadata)
@@ -117,6 +93,34 @@ public enum ICYMetadataParser {
         }
 
         return info
+    }
+
+    private static func parse(fields: [String: String], depth: Int) -> AudioTrackInfo {
+        // A combined field's value may itself be another wire-format layer
+        // (iHeart nests cue blocks inside StreamTitle) — recurse.
+        for key in combinedTitleKeys {
+            if let combined = fields[key] {
+                return parse(combined, depth: depth + 1)
+            }
+        }
+
+        if fields["title"] != nil || fields["artist"] != nil {
+            // Normalize empty values to nil *before* the ad check: an ad
+            // cue often arrives with a present-but-empty artist field
+            // (`title="Commercial Break",artist=`), which must not defeat
+            // suppression.
+            let title = nonEmptyTrimmed(fields["title"])
+            let artist = nonEmptyTrimmed(fields["artist"])
+            if let title, artist == nil, isAdvertisementMarker(title) {
+                return AudioTrackInfo(title: nil, artist: nil, isAdvertisement: true)
+            }
+            return AudioTrackInfo(title: title, artist: artist)
+        }
+
+        // Recognized wire format (e.g. cue metadata with only TrackId/length),
+        // but no title-bearing key — suppress rather than display an
+        // unrecognized key dump.
+        return AudioTrackInfo(title: nil, artist: nil)
     }
 
     /// Tokenizes a wire-format metadata block into lowercased-key fields, e.g.
