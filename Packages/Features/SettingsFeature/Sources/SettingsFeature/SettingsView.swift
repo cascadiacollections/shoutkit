@@ -39,12 +39,21 @@ public struct SettingsView: View {
                         set: { settings.isPlayReportingEnabled = $0 }
                     )
                 )
+                Toggle(
+                    "Fetch Album Artwork",
+                    isOn: Binding(
+                        get: { settings.isAlbumArtEnabled },
+                        set: { settings.isAlbumArtEnabled = $0 }
+                    )
+                )
             } header: {
                 Text("Privacy")
             } footer: {
                 Text("""
                 When on, playing a Radio-Browser station sends its public station ID (nothing \
                 about you or your device) so the community directory can rank popularity. \
+                Album artwork lookups send the current track's artist and title to Apple's \
+                iTunes Search API; turn this off to always show station artwork instead. \
                 ShoutKit has no analytics, no ads, and no accounts.
                 """)
             }

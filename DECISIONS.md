@@ -1,5 +1,45 @@
 # Decisions
 
+## 2026-07-09 (Album art discovery)
+
+- **Album art source**: iTunes Search API (`itunes.apple.com/search?entity=song&limit=1`).
+  Free, keyless, widely available. Chosen over MusicBrainz (slower, more complex JSON) and
+  Discogs (requires an API key). The endpoint returns `artworkUrl100`; we up-size to `600x600bb`
+  by string-replacing the suffix — a documented Apple pattern.
+- **`AlbumArtLookup` in DesignSystem, not Playback**: Playback is deliberately thin (it compiles
+  and tests on macOS without UIKit). DesignSystem already owns `ArtworkLoader` and the rest of
+  the artwork pipeline, so the lookup naturally lives there.
+- **`albumArtURLProvider` hook on `PlaybackController`**: the controller resolves album art via
+  an injected async closure, keeping Playback free of any DesignSystem / iTunes dependency.
+  `AppDependencies.bootstrap()` wires the closure to `AlbumArtLookup.artworkURL`. The pattern
+  mirrors `onStationPlayed` (existing) and means the Playback test suite never touches the API.
+- **Opt-out in `SettingsStore` (Persistence), gated at the source**: `isAlbumArtEnabled`
+  defaults on. The composition root's provider closure checks the setting before any network
+  request (mirroring the play-reporting hook) — the toggle lives under Privacy, so opting out
+  must stop the iTunes call itself, not merely hide the result. The views additionally check it
+  reactively via a shared `effectiveArtworkURL` helper, so toggling takes effect immediately
+  in the UI without restarting playback; the lock screen follows on the next track change
+  (acceptable "best effort").
+- **`NowPlayingPresenting.update()` gains `artworkURL: URL?`**: every call site passes it
+  explicitly. The `NowPlayingCenter` (legacy MediaPlayer) and `MediaSessionNowPlayingCenter`
+  (NowPlaying framework) both prefer the supplied URL when non-nil, falling back to
+  `station.artworkURL`.
+- **Positive-result cache in `AlbumArtLookup`**: transient lookup failures don't permanently
+  suppress art (negative results are not cached), but a second track with the same artist/title
+  (common for repeating radio formats) reuses the cached URL without a second API hit. A plain
+  locked dictionary, not `NSCache` — values are ~100-byte URLs, so memory-pressure eviction
+  buys nothing, and `OSAllocatedUnfairLock` is `Sendable` by construction (no reliance on
+  `NSCache`'s bridging annotations).
+- **Staleness guard in the album art task**: after `await provider(track)` resolves, the task
+  checks that `nowPlaying.artist` and `nowPlaying.title` still match before applying the
+  result — otherwise a slow network response for a previous track would overwrite the
+  current track's (potentially correct) artwork.
+- **Duplicate ICY pushes are deduped in `PlaybackController.onTrackInfo`**: streams re-deliver
+  identical `StreamTitle` metadata (the Live Activity coordinator dedupes for the same reason).
+  Without the guard, every duplicate would flash the lock screen back to station art and refire
+  the lookup — and since negative results are deliberately uncached, an unknown track on a
+  cue-heavy stream could burn the iTunes API's ~20 req/min budget on a single station.
+
 ## 2026-07-09 (station deep links: trust model + launch routing)
 
 - **Deep links route through a MainActor `@Observable` router, not an actor + NotificationCenter

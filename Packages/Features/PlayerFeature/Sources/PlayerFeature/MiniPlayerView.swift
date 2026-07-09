@@ -11,6 +11,7 @@ import SwiftUI
 public struct MiniPlayerView: View {
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
+    @Environment(\.settingsStore) private var settings
 
     private let onExpand: () -> Void
 
@@ -46,7 +47,7 @@ public struct MiniPlayerView: View {
     private func content(playback: PlaybackController, station: Station) -> some View {
         HStack(spacing: ShoutKitSpacing.small) {
             StationArtworkView(
-                artworkURL: station.artworkURL,
+                artworkURL: effectiveArtworkURL(settings: settings, playback: playback, station: station),
                 size: 40,
                 cornerRadius: ShoutKitRadius.small,
                 isPlaying: isPlaying(playback)
