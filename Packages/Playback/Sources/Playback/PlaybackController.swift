@@ -242,8 +242,7 @@ public final class PlaybackController {
             if info.isAdvertisement {
                 self.isAdPlaying = true
                 self.nowPlaying = nil
-                let isPlaying: Bool
-                if case .playing = self.state { isPlaying = true } else { isPlaying = false }
+                let isPlaying = if case .playing = self.state { true } else { false }
                 self.nowPlayingCenter.update(station: station, track: nil, isPlaying: isPlaying)
                 return
             }
@@ -257,8 +256,7 @@ public final class PlaybackController {
             )
             self.nowPlaying = metadata
 
-            let isPlaying: Bool
-            if case .playing = self.state { isPlaying = true } else { isPlaying = false }
+            let isPlaying = if case .playing = self.state { true } else { false }
             self.nowPlayingCenter.update(station: station, track: metadata, isPlaying: isPlaying)
         }
     }
