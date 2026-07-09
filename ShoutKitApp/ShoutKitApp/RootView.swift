@@ -59,10 +59,6 @@ struct RootView: View {
                     for await notification in NotificationCenter.default.notifications(
                         named: StationLaunchCoordinator.notificationName
                     ) {
-                        if Task.isCancelled {
-                            break
-                        }
-
                         guard let request = notification.object as? StationLaunchRequest else { continue }
                         handle(request)
                     }

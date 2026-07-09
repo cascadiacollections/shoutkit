@@ -22,6 +22,8 @@ public struct StationLink: Equatable, Sendable {
     public init?(url: URL, appScheme: String = StationLink.appScheme) {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let route = Self.route(from: url, appScheme: appScheme),
+              // Accept both a noun (`station`) and a verb (`play`) so promos,
+              // notifications, and shortcuts can use whichever reads best.
               route == "station" || route == "play" else {
             return nil
         }
