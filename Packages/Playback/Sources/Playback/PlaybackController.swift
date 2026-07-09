@@ -208,92 +208,94 @@ public final class PlaybackController {
 
     private func configureOutput() {
         output.onStatusChange = { [weak self] status in
-            guard let self, let station = self.activeStation else { return }
-            switch status {
-            case .buffering:
-                self.state = .buffering(station)
-            case .playing:
-                self.state = .playing(station)
-                self.nowPlayingCenter.update(
-                    station: station,
-                    track: self.nowPlaying,
-                    isPlaying: true,
-                    artworkURL: self.albumArtURL
-                )
-            case .paused:
-                self.state = .paused(station)
-                self.nowPlayingCenter.update(
-                    station: station,
-                    track: self.nowPlaying,
-                    isPlaying: false,
-                    artworkURL: self.albumArtURL
-                )
-            case let .failed(message):
-                self.state = .failed(message)
-            case .interruptionBegan:
-                self.handleInterruptionBegan(station: station)
-            case let .interruptionEnded(shouldResume):
-                if self.resumeAfterInterruption, shouldResume {
-                    self.resume()
-                }
-                self.resumeAfterInterruption = false
+            self?.handleStatusChange(status)
+        }
+        output.onTrackInfo = { [weak self] info in
+            self?.handleTrackInfo(info)
+        }
+    }
+
+    private var isOutputPlaying: Bool {
+        if case .playing = state { return true }
+        return false
+    }
+
+    private func handleStatusChange(_ status: AudioStatus) {
+        guard let station = activeStation else { return }
+        switch status {
+        case .buffering:
+            state = .buffering(station)
+        case .playing:
+            state = .playing(station)
+            nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: true, artworkURL: albumArtURL)
+        case .paused:
+            state = .paused(station)
+            nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
+        case let .failed(message):
+            state = .failed(message)
+        case .interruptionBegan:
+            handleInterruptionBegan(station: station)
+        case let .interruptionEnded(shouldResume):
+            if resumeAfterInterruption, shouldResume {
+                resume()
             }
+            resumeAfterInterruption = false
+        }
+    }
+
+    private func handleTrackInfo(_ info: AudioTrackInfo) {
+        guard let station = activeStation else { return }
+
+        // ICY pushes often repeat identical track info (the Live Activity
+        // coordinator dedupes for the same reason). Ignore duplicates so the
+        // lock screen doesn't flash back to station art and the album art
+        // lookup isn't refired for a track already resolved.
+        if let current = nowPlaying,
+           current.stationID == station.id,
+           current.title == info.title,
+           current.artist == info.artist {
+            return
         }
 
-        output.onTrackInfo = { [weak self] info in
-            guard let self, let station = self.activeStation else { return }
+        let metadata = NowPlayingMetadata(
+            stationID: station.id,
+            title: info.title,
+            artist: info.artist,
+            receivedAt: Date()
+        )
+        nowPlaying = metadata
+        // Clear any art from a previous track while resolution is in flight.
+        albumArtURL = nil
 
-            // ICY pushes often repeat identical track info (the Live Activity
-            // coordinator dedupes for the same reason). Ignore duplicates so
-            // the lock screen doesn't flash back to station art and the album
-            // art lookup isn't refired for a track already resolved.
-            if let current = self.nowPlaying,
-               current.stationID == station.id,
-               current.title == info.title,
-               current.artist == info.artist {
-                return
-            }
+        nowPlayingCenter.update(
+            station: station,
+            track: metadata,
+            isPlaying: isOutputPlaying,
+            artworkURL: albumArtURL
+        )
 
-            let metadata = NowPlayingMetadata(
-                stationID: station.id,
-                title: info.title,
-                artist: info.artist,
-                receivedAt: Date()
-            )
-            self.nowPlaying = metadata
-            // Clear any art from a previous track while resolution is in flight.
-            self.albumArtURL = nil
+        resolveAlbumArt(for: info)
+    }
 
-            let isPlaying: Bool
-            if case .playing = self.state { isPlaying = true } else { isPlaying = false }
+    /// Best-effort album art resolution: resolve asynchronously and re-push
+    /// the now-playing surface with the resolved URL.
+    private func resolveAlbumArt(for info: AudioTrackInfo) {
+        guard let provider = albumArtURLProvider else { return }
+        albumArtTask?.cancel()
+        albumArtTask = Task { [weak self] in
+            let resolvedURL = await provider(info)
+            guard Task.isCancelled == false, let self else { return }
+            // Only apply if the track hasn't changed while we awaited.
+            guard self.nowPlaying?.title == info.title,
+                  self.nowPlaying?.artist == info.artist else { return }
+            self.albumArtURL = resolvedURL
+            guard let station = self.activeStation, let resolvedURL else { return }
             self.nowPlayingCenter.update(
                 station: station,
-                track: metadata,
-                isPlaying: isPlaying,
-                artworkURL: self.albumArtURL
+                track: self.nowPlaying,
+                isPlaying: self.isOutputPlaying,
+                artworkURL: resolvedURL
             )
-
-            // Best-effort album art resolution: resolve asynchronously and
-            // re-push the now-playing surface with the resolved URL.
-            guard let provider = self.albumArtURLProvider else { return }
-            self.albumArtTask?.cancel()
-            self.albumArtTask = Task { [weak self] in
-                let resolvedURL = await provider(info)
-                guard Task.isCancelled == false, let self else { return }
-                // Only apply if the track hasn't changed while we awaited.
-                guard self.nowPlaying?.title == info.title,
-                      self.nowPlaying?.artist == info.artist else { return }
-                self.albumArtURL = resolvedURL
-                guard let station = self.activeStation, let resolvedURL else { return }
-                let isStillPlaying: Bool
-                if case .playing = self.state { isStillPlaying = true } else { isStillPlaying = false }
-                self.nowPlayingCenter.update(
-                    station: station,
-                    track: self.nowPlaying,
-                    isPlaying: isStillPlaying,
-                    artworkURL: resolvedURL
-                )
-            }
         }
     }
 

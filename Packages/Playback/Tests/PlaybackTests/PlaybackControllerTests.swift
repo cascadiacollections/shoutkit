@@ -4,91 +4,12 @@ import Testing
 
 @testable import Playback
 
-@MainActor
-final class FakeAudioOutput: AudioOutput {
-    var onStatusChange: ((AudioStatus) -> Void)?
-    var onTrackInfo: ((AudioTrackInfo) -> Void)?
-
-    private(set) var startedURLs: [URL] = []
-    private(set) var stopCalled = false
-
-    var startedURL: URL? { startedURLs.last }
-
-    func start(url: URL) { startedURLs.append(url) }
-    func pause() { onStatusChange?(.paused) }
-    func resume() { onStatusChange?(.playing) }
-    func stop() { stopCalled = true }
-}
-
-/// Spy standing in for the system now-playing surface, so tests never touch
-/// `MPRemoteCommandCenter.shared()` and can assert exactly what the lock screen
-/// was told, and when.
-@MainActor
-final class NowPlayingPresenterSpy: NowPlayingPresenting {
-    var onPlay: (() -> Void)?
-    var onPause: (() -> Void)?
-    var onStop: (() -> Void)?
-    var onToggle: (() -> Void)?
-
-    enum Event: Equatable {
-        case update(stationID: String, trackTitle: String?, isPlaying: Bool, artworkURL: URL?)
-        case clear
-    }
-
-    private(set) var events: [Event] = []
-
-    var lastUpdate: Event? { events.last(where: { $0 != .clear }) }
-
-    func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool, artworkURL: URL?) {
-        events.append(.update(
-            stationID: station.id,
-            trackTitle: track?.title,
-            isPlaying: isPlaying,
-            artworkURL: artworkURL
-        ))
-    }
-
-    func clear() {
-        events.append(.clear)
-    }
-}
+// Doubles and builders (FakeAudioOutput, NowPlayingPresenterSpy, station(_:),
+// makeController, waitForStart, drainMainQueue) live in PlaybackTestSupport.swift
+// and are shared with PlaybackControllerAlbumArtTests.
 
 @MainActor
 struct PlaybackControllerTests {
-    private func station(_ id: String = "kexp") -> Station {
-        Station(
-            id: id,
-            name: "Station \(id)",
-            genre: "Indie",
-            listenerCount: 0,
-            preferredStreamURL: URL(string: "https://example.com/\(id).aac")
-        )
-    }
-
-    private func makeController(
-        stations: [Station],
-        output: FakeAudioOutput,
-        presenter: NowPlayingPresenterSpy = NowPlayingPresenterSpy()
-    ) -> PlaybackController {
-        PlaybackController(
-            directory: BundledRadioDirectory(stations: stations),
-            output: output,
-            nowPlayingCenter: presenter
-        )
-    }
-
-    private func waitForStart(_ output: FakeAudioOutput, count: Int = 1) async {
-        for _ in 0..<200 where output.startedURLs.count < count {
-            await Task.yield()
-        }
-    }
-
-    private func drainMainQueue() async {
-        for _ in 0..<50 {
-            await Task.yield()
-        }
-    }
-
     @Test func playResolvesEndpointAndStartsOutput() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
@@ -330,92 +251,6 @@ struct PlaybackControllerTests {
         // Lock-screen stop.
         presenter.onStop?()
         #expect(controller.state == .idle)
-    }
-
-    // MARK: - Album art resolution
-
-    @Test func resolvedAlbumArtIsPublishedAndPushedToLockScreen() async throws {
-        let output = FakeAudioOutput()
-        let presenter = NowPlayingPresenterSpy()
-        let controller = makeController(stations: [station()], output: output, presenter: presenter)
-        let art = try #require(URL(string: "https://example.com/art/600x600bb.jpg"))
-        controller.albumArtURLProvider = { _ in art }
-
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
-        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
-        await drainMainQueue()
-
-        #expect(controller.albumArtURL == art)
-        #expect(presenter.lastUpdate == .update(
-            stationID: "kexp", trackTitle: "Song", isPlaying: true, artworkURL: art
-        ))
-    }
-
-    @Test func duplicateTrackInfoDoesNotRefireLookup() async throws {
-        let output = FakeAudioOutput()
-        let controller = makeController(stations: [station()], output: output)
-        let art = try #require(URL(string: "https://example.com/art.jpg"))
-        var lookups = 0
-        controller.albumArtURLProvider = { _ in
-            lookups += 1
-            return art
-        }
-
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
-        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
-        await drainMainQueue()
-        // ICY streams re-deliver identical metadata; it must not churn.
-        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
-        await drainMainQueue()
-
-        #expect(lookups == 1)
-        #expect(controller.albumArtURL == art)
-    }
-
-    @Test func lateArtForPreviousTrackIsDiscarded() async throws {
-        let output = FakeAudioOutput()
-        let controller = makeController(stations: [station()], output: output)
-        let oldArt = try #require(URL(string: "https://example.com/old.jpg"))
-        let newArt = try #require(URL(string: "https://example.com/new.jpg"))
-        controller.albumArtURLProvider = { track in
-            if track.title == "Old" {
-                // Outlast the track change below; cancellation and the
-                // staleness guard must keep this result from applying.
-                for _ in 0..<400 { await Task.yield() }
-                return oldArt
-            }
-            return newArt
-        }
-
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
-        output.onTrackInfo?(AudioTrackInfo(title: "Old", artist: "Band"))
-        output.onTrackInfo?(AudioTrackInfo(title: "New", artist: "Band"))
-        for _ in 0..<600 { await Task.yield() }
-
-        #expect(controller.albumArtURL == newArt)
-    }
-
-    @Test func stopClearsAlbumArt() async throws {
-        let output = FakeAudioOutput()
-        let controller = makeController(stations: [station()], output: output)
-        let art = try #require(URL(string: "https://example.com/art.jpg"))
-        controller.albumArtURLProvider = { _ in art }
-
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
-        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
-        await drainMainQueue()
-        #expect(controller.albumArtURL == art)
-
-        controller.stop()
-        #expect(controller.albumArtURL == nil)
     }
 
     // MARK: - ICY metadata parsing
