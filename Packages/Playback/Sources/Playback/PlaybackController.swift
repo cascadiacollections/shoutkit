@@ -185,7 +185,7 @@ public final class PlaybackController {
         isLoadingAmbientFallback = false
 
         guard let fallback else {
-            ambientFallbackError = "No ambient fallback is available right now."
+            ambientFallbackError = "Could not find an ambient station to switch to right now."
             return
         }
 
@@ -287,16 +287,24 @@ public final class PlaybackController {
     }
 
     private func ambientFallbackStation(excluding stationID: Station.ID?) async -> Station? {
-        for genre in ["Ambient", "Nature"] {
-            if let stations = try? await directory.stations(inGenre: genre, limit: 5),
-               let station = stations.first(where: { $0.id != stationID }) {
-                return station
-            }
-        }
+        async let ambientGenreStations = try? await directory.stations(inGenre: "Ambient", limit: 5)
+        async let natureGenreStations = try? await directory.stations(inGenre: "Nature", limit: 5)
+        async let ambientSearchStations = try? await directory.searchStations(matching: "ambient", limit: 5)
+        async let natureSearchStations = try? await directory.searchStations(matching: "nature", limit: 5)
+        async let sleepSearchStations = try? await directory.searchStations(matching: "sleep", limit: 5)
+        async let meditationSearchStations = try? await directory.searchStations(matching: "meditation", limit: 5)
 
-        for query in ["ambient", "nature", "sleep", "meditation"] {
-            if let stations = try? await directory.searchStations(matching: query, limit: 5),
-               let station = stations.first(where: { $0.id != stationID }) {
+        let candidateGroups = await [
+            ambientGenreStations,
+            natureGenreStations,
+            ambientSearchStations,
+            natureSearchStations,
+            sleepSearchStations,
+            meditationSearchStations
+        ]
+
+        for stations in candidateGroups {
+            if let station = stations?.first(where: { $0.id != stationID }) {
                 return station
             }
         }

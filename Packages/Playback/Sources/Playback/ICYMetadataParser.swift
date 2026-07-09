@@ -49,8 +49,7 @@ public enum ICYMetadataParser {
     private static let advertisementCuePhrases: Set<String> = [
         "spot block",
         "commercial break",
-        "ad break",
-        "advertisement"
+        "ad break"
     ]
 
     /// Dialects nest at most one level in observed streams; the guard is just
