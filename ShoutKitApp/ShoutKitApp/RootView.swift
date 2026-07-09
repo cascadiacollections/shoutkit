@@ -45,8 +45,12 @@ struct RootView: View {
                 }
             }
             .onAppear {
-                stationLaunchTask?.cancel()
+                let previousTask = stationLaunchTask
+                previousTask?.cancel()
+
                 stationLaunchTask = Task { @MainActor in
+                    _ = await previousTask?.value
+
                     // Every feature view optional-chains these, so a missing injection
                     // fails silently (taps do nothing) rather than crashing — easy to
                     // miss outside of active testing. Catch it loudly in Debug.
@@ -59,15 +63,21 @@ struct RootView: View {
                     for await notification in NotificationCenter.default.notifications(
                         named: StationLaunchCoordinator.notificationName
                     ) {
+                        if Task.isCancelled {
+                            break
+                        }
+
                         guard let request = notification.object as? StationLaunchRequest else { continue }
                         handle(request)
                     }
                 }
             }
             .onDisappear {
-                stationLaunchTask?.cancel()
+                let activeTask = stationLaunchTask
                 stationLaunchTask = nil
+                activeTask?.cancel()
                 Task {
+                    _ = await activeTask?.value
                     await StationLaunchCoordinator.shared.deactivateListener()
                 }
             }

@@ -75,7 +75,10 @@ public struct StationLink: Equatable, Sendable {
         components.queryItems = queryItems
 
         guard let url = components.url else {
-            preconditionFailure("StationLink produced an invalid shoutkit URL for station '\(station.id)'.")
+            preconditionFailure(
+                "StationLink produced an invalid shoutkit URL for station '\(station.id)'. " +
+                    "One of the station fields may contain characters that cannot be URL-encoded."
+            )
         }
 
         return url
