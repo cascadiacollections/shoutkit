@@ -27,7 +27,7 @@ struct ShoutKitApp: App {
                 .settingsStore(services.settingsStore)
                 .tint(.shoutKitAccent)
                 .onOpenURL { url in
-                    _ = StationLaunchCoordinator.request(url: url)
+                    _ = StationLaunchCoordinator.shared.request(url: url)
                 }
         }
     }

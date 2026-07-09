@@ -33,7 +33,6 @@ public struct StationLink: Equatable, Sendable {
             ?? Self.value(in: items, named: "streamURL")
             ?? Self.value(in: items, named: "stream")
             ?? Self.value(in: items, named: "url")
-            ?? Self.value(in: items, named: "name")
         let name = Self.value(in: items, named: "name")
             ?? Self.value(in: items, named: "title")
             ?? stationID
@@ -65,21 +64,17 @@ public struct StationLink: Equatable, Sendable {
         )
     }
 
-    public func url(appScheme: String = StationLink.appScheme) -> URL {
+    public func url() -> URL {
         var components = URLComponents()
-        components.scheme = appScheme
+        components.scheme = StationLink.appScheme
         components.host = "station"
         components.queryItems = queryItems
 
-        if let url = components.url {
-            return url
+        guard let url = components.url else {
+            preconditionFailure("StationLink produced an invalid shoutkit URL.")
         }
 
-        var fallbackComponents = URLComponents()
-        fallbackComponents.scheme = StationLink.appScheme
-        fallbackComponents.host = "station"
-        fallbackComponents.queryItems = queryItems
-        return fallbackComponents.url ?? URL(fileURLWithPath: "/")
+        return url
     }
 
     public var queryItems: [URLQueryItem] {

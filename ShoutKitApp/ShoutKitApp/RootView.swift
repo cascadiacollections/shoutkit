@@ -19,7 +19,6 @@ struct RootView: View {
     @State private var selectedTab = ShoutKitTab.listenNow
     @State private var isShowingNowPlaying = false
     @State private var isShowingSettings = false
-    @State private var lastHandledLaunchRequestID: UUID?
     @AppStorage("hasCompletedFirstRun") private var hasCompletedFirstRun = false
 
     var body: some View {
@@ -47,7 +46,6 @@ struct RootView: View {
             .onReceive(NotificationCenter.default.publisher(for: StationLaunchCoordinator.notificationName)) { notification in
                 guard let request = notification.object as? StationLaunchRequest else { return }
                 handle(request)
-                StationLaunchCoordinator.clearPendingRequest(request)
             }
             .task {
                 // Every feature view optional-chains these, so a missing injection
@@ -55,9 +53,12 @@ struct RootView: View {
                 // miss outside of active testing. Catch it loudly in Debug.
                 assertEnvironmentInjected(playback != nil, "PlaybackController was not injected at the app root")
                 assertEnvironmentInjected(library != nil, "LibraryStore was not injected at the app root")
-                if let request = StationLaunchCoordinator.takePendingRequest() {
+                if let request = StationLaunchCoordinator.shared.activateListener() {
                     handle(request)
                 }
+            }
+            .onDisappear {
+                StationLaunchCoordinator.shared.deactivateListener()
             }
     }
 
@@ -104,9 +105,6 @@ struct RootView: View {
     }
 
     private func handle(_ request: StationLaunchRequest) {
-        guard lastHandledLaunchRequestID != request.id else { return }
-        lastHandledLaunchRequestID = request.id
-
         let link = request.link
         selectedTab = .listenNow
         isShowingNowPlaying = link.presentNowPlaying

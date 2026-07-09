@@ -5,19 +5,25 @@ import RadioDirectory
 import SwiftData
 
 @MainActor
-enum StationLaunchCoordinator {
+final class StationLaunchCoordinator {
     static let notificationName = Notification.Name("StationLaunchCoordinator.requested")
-    @MainActor
-    private static var pendingRequest: StationLaunchRequest?
+    static let shared = StationLaunchCoordinator()
 
-    static func request(_ link: StationLink) {
+    private var pendingRequest: StationLaunchRequest?
+    private var hasActiveListener = false
+
+    private init() {}
+
+    func request(_ link: StationLink) {
         let request = StationLaunchRequest(link: link)
         pendingRequest = request
-        NotificationCenter.default.post(name: notificationName, object: request)
+
+        guard hasActiveListener else { return }
+        NotificationCenter.default.post(name: Self.notificationName, object: request)
     }
 
     @discardableResult
-    static func request(url: URL) -> Bool {
+    func request(url: URL) -> Bool {
         guard let link = StationLink(url: url) else {
             return false
         }
@@ -26,18 +32,18 @@ enum StationLaunchCoordinator {
         return true
     }
 
-    static func takePendingRequest() -> StationLaunchRequest? {
+    func activateListener() -> StationLaunchRequest? {
+        hasActiveListener = true
         defer { pendingRequest = nil }
         return pendingRequest
     }
 
-    static func clearPendingRequest(_ request: StationLaunchRequest) {
-        guard pendingRequest?.id == request.id else { return }
-        pendingRequest = nil
+    func deactivateListener() {
+        hasActiveListener = false
     }
 }
 
-struct StationLaunchRequest: Equatable {
+struct StationLaunchRequest: Equatable, Sendable {
     let id: UUID
     let link: StationLink
 
@@ -181,7 +187,7 @@ struct PlayStationIntent: AppIntent {
     func perform() async throws -> some IntentResult & ProvidesDialog {
         // Share the same launch surface as promos, notifications, and URL-based
         // entry points so every extension path opens the app to the same station.
-        StationLaunchCoordinator.request(StationLink(station: station.station))
+        StationLaunchCoordinator.shared.request(StationLink(station: station.station))
         return .result(dialog: "Playing \(station.name)")
     }
 }
