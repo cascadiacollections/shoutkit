@@ -17,6 +17,18 @@ All notable changes to ShoutKit are documented here. The format follows
 - 0.3.0 release plan (`docs/releases/0.3.0.md`): iOS 27 platform adoption — App Intents entity
   schemas for the new Siri, quick-play widget, and an iOS 27 QA checklist
 
+### Fixed
+- The ambient-fallback offer no longer hijacks playback when its station lookup loses a race
+  with the user: if the ad break ends, playback is stopped, or another station starts while the
+  directory search is in flight, the result is discarded instead of switching stations
+- Ad-break cues with a present-but-empty artist field (`title="Commercial Break",artist=`) are
+  suppressed again instead of showing the marker as a track title
+- The ambient-fallback station lookup fans out its directory queries concurrently (the
+  sequential worst case was six network round-trips, each walking three mirrors with backoff,
+  while the listener waits through an ad); the first hit in priority order still wins
+- `ArtworkLoader` renders its palette-sampling bitmap inside the pixel buffer's guaranteed
+  pointer lifetime instead of through a dangling inout pointer
+
 ## [0.2.0] — in progress (first TestFlight beta)
 
 ### Added

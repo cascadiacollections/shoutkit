@@ -187,6 +187,11 @@ public final class PlaybackController {
         let fallback = await ambientFallbackStation(excluding: currentStationID)
         isLoadingAmbientFallback = false
 
+        // The lookup raced user intent: if the ad break ended, playback was
+        // stopped, or another station started while searching, keep that
+        // outcome rather than hijacking it with the fallback.
+        guard isAdPlaying, activeStation?.id == currentStationID else { return }
+
         guard let fallback else {
             ambientFallbackError = "No ambient stations are available right now."
             return
@@ -290,16 +295,41 @@ public final class PlaybackController {
     }
 
     private func ambientFallbackStation(excluding stationID: Station.ID?) async -> Station? {
-        for genre in Self.ambientFallbackGenres {
-            if let stations = try? await directory.stations(inGenre: genre, limit: 5),
-               let station = firstAmbientFallbackCandidate(in: stations, excluding: stationID) {
-                return station
+        // Genre lookups are the best matches, then the broader searches. All
+        // of them fan out concurrently — the user is sitting through an ad
+        // while this runs — but the winner is still the first hit in
+        // priority order. Failed lookups just yield no candidates.
+        enum Lookup: Sendable {
+            case genre(String)
+            case search(String)
+        }
+        let lookups = Self.ambientFallbackGenres.map(Lookup.genre)
+            + Self.ambientFallbackQueries.map(Lookup.search)
+
+        let directory = self.directory
+        let ranked = await withTaskGroup(of: (Int, [Station]).self) { group in
+            for (priority, lookup) in lookups.enumerated() {
+                group.addTask {
+                    let stations: [Station]
+                    switch lookup {
+                    case let .genre(genre):
+                        stations = (try? await directory.stations(inGenre: genre, limit: 5)) ?? []
+                    case let .search(query):
+                        stations = (try? await directory.searchStations(matching: query, limit: 5)) ?? []
+                    }
+                    return (priority, stations)
+                }
             }
+
+            var collected = Array(repeating: [Station](), count: lookups.count)
+            for await (priority, stations) in group {
+                collected[priority] = stations
+            }
+            return collected
         }
 
-        for query in Self.ambientFallbackQueries {
-            if let stations = try? await directory.searchStations(matching: query, limit: 5),
-               let station = firstAmbientFallbackCandidate(in: stations, excluding: stationID) {
+        for stations in ranked {
+            if let station = firstAmbientFallbackCandidate(in: stations, excluding: stationID) {
                 return station
             }
         }

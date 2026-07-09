@@ -20,6 +20,47 @@ final class FakeAudioOutput: AudioOutput {
     func stop() { stopCalled = true }
 }
 
+/// Directory whose discovery calls block until `open()` is called, so tests
+/// can interleave user actions with an in-flight ambient-fallback lookup.
+/// `streamEndpoint` stays ungated — `play()` must keep working while the
+/// lookup is suspended.
+actor GatedRadioDirectory: RadioDirectoryProviding {
+    private let base: BundledRadioDirectory
+    private var isOpen = false
+
+    init(stations: [Station]) {
+        base = BundledRadioDirectory(stations: stations)
+    }
+
+    func open() { isOpen = true }
+
+    func genres() async throws(RadioDirectoryError) -> [Genre] {
+        try await base.genres()
+    }
+
+    func topStations(limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        try await base.topStations(limit: limit)
+    }
+
+    func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        await waitForGate()
+        return try await base.searchStations(matching: query, limit: limit)
+    }
+
+    func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        await waitForGate()
+        return try await base.searchStations(matching: genre, limit: limit)
+    }
+
+    func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
+        try await base.streamEndpoint(for: station)
+    }
+
+    private func waitForGate() async {
+        while isOpen == false { await Task.yield() }
+    }
+}
+
 /// Spy standing in for the system now-playing surface, so tests never touch
 /// `MPRemoteCommandCenter.shared()` and can assert exactly what the lock screen
 /// was told, and when.
@@ -244,6 +285,61 @@ struct PlaybackControllerTests {
 
         #expect(controller.currentStation?.id == "ambient-current")
         #expect(output.startedURL?.absoluteString == ambientStation.preferredStreamURL?.absoluteString)
+    }
+
+    @Test func ambientFallbackAbortsWhenAdEndsDuringLookup() async {
+        let output = FakeAudioOutput()
+        let ambient = station("ambient-current", name: "Ambient Current", genre: "Ambient")
+        let directory = GatedRadioDirectory(stations: [station(), ambient])
+        let controller = PlaybackController(
+            directory: directory,
+            output: output,
+            nowPlayingCenter: NowPlayingPresenterSpy()
+        )
+
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        output.onTrackInfo?(AudioTrackInfo(title: nil, artist: nil, isAdvertisement: true))
+
+        let fallbackTask = Task { await controller.playAmbientFallback() }
+        await drainMainQueue()
+        // The ad break ends while the directory lookup is still in flight.
+        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        await directory.open()
+        await fallbackTask.value
+
+        #expect(controller.currentStation?.id == "kexp", "the lookup must not hijack resumed programming")
+        #expect(output.startedURLs.count == 1)
+        #expect(controller.isLoadingAmbientFallback == false)
+        #expect(controller.ambientFallbackError == nil)
+    }
+
+    @Test func ambientFallbackAbortsWhenPlaybackStoppedDuringLookup() async {
+        let output = FakeAudioOutput()
+        let ambient = station("ambient-current", name: "Ambient Current", genre: "Ambient")
+        let directory = GatedRadioDirectory(stations: [station(), ambient])
+        let controller = PlaybackController(
+            directory: directory,
+            output: output,
+            nowPlayingCenter: NowPlayingPresenterSpy()
+        )
+
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        output.onTrackInfo?(AudioTrackInfo(title: nil, artist: nil, isAdvertisement: true))
+
+        let fallbackTask = Task { await controller.playAmbientFallback() }
+        await drainMainQueue()
+        // The user stops playback while the directory lookup is still in flight.
+        controller.stop()
+        await directory.open()
+        await fallbackTask.value
+
+        #expect(controller.state == .idle, "stopped playback must stay stopped")
+        #expect(controller.currentStation == nil)
+        #expect(output.startedURLs.count == 1)
     }
 
     @Test func stopResetsToIdle() async {

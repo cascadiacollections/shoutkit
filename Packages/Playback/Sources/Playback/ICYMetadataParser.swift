@@ -41,12 +41,15 @@ public enum ICYMetadataParser {
     /// priority order.
     private static let combinedTitleKeys = ["streamtitle", "text"]
 
-    /// Triton Digital ad-break cue markers delivered in the `text` field.
-    /// These describe the break, not what's playing — showing them as a song
-    /// title reads as a glitch, so they're suppressed (the UI falls back to
-    /// the station name).
-    private static let adCueMarkers: Set<String> = ["spot block start", "spot block end"]
-    private static let advertisementCueMarkers: Set<String> = [
+    /// Ad-break cue markers delivered in title-bearing fields (Triton
+    /// Digital's `text` cues, iHeart-style `title` fields). These describe
+    /// the break, not what's playing — showing them as a song title reads as
+    /// a glitch, so they're suppressed (the UI falls back to the station
+    /// name). Matched against the whole normalized cue text, never as a
+    /// substring, so a song actually titled "Ad Break Anthem" passes through.
+    private static let adCueMarkers: Set<String> = [
+        "spot block start",
+        "spot block end",
         "commercial break",
         "ad break"
     ]
@@ -74,15 +77,16 @@ public enum ICYMetadataParser {
             }
 
             if fields["title"] != nil || fields["artist"] != nil {
-                let title = fields["title"]?.trimmingCharacters(in: .whitespacesAndNewlines)
-                let artist = fields["artist"]?.trimmingCharacters(in: .whitespacesAndNewlines)
+                // Normalize empty values to nil *before* the ad check: an ad
+                // cue often arrives with a present-but-empty artist field
+                // (`title="Commercial Break",artist=`), which must not defeat
+                // suppression.
+                let title = nonEmptyTrimmed(fields["title"])
+                let artist = nonEmptyTrimmed(fields["artist"])
                 if let title, artist == nil, isAdvertisementMarker(title) {
                     return suppressedAdBreak
                 }
-                return AudioTrackInfo(
-                    title: title?.isEmpty == false ? title : nil,
-                    artist: artist?.isEmpty == false ? artist : nil
-                )
+                return AudioTrackInfo(title: title, artist: artist)
             }
 
             // Recognized wire format (e.g. cue metadata with only
@@ -208,8 +212,13 @@ public enum ICYMetadataParser {
     }
 
     private static func isAdvertisementMarker(_ text: String) -> Bool {
-        let normalized = normalizedCueText(text)
-        return adCueMarkers.contains(normalized) || advertisementCueMarkers.contains(normalized)
+        adCueMarkers.contains(normalizedCueText(text))
+    }
+
+    private static func nonEmptyTrimmed(_ value: String?) -> String? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              trimmed.isEmpty == false else { return nil }
+        return trimmed
     }
 
     private static func normalizedCueText(_ text: String) -> String {

@@ -94,10 +94,19 @@ public actor CachingRadioDirectory: RadioDirectoryProviding {
 
         topStationsInFlight = (task, limit)
         let result = await task.value
-        topStationsInFlight = nil
+        // A concurrent larger request may have replaced our registration;
+        // only clear the in-flight slot if it is still ours.
+        if topStationsInFlight?.limit == limit {
+            topStationsInFlight = nil
+        }
 
         if case let .success(stations) = result {
-            topStationsCache = TopStationsCache(value: stations, fetchedLimit: limit, fetchedAt: now())
+            // Don't let a smaller fetch that finished late clobber a fresh,
+            // larger cache written by a concurrent request.
+            let keepExisting = topStationsCache.map { $0.fetchedLimit > limit && isFresh($0.fetchedAt) } ?? false
+            if keepExisting == false {
+                topStationsCache = TopStationsCache(value: stations, fetchedLimit: limit, fetchedAt: now())
+            }
         }
         return try Array(result.get().prefix(limit))
     }

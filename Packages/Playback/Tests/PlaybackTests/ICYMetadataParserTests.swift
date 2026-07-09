@@ -128,6 +128,13 @@ struct ICYMetadataParserTests {
         #expect(info.title == nil)
     }
 
+    @Test func adMarkerTitleWithQuotedEmptyArtistIsSuppressed() {
+        let info = ICYMetadataParser.parseTrack(from: "title=\"Ad Break\",artist=\"\"")
+        #expect(info.isAdvertisement)
+        #expect(info.artist == nil)
+        #expect(info.title == nil)
+    }
+
     @Test func songTitleContainingAdvertisementIsNotMarkedAsAd() {
         let info = ICYMetadataParser.parseTrack(from: "Artist - The Advertisement of Love")
         #expect(info.isAdvertisement == false)

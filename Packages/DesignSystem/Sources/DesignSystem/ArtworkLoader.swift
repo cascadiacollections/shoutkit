@@ -60,20 +60,27 @@ public enum ArtworkLoader {
     private nonisolated static func hsbSamples(from cgImage: CGImage) -> [HSBSample] {
         let side = 3
         var pixels = [UInt8](repeating: 0, count: side * side * 4)
-        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
-              let context = CGContext(
-                  data: &pixels,
-                  width: side,
-                  height: side,
-                  bitsPerComponent: 8,
-                  bytesPerRow: side * 4,
-                  space: space,
-                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-              )
-        else { return [] }
+        // The context writes into the array's storage during draw(), so the
+        // whole render must happen inside withUnsafeMutableBytes — an inout
+        // pointer (`&pixels`) is only valid for the initializer call itself.
+        let rendered = pixels.withUnsafeMutableBytes { buffer in
+            guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+                  let context = CGContext(
+                      data: buffer.baseAddress,
+                      width: side,
+                      height: side,
+                      bitsPerComponent: 8,
+                      bytesPerRow: side * 4,
+                      space: space,
+                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                  )
+            else { return false }
 
-        context.interpolationQuality = .medium
-        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: side, height: side))
+            context.interpolationQuality = .medium
+            context.draw(cgImage, in: CGRect(x: 0, y: 0, width: side, height: side))
+            return true
+        }
+        guard rendered else { return [] }
 
         // CoreGraphics rows run bottom-up; reverse so the grid reads top-first.
         return (0 ..< side).reversed().flatMap { row in
