@@ -99,6 +99,11 @@ tracking. The complete list of network traffic the app produces:
 
 Favorites and recents live in a local SwiftData store on your device.
 
+## Roadmap
+
+Release plans live in `docs/releases/*.md`; the sprint-by-sprint sequencing across releases
+is in [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
 ## Testing
 
 All package test suites (`RadioDirectory`, `Playback`, `Persistence`) run on the mac host with
