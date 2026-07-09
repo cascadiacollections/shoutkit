@@ -70,7 +70,16 @@ public struct StationLink: Equatable, Sendable {
         components.scheme = appScheme
         components.host = "station"
         components.queryItems = queryItems
-        return components.url ?? URL(string: "\(appScheme)://station")!
+
+        if let url = components.url {
+            return url
+        }
+
+        var fallbackComponents = URLComponents()
+        fallbackComponents.scheme = StationLink.appScheme
+        fallbackComponents.host = "station"
+        fallbackComponents.queryItems = queryItems
+        return fallbackComponents.url ?? URL(fileURLWithPath: "/")
     }
 
     public var queryItems: [URLQueryItem] {

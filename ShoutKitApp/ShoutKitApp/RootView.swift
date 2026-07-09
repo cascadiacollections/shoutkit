@@ -19,6 +19,7 @@ struct RootView: View {
     @State private var selectedTab = ShoutKitTab.listenNow
     @State private var isShowingNowPlaying = false
     @State private var isShowingSettings = false
+    @State private var lastHandledLaunchRequestID: UUID?
     @AppStorage("hasCompletedFirstRun") private var hasCompletedFirstRun = false
 
     var body: some View {
@@ -44,9 +45,9 @@ struct RootView: View {
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: StationLaunchCoordinator.notificationName)) { notification in
-                guard let link = notification.object as? StationLink else { return }
-                handle(link)
-                StationLaunchCoordinator.clearPendingLink(link)
+                guard let request = notification.object as? StationLaunchRequest else { return }
+                handle(request)
+                StationLaunchCoordinator.clearPendingRequest(request)
             }
             .task {
                 // Every feature view optional-chains these, so a missing injection
@@ -54,8 +55,8 @@ struct RootView: View {
                 // miss outside of active testing. Catch it loudly in Debug.
                 assertEnvironmentInjected(playback != nil, "PlaybackController was not injected at the app root")
                 assertEnvironmentInjected(library != nil, "LibraryStore was not injected at the app root")
-                if let link = StationLaunchCoordinator.takePendingLink() {
-                    handle(link)
+                if let request = StationLaunchCoordinator.takePendingRequest() {
+                    handle(request)
                 }
             }
     }
@@ -102,7 +103,11 @@ struct RootView: View {
         }
     }
 
-    private func handle(_ link: StationLink) {
+    private func handle(_ request: StationLaunchRequest) {
+        guard lastHandledLaunchRequestID != request.id else { return }
+        lastHandledLaunchRequestID = request.id
+
+        let link = request.link
         selectedTab = .listenNow
         isShowingNowPlaying = link.presentNowPlaying
 

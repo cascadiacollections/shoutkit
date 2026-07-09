@@ -7,11 +7,13 @@ import SwiftData
 @MainActor
 enum StationLaunchCoordinator {
     static let notificationName = Notification.Name("StationLaunchCoordinator.requested")
-    private static var pendingLink: StationLink?
+    @MainActor
+    private static var pendingRequest: StationLaunchRequest?
 
     static func request(_ link: StationLink) {
-        pendingLink = link
-        NotificationCenter.default.post(name: notificationName, object: link)
+        let request = StationLaunchRequest(link: link)
+        pendingRequest = request
+        NotificationCenter.default.post(name: notificationName, object: request)
     }
 
     @discardableResult
@@ -24,14 +26,24 @@ enum StationLaunchCoordinator {
         return true
     }
 
-    static func takePendingLink() -> StationLink? {
-        defer { pendingLink = nil }
-        return pendingLink
+    static func takePendingRequest() -> StationLaunchRequest? {
+        defer { pendingRequest = nil }
+        return pendingRequest
     }
 
-    static func clearPendingLink(_ link: StationLink) {
-        guard pendingLink == link else { return }
-        pendingLink = nil
+    static func clearPendingRequest(_ request: StationLaunchRequest) {
+        guard pendingRequest?.id == request.id else { return }
+        pendingRequest = nil
+    }
+}
+
+struct StationLaunchRequest: Equatable {
+    let id: UUID
+    let link: StationLink
+
+    init(id: UUID = UUID(), link: StationLink) {
+        self.id = id
+        self.link = link
     }
 }
 
