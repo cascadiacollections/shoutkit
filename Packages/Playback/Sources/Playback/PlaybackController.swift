@@ -311,9 +311,7 @@ public final class PlaybackController {
         in stations: [Station],
         excluding stationID: Station.ID?
     ) -> Station? {
-        stations.first { station in
-            station.id != stationID && station.id != activeStation?.id
-        }
+        stations.first { $0.id != stationID }
     }
 }
 

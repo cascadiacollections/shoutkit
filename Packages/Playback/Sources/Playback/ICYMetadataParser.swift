@@ -209,15 +209,28 @@ public enum ICYMetadataParser {
     }
 
     private static func isAdvertisementMarker(_ text: String) -> Bool {
-        let normalized = text
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-            .split(whereSeparator: \.isWhitespace)
-            .joined(separator: " ")
-        if adCueMarkers.contains(normalized) {
-            return true
+        let normalized = normalizedCueText(text)
+        return adCueMarkers.contains(normalized) || advertisementCueMarkers.contains(normalized)
+    }
+
+    private static func normalizedCueText(_ text: String) -> String {
+        var normalized = ""
+        normalized.reserveCapacity(text.count)
+        var previousWasWhitespace = false
+
+        for character in text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+            if character.isWhitespace {
+                if previousWasWhitespace == false {
+                    normalized.append(" ")
+                    previousWasWhitespace = true
+                }
+            } else {
+                normalized.append(character)
+                previousWasWhitespace = false
+            }
         }
-        return advertisementCueMarkers.contains(normalized)
+
+        return normalized
     }
 
     /// The separator is searched in the raw string: trimming first would destroy
