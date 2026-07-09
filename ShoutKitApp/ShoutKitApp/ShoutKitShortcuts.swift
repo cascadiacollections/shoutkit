@@ -4,6 +4,37 @@ import Persistence
 import RadioDirectory
 import SwiftData
 
+@MainActor
+enum StationLaunchCoordinator {
+    static let notificationName = Notification.Name("StationLaunchCoordinator.requested")
+    private static var pendingLink: StationLink?
+
+    static func request(_ link: StationLink) {
+        pendingLink = link
+        NotificationCenter.default.post(name: notificationName, object: link)
+    }
+
+    @discardableResult
+    static func request(url: URL) -> Bool {
+        guard let link = StationLink(url: url) else {
+            return false
+        }
+
+        request(link)
+        return true
+    }
+
+    static func takePendingLink() -> StationLink? {
+        defer { pendingLink = nil }
+        return pendingLink
+    }
+
+    static func clearPendingLink(_ link: StationLink) {
+        guard pendingLink == link else { return }
+        pendingLink = nil
+    }
+}
+
 // MARK: - Station entity
 
 /// A radio station as Siri/Shortcuts sees it. Carries the full snapshot needed to
@@ -129,16 +160,16 @@ enum IntentStationCache {
 struct PlayStationIntent: AppIntent {
     static let title: LocalizedStringResource = "Play Station"
     static let description = IntentDescription("Plays a radio station in ShoutKit.")
+    static let openAppWhenRun = true
 
     @Parameter(title: "Station")
     var station: StationEntity
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        // Reaches the same PlaybackController the app UI drives; bootstrap() is
-        // idempotent, so this is safe even when the intent cold-launches the app.
-        let services = AppDependencies.bootstrap()
-        services.playbackController.play(station.station)
+        // Share the same launch surface as promos, notifications, and URL-based
+        // entry points so every extension path opens the app to the same station.
+        StationLaunchCoordinator.request(StationLink(station: station.station))
         return .result(dialog: "Playing \(station.name)")
     }
 }

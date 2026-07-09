@@ -26,6 +26,9 @@ struct ShoutKitApp: App {
                 .sleepTimer(services.sleepTimer)
                 .settingsStore(services.settingsStore)
                 .tint(.shoutKitAccent)
+                .onOpenURL { url in
+                    _ = StationLaunchCoordinator.request(url: url)
+                }
         }
     }
 }

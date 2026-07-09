@@ -43,12 +43,20 @@ struct RootView: View {
                     hasCompletedFirstRun = true
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: StationLaunchCoordinator.notificationName)) { notification in
+                guard let link = notification.object as? StationLink else { return }
+                handle(link)
+                StationLaunchCoordinator.clearPendingLink(link)
+            }
             .task {
                 // Every feature view optional-chains these, so a missing injection
                 // fails silently (taps do nothing) rather than crashing — easy to
                 // miss outside of active testing. Catch it loudly in Debug.
                 assertEnvironmentInjected(playback != nil, "PlaybackController was not injected at the app root")
                 assertEnvironmentInjected(library != nil, "LibraryStore was not injected at the app root")
+                if let link = StationLaunchCoordinator.takePendingLink() {
+                    handle(link)
+                }
             }
     }
 
@@ -91,6 +99,15 @@ struct RootView: View {
                         .navigationTitle("Favorites")
                 }
             }
+        }
+    }
+
+    private func handle(_ link: StationLink) {
+        selectedTab = .listenNow
+        isShowingNowPlaying = link.presentNowPlaying
+
+        if link.autoPlay {
+            playback?.play(link.station)
         }
     }
 }
