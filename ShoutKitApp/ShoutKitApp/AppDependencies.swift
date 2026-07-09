@@ -20,6 +20,7 @@ struct AppServices {
     /// Retained here: its observation tasks hold it weakly, so this reference
     /// is what keeps the Live Activity following playback for the app's lifetime.
     let activityCoordinator: NowPlayingActivityCoordinator
+    let stationLaunchRouter: StationLaunchRouter
 }
 
 @MainActor
@@ -83,7 +84,8 @@ enum AppDependencies {
             sleepTimer: sleepTimer,
             settingsStore: settings,
             directory: directory,
-            activityCoordinator: activityCoordinator
+            activityCoordinator: activityCoordinator,
+            stationLaunchRouter: StationLaunchRouter()
         )
         Self.services = services
         return services
