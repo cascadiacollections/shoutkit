@@ -1,5 +1,38 @@
 # Decisions
 
+## 2026-07-09 (station deep links: trust model + launch routing)
+
+- **Deep links route through a MainActor `@Observable` router, not an actor + NotificationCenter
+  bridge.** `StationLaunchRouter` (app target, owned by `AppServices`) holds a latest-wins
+  `pending: StationLink?`; `onOpenURL` writes it synchronously and `RootView` drains it with
+  `.onChange(of:initial:true)` — the `initial` pass covers a link that arrives before the root
+  view exists (cold launch), so there is no listener handshake at all. Every producer and
+  consumer here is already MainActor, so the earlier actor-based coordinator only added
+  suspension points, and with them delivery races (a post landing between listener activation
+  and async-sequence subscription was silently dropped; an unserialized deactivate could kill
+  delivery for the session; an undeleted pending request replayed on re-appear). The router
+  makes those bug classes structurally impossible rather than patched.
+- **`PlayStationIntent` stays headless: `AudioPlaybackIntent`, direct `PlaybackController.play`,
+  no `openAppWhenRun`.** Reaffirms the 2026-07-03 decision that intents share the controller via
+  `AppDependencies.bootstrap()` and never need the view hierarchy. Routing the intent through
+  the deep-link surface had forced a foreground launch — which on a locked device demands unlock
+  before "Hey Siri, play KEXP" can run, exactly the hands-free scenario the intent exists for.
+  Opening the app is inherent to a *URL* launch, so only URL entry points use the router.
+- **Deep-link URLs are parsed as untrusted input.** Any installed app or web page can open a
+  custom-scheme URL, so `StationLink(url:)` accepts only the `shoutkit` scheme (the
+  universal-link-style path fallback is gone until associated domains actually ship, at which
+  point it needs a host allow-list), only the canonical query items `url()` emits (the
+  id/stream/url alias fan-in was unowned API surface), and only https stream/artwork URLs — a
+  crafted link must not point playback at cleartext or local-scheme resources. Residual accepted
+  risk, recorded deliberately: a link can still name an arbitrary https stream with arbitrary
+  display metadata; opening a link is a user action, and the same risk profile applies to any
+  radio app with URL-openable stations. Revisit (resolve-by-id against the directory, or an
+  autoplay confirmation) if links ever arrive from less user-mediated surfaces.
+- **`StationLink` stays in RadioDirectory despite carrying the app scheme.** Layering-wise it is
+  app routing policy and belongs in the app target, but CI's test jobs run package tests only —
+  moving it would orphan its round-trip/rejection suite. Accepted tradeoff until an app-hosted
+  unit-test target exists.
+
 ## 2026-07-06 (Now Playing artwork: ambient acrylic backdrop + Liquid Glass hero)
 
 - **Now Playing's artwork treatment moved into DesignSystem as two composable components**

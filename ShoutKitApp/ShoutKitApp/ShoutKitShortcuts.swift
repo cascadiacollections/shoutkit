@@ -4,54 +4,6 @@ import Persistence
 import RadioDirectory
 import SwiftData
 
-actor StationLaunchCoordinator {
-    static let notificationName = Notification.Name("StationLaunchCoordinator.requested")
-    static let shared = StationLaunchCoordinator()
-
-    private var pendingRequest: StationLaunchRequest?
-    private var hasActiveListener = false
-
-    private init() {}
-
-    func request(_ link: StationLink) {
-        let request = StationLaunchRequest(link: link)
-        pendingRequest = request
-
-        guard hasActiveListener else { return }
-        NotificationCenter.default.post(name: Self.notificationName, object: request)
-    }
-
-    @discardableResult
-    func request(url: URL) -> Bool {
-        guard let link = StationLink(url: url) else {
-            return false
-        }
-
-        request(link)
-        return true
-    }
-
-    func activateListener() -> StationLaunchRequest? {
-        hasActiveListener = true
-        defer { pendingRequest = nil }
-        return pendingRequest
-    }
-
-    func deactivateListener() {
-        hasActiveListener = false
-    }
-}
-
-struct StationLaunchRequest: Equatable, Sendable {
-    let id: UUID
-    let link: StationLink
-
-    init(id: UUID = UUID(), link: StationLink) {
-        self.id = id
-        self.link = link
-    }
-}
-
 // MARK: - Station entity
 
 /// A radio station as Siri/Shortcuts sees it. Carries the full snapshot needed to
@@ -174,19 +126,23 @@ enum IntentStationCache {
 
 // MARK: - Intents
 
-struct PlayStationIntent: AppIntent {
+/// AudioPlaybackIntent keeps this headless: Siri/Shortcuts start audio without
+/// foregrounding the app (or demanding unlock), which is the whole point of
+/// "Hey Siri, play KEXP" while driving. Deep links use StationLaunchRouter
+/// instead because opening the app is inherent to a URL launch.
+struct PlayStationIntent: AudioPlaybackIntent {
     static let title: LocalizedStringResource = "Play Station"
     static let description = IntentDescription("Plays a radio station in ShoutKit.")
-    static let openAppWhenRun = true
 
     @Parameter(title: "Station")
     var station: StationEntity
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        // Share the same launch surface as promos, notifications, and URL-based
-        // entry points so every extension path opens the app to the same station.
-        await StationLaunchCoordinator.shared.request(StationLink(station: station.station))
+        // Reaches the same PlaybackController the app UI drives; bootstrap() is
+        // idempotent, so this is safe even when the intent cold-launches the app.
+        let services = AppDependencies.bootstrap()
+        services.playbackController.play(station.station)
         return .result(dialog: "Playing \(station.name)")
     }
 }

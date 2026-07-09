@@ -77,9 +77,10 @@ implementation details stay behind protocol or actor boundaries.
 The app `Info.plist` declares `UIBackgroundModes = audio` for streaming playback and
 `NSSupportsLiveActivities` for the lock screen / Dynamic Island now-playing Live Activity (the
 `ShoutKitWidgets` extension target, driven by `NowPlayingActivityCoordinator` from playback
-state). App Intents plus `shoutkit://station?...` deep links power Siri/Shortcuts, promos,
-notifications, and other station-launch entry points today. Later milestones will add Home
-Screen widgets, Control Center controls, and CarPlay.
+state). App Intents power Siri/Shortcuts with headless background playback (no app foregrounding),
+and `shoutkit://station?...` deep links open the app to a station for promos, notifications, and
+other launch entry points. Later milestones will add Home Screen widgets, Control Center
+controls, and CarPlay.
 
 ## Privacy
 

@@ -11,6 +11,7 @@ import SwiftUI
 
 struct RootView: View {
     let directory: any RadioDirectoryProviding
+    let launchRouter: StationLaunchRouter
 
     // Read only to verify injection below; feature views read these themselves.
     @Environment(\.playbackController) private var playback
@@ -19,7 +20,6 @@ struct RootView: View {
     @State private var selectedTab = ShoutKitTab.listenNow
     @State private var isShowingNowPlaying = false
     @State private var isShowingSettings = false
-    @State private var stationLaunchTask: Task<Void, Never>?
     @AppStorage("hasCompletedFirstRun") private var hasCompletedFirstRun = false
 
     var body: some View {
@@ -44,42 +44,19 @@ struct RootView: View {
                     hasCompletedFirstRun = true
                 }
             }
-            .onAppear {
-                let previousTask = stationLaunchTask
-                previousTask?.cancel()
-
-                stationLaunchTask = Task { @MainActor in
-                    _ = await previousTask?.value
-
-                    // Every feature view optional-chains these, so a missing injection
-                    // fails silently (taps do nothing) rather than crashing — easy to
-                    // miss outside of active testing. Catch it loudly in Debug.
-                    assertEnvironmentInjected(playback != nil, "PlaybackController was not injected at the app root")
-                    assertEnvironmentInjected(library != nil, "LibraryStore was not injected at the app root")
-                    if let request = await StationLaunchCoordinator.shared.activateListener() {
-                        handle(request)
-                    }
-
-                    for await notification in NotificationCenter.default.notifications(
-                        named: StationLaunchCoordinator.notificationName
-                    ) {
-                        if Task.isCancelled {
-                            break
-                        }
-
-                        guard let request = notification.object as? StationLaunchRequest else { continue }
-                        handle(request)
-                    }
-                }
+            .task {
+                // Every feature view optional-chains these, so a missing injection
+                // fails silently (taps do nothing) rather than crashing — easy to
+                // miss outside of active testing. Catch it loudly in Debug.
+                assertEnvironmentInjected(playback != nil, "PlaybackController was not injected at the app root")
+                assertEnvironmentInjected(library != nil, "LibraryStore was not injected at the app root")
             }
-            .onDisappear {
-                let activeTask = stationLaunchTask
-                stationLaunchTask = nil
-                activeTask?.cancel()
-                Task {
-                    _ = await activeTask?.value
-                    await StationLaunchCoordinator.shared.deactivateListener()
-                }
+            // `initial: true` drains a link that arrived before this view existed
+            // (cold launch via deep link), so no listener handshake is needed.
+            .onChange(of: launchRouter.pending, initial: true) { _, link in
+                guard let link else { return }
+                launchRouter.clearPending()
+                handle(link)
             }
     }
 
@@ -125,13 +102,23 @@ struct RootView: View {
         }
     }
 
-    private func handle(_ request: StationLaunchRequest) {
-        let link = request.link
+    private func handle(_ link: StationLink) {
         selectedTab = .listenNow
-        isShowingNowPlaying = link.presentNowPlaying
+        // An absent flag is inert — it must not yank down a sheet the user is in.
+        if link.presentNowPlaying {
+            isShowingNowPlaying = true
+        }
 
-        if link.autoPlay {
-            playback?.play(link.station)
+        guard link.autoPlay, let playback else { return }
+
+        // A repeated link must not tear down and reconnect a live stream.
+        switch playback.phase(for: link.station) {
+        case .playing, .loading:
+            break
+        case .paused, .failed:
+            playback.resume()
+        case .idle:
+            playback.play(link.station)
         }
     }
 }
@@ -144,6 +131,6 @@ private enum ShoutKitTab: Hashable {
 }
 
 #Preview {
-    RootView(directory: PreviewRadioDirectory())
+    RootView(directory: PreviewRadioDirectory(), launchRouter: StationLaunchRouter())
         .tint(.shoutKitAccent)
 }

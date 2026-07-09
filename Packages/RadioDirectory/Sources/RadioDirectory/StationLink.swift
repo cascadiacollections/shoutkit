@@ -1,7 +1,12 @@
 import Foundation
 
-/// A station launch payload that can round-trip through a deep link for
-/// Shortcuts, notifications, promos, or other app-extension entry points.
+/// A station launch payload that can round-trip through an app-scheme deep link
+/// for Shortcuts, notifications, promos, or other app-extension entry points.
+///
+/// Links are untrusted input — any installed app or web page can open one — so
+/// the parser accepts only the app scheme, exactly the query items ``url()``
+/// emits, and https remote URLs. In-process callers construct the payload
+/// directly and never round-trip through a URL.
 public struct StationLink: Equatable, Sendable {
     public static let appScheme = "shoutkit"
 
@@ -21,51 +26,36 @@ public struct StationLink: Equatable, Sendable {
 
     public init?(url: URL, appScheme: String = StationLink.appScheme) {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let route = Self.route(from: url, appScheme: appScheme),
+              components.scheme?.caseInsensitiveCompare(appScheme) == .orderedSame,
               // Accept both a noun (`station`) and a verb (`play`) so promos,
               // notifications, and shortcuts can use whichever reads best.
+              let route = components.host?.lowercased(),
               route == "station" || route == "play" else {
             return nil
         }
 
         let items = components.queryItems ?? []
+        let streamURL = Self.httpsURLValue(in: items, named: "streamURL")
         // Promos/notifications may only know the stream URL. In that case use it
         // as a stable synthetic id so the app can still route and play the target.
-        let stationID = Self.value(in: items, named: "id")
-            ?? Self.value(in: items, named: "stationID")
-            ?? Self.value(in: items, named: "stationId")
-            ?? Self.value(in: items, named: "streamURL")
-            ?? Self.value(in: items, named: "stream")
-            ?? Self.value(in: items, named: "url")
-        let name = Self.value(in: items, named: "name")
-            ?? Self.value(in: items, named: "title")
-            ?? stationID
+        let stationID = Self.value(in: items, named: "id") ?? streamURL?.absoluteString
+        let name = Self.value(in: items, named: "name") ?? stationID
 
         guard let stationID, let name else {
             return nil
         }
 
-        let genre = Self.value(in: items, named: "genre") ?? ""
-        let listenerCount = Int(Self.value(in: items, named: "listenerCount") ?? "") ?? 0
-        let bitrate = Int(Self.value(in: items, named: "bitrate") ?? "")
-        let artworkURL = Self.urlValue(in: items, named: ["artworkURL", "artwork"])
-        let streamURL = Self.urlValue(in: items, named: ["streamURL", "stream", "url"])
-
         station = Station(
             id: stationID,
             name: name,
-            genre: genre,
-            listenerCount: listenerCount,
-            bitrate: bitrate,
-            artworkURL: artworkURL,
+            genre: Self.value(in: items, named: "genre") ?? "",
+            listenerCount: Int(Self.value(in: items, named: "listenerCount") ?? "") ?? 0,
+            bitrate: Int(Self.value(in: items, named: "bitrate") ?? ""),
+            artworkURL: Self.httpsURLValue(in: items, named: "artworkURL"),
             preferredStreamURL: streamURL
         )
-        autoPlay = Self.boolValue(in: items, named: ["autoPlay", "autoplay"], default: true)
-        presentNowPlaying = Self.boolValue(
-            in: items,
-            named: ["presentNowPlaying", "present", "showNowPlaying"],
-            default: true
-        )
+        autoPlay = Self.boolValue(in: items, named: "autoPlay") ?? true
+        presentNowPlaying = Self.boolValue(in: items, named: "presentNowPlaying") ?? true
     }
 
     public func url() -> URL {
@@ -75,6 +65,8 @@ public struct StationLink: Equatable, Sendable {
         components.queryItems = queryItems
 
         guard let url = components.url else {
+            // Unreachable in practice: scheme/host are constants and
+            // URLComponents percent-encodes query-item values.
             preconditionFailure(
                 "StationLink produced an invalid shoutkit URL for station '\(station.id)'. " +
                     "One of the station fields may contain characters that cannot be URL-encoded."
@@ -109,14 +101,6 @@ public struct StationLink: Equatable, Sendable {
         return items
     }
 
-    private static func route(from url: URL, appScheme: String) -> String? {
-        if url.scheme?.caseInsensitiveCompare(appScheme) == .orderedSame {
-            return url.host?.lowercased()
-        }
-
-        return url.pathComponents.dropFirst().first?.lowercased()
-    }
-
     private static func value(in items: [URLQueryItem], named name: String) -> String? {
         guard let value = items.first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame })?.value else {
             return nil
@@ -125,34 +109,27 @@ public struct StationLink: Equatable, Sendable {
         return value.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
     }
 
-    private static func urlValue(in items: [URLQueryItem], named names: [String]) -> URL? {
-        names.lazy
-            .compactMap { value(in: items, named: $0) }
-            .compactMap(URL.init(string:))
-            .first
-    }
-
-    private static func boolValue(
-        in items: [URLQueryItem],
-        named names: [String],
-        default defaultValue: Bool
-    ) -> Bool {
-        for name in names {
-            guard let rawValue = value(in: items, named: name)?.lowercased() else {
-                continue
-            }
-
-            switch rawValue {
-            case "0", "false", "no":
-                return false
-            case "1", "true", "yes":
-                return true
-            default:
-                continue
-            }
+    /// Remote URLs arriving through a link must be https: a crafted deep link
+    /// must not be able to point playback or artwork at cleartext or
+    /// local-scheme resources.
+    private static func httpsURLValue(in items: [URLQueryItem], named name: String) -> URL? {
+        guard let url = value(in: items, named: name).flatMap(URL.init(string:)),
+              url.scheme?.caseInsensitiveCompare("https") == .orderedSame else {
+            return nil
         }
 
-        return defaultValue
+        return url
+    }
+
+    private static func boolValue(in items: [URLQueryItem], named name: String) -> Bool? {
+        switch value(in: items, named: name)?.lowercased() {
+        case "1", "true":
+            return true
+        case "0", "false":
+            return false
+        default:
+            return nil
+        }
     }
 }
 

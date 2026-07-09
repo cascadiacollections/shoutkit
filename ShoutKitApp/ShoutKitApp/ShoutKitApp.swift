@@ -19,7 +19,7 @@ struct ShoutKitApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView(directory: services.directory)
+            RootView(directory: services.directory, launchRouter: services.stationLaunchRouter)
                 .modelContainer(services.container)
                 .libraryStore(services.libraryStore)
                 .playbackController(services.playbackController)
@@ -27,9 +27,7 @@ struct ShoutKitApp: App {
                 .settingsStore(services.settingsStore)
                 .tint(.shoutKitAccent)
                 .onOpenURL { url in
-                    Task {
-                        _ = await StationLaunchCoordinator.shared.request(url: url)
-                    }
+                    services.stationLaunchRouter.open(url: url)
                 }
         }
     }

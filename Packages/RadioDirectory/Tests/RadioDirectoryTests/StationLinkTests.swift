@@ -22,8 +22,8 @@ struct StationLinkTests {
     }
 
     @Test
-    func parsesMinimalStationLinks() {
-        let url = URL(string: "shoutkit://station?name=KEXP&streamURL=https://example.com/live.mp3")!
+    func parsesMinimalStationLinks() throws {
+        let url = try #require(URL(string: "shoutkit://station?name=KEXP&streamURL=https://example.com/live.mp3"))
 
         let parsed = StationLink(url: url)
 
@@ -36,14 +36,45 @@ struct StationLinkTests {
     }
 
     @Test
-    func parsesUniversalLinkStyleStationRoutes() {
-        let url = URL(string: "https://example.com/station?id=kexp&name=KEXP&autoplay=0&present=0")!
+    func parsesPlayRouteWithExplicitFlags() throws {
+        let url = try #require(URL(string: "shoutkit://play?id=kexp&name=KEXP&autoPlay=0&presentNowPlaying=false"))
 
         let parsed = StationLink(url: url)
 
         #expect(parsed?.station.id == "kexp")
-        #expect(parsed?.station.name == "KEXP")
         #expect(parsed?.autoPlay == false)
         #expect(parsed?.presentNowPlaying == false)
+    }
+
+    @Test(arguments: [
+        // Only the registered app scheme routes; universal-link-style URLs are
+        // not configured (no associated domains) and must not parse.
+        "https://example.com/station?id=kexp&name=KEXP",
+        "file:///station?id=kexp&name=KEXP",
+        // Unknown route hosts must not parse.
+        "shoutkit://settings?id=kexp&name=KEXP",
+        // A station identified only by a cleartext stream URL has no usable
+        // id or playable stream, so the whole link is rejected.
+        "shoutkit://station?name=KEXP&streamURL=http://example.com/live.mp3",
+        // No id and no name.
+        "shoutkit://station?genre=News"
+    ])
+    func rejectsUntrustedOrMalformedLinks(urlString: String) throws {
+        let url = try #require(URL(string: urlString))
+
+        #expect(StationLink(url: url) == nil)
+    }
+
+    @Test
+    func dropsCleartextRemoteURLsButKeepsIdentifiedStation() throws {
+        let url = try #require(URL(
+            string: "shoutkit://station?id=kexp&streamURL=http://x.example/s.mp3&artworkURL=http://x.example/a.png"
+        ))
+
+        let parsed = StationLink(url: url)
+
+        #expect(parsed?.station.id == "kexp")
+        #expect(parsed?.station.preferredStreamURL == nil)
+        #expect(parsed?.station.artworkURL == nil)
     }
 }
