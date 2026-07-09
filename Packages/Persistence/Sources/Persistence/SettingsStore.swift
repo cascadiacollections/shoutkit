@@ -9,6 +9,7 @@ import Observation
 public final class SettingsStore {
     private enum Keys {
         static let playReporting = "settings.playReportingEnabled"
+        static let albumArt = "settings.albumArtEnabled"
     }
 
     /// Whether plays are reported to Radio-Browser (station UUID only, per that
@@ -19,10 +20,19 @@ public final class SettingsStore {
         didSet { defaults.set(isPlayReportingEnabled, forKey: Keys.playReporting) }
     }
 
+    /// Whether the app fetches album artwork from the iTunes Search API when
+    /// track metadata is available and uses it in the Now Playing UI. Defaults
+    /// to on. Opt-out is provided for users who prefer station artwork only or
+    /// who want to avoid the supplemental iTunes network request.
+    public var isAlbumArtEnabled: Bool {
+        didSet { defaults.set(isAlbumArtEnabled, forKey: Keys.albumArt) }
+    }
+
     @ObservationIgnored private let defaults: UserDefaults
 
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         isPlayReportingEnabled = defaults.object(forKey: Keys.playReporting) as? Bool ?? true
+        isAlbumArtEnabled = defaults.object(forKey: Keys.albumArt) as? Bool ?? true
     }
 }

@@ -1,3 +1,4 @@
+import DesignSystem
 import Foundation
 import NowPlayingActivityKit
 import Persistence
@@ -51,6 +52,13 @@ enum AppDependencies {
                     await playReporter.reportPlay(stationID: station.id)
                 }
             }
+        }
+
+        // Best-effort album art from the iTunes Search API. The closure is
+        // nonisolated; settings opt-out is enforced in the views (which read
+        // settings reactively) and on the lock screen on the next track change.
+        controller.albumArtURLProvider = { artist, title in
+            await AlbumArtLookup.artworkURL(artist: artist, title: title)
         }
 
         // Lock screen / Dynamic Island Live Activity follows playback by

@@ -39,17 +39,20 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
 
     public init() {}
 
-    public func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool) {
+    public func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool, artworkURL: URL?) {
         if session == nil {
             state.commands = makeCommands()
             session = MediaSession(state)
         }
 
+        // Prefer album art URL when provided; fall back to the station's own artwork.
+        let targetArtworkURL = artworkURL ?? station.artworkURL
+
         var content = RadioContent(
             id: station.id,
             stationName: station.name,
             programName: programName(for: track),
-            artwork: artwork(for: station.artworkURL)
+            artwork: artwork(for: targetArtworkURL)
         )
         content.genre = station.genre.isEmpty ? nil : station.genre
         state.content = content

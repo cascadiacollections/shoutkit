@@ -16,10 +16,25 @@ public protocol NowPlayingPresenting: AnyObject {
     var onToggle: (() -> Void)? { get set }
 
     /// Pushes current station + live track metadata to the system surface.
-    func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool)
+    ///
+    /// - Parameters:
+    ///   - station:    The currently playing station.
+    ///   - track:      Live ICY track metadata, if available.
+    ///   - isPlaying:  Whether playback is active.
+    ///   - artworkURL: Optional album art URL to display in preference to the
+    ///                 station's own artwork. Pass `nil` to fall back to the
+    ///                 station URL.
+    func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool, artworkURL: URL?)
 
     /// Removes the now-playing item from the system surface.
     func clear()
+}
+
+extension NowPlayingPresenting {
+    /// Convenience overload that uses only station artwork (no album art override).
+    public func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool) {
+        update(station: station, track: track, isPlaying: isPlaying, artworkURL: nil)
+    }
 }
 
 #if canImport(UIKit)
@@ -99,7 +114,7 @@ public final class NowPlayingCenter: NowPlayingPresenting {
     }
 
     /// Pushes current station + live track metadata to the system.
-    public func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool) {
+    public func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool, artworkURL: URL?) {
         hasActiveItem.withLock { $0 = true }
 
         var info: [String: Any] = [:]
@@ -111,14 +126,17 @@ public final class NowPlayingCenter: NowPlayingPresenting {
         info[MPNowPlayingInfoPropertyIsLiveStream] = true
         info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0
 
-        // Only attach cached artwork if it belongs to this station's URL —
+        // Prefer album art URL when provided; fall back to the station's own artwork.
+        let targetArtworkURL = artworkURL ?? station.artworkURL
+
+        // Only attach cached artwork if it belongs to the current target URL —
         // otherwise the previous station's art would show on the lock screen.
-        if let cachedArtwork, artworkCacheURL == station.artworkURL {
+        if let cachedArtwork, artworkCacheURL == targetArtworkURL {
             info[MPMediaItemPropertyArtwork] = cachedArtwork
         }
 
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
-        loadArtworkIfNeeded(from: station.artworkURL)
+        loadArtworkIfNeeded(from: targetArtworkURL)
     }
 
     public func clear() {

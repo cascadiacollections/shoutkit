@@ -39,7 +39,7 @@ final class NowPlayingPresenterSpy: NowPlayingPresenting {
 
     var lastUpdate: Event? { events.last(where: { $0 != .clear }) }
 
-    func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool) {
+    func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool, artworkURL: URL?) {
         events.append(.update(stationID: station.id, trackTitle: track?.title, isPlaying: isPlaying))
     }
 

@@ -1,6 +1,37 @@
 # Decisions
 
-## 2026-07-06 (Now Playing artwork: ambient acrylic backdrop + Liquid Glass hero)
+## 2026-07-09 (Album art discovery)
+
+- **Album art source**: iTunes Search API (`itunes.apple.com/search?entity=song&limit=1`).
+  Free, keyless, widely available. Chosen over MusicBrainz (slower, more complex JSON) and
+  Discogs (requires an API key). The endpoint returns `artworkUrl100`; we up-size to `600x600bb`
+  by string-replacing the suffix — a documented Apple pattern.
+- **`AlbumArtLookup` in DesignSystem, not Playback**: Playback is deliberately thin (it compiles
+  and tests on macOS without UIKit). DesignSystem already owns `ArtworkLoader` and the rest of
+  the artwork pipeline, so the lookup naturally lives there.
+- **`albumArtURLProvider` hook on `PlaybackController`**: the controller resolves album art via
+  an injected async closure, keeping Playback free of any DesignSystem / iTunes dependency.
+  `AppDependencies.bootstrap()` wires the closure to `AlbumArtLookup.artworkURL`. The pattern
+  mirrors `onStationPlayed` (existing) and means the Playback test suite never touches the API.
+- **Opt-out in `SettingsStore` (Persistence), checked in views**: `isAlbumArtEnabled` defaults
+  on. The views (`NowPlayingView`, `MiniPlayerView`) check the setting reactively via
+  `effectiveArtworkURL`, so toggling the setting takes effect immediately in the UI without
+  restarting playback. The lock screen respects the setting on the next track change (acceptable
+  "best effort").
+- **`NowPlayingPresenting.update()` gains `artworkURL: URL?`**: the protocol extension provides
+  a backwards-compatible zero-parameter overload (`artworkURL: nil`) so existing test-spy
+  conformances needed only a one-line signature change. The `NowPlayingCenter` (legacy
+  MediaPlayer) and `MediaSessionNowPlayingCenter` (NowPlaying framework) both prefer the
+  supplied URL when non-nil, falling back to `station.artworkURL`.
+- **Positive-result NSCache in `AlbumArtLookup`**: transient lookup failures don't permanently
+  suppress art (negative results are not cached), but a second track with the same artist/title
+  (common for repeating radio formats) reuses the cached URL without a second API hit.
+- **Staleness guard in the album art task**: after `await provider(artist, title)` resolves,
+  the task checks that `nowPlaying.artist` and `nowPlaying.title` still match before applying
+  the result — otherwise a slow network response for a previous track would overwrite the
+  current track's (potentially correct) artwork.
+
+
 
 - **Now Playing's artwork treatment moved into DesignSystem as two composable components**
   instead of view-local styling in `NowPlayingView`: `AmbientArtworkBackdrop` (station artwork

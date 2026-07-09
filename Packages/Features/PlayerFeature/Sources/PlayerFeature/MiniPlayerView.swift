@@ -11,6 +11,7 @@ import SwiftUI
 public struct MiniPlayerView: View {
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
+    @Environment(\.settingsStore) private var settings
 
     private let onExpand: () -> Void
 
@@ -24,6 +25,15 @@ public struct MiniPlayerView: View {
         } else {
             idlePlaceholder
         }
+    }
+
+    /// The artwork URL to display: album art when the feature is enabled and a
+    /// URL has been resolved, otherwise the station's own artwork.
+    private func effectiveArtworkURL(for station: Station) -> URL? {
+        if settings?.isAlbumArtEnabled == true, let albumArt = playback?.albumArtURL {
+            return albumArt
+        }
+        return station.artworkURL
     }
 
     private var idlePlaceholder: some View {
@@ -46,7 +56,7 @@ public struct MiniPlayerView: View {
     private func content(playback: PlaybackController, station: Station) -> some View {
         HStack(spacing: ShoutKitSpacing.small) {
             StationArtworkView(
-                artworkURL: station.artworkURL,
+                artworkURL: effectiveArtworkURL(for: station),
                 size: 40,
                 cornerRadius: ShoutKitRadius.small,
                 isPlaying: isPlaying(playback)
