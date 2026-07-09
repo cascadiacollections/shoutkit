@@ -46,7 +46,7 @@ public enum ICYMetadataParser {
     /// title reads as a glitch, so they're suppressed (the UI falls back to
     /// the station name).
     private static let adCueMarkers: Set<String> = ["spot block start", "spot block end"]
-    private static let advertisementCuePhrases = [
+    private static let advertisementCuePhrases: Set<String> = [
         "spot block",
         "commercial break",
         "ad break",
@@ -210,11 +210,15 @@ public enum ICYMetadataParser {
     }
 
     private static func isAdvertisementMarker(_ text: String) -> Bool {
-        let normalized = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalized = text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .split(whereSeparator: \.isWhitespace)
+            .joined(separator: " ")
         if adCueMarkers.contains(normalized) {
             return true
         }
-        return advertisementCuePhrases.contains(where: normalized.contains)
+        return advertisementCuePhrases.contains(normalized)
     }
 
     /// The separator is searched in the raw string: trimming first would destroy

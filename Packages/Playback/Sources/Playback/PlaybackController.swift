@@ -288,15 +288,15 @@ public final class PlaybackController {
 
     private func ambientFallbackStation(excluding stationID: Station.ID?) async -> Station? {
         for genre in ["Ambient", "Nature"] {
-            if let station = try? await directory.stations(inGenre: genre, limit: 5)
-                .first(where: { $0.id != stationID }) {
+            if let stations = try? await directory.stations(inGenre: genre, limit: 5),
+               let station = stations.first(where: { $0.id != stationID }) {
                 return station
             }
         }
 
         for query in ["ambient", "nature", "sleep", "meditation"] {
-            if let station = try? await directory.searchStations(matching: query, limit: 5)
-                .first(where: { $0.id != stationID }) {
+            if let stations = try? await directory.searchStations(matching: query, limit: 5),
+               let station = stations.first(where: { $0.id != stationID }) {
                 return station
             }
         }

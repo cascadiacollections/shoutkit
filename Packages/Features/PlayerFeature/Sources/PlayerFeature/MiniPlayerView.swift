@@ -121,7 +121,7 @@ public struct MiniPlayerView: View {
             return "Tap to retry"
         default:
             if playback.isAdPlaying {
-                return "Ad detected • open player for ambient"
+                return "Ad detected — open player for ambient"
             }
             if let track = playback.nowPlaying, let title = track.title {
                 if let artist = track.artist { return "\(title) — \(artist)" }

@@ -128,6 +128,13 @@ struct ICYMetadataParserTests {
         #expect(info.title == nil)
     }
 
+    @Test func songTitleContainingAdvertisementIsNotMarkedAsAd() {
+        let info = ICYMetadataParser.parseTrack(from: "Artist - The Advertisement of Love")
+        #expect(info.isAdvertisement == false)
+        #expect(info.artist == "Artist")
+        #expect(info.title == "The Advertisement of Love")
+    }
+
     @Test func spaceSeparatedCueMetadataSplitsArtistTitleInTextField() {
         let info = ICYMetadataParser.parseTrack(
             from: "text=\"Journey - Don't Stop Believin\" amgTrackId=\"123\" length=\"00:00:00\""
