@@ -46,7 +46,7 @@ public enum ICYMetadataParser {
     /// title reads as a glitch, so they're suppressed (the UI falls back to
     /// the station name).
     private static let adCueMarkers: Set<String> = ["spot block start", "spot block end"]
-    private static let advertisementCuePhrases: Set<String> = [
+    private static let advertisementCueMarkers: Set<String> = [
         "spot block",
         "commercial break",
         "ad break"
@@ -217,7 +217,7 @@ public enum ICYMetadataParser {
         if adCueMarkers.contains(normalized) {
             return true
         }
-        return advertisementCuePhrases.contains(normalized)
+        return advertisementCueMarkers.contains(normalized)
     }
 
     /// The separator is searched in the raw string: trimming first would destroy

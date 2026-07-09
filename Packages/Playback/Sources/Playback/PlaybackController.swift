@@ -287,29 +287,33 @@ public final class PlaybackController {
     }
 
     private func ambientFallbackStation(excluding stationID: Station.ID?) async -> Station? {
-        async let ambientGenreStations = try? await directory.stations(inGenre: "Ambient", limit: 5)
-        async let natureGenreStations = try? await directory.stations(inGenre: "Nature", limit: 5)
-        async let ambientSearchStations = try? await directory.searchStations(matching: "ambient", limit: 5)
-        async let natureSearchStations = try? await directory.searchStations(matching: "nature", limit: 5)
-        async let sleepSearchStations = try? await directory.searchStations(matching: "sleep", limit: 5)
-        async let meditationSearchStations = try? await directory.searchStations(matching: "meditation", limit: 5)
+        if let stations = try? await directory.stations(inGenre: "Ambient", limit: 5),
+           let station = firstAmbientFallbackCandidate(in: stations, excluding: stationID) {
+            return station
+        }
 
-        let candidateGroups = await [
-            ambientGenreStations,
-            natureGenreStations,
-            ambientSearchStations,
-            natureSearchStations,
-            sleepSearchStations,
-            meditationSearchStations
-        ]
+        if let stations = try? await directory.stations(inGenre: "Nature", limit: 5),
+           let station = firstAmbientFallbackCandidate(in: stations, excluding: stationID) {
+            return station
+        }
 
-        for stations in candidateGroups {
-            if let station = stations?.first(where: { $0.id != stationID }) {
+        for query in ["ambient", "nature", "sleep", "meditation"] {
+            if let stations = try? await directory.searchStations(matching: query, limit: 5),
+               let station = firstAmbientFallbackCandidate(in: stations, excluding: stationID) {
                 return station
             }
         }
 
         return nil
+    }
+
+    private func firstAmbientFallbackCandidate(
+        in stations: [Station],
+        excluding stationID: Station.ID?
+    ) -> Station? {
+        stations.first { station in
+            station.id != stationID && station.id != activeStation?.id
+        }
     }
 }
 
