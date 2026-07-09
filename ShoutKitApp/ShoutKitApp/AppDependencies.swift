@@ -1,3 +1,4 @@
+import DesignSystem
 import Foundation
 import NowPlayingActivityKit
 import Persistence
@@ -19,6 +20,7 @@ struct AppServices {
     /// Retained here: its observation tasks hold it weakly, so this reference
     /// is what keeps the Live Activity following playback for the app's lifetime.
     let activityCoordinator: NowPlayingActivityCoordinator
+    let stationLaunchRouter: StationLaunchRouter
 }
 
 @MainActor
@@ -53,6 +55,16 @@ enum AppDependencies {
             }
         }
 
+        // Best-effort album art from the iTunes Search API. Gated here, at the
+        // source, so opting out stops the supplemental network request itself —
+        // the toggle lives under Privacy and must mean what it says. The views
+        // also read the setting reactively (flipping it updates the UI
+        // immediately); the lock screen follows on the next track change.
+        controller.albumArtURLProvider = { track in
+            guard settings.isAlbumArtEnabled else { return nil }
+            return await AlbumArtLookup.artworkURL(artist: track.artist, title: track.title)
+        }
+
         // Lock screen / Dynamic Island Live Activity follows playback by
         // observing the controller's @Observable state directly.
         let activityCoordinator = NowPlayingActivityCoordinator()
@@ -72,7 +84,8 @@ enum AppDependencies {
             sleepTimer: sleepTimer,
             settingsStore: settings,
             directory: directory,
-            activityCoordinator: activityCoordinator
+            activityCoordinator: activityCoordinator,
+            stationLaunchRouter: StationLaunchRouter()
         )
         Self.services = services
         return services

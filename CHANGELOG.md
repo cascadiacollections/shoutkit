@@ -7,6 +7,11 @@ All notable changes to ShoutKit are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Album art discovery**: when ICY stream metadata contains both artist and title, the app
+  queries the iTunes Search API (keyless, best-effort) and shows the resolved album artwork in
+  the Now Playing hero, mini-player thumbnail, and lock screen / Control Center. Falls back to
+  the station's own artwork if the lookup fails or returns no result. Opt-out via
+  **Settings → Privacy → Fetch Album Artwork** (defaults on)
 - Settings → About shows the build's short git commit next to the version (`0.2.0 (12) · a1b2c3d`),
   so a beta tester's screenshot maps to an exact source revision for bug repro. Stamped at build
   time via the `GIT_COMMIT_SHA` setting; the line stays clean (no commit) for local dev builds

@@ -126,7 +126,11 @@ enum IntentStationCache {
 
 // MARK: - Intents
 
-struct PlayStationIntent: AppIntent {
+/// AudioPlaybackIntent keeps this headless: Siri/Shortcuts start audio without
+/// foregrounding the app (or demanding unlock), which is the whole point of
+/// "Hey Siri, play KEXP" while driving. Deep links use StationLaunchRouter
+/// instead because opening the app is inherent to a URL launch.
+struct PlayStationIntent: AudioPlaybackIntent {
     static let title: LocalizedStringResource = "Play Station"
     static let description = IntentDescription("Plays a radio station in ShoutKit.")
 

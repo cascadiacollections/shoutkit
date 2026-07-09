@@ -30,4 +30,23 @@ struct SettingsStoreTests {
         let reloadedAgain = SettingsStore(defaults: defaults)
         #expect(reloadedAgain.isPlayReportingEnabled == true)
     }
+
+    @Test func albumArtDefaultsToEnabled() throws {
+        let store = SettingsStore(defaults: try makeDefaults())
+        #expect(store.isAlbumArtEnabled == true)
+    }
+
+    @Test func albumArtTogglePersistsAcrossInstances() throws {
+        let defaults = try makeDefaults()
+
+        let store = SettingsStore(defaults: defaults)
+        store.isAlbumArtEnabled = false
+
+        let reloaded = SettingsStore(defaults: defaults)
+        #expect(reloaded.isAlbumArtEnabled == false)
+
+        reloaded.isAlbumArtEnabled = true
+        let reloadedAgain = SettingsStore(defaults: defaults)
+        #expect(reloadedAgain.isAlbumArtEnabled == true)
+    }
 }

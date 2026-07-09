@@ -15,11 +15,24 @@ public final class PlaybackController {
     public private(set) var isLoadingAmbientFallback = false
     public private(set) var ambientFallbackError: String?
 
+    /// The resolved album art URL for the current track, or `nil` when no
+    /// track metadata is available, the lookup is still in progress, or the
+    /// lookup returned no result. Consumers fall back to the station's own
+    /// artwork URL when this is `nil`.
+    public private(set) var albumArtURL: URL?
+
     /// Invoked whenever a station is chosen for playback. The app layer uses this
     /// to log recents so Playback does not depend on the persistence layer.
     /// (An event hook, deliberately — `state`/`nowPlaying` are @Observable and
     /// consumers follow them with `Observations`; a play is a discrete action.)
     @ObservationIgnored public var onStationPlayed: ((Station) -> Void)?
+
+    /// Resolves album art for a track. Injected by the app layer so the
+    /// Playback package stays free of any artwork/UI dependency. The closure
+    /// runs on the main actor (hop off it internally for network work) and
+    /// should return `nil` on failure or when the feature is disabled.
+    /// Called once per unique track change.
+    @ObservationIgnored public var albumArtURLProvider: (@MainActor (AudioTrackInfo) async -> URL?)?
 
     public var currentStation: Station? { activeStation }
 
@@ -28,6 +41,7 @@ public final class PlaybackController {
     @ObservationIgnored private let output: any AudioOutput
     @ObservationIgnored private let nowPlayingCenter: any NowPlayingPresenting
     @ObservationIgnored private var resolveTask: Task<Void, Never>?
+    @ObservationIgnored private var albumArtTask: Task<Void, Never>?
 
     /// Whether `output.start` has run for the active station. False while the
     /// stream endpoint is still resolving, or after a pause during loading —
@@ -83,12 +97,15 @@ public final class PlaybackController {
 
     public func play(_ station: Station) {
         resolveTask?.cancel()
+        albumArtTask?.cancel()
+        albumArtTask = nil
         activeStation = station
         state = .loading(station)
         nowPlaying = nil
         isAdPlaying = false
         isLoadingAmbientFallback = false
         ambientFallbackError = nil
+        albumArtURL = nil
         outputStarted = false
         resumeAfterInterruption = false
         onStationPlayed?(station)
@@ -100,7 +117,7 @@ public final class PlaybackController {
                 guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
                 self.output.start(url: endpoint.url)
                 self.outputStarted = true
-                self.nowPlayingCenter.update(station: station, track: nil, isPlaying: true)
+                self.nowPlayingCenter.update(station: station, track: nil, isPlaying: true, artworkURL: nil)
             } catch {
                 guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
                 self.state = .failed(error.localizedDescription)
@@ -116,7 +133,7 @@ public final class PlaybackController {
         if case let .loading(station) = state {
             resolveTask?.cancel()
             state = .paused(station)
-            nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false)
+            nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
             return
         }
         output.pause()
@@ -163,6 +180,8 @@ public final class PlaybackController {
 
     public func stop() {
         resolveTask?.cancel()
+        albumArtTask?.cancel()
+        albumArtTask = nil
         output.stop()
         activeStation = nil
         state = .idle
@@ -170,6 +189,7 @@ public final class PlaybackController {
         isAdPlaying = false
         isLoadingAmbientFallback = false
         ambientFallbackError = nil
+        albumArtURL = nil
         outputStarted = false
         resumeAfterInterruption = false
         nowPlayingCenter.clear()
@@ -220,26 +240,29 @@ public final class PlaybackController {
 
     private func configureOutput() {
         output.onStatusChange = { [weak self] status in
-            guard let self, let station = self.activeStation else { return }
-            self.handleStatusChange(status, station: station)
+            self?.handleStatusChange(status)
         }
-
         output.onTrackInfo = { [weak self] info in
-            guard let self, let station = self.activeStation else { return }
-            self.handleTrackInfo(info, station: station)
+            self?.handleTrackInfo(info)
         }
     }
 
-    private func handleStatusChange(_ status: AudioStatus, station: Station) {
+    private var isOutputPlaying: Bool {
+        if case .playing = state { return true }
+        return false
+    }
+
+    private func handleStatusChange(_ status: AudioStatus) {
+        guard let station = activeStation else { return }
         switch status {
         case .buffering:
             state = .buffering(station)
         case .playing:
             state = .playing(station)
-            nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: true)
+            nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: true, artworkURL: albumArtURL)
         case .paused:
             state = .paused(station)
-            nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false)
+            nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
         case let .failed(message):
             state = .failed(message)
         case .interruptionBegan:
@@ -252,17 +275,32 @@ public final class PlaybackController {
         }
     }
 
-    private func handleTrackInfo(_ info: AudioTrackInfo, station: Station) {
-        let isPlaying = if case .playing = state { true } else { false }
+    private func handleTrackInfo(_ info: AudioTrackInfo) {
+        guard let station = activeStation else { return }
 
         if info.isAdvertisement {
             isAdPlaying = true
             nowPlaying = nil
-            nowPlayingCenter.update(station: station, track: nil, isPlaying: isPlaying)
+            albumArtTask?.cancel()
+            albumArtTask = nil
+            albumArtURL = nil
+            nowPlayingCenter.update(station: station, track: nil, isPlaying: isOutputPlaying, artworkURL: nil)
             return
         }
 
         isAdPlaying = false
+
+        // ICY pushes often repeat identical track info (the Live Activity
+        // coordinator dedupes for the same reason). Ignore duplicates so the
+        // lock screen doesn't flash back to station art and the album art
+        // lookup isn't refired for a track already resolved.
+        if let current = nowPlaying,
+           current.stationID == station.id,
+           current.title == info.title,
+           current.artist == info.artist {
+            return
+        }
+
         let metadata = NowPlayingMetadata(
             stationID: station.id,
             title: info.title,
@@ -270,7 +308,34 @@ public final class PlaybackController {
             receivedAt: Date()
         )
         nowPlaying = metadata
-        nowPlayingCenter.update(station: station, track: metadata, isPlaying: isPlaying)
+        // Clear any art from a previous track while resolution is in flight.
+        albumArtURL = nil
+
+        nowPlayingCenter.update(station: station, track: metadata, isPlaying: isOutputPlaying, artworkURL: nil)
+
+        resolveAlbumArt(for: info)
+    }
+
+    /// Best-effort album art resolution: resolve asynchronously and re-push
+    /// the now-playing surface with the resolved URL.
+    private func resolveAlbumArt(for info: AudioTrackInfo) {
+        guard let provider = albumArtURLProvider else { return }
+        albumArtTask?.cancel()
+        albumArtTask = Task { [weak self] in
+            let resolvedURL = await provider(info)
+            guard Task.isCancelled == false, let self else { return }
+            // Only apply if the track hasn't changed while we awaited.
+            guard self.nowPlaying?.title == info.title,
+                  self.nowPlaying?.artist == info.artist else { return }
+            self.albumArtURL = resolvedURL
+            guard let station = self.activeStation, let resolvedURL else { return }
+            self.nowPlayingCenter.update(
+                station: station,
+                track: self.nowPlaying,
+                isPlaying: self.isOutputPlaying,
+                artworkURL: resolvedURL
+            )
+        }
     }
 
     private func handleInterruptionBegan(station: Station) {
@@ -288,7 +353,7 @@ public final class PlaybackController {
         default:
             break
         }
-        nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false)
+        nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
     }
 
     private func configureRemoteCommands() {

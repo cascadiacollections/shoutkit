@@ -11,6 +11,7 @@ import SwiftUI
 
 struct RootView: View {
     let directory: any RadioDirectoryProviding
+    let launchRouter: StationLaunchRouter
 
     // Read only to verify injection below; feature views read these themselves.
     @Environment(\.playbackController) private var playback
@@ -49,6 +50,13 @@ struct RootView: View {
                 // miss outside of active testing. Catch it loudly in Debug.
                 assertEnvironmentInjected(playback != nil, "PlaybackController was not injected at the app root")
                 assertEnvironmentInjected(library != nil, "LibraryStore was not injected at the app root")
+            }
+            // `initial: true` drains a link that arrived before this view existed
+            // (cold launch via deep link), so no listener handshake is needed.
+            .onChange(of: launchRouter.pending, initial: true) { _, link in
+                guard let link else { return }
+                launchRouter.clearPending()
+                handle(link)
             }
     }
 
@@ -93,6 +101,26 @@ struct RootView: View {
             }
         }
     }
+
+    private func handle(_ link: StationLink) {
+        selectedTab = .listenNow
+        // An absent flag is inert — it must not yank down a sheet the user is in.
+        if link.presentNowPlaying {
+            isShowingNowPlaying = true
+        }
+
+        guard link.autoPlay, let playback else { return }
+
+        // A repeated link must not tear down and reconnect a live stream.
+        switch playback.phase(for: link.station) {
+        case .playing, .loading:
+            break
+        case .paused, .failed:
+            playback.resume()
+        case .idle:
+            playback.play(link.station)
+        }
+    }
 }
 
 private enum ShoutKitTab: Hashable {
@@ -103,6 +131,6 @@ private enum ShoutKitTab: Hashable {
 }
 
 #Preview {
-    RootView(directory: PreviewRadioDirectory())
+    RootView(directory: PreviewRadioDirectory(), launchRouter: StationLaunchRouter())
         .tint(.shoutKitAccent)
 }

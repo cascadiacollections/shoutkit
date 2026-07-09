@@ -4,50 +4,13 @@ import Testing
 
 @testable import Playback
 
-// Test doubles (FakeAudioOutput, GatedRadioDirectory, NowPlayingPresenterSpy)
-// live in PlaybackTestDoubles.swift; the ambient-fallback offer is covered in
-// AmbientFallbackTests.swift.
+// Doubles and builders (FakeAudioOutput, GatedRadioDirectory,
+// NowPlayingPresenterSpy, station(_:), makeController, waitForStart,
+// drainMainQueue) live in PlaybackTestSupport.swift and are shared with
+// PlaybackControllerAlbumArtTests and AmbientFallbackTests.
+
 @MainActor
 struct PlaybackControllerTests {
-    private func station(
-        _ id: String = "kexp",
-        name: String? = nil,
-        genre: String = "Indie",
-        preferredStreamURL: URL? = nil
-    ) -> Station {
-        Station(
-            id: id,
-            name: name ?? "Station \(id)",
-            genre: genre,
-            listenerCount: 0,
-            preferredStreamURL: preferredStreamURL ?? URL(string: "https://example.com/\(id).aac")
-        )
-    }
-
-    private func makeController(
-        stations: [Station],
-        output: FakeAudioOutput,
-        presenter: NowPlayingPresenterSpy = NowPlayingPresenterSpy()
-    ) -> PlaybackController {
-        PlaybackController(
-            directory: BundledRadioDirectory(stations: stations),
-            output: output,
-            nowPlayingCenter: presenter
-        )
-    }
-
-    private func waitForStart(_ output: FakeAudioOutput, count: Int = 1) async {
-        for _ in 0..<200 where output.startedURLs.count < count {
-            await Task.yield()
-        }
-    }
-
-    private func drainMainQueue() async {
-        for _ in 0..<50 {
-            await Task.yield()
-        }
-    }
-
     @Test func playResolvesEndpointAndStartsOutput() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
@@ -201,7 +164,9 @@ struct PlaybackControllerTests {
         await waitForStart(output)
         output.onStatusChange?(.playing)
 
-        #expect(presenter.lastUpdate == .update(stationID: "kexp", trackTitle: nil, isPlaying: true))
+        #expect(presenter.lastUpdate == .update(
+            stationID: "kexp", trackTitle: nil, isPlaying: true, artworkURL: nil
+        ))
     }
 
     @Test func pauseDuringLoadingTellsLockScreenNotPlaying() async {
@@ -214,7 +179,9 @@ struct PlaybackControllerTests {
         await drainMainQueue()
 
         // The lock screen must reflect the pause even though no player ever started.
-        #expect(presenter.lastUpdate == .update(stationID: "kexp", trackTitle: nil, isPlaying: false))
+        #expect(presenter.lastUpdate == .update(
+            stationID: "kexp", trackTitle: nil, isPlaying: false, artworkURL: nil
+        ))
     }
 
     @Test func trackInfoReachesLockScreenWithTitle() async {
@@ -227,7 +194,9 @@ struct PlaybackControllerTests {
         output.onStatusChange?(.playing)
         output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
 
-        #expect(presenter.lastUpdate == .update(stationID: "kexp", trackTitle: "Song", isPlaying: true))
+        #expect(presenter.lastUpdate == .update(
+            stationID: "kexp", trackTitle: "Song", isPlaying: true, artworkURL: nil
+        ))
     }
 
     @Test func interruptionTellsLockScreenNotPlaying() async {
@@ -240,7 +209,9 @@ struct PlaybackControllerTests {
         output.onStatusChange?(.playing)
         output.onStatusChange?(.interruptionBegan)
 
-        #expect(presenter.lastUpdate == .update(stationID: "kexp", trackTitle: nil, isPlaying: false))
+        #expect(presenter.lastUpdate == .update(
+            stationID: "kexp", trackTitle: nil, isPlaying: false, artworkURL: nil
+        ))
         #expect(controller.state == .paused(station()))
     }
 

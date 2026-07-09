@@ -10,6 +10,7 @@ public struct NowPlayingView: View {
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
     @Environment(\.sleepTimer) private var sleepTimer
+    @Environment(\.settingsStore) private var settings
     @Environment(\.dismiss) private var dismiss
 
     /// Control tint elected from the artwork palette so the transport
@@ -20,7 +21,7 @@ public struct NowPlayingView: View {
 
     public var body: some View {
         ZStack {
-            AmbientArtworkBackdrop(artworkURL: playback?.currentStation?.artworkURL)
+            AmbientArtworkBackdrop(artworkURL: effectiveArtworkURL)
 
             if let playback, let station = playback.currentStation {
                 content(playback: playback, station: station)
@@ -30,12 +31,20 @@ public struct NowPlayingView: View {
         }
         .presentationDragIndicator(.visible)
         .tint(accent)
-        .task(id: playback?.currentStation?.artworkURL) {
-            let loaded = await ArtworkLoader.load(playback?.currentStation?.artworkURL)
+        .task(id: effectiveArtworkURL) {
+            let loaded = await ArtworkLoader.load(effectiveArtworkURL)
             withAnimation(.easeInOut(duration: 0.6)) {
                 artworkAccent = loaded?.accentColor
             }
         }
+    }
+
+    private var effectiveArtworkURL: URL? {
+        PlayerFeature.effectiveArtworkURL(
+            settings: settings,
+            playback: playback,
+            station: playback?.currentStation
+        )
     }
 
     private var accent: Color {
@@ -47,7 +56,7 @@ public struct NowPlayingView: View {
             grabberSpacer
 
             HeroArtworkView(
-                artworkURL: station.artworkURL,
+                artworkURL: effectiveArtworkURL,
                 size: 272,
                 isPlaying: isPlaying(playback)
             )

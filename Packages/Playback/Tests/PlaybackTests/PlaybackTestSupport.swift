@@ -3,6 +3,8 @@ import RadioDirectory
 
 @testable import Playback
 
+// Shared doubles and builders for the PlaybackController test suites.
+
 @MainActor
 final class FakeAudioOutput: AudioOutput {
     var onStatusChange: ((AudioStatus) -> Void)?
@@ -71,7 +73,7 @@ final class NowPlayingPresenterSpy: NowPlayingPresenting {
     var onToggle: (() -> Void)?
 
     enum Event: Equatable {
-        case update(stationID: String, trackTitle: String?, isPlaying: Bool)
+        case update(stationID: String, trackTitle: String?, isPlaying: Bool, artworkURL: URL?)
         case clear
     }
 
@@ -79,11 +81,52 @@ final class NowPlayingPresenterSpy: NowPlayingPresenting {
 
     var lastUpdate: Event? { events.last(where: { $0 != .clear }) }
 
-    func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool) {
-        events.append(.update(stationID: station.id, trackTitle: track?.title, isPlaying: isPlaying))
+    func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool, artworkURL: URL?) {
+        events.append(.update(
+            stationID: station.id,
+            trackTitle: track?.title,
+            isPlaying: isPlaying,
+            artworkURL: artworkURL
+        ))
     }
 
     func clear() {
         events.append(.clear)
+    }
+}
+
+func station(_ id: String = "kexp") -> Station {
+    Station(
+        id: id,
+        name: "Station \(id)",
+        genre: "Indie",
+        listenerCount: 0,
+        preferredStreamURL: URL(string: "https://example.com/\(id).aac")
+    )
+}
+
+@MainActor
+func makeController(
+    stations: [Station],
+    output: FakeAudioOutput,
+    presenter: NowPlayingPresenterSpy = NowPlayingPresenterSpy()
+) -> PlaybackController {
+    PlaybackController(
+        directory: BundledRadioDirectory(stations: stations),
+        output: output,
+        nowPlayingCenter: presenter
+    )
+}
+
+@MainActor
+func waitForStart(_ output: FakeAudioOutput, count: Int = 1) async {
+    for _ in 0..<200 where output.startedURLs.count < count {
+        await Task.yield()
+    }
+}
+
+func drainMainQueue() async {
+    for _ in 0..<50 {
+        await Task.yield()
     }
 }
