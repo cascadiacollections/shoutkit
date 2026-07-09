@@ -27,15 +27,6 @@ public struct MiniPlayerView: View {
         }
     }
 
-    /// The artwork URL to display: album art when the feature is enabled and a
-    /// URL has been resolved, otherwise the station's own artwork.
-    private func effectiveArtworkURL(for station: Station) -> URL? {
-        if settings?.isAlbumArtEnabled == true, let albumArt = playback?.albumArtURL {
-            return albumArt
-        }
-        return station.artworkURL
-    }
-
     private var idlePlaceholder: some View {
         HStack(spacing: ShoutKitSpacing.small) {
             Image(systemName: "dot.radiowaves.left.and.right")
@@ -56,7 +47,7 @@ public struct MiniPlayerView: View {
     private func content(playback: PlaybackController, station: Station) -> some View {
         HStack(spacing: ShoutKitSpacing.small) {
             StationArtworkView(
-                artworkURL: effectiveArtworkURL(for: station),
+                artworkURL: effectiveArtworkURL(settings: settings, playback: playback, station: station),
                 size: 40,
                 cornerRadius: ShoutKitRadius.small,
                 isPlaying: isPlaying(playback)

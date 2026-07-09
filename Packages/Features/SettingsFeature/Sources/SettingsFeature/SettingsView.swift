@@ -52,8 +52,8 @@ public struct SettingsView: View {
                 Text("""
                 When on, playing a Radio-Browser station sends its public station ID (nothing \
                 about you or your device) so the community directory can rank popularity. \
-                Album artwork is fetched from the iTunes Search API when track metadata is \
-                available; turn this off to always show station artwork instead. \
+                Album artwork lookups send the current track's artist and title to Apple's \
+                iTunes Search API; turn this off to always show station artwork instead. \
                 ShoutKit has no analytics, no ads, and no accounts.
                 """)
             }

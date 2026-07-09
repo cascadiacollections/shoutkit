@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// Best-effort album artwork discovery via the public iTunes Search API.
 ///
@@ -6,7 +7,11 @@ import Foundation
 /// don't leave the app's sandbox. The service is deliberately simple —
 /// one hit per track, nil on any failure — to stay true to the "best effort"
 /// contract callers expect.
-public enum AlbumArtLookup {
+///
+/// `nonisolated` opts the whole type out of the package's main-actor default:
+/// this is pure networking with `Sendable` shared state (session + locked
+/// cache), and lookups must not tie up the main actor.
+public nonisolated enum AlbumArtLookup {
     /// Shared URL session configured with a short timeout; artwork is a
     /// nicety, not a requirement, so we fail fast rather than block the UI.
     private static let requestTimeout: TimeInterval = 8
@@ -18,8 +23,9 @@ public enum AlbumArtLookup {
 
     /// In-process positive-result cache. Negative results are NOT cached so a
     /// transient network failure on one track doesn't permanently suppress art
-    /// for that track. Keyed on "artist|title" (lowercased).
-    private static let cache = NSCache<NSString, NSURL>()
+    /// for that track. Keyed on "artist|title" (lowercased). Values are tiny
+    /// (a URL apiece), so unbounded growth over a listening session is fine.
+    private static let cache = OSAllocatedUnfairLock<[String: URL]>(initialState: [:])
 
     /// Resolves a high-quality artwork URL for the given artist and title.
     ///
@@ -28,14 +34,15 @@ public enum AlbumArtLookup {
     ///   - title:  The track title.
     /// - Returns: An artwork URL at up to 600 × 600 points, or `nil` when
     ///   either parameter is absent/empty or when the lookup fails.
-    public nonisolated static func artworkURL(artist: String?, title: String?) async -> URL? {
-        guard let artist, let title,
+    public static func artworkURL(artist: String?, title: String?) async -> URL? {
+        guard let artist = artist?.trimmingCharacters(in: .whitespacesAndNewlines),
+              let title = title?.trimmingCharacters(in: .whitespacesAndNewlines),
               artist.isEmpty == false, title.isEmpty == false
         else { return nil }
 
-        let cacheKey = "\(artist.lowercased())|\(title.lowercased())" as NSString
-        if let cached = cache.object(forKey: cacheKey) {
-            return cached as URL
+        let cacheKey = "\(artist.lowercased())|\(title.lowercased())"
+        if let cached = cache.withLock({ $0[cacheKey] }) {
+            return cached
         }
 
         guard let searchURL = buildSearchURL(artist: artist, title: title) else { return nil }
@@ -46,29 +53,42 @@ public enum AlbumArtLookup {
 
         guard let artworkURL = parseArtworkURL(from: data) else { return nil }
 
-        cache.setObject(artworkURL as NSURL, forKey: cacheKey)
+        cache.withLock { $0[cacheKey] = artworkURL }
         return artworkURL
     }
 
     // MARK: - Private helpers
 
+    private nonisolated struct SearchResponse: Decodable {
+        let results: [SearchResult]
+    }
+
+    private nonisolated struct SearchResult: Decodable {
+        let artworkUrl100: String?
+    }
+
     private static func buildSearchURL(artist: String, title: String) -> URL? {
         var components = URLComponents(string: "https://itunes.apple.com/search")
-        components?.queryItems = [
+        var queryItems = [
             URLQueryItem(name: "term", value: "\(artist) \(title)"),
+            URLQueryItem(name: "media", value: "music"),
             URLQueryItem(name: "entity", value: "song"),
-            URLQueryItem(name: "limit", value: "1"),
+            URLQueryItem(name: "limit", value: "1")
         ]
+        // Search the user's storefront — the API defaults to the US catalog,
+        // which misses regional releases and returns wrong-region art.
+        if let region = Locale.current.region?.identifier {
+            queryItems.append(URLQueryItem(name: "country", value: region))
+        }
+        components?.queryItems = queryItems
         return components?.url
     }
 
     /// Parses the first result's `artworkUrl100` field and up-sizes it to
     /// 600 × 600 for crisp rendering on high-density displays.
     private static func parseArtworkURL(from data: Data) -> URL? {
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let results = json["results"] as? [[String: Any]],
-              let first = results.first,
-              let urlString = first["artworkUrl100"] as? String
+        guard let response = try? JSONDecoder().decode(SearchResponse.self, from: data),
+              let urlString = response.results.first?.artworkUrl100
         else { return nil }
 
         // Apple returns 100×100; replace with 600×600 for album-art quality.

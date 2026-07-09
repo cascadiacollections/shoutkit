@@ -30,13 +30,6 @@ public protocol NowPlayingPresenting: AnyObject {
     func clear()
 }
 
-extension NowPlayingPresenting {
-    /// Convenience overload that uses only station artwork (no album art override).
-    public func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool) {
-        update(station: station, track: track, isPlaying: isPlaying, artworkURL: nil)
-    }
-}
-
 #if canImport(UIKit)
 
 /// Bridges playback to the system Now Playing info center and remote command center

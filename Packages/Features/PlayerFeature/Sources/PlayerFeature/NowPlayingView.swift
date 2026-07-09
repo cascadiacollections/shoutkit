@@ -39,13 +39,12 @@ public struct NowPlayingView: View {
         }
     }
 
-    /// The artwork URL to display: album art when the feature is enabled and a
-    /// URL has been resolved, otherwise the station's own artwork.
     private var effectiveArtworkURL: URL? {
-        if settings?.isAlbumArtEnabled == true, let albumArt = playback?.albumArtURL {
-            return albumArt
-        }
-        return playback?.currentStation?.artworkURL
+        PlayerFeature.effectiveArtworkURL(
+            settings: settings,
+            playback: playback,
+            station: playback?.currentStation
+        )
     }
 
     private var accent: Color {

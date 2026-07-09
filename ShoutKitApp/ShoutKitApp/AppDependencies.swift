@@ -54,11 +54,14 @@ enum AppDependencies {
             }
         }
 
-        // Best-effort album art from the iTunes Search API. The closure is
-        // nonisolated; settings opt-out is enforced in the views (which read
-        // settings reactively) and on the lock screen on the next track change.
-        controller.albumArtURLProvider = { artist, title in
-            await AlbumArtLookup.artworkURL(artist: artist, title: title)
+        // Best-effort album art from the iTunes Search API. Gated here, at the
+        // source, so opting out stops the supplemental network request itself —
+        // the toggle lives under Privacy and must mean what it says. The views
+        // also read the setting reactively (flipping it updates the UI
+        // immediately); the lock screen follows on the next track change.
+        controller.albumArtURLProvider = { track in
+            guard settings.isAlbumArtEnabled else { return nil }
+            return await AlbumArtLookup.artworkURL(artist: track.artist, title: track.title)
         }
 
         // Lock screen / Dynamic Island Live Activity follows playback by
