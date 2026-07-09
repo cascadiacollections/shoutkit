@@ -19,6 +19,7 @@ struct RootView: View {
     @State private var selectedTab = ShoutKitTab.listenNow
     @State private var isShowingNowPlaying = false
     @State private var isShowingSettings = false
+    @State private var stationLaunchTask: Task<Void, Never>?
     @AppStorage("hasCompletedFirstRun") private var hasCompletedFirstRun = false
 
     var body: some View {
@@ -43,24 +44,33 @@ struct RootView: View {
                     hasCompletedFirstRun = true
                 }
             }
-            .task {
-                // Every feature view optional-chains these, so a missing injection
-                // fails silently (taps do nothing) rather than crashing — easy to
-                // miss outside of active testing. Catch it loudly in Debug.
-                assertEnvironmentInjected(playback != nil, "PlaybackController was not injected at the app root")
-                assertEnvironmentInjected(library != nil, "LibraryStore was not injected at the app root")
-                if let request = await StationLaunchCoordinator.shared.activateListener() {
-                    handle(request)
-                }
+            .onAppear {
+                stationLaunchTask?.cancel()
+                stationLaunchTask = Task { @MainActor in
+                    // Every feature view optional-chains these, so a missing injection
+                    // fails silently (taps do nothing) rather than crashing — easy to
+                    // miss outside of active testing. Catch it loudly in Debug.
+                    assertEnvironmentInjected(playback != nil, "PlaybackController was not injected at the app root")
+                    assertEnvironmentInjected(library != nil, "LibraryStore was not injected at the app root")
+                    if let request = await StationLaunchCoordinator.shared.activateListener() {
+                        handle(request)
+                    }
 
-                for await notification in NotificationCenter.default.notifications(
-                    named: StationLaunchCoordinator.notificationName
-                ) {
-                    guard let request = notification.object as? StationLaunchRequest else { continue }
-                    handle(request)
+                    for await notification in NotificationCenter.default.notifications(
+                        named: StationLaunchCoordinator.notificationName
+                    ) {
+                        if Task.isCancelled {
+                            break
+                        }
+
+                        guard let request = notification.object as? StationLaunchRequest else { continue }
+                        handle(request)
+                    }
                 }
             }
             .onDisappear {
+                stationLaunchTask?.cancel()
+                stationLaunchTask = nil
                 Task {
                     await StationLaunchCoordinator.shared.deactivateListener()
                 }
