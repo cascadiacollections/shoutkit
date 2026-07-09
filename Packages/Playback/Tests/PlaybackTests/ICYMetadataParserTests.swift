@@ -109,12 +109,21 @@ struct ICYMetadataParserTests {
         let info = ICYMetadataParser.parseTrack(
             from: "text=\"Spot Block End\" amgTrackId=\"9876543\" length=\"00:00:00\""
         )
+        #expect(info.isAdvertisement)
         #expect(info.artist == nil)
         #expect(info.title == nil)
     }
 
     @Test func adCueStartMarkerIsSuppressedCaseInsensitively() {
         let info = ICYMetadataParser.parseTrack(from: "text=\"SPOT BLOCK START\" adContext=\"12345\"")
+        #expect(info.isAdvertisement)
+        #expect(info.artist == nil)
+        #expect(info.title == nil)
+    }
+
+    @Test func titleFieldCommercialBreakIsMarkedAsAdvertisement() {
+        let info = ICYMetadataParser.parseTrack(from: "title=\"Commercial Break\",artist=")
+        #expect(info.isAdvertisement)
         #expect(info.artist == nil)
         #expect(info.title == nil)
     }
@@ -148,6 +157,7 @@ struct ICYMetadataParserTests {
         let info = ICYMetadataParser.parseTrack(
             from: "StreamTitle=' - text=\"Spot Block End\" amgTrackId=\"9876543\" length=\"00:00:00\"';"
         )
+        #expect(info.isAdvertisement)
         #expect(info.artist == nil)
         #expect(info.title == nil)
     }

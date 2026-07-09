@@ -17,10 +17,12 @@ public enum AudioStatus: Equatable, Sendable {
 public struct AudioTrackInfo: Equatable, Sendable {
     public let title: String?
     public let artist: String?
+    public let isAdvertisement: Bool
 
-    public init(title: String?, artist: String?) {
+    public init(title: String?, artist: String?, isAdvertisement: Bool = false) {
         self.title = title
         self.artist = artist
+        self.isAdvertisement = isAdvertisement
     }
 }
 

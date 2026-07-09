@@ -46,6 +46,12 @@ public enum ICYMetadataParser {
     /// title reads as a glitch, so they're suppressed (the UI falls back to
     /// the station name).
     private static let adCueMarkers: Set<String> = ["spot block start", "spot block end"]
+    private static let advertisementCuePhrases = [
+        "spot block",
+        "commercial break",
+        "ad break",
+        "advertisement"
+    ]
 
     /// Dialects nest at most one level in observed streams; the guard is just
     /// a backstop against a pathological self-referencing block.
@@ -57,6 +63,7 @@ public enum ICYMetadataParser {
 
     private static func parse(_ rawMetadata: String, depth: Int) -> AudioTrackInfo {
         let suppressed = AudioTrackInfo(title: nil, artist: nil)
+        let suppressedAdBreak = AudioTrackInfo(title: nil, artist: nil, isAdvertisement: true)
         guard depth < maxNestingDepth else { return suppressed }
 
         if let fields = fields(from: rawMetadata) {
@@ -71,6 +78,9 @@ public enum ICYMetadataParser {
             if fields["title"] != nil || fields["artist"] != nil {
                 let title = fields["title"]?.trimmingCharacters(in: .whitespacesAndNewlines)
                 let artist = fields["artist"]?.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let title, artist == nil, isAdvertisementMarker(title) {
+                    return suppressedAdBreak
+                }
                 return AudioTrackInfo(
                     title: title?.isEmpty == false ? title : nil,
                     artist: artist?.isEmpty == false ? artist : nil
@@ -93,8 +103,8 @@ public enum ICYMetadataParser {
             return parse(title, depth: depth + 1)
         }
 
-        if info.artist == nil, adCueMarkers.contains(title.lowercased()) {
-            return suppressed
+        if info.artist == nil, isAdvertisementMarker(title) {
+            return suppressedAdBreak
         }
 
         // Last-resort guard for dialects the tokenizer can't decompose (bad
@@ -197,6 +207,14 @@ public enum ICYMetadataParser {
 
     private static func isKeyCharacter(_ character: Character) -> Bool {
         character.isLetter || character.isNumber || character == "_"
+    }
+
+    private static func isAdvertisementMarker(_ text: String) -> Bool {
+        let normalized = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if adCueMarkers.contains(normalized) {
+            return true
+        }
+        return advertisementCuePhrases.contains(where: normalized.contains)
     }
 
     /// The separator is searched in the raw string: trimming first would destroy

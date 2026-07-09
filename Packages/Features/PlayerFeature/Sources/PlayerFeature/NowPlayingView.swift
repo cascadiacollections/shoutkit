@@ -66,6 +66,8 @@ public struct NowPlayingView: View {
             }
             .padding(.horizontal, ShoutKitSpacing.large)
 
+            ambientOffer(playback)
+
             statusBadge(playback)
 
             Spacer()
@@ -81,6 +83,38 @@ public struct NowPlayingView: View {
 
     private var grabberSpacer: some View {
         Color.clear.frame(height: ShoutKitSpacing.small)
+    }
+
+    @ViewBuilder
+    private func ambientOffer(_ playback: PlaybackController) -> some View {
+        if playback.isAdPlaying {
+            VStack(spacing: ShoutKitSpacing.small) {
+                Text("Ad break detected")
+                    .font(.subheadline.weight(.semibold))
+
+                if let message = playback.ambientFallbackError {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+
+                Button {
+                    Task {
+                        await playback.playAmbientFallback()
+                    }
+                } label: {
+                    if playback.isLoadingAmbientFallback {
+                        ProgressView()
+                            .frame(minWidth: 180)
+                    } else {
+                        Label("Play Ambient Instead", systemImage: "leaf.fill")
+                    }
+                }
+                .buttonStyle(.glassProminent)
+            }
+            .padding(.horizontal, ShoutKitSpacing.large)
+        }
     }
 
     @ViewBuilder

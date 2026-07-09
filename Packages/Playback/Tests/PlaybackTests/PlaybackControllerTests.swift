@@ -50,13 +50,18 @@ final class NowPlayingPresenterSpy: NowPlayingPresenting {
 
 @MainActor
 struct PlaybackControllerTests {
-    private func station(_ id: String = "kexp") -> Station {
+    private func station(
+        _ id: String = "kexp",
+        name: String? = nil,
+        genre: String = "Indie",
+        preferredStreamURL: URL? = nil
+    ) -> Station {
         Station(
             id: id,
-            name: "Station \(id)",
-            genre: "Indie",
+            name: name ?? "Station \(id)",
+            genre: genre,
             listenerCount: 0,
-            preferredStreamURL: URL(string: "https://example.com/\(id).aac")
+            preferredStreamURL: preferredStreamURL ?? URL(string: "https://example.com/\(id).aac")
         )
     }
 
@@ -198,6 +203,47 @@ struct PlaybackControllerTests {
 
         #expect(controller.nowPlaying?.title == "Song")
         #expect(controller.nowPlaying?.artist == "Band")
+    }
+
+    @Test func advertisementMetadataClearsTrackAndEnablesAmbientOffer() async {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station()], output: output)
+
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        output.onTrackInfo?(AudioTrackInfo(title: nil, artist: nil, isAdvertisement: true))
+
+        #expect(controller.isAdPlaying)
+        #expect(controller.nowPlaying == nil)
+
+        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        #expect(controller.isAdPlaying == false)
+        #expect(controller.nowPlaying?.title == "Song")
+    }
+
+    @Test func ambientFallbackPlaysAmbientStationDuringAnAd() async {
+        let output = FakeAudioOutput()
+        let ambientStation = station(
+            "ambient-current",
+            name: "Ambient Current",
+            genre: "Ambient"
+        )
+        let controller = makeController(
+            stations: [station(), ambientStation],
+            output: output
+        )
+
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        output.onTrackInfo?(AudioTrackInfo(title: nil, artist: nil, isAdvertisement: true))
+
+        await controller.playAmbientFallback()
+        await waitForStart(output, count: 2)
+
+        #expect(controller.currentStation?.id == "ambient-current")
+        #expect(output.startedURL?.absoluteString == ambientStation.preferredStreamURL?.absoluteString)
     }
 
     @Test func stopResetsToIdle() async {

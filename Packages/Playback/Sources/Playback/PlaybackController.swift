@@ -11,6 +11,9 @@ public final class PlaybackController {
     public private(set) var state: PlaybackState = .idle
 
     public private(set) var nowPlaying: NowPlayingMetadata?
+    public private(set) var isAdPlaying = false
+    public private(set) var isLoadingAmbientFallback = false
+    public private(set) var ambientFallbackError: String?
 
     /// Invoked whenever a station is chosen for playback. The app layer uses this
     /// to log recents so Playback does not depend on the persistence layer.
@@ -83,6 +86,9 @@ public final class PlaybackController {
         activeStation = station
         state = .loading(station)
         nowPlaying = nil
+        isAdPlaying = false
+        isLoadingAmbientFallback = false
+        ambientFallbackError = nil
         outputStarted = false
         resumeAfterInterruption = false
         onStationPlayed?(station)
@@ -99,6 +105,7 @@ public final class PlaybackController {
                 guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
                 self.state = .failed(error.localizedDescription)
                 self.activeStation = nil
+                self.isAdPlaying = false
             }
         }
     }
@@ -160,9 +167,29 @@ public final class PlaybackController {
         activeStation = nil
         state = .idle
         nowPlaying = nil
+        isAdPlaying = false
+        isLoadingAmbientFallback = false
+        ambientFallbackError = nil
         outputStarted = false
         resumeAfterInterruption = false
         nowPlayingCenter.clear()
+    }
+
+    public func playAmbientFallback() async {
+        guard isAdPlaying, isLoadingAmbientFallback == false else { return }
+
+        isLoadingAmbientFallback = true
+        ambientFallbackError = nil
+        let currentStationID = activeStation?.id
+        let fallback = await ambientFallbackStation(excluding: currentStationID)
+        isLoadingAmbientFallback = false
+
+        guard let fallback else {
+            ambientFallbackError = "No ambient fallback is available right now."
+            return
+        }
+
+        play(fallback)
     }
 
     // MARK: - Per-station phase
@@ -212,6 +239,16 @@ public final class PlaybackController {
 
         output.onTrackInfo = { [weak self] info in
             guard let self, let station = self.activeStation else { return }
+            if info.isAdvertisement {
+                self.isAdPlaying = true
+                self.nowPlaying = nil
+                let isPlaying: Bool
+                if case .playing = self.state { isPlaying = true } else { isPlaying = false }
+                self.nowPlayingCenter.update(station: station, track: nil, isPlaying: isPlaying)
+                return
+            }
+
+            self.isAdPlaying = false
             let metadata = NowPlayingMetadata(
                 stationID: station.id,
                 title: info.title,
@@ -249,6 +286,24 @@ public final class PlaybackController {
         nowPlayingCenter.onPause = { [weak self] in self?.pause() }
         nowPlayingCenter.onStop = { [weak self] in self?.stop() }
         nowPlayingCenter.onToggle = { [weak self] in self?.togglePlayPause() }
+    }
+
+    private func ambientFallbackStation(excluding stationID: Station.ID?) async -> Station? {
+        for genre in ["Ambient", "Nature"] {
+            if let station = try? await directory.stations(inGenre: genre, limit: 5)
+                .first(where: { $0.id != stationID }) {
+                return station
+            }
+        }
+
+        for query in ["ambient", "nature", "sleep", "meditation"] {
+            if let station = try? await directory.searchStations(matching: query, limit: 5)
+                .first(where: { $0.id != stationID }) {
+                return station
+            }
+        }
+
+        return nil
     }
 }
 
