@@ -12,6 +12,7 @@
 		000000000000000000000022 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000012 /* AppDependencies.swift */; };
 		000000000000000000000023 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000014 /* Assets.xcassets */; };
 		000000000000000000000024 /* ShoutKitShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000018 /* ShoutKitShortcuts.swift */; };
+		000000000000000000000091 /* StationLaunchRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000090 /* StationLaunchRouter.swift */; };
 		000000000000000000000025 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000019 /* PrivacyInfo.xcprivacy */; };
 		000000000000000000000026 /* WelcomeOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000001A /* WelcomeOverlayView.swift */; };
 		000000000000000000000060 /* DesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000050 /* DesignSystem */; };
@@ -69,6 +70,7 @@
 		000000000000000000000018 /* ShoutKitShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoutKitShortcuts.swift; sourceTree = "<group>"; };
 		000000000000000000000019 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		00000000000000000000001A /* WelcomeOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeOverlayView.swift; sourceTree = "<group>"; };
+		000000000000000000000090 /* StationLaunchRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationLaunchRouter.swift; sourceTree = "<group>"; };
 		000000000000000000000070 /* ShoutKitWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShoutKitWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		000000000000000000000071 /* ShoutKitWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoutKitWidgetsBundle.swift; sourceTree = "<group>"; };
 		000000000000000000000072 /* NowPlayingLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingLiveActivity.swift; sourceTree = "<group>"; };
@@ -133,6 +135,7 @@
 				000000000000000000000011 /* RootView.swift */,
 				000000000000000000000012 /* AppDependencies.swift */,
 				000000000000000000000018 /* ShoutKitShortcuts.swift */,
+				000000000000000000000090 /* StationLaunchRouter.swift */,
 				000000000000000000000013 /* Info.plist */,
 				000000000000000000000014 /* Assets.xcassets */,
 				000000000000000000000019 /* PrivacyInfo.xcprivacy */,
@@ -308,6 +311,7 @@
 				000000000000000000000026 /* WelcomeOverlayView.swift in Sources */,
 				000000000000000000000022 /* AppDependencies.swift in Sources */,
 				000000000000000000000024 /* ShoutKitShortcuts.swift in Sources */,
+				000000000000000000000091 /* StationLaunchRouter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

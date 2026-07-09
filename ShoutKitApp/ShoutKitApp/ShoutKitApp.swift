@@ -19,13 +19,16 @@ struct ShoutKitApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView(directory: services.directory)
+            RootView(directory: services.directory, launchRouter: services.stationLaunchRouter)
                 .modelContainer(services.container)
                 .libraryStore(services.libraryStore)
                 .playbackController(services.playbackController)
                 .sleepTimer(services.sleepTimer)
                 .settingsStore(services.settingsStore)
                 .tint(.shoutKitAccent)
+                .onOpenURL { url in
+                    services.stationLaunchRouter.open(url: url)
+                }
         }
     }
 }
