@@ -1,5 +1,41 @@
 # Decisions
 
+## 2026-07-10 (background battery hygiene)
+
+Prompted by a real-world battery report: ShoutKit at 14% of a day's battery with 2h42m
+background time. The audit found no polling or periodic work anywhere (metadata is push-based,
+now-playing updates are event-driven), so the fixes target resource *retention*, not activity.
+
+- **Paused playback releases the player and audio session after 10 minutes**
+  (`PlaybackController.schedulePausedRelease`). `pause()` used to keep the AVPlayerItem, its
+  observers, and the active audio session alive indefinitely — pause-and-pocket held the
+  `audio` background assertion for hours. Live radio has no position to preserve, so teardown
+  is invisible: `state`/`nowPlaying` and the lock-screen surface are left untouched, and the
+  play button routes through `resume()`'s existing `outputStarted == false` restart path.
+  10 minutes matches audio-app norms; it is an init parameter, not a user setting — this is
+  invisible hygiene, not behavior a listener should have to configure.
+- **Stalled buffering is bounded at 90 seconds** (`scheduleStallCeiling`). AVPlayer's
+  `automaticallyWaitsToMinimizeStalling` retries a stalled live stream forever; backgrounded
+  with signal loss that churns the network radio with no ceiling. On expiry the stream is torn
+  down and parked as **`.paused`, not `.failed`** — a stall isn't a user error, and paused
+  keeps the lock screen accurate with a working play button. The controller pushes that final
+  now-playing update itself, because teardown invalidates the player's KVO before pausing.
+- **Internal restarts don't refire `onStationPlayed`**: `play(_:)` split into the public
+  intent (fires the hook) and `startPlayback(of:)` (does the work). Resume-after-release and
+  retry-after-failure are not new listening choices, so they no longer double-log recents or
+  double-report the play to Radio-Browser.
+- **`AlbumArtLookup` now caches definitive misses too** (supersedes the 2026-07-09
+  "negative results are not cached" bullet, and resolves its recorded iTunes-budget risk).
+  The distinction that matters is *definitive* vs *transient*: an HTTP 200 whose decoded JSON
+  has no artwork is a catalog answer and is cached; transport errors, non-200s, and malformed
+  payloads still aren't, so a network blip can't permanently suppress art. Cache capped at 256
+  entries with reset-on-overflow — LRU bookkeeping isn't worth it for ~100-byte values.
+- **`ArtworkLoader` coalesces per-URL work through a small actor store**: backdrop, hero, and
+  tint views all request the same artwork on every track change; URLCache already coalesced
+  the network fetch but each caller re-decoded the bitmap and re-ran the palette box filter.
+  In-flight and completed loads now share one task per URL (FIFO-bounded at 6; nil results are
+  evicted immediately so failures stay retryable). Public API unchanged.
+
 ## 2026-07-09 (Album art discovery)
 
 - **Album art source**: iTunes Search API (`itunes.apple.com/search?entity=song&limit=1`).

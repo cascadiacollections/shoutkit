@@ -40,6 +40,16 @@ public final class PlaybackController {
     @ObservationIgnored private var resolveTask: Task<Void, Never>?
     @ObservationIgnored private var albumArtTask: Task<Void, Never>?
 
+    /// How long playback may sit paused before the player and audio session
+    /// are released (see ``schedulePausedRelease()``).
+    @ObservationIgnored private let pausedReleaseTimeout: Duration
+    @ObservationIgnored private var pausedReleaseTask: Task<Void, Never>?
+
+    /// How long a stream may sit buffering before it is parked as paused
+    /// (see ``scheduleStallCeiling(for:)``).
+    @ObservationIgnored private let stallTimeout: Duration
+    @ObservationIgnored private var stallCeilingTask: Task<Void, Never>?
+
     /// Whether `output.start` has run for the active station. False while the
     /// stream endpoint is still resolving, or after a pause during loading —
     /// in that case `resume()` must re-play rather than resume a nonexistent player.
@@ -55,11 +65,15 @@ public final class PlaybackController {
     public init(
         directory: any RadioDirectoryProviding,
         output: any AudioOutput,
-        nowPlayingCenter: any NowPlayingPresenting
+        nowPlayingCenter: any NowPlayingPresenting,
+        pausedReleaseTimeout: Duration = .seconds(10 * 60),
+        stallTimeout: Duration = .seconds(90)
     ) {
         self.directory = directory
         self.output = output
         self.nowPlayingCenter = nowPlayingCenter
+        self.pausedReleaseTimeout = pausedReleaseTimeout
+        self.stallTimeout = stallTimeout
 
         configureOutput()
         configureRemoteCommands()
@@ -93,16 +107,27 @@ public final class PlaybackController {
     // MARK: - Intents
 
     public func play(_ station: Station) {
+        startPlayback(of: station)
+        onStationPlayed?(station)
+    }
+
+    /// Starts (or restarts) the stream for `station` without treating it as a
+    /// new listening choice: `onStationPlayed` (recents logging, play
+    /// reporting) fires only from ``play(_:)``, so internal restarts — resume
+    /// after the paused-release teardown, retry after a failure — don't
+    /// double-log or double-report.
+    private func startPlayback(of station: Station) {
         resolveTask?.cancel()
         albumArtTask?.cancel()
         albumArtTask = nil
+        cancelPausedRelease()
+        cancelStallCeiling()
         activeStation = station
         state = .loading(station)
         nowPlaying = nil
         albumArtURL = nil
         outputStarted = false
         resumeAfterInterruption = false
-        onStationPlayed?(station)
 
         resolveTask = Task { [weak self] in
             guard let self else { return }
@@ -127,6 +152,7 @@ public final class PlaybackController {
             resolveTask?.cancel()
             state = .paused(station)
             nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
+            schedulePausedRelease()
             return
         }
         output.pause()
@@ -138,13 +164,15 @@ public final class PlaybackController {
         switch state {
         case .paused:
             if outputStarted {
+                cancelPausedRelease()
                 output.resume()
             } else {
-                // Paused during loading: the player never started, so re-play.
-                play(station)
+                // Paused during loading, or the paused-release timeout tore
+                // the player down: nothing to resume, so restart the stream.
+                startPlayback(of: station)
             }
         case .failed:
-            play(station)
+            startPlayback(of: station)
         default:
             break
         }
@@ -175,6 +203,8 @@ public final class PlaybackController {
         resolveTask?.cancel()
         albumArtTask?.cancel()
         albumArtTask = nil
+        cancelPausedRelease()
+        cancelStallCeiling()
         output.stop()
         activeStation = nil
         state = .idle
@@ -224,14 +254,22 @@ public final class PlaybackController {
         guard let station = activeStation else { return }
         switch status {
         case .buffering:
+            cancelPausedRelease()
             state = .buffering(station)
+            scheduleStallCeiling(for: station)
         case .playing:
+            cancelPausedRelease()
+            cancelStallCeiling()
             state = .playing(station)
             nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: true, artworkURL: albumArtURL)
         case .paused:
+            cancelStallCeiling()
             state = .paused(station)
             nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
+            schedulePausedRelease()
         case let .failed(message):
+            cancelPausedRelease()
+            cancelStallCeiling()
             state = .failed(message)
         case .interruptionBegan:
             handleInterruptionBegan(station: station)
@@ -304,17 +342,84 @@ public final class PlaybackController {
         case .playing, .buffering:
             // The system already paused the player; remember to resume.
             resumeAfterInterruption = true
+            cancelStallCeiling()
             state = .paused(station)
+            schedulePausedRelease()
         case .loading:
             // Don't let a pending start fire mid-interruption.
             resumeAfterInterruption = true
             resolveTask?.cancel()
             outputStarted = false
             state = .paused(station)
+            schedulePausedRelease()
         default:
             break
         }
         nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
+    }
+
+    // MARK: - Resource hygiene
+
+    /// Releases the player and audio session once playback has sat paused for
+    /// `pausedReleaseTimeout`. Holding them longer keeps the `audio`
+    /// background assertion (and the resident AVPlayerItem) alive for as long
+    /// as the user stays paused — hours of background battery for no benefit,
+    /// since live radio has no position to preserve: `resume()` restarts the
+    /// stream to identical effect via its `outputStarted == false` path.
+    ///
+    /// `state`, `nowPlaying`, and the now-playing surface are deliberately
+    /// left untouched — the lock screen keeps showing the paused station with
+    /// a working play button, and observers see no state change.
+    private func schedulePausedRelease() {
+        pausedReleaseTask?.cancel()
+        let timeout = pausedReleaseTimeout
+        pausedReleaseTask = Task { [weak self] in
+            try? await Task.sleep(for: timeout)
+            guard let self, Task.isCancelled == false else { return }
+            guard case .paused = self.state else { return }
+            self.output.stop()
+            self.outputStarted = false
+        }
+    }
+
+    private func cancelPausedRelease() {
+        pausedReleaseTask?.cancel()
+        pausedReleaseTask = nil
+    }
+
+    /// Bounds how long a stalled stream may sit buffering. AVPlayer's
+    /// `automaticallyWaitsToMinimizeStalling` retries a stalled live stream
+    /// indefinitely — with the app backgrounded (signal loss in a pocket)
+    /// that keeps the network radio churning with no ceiling. After
+    /// `stallTimeout` the stream is torn down and parked as `.paused` rather
+    /// than `.failed`: a stall isn't a user error, and paused keeps the lock
+    /// screen accurate with a play button that routes to the restart path.
+    private func scheduleStallCeiling(for station: Station) {
+        stallCeilingTask?.cancel()
+        let timeout = stallTimeout
+        stallCeilingTask = Task { [weak self] in
+            try? await Task.sleep(for: timeout)
+            guard let self, Task.isCancelled == false else { return }
+            guard case .buffering = self.state else { return }
+            self.output.stop()
+            self.outputStarted = false
+            self.state = .paused(station)
+            // Teardown invalidated the player's observation before pausing,
+            // so no `.paused` status callback arrives — push the lock-screen
+            // surface manually. No paused-release is scheduled: the player
+            // and session are already gone.
+            self.nowPlayingCenter.update(
+                station: station,
+                track: self.nowPlaying,
+                isPlaying: false,
+                artworkURL: self.albumArtURL
+            )
+        }
+    }
+
+    private func cancelStallCeiling() {
+        stallCeilingTask?.cancel()
+        stallCeilingTask = nil
     }
 
     private func configureRemoteCommands() {
