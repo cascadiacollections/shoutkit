@@ -1,9 +1,12 @@
 #if canImport(NowPlaying)
 
+import CoreGraphics
 import Foundation
+import ImageIO
 import NowPlaying
 import Observation
 import RadioDirectory
+import UniformTypeIdentifiers
 
 /// iOS 27+ implementation of ``NowPlayingPresenting`` on the NowPlaying
 /// framework — the WWDC26 replacement for the `MPNowPlayingInfoCenter`
@@ -84,8 +87,48 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
         guard let url else { return nil }
         return Artwork(id: url.absoluteString) { @Sendable _ in
             let (data, _) = try await URLSession.shared.data(from: url)
-            return try ArtworkRepresentation(data: data)
+            if let representation = try? ArtworkRepresentation(data: data) {
+                return representation
+            }
+            guard let normalizedData = Self.normalizedArtworkData(from: data) else {
+                throw URLError(.cannotDecodeContentData)
+            }
+            return try ArtworkRepresentation(data: normalizedData)
         }
+    }
+
+    /// Some remote album-art payloads decode fine in ImageIO but are rejected by
+    /// `ArtworkRepresentation(data:)`. Normalize through a decode + PNG re-encode
+    /// so lock-screen Now Playing can still present the image.
+    private nonisolated static func normalizedArtworkData(from data: Data) -> Data? {
+        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
+            return nil
+        }
+
+        let thumbnailOptions = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: 1024
+        ] as [CFString: Any] as CFDictionary
+
+        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions) else {
+            return nil
+        }
+
+        let encoded = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(
+            encoded as CFMutableData,
+            UTType.png.identifier as CFString,
+            1,
+            nil
+        ) else {
+            return nil
+        }
+        CGImageDestinationAddImage(destination, image, nil)
+        guard CGImageDestinationFinalize(destination) else { return nil }
+        return encoded as Data
     }
 
     /// Command callbacks arrive on arbitrary executors; hop to the main actor
