@@ -1,0 +1,21 @@
+# Third-Party Licenses
+
+ShoutKit's runtime dependencies are listed here with their licenses. Every
+entry must be GPL-3.0-compatible (MIT, Apache-2.0, BSD); GPL/LGPL/AGPL and
+unlicensed code are not accepted. Dependencies are pinned to stable semver
+releases — never branch references. When adding one, record it here and, since
+it ships in the binary, add its license text to the in-app Licenses screen
+(`SettingsFeature`).
+
+| Name | Version | License | Used in | URL |
+| ---- | ------- | ------- | ------- | --- |
+| swift-algorithms | 1.2.1+ (`from: "1.2.1"`) | Apache-2.0 (with Runtime Library Exception) | RadioDirectory — order-preserving, case-insensitive de-duplication (`uniqued(on:)`) of merged station/genre lists | <https://github.com/apple/swift-algorithms> |
+
+## Development-only tools
+
+Not linked into the shipped binary; listed for completeness.
+
+| Name | License | Used for | URL |
+| ---- | ------- | -------- | --- |
+| SwiftLint (pinned in CI, see `ci.yml`) | MIT | Linting, `--strict` in CI | <https://github.com/realm/SwiftLint> |
+| SwiftFormat | MIT | Formatting (`.swiftformat`) | <https://github.com/nicklockwood/SwiftFormat> |
