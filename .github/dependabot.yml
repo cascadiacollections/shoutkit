@@ -12,3 +12,33 @@ updates:
       prefix: ci
     labels:
       - dependencies
+
+  # Only the packages with a remote `.package(url:)` dependency need an entry —
+  # the rest resolve exclusively through local `.package(path:)` references
+  # (see THIRD_PARTY_LICENSES.md for the three runtime deps this tracks).
+  - package-ecosystem: swift
+    directory: "/Packages/RadioDirectory"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: deps
+    labels:
+      - dependencies
+
+  - package-ecosystem: swift
+    directory: "/Packages/DesignSystem"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: deps
+    labels:
+      - dependencies
+
+  - package-ecosystem: swift
+    directory: "/Packages/LiveActivity"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: deps
+    labels:
+      - dependencies

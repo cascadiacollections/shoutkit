@@ -81,7 +81,7 @@ jobs:
           grep -E "(error|fatal error): " build.log | sort -u | head -10 | sed 's/^/::error::/' || true
 
   lint:
-    name: SwiftLint
+    name: Lint & format
     runs-on: macos-26
     timeout-minutes: 10
     steps:
@@ -100,3 +100,12 @@ jobs:
       # this keeps it that way (new warnings fail the build instead of rotting).
       - name: Lint
         run: swiftlint lint --strict --reporter github-actions-logging
+
+      # Homebrew ships current SwiftFormat and is preinstalled on GitHub-hosted
+      # macOS runners; --lint fails instead of rewriting, so drift from the
+      # checked-in `.swiftformat` config shows up as a CI failure.
+      - name: Install SwiftFormat
+        run: brew install swiftformat
+
+      - name: Format check
+        run: swiftformat --lint ShoutKitApp Packages
