@@ -11,6 +11,10 @@ public enum SearchPhase: Equatable, Sendable {
     case failed(RadioDirectoryError)
 }
 
+// Explicitly @MainActor (not just the target's default isolation): the
+// isolated deinit below requires the class itself to carry the actor
+// annotation.
+@MainActor
 @Observable
 public final class SearchViewModel {
     public var query: String = "" {
