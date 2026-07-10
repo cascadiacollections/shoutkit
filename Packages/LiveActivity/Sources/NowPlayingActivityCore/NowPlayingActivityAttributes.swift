@@ -6,19 +6,32 @@ import Foundation
 ///
 /// Fixed attributes identify the station for the activity's lifetime; a station
 /// switch ends the activity and starts a new one. The content state carries what
-/// changes mid-stream: the live ICY track and play/pause state.
+/// changes mid-stream: the live ICY track, play/pause state, and the current
+/// artwork token.
 ///
-/// Deliberately no artwork: Live Activity views cannot load network images, and
-/// shipping them would require an App Group hand-off that this milestone scoped out.
+/// Artwork can't be streamed inline — the content state is capped at 4 KB and
+/// Live Activity views can't fetch network images — so the app downsamples the
+/// current art into the shared App Group container (see ``LiveActivityArtworkStore``)
+/// and passes only a small `artworkToken` here; the widget renders the file by
+/// token. `nil` means "no art yet", so the widget falls back to a glyph.
 public struct NowPlayingActivityAttributes: ActivityAttributes, Sendable {
     public struct ContentState: Codable, Hashable, Sendable {
         public var trackTitle: String?
         public var artist: String?
+        /// Opaque handle for the artwork the app has staged in the shared
+        /// container. Resolve it with ``LiveActivityArtworkStore/fileURL(forToken:)``.
+        public var artworkToken: String?
         public var isPlaying: Bool
 
-        public init(trackTitle: String? = nil, artist: String? = nil, isPlaying: Bool) {
+        public init(
+            trackTitle: String? = nil,
+            artist: String? = nil,
+            artworkToken: String? = nil,
+            isPlaying: Bool
+        ) {
             self.trackTitle = trackTitle
             self.artist = artist
+            self.artworkToken = artworkToken
             self.isPlaying = isPlaying
         }
     }
