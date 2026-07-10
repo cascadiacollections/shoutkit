@@ -1,5 +1,35 @@
 # Decisions
 
+## 2026-07-10 (Live Activity artwork via App Group hand-off)
+
+The lock screen / Dynamic Island Live Activity shipped text-only (2026-07-03 entry below) on the
+reasoning that Live Activity views can't fetch network images. That's true, but it isn't the whole
+story: a view *can* render a local file, so the app can produce the bitmap and hand it over. The
+Now Playing screen, mini-player, and system (`MPNowPlayingInfoCenter` / `MediaSession`) surface all
+show artwork; the Live Activity was the one place that didn't. This reverses the scope-out.
+
+- **The bytes travel through a shared App Group container, not the content state.** ActivityKit
+  caps `ContentState` at ~4 KB, nowhere near a bitmap, and the state is serialized on every update.
+  So `NowPlayingActivityCore.LiveActivityArtworkStore` owns a directory in
+  `group.com.cascadiacollections.shoutkit` (entitled on both the app and the widget target); the
+  app writes a downsampled PNG there and the content state carries only a short `artworkToken`. The
+  widget resolves the token back to a file URL and renders it with `UIImage(contentsOfFile:)`.
+- **Token = FNV-1a of the source URL, not `Hashable`.** `Hasher` is seeded per launch, so its
+  output can't be a stable key shared across the app and widget processes. FNV-1a over the URL
+  string is deterministic and filesystem-safe, and the single-item cache makes collision risk moot.
+- **The coordinator observes `albumArtURL` too.** It already followed `state` and `nowPlaying`; a
+  third `Observations` stream on the controller's resolved album art lets the widget's artwork catch
+  up asynchronously exactly like the lock screen does — effective URL is album art when present,
+  else the station's own art. The download/downsample/stage all run off the main actor (mirroring
+  `NowPlayingCenter`'s ImageIO downsampler); only the tiny state mutation and re-push are on-main.
+- **`.noFileProtection` on the staged file.** The Live Activity renders on the lock screen while the
+  device is locked, and the default protection class would make the file unreadable exactly then.
+  Cover art isn't sensitive. The store keeps only the current track's file (`purge(except:)`), so
+  the container never grows.
+- **Simulator/CI-safe.** App Group entitlements work on the simulator without a provisioning profile,
+  so the `CODE_SIGNING_ALLOWED=NO` iOS-simulator build in CI is unaffected. On-device rendering still
+  needs a real provisioning profile with the group enabled (device-only verification, as before).
+
 ## 2026-07-10 (bounded auto-reconnect for dropped streams)
 
 Live radio drops for transient reasons — a tunnel, a cell handoff, a flaky AP — far more often

@@ -1,11 +1,15 @@
 import ActivityKit
 import NowPlayingActivityCore
 import SwiftUI
+import UIKit
 import WidgetKit
 
 /// Lock screen banner + Dynamic Island presentation for the now-playing stream.
-/// Text-only by design: Live Activity views cannot load network images, so
-/// artwork is scoped out rather than half-shipped (see NowPlayingActivityCore).
+/// Artwork is handed over out-of-band: the app stages a downsampled bitmap in the
+/// shared App Group container (see `LiveActivityArtworkStore`) and the content
+/// state carries only its token, since Live Activity views can't fetch network
+/// images and the state payload is too small to hold one. When no art is staged
+/// yet, each surface falls back to a playback glyph.
 struct NowPlayingLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: NowPlayingActivityAttributes.self) { context in
@@ -15,10 +19,13 @@ struct NowPlayingLiveActivity: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    Image(systemName: playbackSymbol(context))
-                        .font(.title2)
-                        .foregroundStyle(.tint)
-                        .padding(.leading, 4)
+                    ArtworkTile(
+                        token: context.state.artworkToken,
+                        fallbackSymbol: playbackSymbol(context),
+                        size: 38,
+                        cornerRadius: 9
+                    )
+                    .padding(.leading, 4)
                 }
                 DynamicIslandExpandedRegion(.center) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -38,8 +45,12 @@ struct NowPlayingLiveActivity: Widget {
                         .foregroundStyle(.secondary)
                 }
             } compactLeading: {
-                Image(systemName: "dot.radiowaves.left.and.right")
-                    .foregroundStyle(.tint)
+                ArtworkTile(
+                    token: context.state.artworkToken,
+                    fallbackSymbol: "dot.radiowaves.left.and.right",
+                    size: 22,
+                    cornerRadius: 5
+                )
             } compactTrailing: {
                 Image(systemName: playbackSymbol(context))
                     .foregroundStyle(.tint)
@@ -68,11 +79,12 @@ private struct LockScreenView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: context.state.isPlaying ? "waveform" : "pause.fill")
-                .font(.title2)
-                .foregroundStyle(.tint)
-                .frame(width: 40, height: 40)
-                .background(.quaternary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            ArtworkTile(
+                token: context.state.artworkToken,
+                fallbackSymbol: context.state.isPlaying ? "waveform" : "pause.fill",
+                size: 40,
+                cornerRadius: 10
+            )
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(context.attributes.stationName)
@@ -102,5 +114,38 @@ private struct LockScreenView: View {
             return "\(title) — \(artist)"
         }
         return title
+    }
+}
+
+/// Renders the staged artwork for a token, falling back to a tinted glyph on a
+/// quaternary tile when nothing is staged yet (or the file can't be read).
+private struct ArtworkTile: View {
+    let token: String?
+    let fallbackSymbol: String
+    let size: CGFloat
+    let cornerRadius: CGFloat
+
+    var body: some View {
+        Group {
+            if let image = stagedImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                Image(systemName: fallbackSymbol)
+                    .font(.system(size: size * 0.5))
+                    .foregroundStyle(.tint)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(.quaternary)
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    }
+
+    private var stagedImage: UIImage? {
+        guard let token,
+              let url = LiveActivityArtworkStore.fileURL(forToken: token) else { return nil }
+        return UIImage(contentsOfFile: url.path)
     }
 }

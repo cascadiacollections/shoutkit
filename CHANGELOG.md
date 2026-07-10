@@ -7,6 +7,11 @@ All notable changes to ShoutKit are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Live Activity artwork**: the lock screen / Dynamic Island now-playing Live Activity now shows
+  the current album (or station) artwork, matching the Now Playing screen and mini-player toolbar.
+  Because Live Activity views can't fetch network images, the app downsamples the art into a shared
+  App Group container (`group.com.cascadiacollections.shoutkit`) and hands the widget a small token;
+  the widget renders the file. Falls back to a playback glyph until art is staged
 - **Album art discovery**: when ICY stream metadata contains both artist and title, the app
   queries the iTunes Search API (keyless, best-effort) and shows the resolved album artwork in
   the Now Playing hero, mini-player thumbnail, and lock screen / Control Center. Falls back to
