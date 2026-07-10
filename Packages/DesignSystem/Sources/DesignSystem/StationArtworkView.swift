@@ -1,13 +1,22 @@
 import RadioDirectory
 import SwiftUI
+import UIKit
 
 /// Async-loading station artwork with a graceful glass placeholder and an optional
 /// "now playing" overlay.
+///
+/// Artwork loads through ``ArtworkThumbnailLoader`` rather than `AsyncImage`,
+/// so the decoded bitmap is sized to this view (`size` × display scale)
+/// instead of the source's native resolution, and repeated appearances in
+/// lazy lists hit a pressure-evicting `NSCache` instead of re-decoding.
 public struct StationArtworkView: View {
     private let artworkURL: URL?
     private let size: CGFloat
     private let cornerRadius: CGFloat
     private let isPlaying: Bool
+
+    @State private var thumbnail: UIImage?
+    @Environment(\.displayScale) private var displayScale
 
     public init(
         artworkURL: URL?,
@@ -25,17 +34,12 @@ public struct StationArtworkView: View {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
             .fill(.tint.opacity(0.16))
             .overlay {
-                AsyncImage(url: artworkURL) { phase in
-                    switch phase {
-                    case let .success(image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    case .empty, .failure:
-                        placeholder
-                    @unknown default:
-                        placeholder
-                    }
+                if let thumbnail {
+                    Image(uiImage: thumbnail)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    placeholder
                 }
             }
             .overlay {
@@ -52,6 +56,12 @@ public struct StationArtworkView: View {
             .overlay {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .stroke(.white.opacity(0.12), lineWidth: 0.5)
+            }
+            .task(id: artworkURL) {
+                thumbnail = await ArtworkThumbnailLoader.thumbnail(
+                    for: artworkURL,
+                    maxPixelSize: size * displayScale
+                )
             }
     }
 

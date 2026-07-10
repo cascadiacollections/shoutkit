@@ -65,10 +65,19 @@ jobs:
       # builds must pass it the same way.
       - name: Build app
         run: |
+          set -o pipefail
           xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
-            GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" build
+            GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" build 2>&1 | tee build.log
+
+      # Surface compiler errors as check annotations. Raw job logs live on
+      # Azure blob storage, which repo-scoped tokens (and remote agents
+      # working a PR) can't always reach — annotations are readable via the
+      # Checks API, so a build failure stays diagnosable from the API alone.
+      - name: Emit compile errors as annotations
+        if: failure()
+        run: grep -E "(error|fatal error): " build.log | sort -u | head -10 | sed 's/^/::error::/' || true
 
   lint:
     name: SwiftLint
