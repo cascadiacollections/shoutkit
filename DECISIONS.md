@@ -1,5 +1,55 @@
 # Decisions
 
+## 2026-07-10 (first third-party dependencies, after a FOSS audit)
+
+The zero-dependency posture (see 2026-07-05) was revisited deliberately: audit every area a
+common FOSS package could serve, adopt only where a dependency clearly beats the hand-rolled
+code, and keep the count minimal. Ground rules, now written down in `THIRD_PARTY_LICENSES.md`:
+GPL-3.0-compatible licenses only (MIT / Apache-2.0 / BSD — Apache-2.0 is one-way compatible
+with GPL-3.0, and fine *inside* the MIT packages since the Apache code keeps its own license),
+pinned stable semver (no branch refs), license recorded in that file and shipped in the in-app
+Licenses screen alongside GPL/MIT.
+
+**Adopted** (both Apple-maintained, Apache-2.0 with Runtime Library Exception, effectively
+standard-library extensions — the lowest-risk dependency class that exists):
+
+- **swift-algorithms 1.2.1** in RadioDirectory: `uniqued(on:)` replaced three private
+  `deduplicated(_:)` helpers duplicated across `PreferredRadioDirectory` and
+  `BundledRadioDirectory` (five call sites). Same semantics — first occurrence wins, keyed on
+  lowercased name, order preserved — with the helper duplication gone.
+- **swift-collections 1.6.0** in DesignSystem: `OrderedDictionary` replaced the artwork
+  store's dictionary + parallel eviction-order array, deleting the two-collection invariant
+  (the failure-removal path had to keep both in sync by hand). FIFO semantics unchanged.
+
+**Evaluated and rejected** — the codebase's Apple-framework-first choices already cover these,
+and each would add surface without deleting meaningful code:
+
+- **Nuke** (MIT): the artwork pipeline is deliberately bespoke — actor-coalesced loads with
+  3×3 palette extraction for the mesh backdrop, ImageIO downsample ceilings sized per surface,
+  NSCache + URLCache tiers, memory-pressure purge (all documented in the two entries below).
+  Nuke covers only the fetch/cache/downsample parts that already work, and none of the palette
+  work; swapping it in would re-litigate the memory-bounding decisions for zero user-visible
+  gain.
+- **GRDB** (MIT): persistence is SwiftData behind a thin `LibraryStore` (a favorites set plus
+  25 recents) with host tests. GRDB is the right call when you need SQL, migrations, or
+  observation at scale — none of which this data shape has. A full data-layer migration to
+  dodge a framework Apple ships is the opposite of minimal.
+- **Defaults** (MIT): `SettingsStore` is ~38 lines, two keys, already type-safe and
+  `@Observable`. A dependency cannot pay for itself against that.
+- **swift-async-algorithms** (Apache-2.0): the only candidate site is Search's 300 ms
+  debounce, which is eight idiomatic lines of `Task.sleep` + cancellation driven by an
+  `@Observable` `didSet`; restructuring the view model around an `AsyncSequence` of queries
+  would be more code, not less.
+- **Alamofire** (MIT): URLSession already handles the entire network surface (Radio-Browser
+  mirror walking, iTunes lookup, artwork); nothing here needs interceptors or multipart.
+- **SwiftLint / SwiftFormat** (MIT): already adopted — configs at the root, SwiftLint pinned
+  at 0.65.0 and `--strict` in CI. Dev-only tools, so they're listed in the dev section of
+  `THIRD_PARTY_LICENSES.md`, not the runtime table.
+
+Follow-up for a mac with Xcode: commit the workspace `Package.resolved`
+(`ShoutKit.xcworkspace/xcshareddata/swiftpm/`) so the exact resolved versions are locked in
+git, not just floored by `from:`.
+
 ## 2026-07-10 (runtime memory on older devices)
 
 Companion to the battery audit below, same philosophy: bound resource *retention*, and lean on

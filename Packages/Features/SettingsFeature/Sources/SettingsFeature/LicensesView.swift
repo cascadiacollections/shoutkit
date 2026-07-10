@@ -19,6 +19,23 @@ struct LicensesView: View {
                 The ShoutKit name and icon are trademarks and not covered by these licenses.
                 """)
             }
+
+            Section {
+                NavigationLink("swift-algorithms — Apache-2.0") {
+                    LicenseTextView(title: "Apache-2.0", resource: "apache-2.0")
+                }
+                NavigationLink("swift-collections — Apache-2.0") {
+                    LicenseTextView(title: "Apache-2.0", resource: "apache-2.0")
+                }
+            } header: {
+                Text("Third-Party")
+            } footer: {
+                Text("""
+                Apple's swift-algorithms and swift-collections packages, \
+                Apache-2.0 with the Swift Runtime Library Exception. \
+                The full inventory lives in THIRD_PARTY_LICENSES.md in the repository.
+                """)
+            }
         }
         .navigationTitle("Licenses")
         .navigationBarTitleDisplayMode(.inline)
