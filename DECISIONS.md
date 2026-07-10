@@ -1,5 +1,44 @@
 # Decisions
 
+## 2026-07-10 (bounded auto-reconnect for dropped streams)
+
+Live radio drops for transient reasons — a tunnel, a cell handoff, a flaky AP — far more often
+than permanent ones, but the two paths that ended playback (the 90 s stall ceiling and a
+mid-play `AVPlayerItem` failure) both gave up immediately: park as `.paused` / surface `.failed`
+and wait for a user tap. `PlaybackController` now attempts a bounded, backed-off reconnect
+before either give-up. Prompted by an evaluation of FRadioPlayer (MIT), whose `NWPathMonitor` +
+`StallRecovery` ladder was the one capability our stack lacked; the rest of FRadioPlayer would
+have been a regression against our multi-dialect ICY parser and strict-concurrency model, so we
+ported the idea, not the code.
+
+- **Reconnect is orchestration, so it lives in `PlaybackController`, not `AVPlayerAudioOutput`.**
+  A "reconnect" for live radio is just a fresh `startPlayback` — there's no position to resume —
+  so the controller (which already owns restart) drives it and the output layer stays a dumb,
+  fakeable AVPlayer wrapper. Both the attempt budget (`maxReconnectAttempts`, default 3) and the
+  base delay (`reconnectBaseDelay`, default 2 s → 2/4/8 s exponential backoff) are injected like
+  the existing hygiene timeouts, so tests use a small budget and millisecond delays; there is no
+  user-facing setting.
+- **The budget resets on a successful `.playing` and on a user `play()`, never inside the
+  reconnect path.** `startPlayback` gained an `isReconnect` flag that guards *both* the
+  attempt-counter reset and the `nowPlaying`/`albumArtURL` clear: resetting the counter on a
+  retry would refill the budget every attempt and loop forever, and clearing metadata would drop
+  the last-known track off the lock screen mid-reconnect. A reconnect holds `.buffering` so rows
+  keep spinning and ICY repopulates the track on success.
+- **A user pause/stop always beats a pending reconnect.** `pause()` and `stop()` cancel the
+  reconnect timer up front — otherwise a stream the user just stopped would resurrect itself when
+  the scheduled retry fired. Covered by `pauseCancelsPendingReconnect`.
+- **Reachability-gated reconnect (fire immediately when the network returns, instead of waiting
+  out the backoff) is deliberately deferred.** It's the other half of FRadioPlayer's edge and
+  wants a small `NWPathMonitor` wrapper injected behind a closure so the fake output stays
+  network-free; the bounded backoff is useful on its own and ships first.
+- **`PlaybackController`'s internal wiring moved to `PlaybackController+Internals.swift`.** The
+  reconnect code pushed the file past the 400-line `file_length` limit (CI runs
+  `swiftlint --strict`, so warnings fail). Rather than a lint-disable, the private extension
+  (stream start, status handling, album art, resource-hygiene timers) split into a sibling file,
+  matching the existing `PlaybackControllerPlatform.swift` precedent. The cost: the controller's
+  stored properties widened from `private` to module-`internal` (via `internal(set)` for the
+  public-read state); no public API changed.
+
 ## 2026-07-10 (runtime memory on older devices)
 
 Companion to the battery audit below, same philosophy: bound resource *retention*, and lean on

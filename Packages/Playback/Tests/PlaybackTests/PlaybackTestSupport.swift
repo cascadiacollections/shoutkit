@@ -75,14 +75,18 @@ func makeController(
     output: FakeAudioOutput,
     presenter: NowPlayingPresenterSpy = NowPlayingPresenterSpy(),
     pausedReleaseTimeout: Duration = .seconds(10 * 60),
-    stallTimeout: Duration = .seconds(90)
+    stallTimeout: Duration = .seconds(90),
+    maxReconnectAttempts: Int = 3,
+    reconnectBaseDelay: Duration = .seconds(2)
 ) -> PlaybackController {
     PlaybackController(
         directory: BundledRadioDirectory(stations: stations),
         output: output,
         nowPlayingCenter: presenter,
         pausedReleaseTimeout: pausedReleaseTimeout,
-        stallTimeout: stallTimeout
+        stallTimeout: stallTimeout,
+        maxReconnectAttempts: maxReconnectAttempts,
+        reconnectBaseDelay: reconnectBaseDelay
     )
 }
 
