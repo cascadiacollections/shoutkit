@@ -1,5 +1,45 @@
 # Decisions
 
+## 2026-07-10 (CI/CD hardening ahead of a production release)
+
+SwiftLint `--strict` was the only automated code-quality gate; the rest of CI just built and ran
+tests. Rounding this out before a real release, using the GHE-hosted tooling that's already free
+for this repo rather than reaching for a paid third-party service:
+
+- **CodeQL (Swift) over a third-party SAST vendor**: it's built into GitHub Actions with no new
+  account/billing relationship, and `github/codeql-action` handles SARIF upload to the Security
+  tab for free on a repo already hosted here. `build-mode: manual` mirrors the existing `build`
+  job's `xcodebuild` invocation — CodeQL's Swift extractor needs an actual compile to trace
+  through, autobuild isn't reliable for xcworkspace projects.
+- **Dependency Review action, not a standalone license-scanner dependency**: it reads the same
+  policy already written down in `THIRD_PARTY_LICENSES.md` (GPL/LGPL/AGPL rejected) and runs only
+  on the PR diff, so it costs nothing on an unshared runner and doesn't need a config file of its
+  own to drift out of sync with the license table.
+- **Dependabot `swift` ecosystem, scoped to the three packages with a remote dependency**
+  (RadioDirectory, DesignSystem, LiveActivity): the rest of `Packages/*` resolve exclusively
+  through local `.package(path:)` references, so a Dependabot entry for them would just poll for
+  nothing every week.
+- **`swiftformat --lint` via Homebrew, not a pinned portable binary like SwiftLint**: SwiftLint's
+  release ships a portable zip; SwiftFormat's doesn't, and this repo has no existing local pin for
+  it (`CONTRIBUTING.md` only pins SwiftLint). Homebrew is preinstalled on GitHub-hosted macOS
+  runners and is nicklockwood/SwiftFormat's own documented install path — adding a version pin for
+  a tool nobody pins locally would be gate-keeping without a matching local workflow to keep it
+  honest.
+- **Release automation stops at drafting a GitHub Release from `CHANGELOG.md`.** A tag push
+  extracts the matching `## [X.Y.Z]` section and fails loudly if it's missing (i.e., someone
+  tagged before cutting the changelog over from `[Unreleased]`). It deliberately does **not**
+  build, sign, or upload to TestFlight — this repo has no Apple signing credentials configured, and
+  faking that pipeline with `CODE_SIGNING_ALLOWED=NO` (as the CI `build` job does) would produce an
+  archive nobody can install. Wiring up notarized/signed builds is a follow-up once distribution
+  certificates exist as repository secrets.
+- **Branch protection, required status checks, and secret-scanning push protection are explicitly
+  out of scope for this change.** They're repository/organization settings, not files this repo's
+  git history can carry, and the GitHub tooling available to this session has no branch-protection
+  or repository-settings endpoint exposed — only content/PR/issue operations. Recommended for an
+  org admin to apply directly: require the `build`, `host-tests`, and `lint` checks (plus CodeQL
+  once it has a green run) before merging to `main`, and enable secret-scanning push protection
+  under repo Settings → Security.
+
 ## 2026-07-10 (Live Activity artwork via App Group hand-off)
 
 The lock screen / Dynamic Island Live Activity shipped text-only (2026-07-03 entry below) on the
