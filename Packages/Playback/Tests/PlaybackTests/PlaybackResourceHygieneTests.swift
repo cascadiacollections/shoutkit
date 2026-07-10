@@ -147,7 +147,7 @@ struct PlaybackResourceHygieneTests {
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(
             stations: [station()], output: output, presenter: presenter,
-            stallTimeout: Self.shortTimeout
+            stallTimeout: Self.shortTimeout, maxReconnectAttempts: 0
         )
 
         controller.play(station())
@@ -186,7 +186,7 @@ struct PlaybackResourceHygieneTests {
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(
             stations: [station()], output: output, presenter: presenter,
-            stallTimeout: Self.shortTimeout
+            stallTimeout: Self.shortTimeout, maxReconnectAttempts: 0
         )
 
         controller.play(station())

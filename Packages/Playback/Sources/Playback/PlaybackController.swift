@@ -8,15 +8,18 @@ import RadioDirectory
 @MainActor
 @Observable
 public final class PlaybackController {
-    public private(set) var state: PlaybackState = .idle
+    // `internal(set)` (not `private(set)`) so the wiring extension in
+    // PlaybackController+Internals.swift can drive these; the public read
+    // surface is unchanged.
+    public internal(set) var state: PlaybackState = .idle
 
-    public private(set) var nowPlaying: NowPlayingMetadata?
+    public internal(set) var nowPlaying: NowPlayingMetadata?
 
     /// The resolved album art URL for the current track, or `nil` when no
     /// track metadata is available, the lookup is still in progress, or the
     /// lookup returned no result. Consumers fall back to the station's own
     /// artwork URL when this is `nil`.
-    public private(set) var albumArtURL: URL?
+    public internal(set) var albumArtURL: URL?
 
     /// Invoked whenever a station is chosen for playback. The app layer uses this
     /// to log recents so Playback does not depend on the persistence layer.
@@ -33,29 +36,43 @@ public final class PlaybackController {
 
     public var currentStation: Station? { activeStation }
 
-    @ObservationIgnored private var activeStation: Station?
-    @ObservationIgnored private let directory: any RadioDirectoryProviding
-    @ObservationIgnored private let output: any AudioOutput
-    @ObservationIgnored private let nowPlayingCenter: any NowPlayingPresenting
-    @ObservationIgnored private var resolveTask: Task<Void, Never>?
-    @ObservationIgnored private var albumArtTask: Task<Void, Never>?
+    // These are `internal` rather than `private` because the wiring lives in a
+    // sibling extension file (PlaybackController+Internals.swift); nothing here
+    // is part of the public API.
+    @ObservationIgnored var activeStation: Station?
+    @ObservationIgnored let directory: any RadioDirectoryProviding
+    @ObservationIgnored let output: any AudioOutput
+    @ObservationIgnored let nowPlayingCenter: any NowPlayingPresenting
+    @ObservationIgnored var resolveTask: Task<Void, Never>?
+    @ObservationIgnored var albumArtTask: Task<Void, Never>?
 
     /// Battery hygiene windows (see the schedule methods below). Both are
     /// injectable so tests can use short values; there is deliberately no
     /// user-facing setting — this is invisible housekeeping.
-    @ObservationIgnored private let pausedReleaseTimeout: Duration
-    @ObservationIgnored private let pausedReleaseTimer = OneShotTimer()
-    @ObservationIgnored private let stallTimeout: Duration
-    @ObservationIgnored private let stallCeilingTimer = OneShotTimer()
+    @ObservationIgnored let pausedReleaseTimeout: Duration
+    @ObservationIgnored let pausedReleaseTimer = OneShotTimer()
+    @ObservationIgnored let stallTimeout: Duration
+    @ObservationIgnored let stallCeilingTimer = OneShotTimer()
+
+    /// Bounded automatic reconnect (see ``attemptReconnect(for:fallback:)``).
+    /// A stall or a mid-play failure retries the stream a few times on a
+    /// backed-off schedule before surfacing a terminal state — network radio
+    /// drops for transient reasons (tunnel, cell handoff) far more often than
+    /// permanent ones. Both knobs are injectable so tests can use a short delay
+    /// and small budget; there is no user-facing setting.
+    @ObservationIgnored let maxReconnectAttempts: Int
+    @ObservationIgnored let reconnectBaseDelay: Duration
+    @ObservationIgnored let reconnectTimer = OneShotTimer()
+    @ObservationIgnored var reconnectAttempts = 0
 
     /// Whether `output.start` has run for the active station. False while the
     /// stream endpoint is still resolving, or after a pause during loading —
     /// in that case `resume()` must re-play rather than resume a nonexistent player.
-    @ObservationIgnored private var outputStarted = false
+    @ObservationIgnored var outputStarted = false
 
     /// Set when the system interrupts playback that was active, so playback can
     /// resume automatically when the interruption ends with a resume hint.
-    @ObservationIgnored private var resumeAfterInterruption = false
+    @ObservationIgnored var resumeAfterInterruption = false
 
     /// Designated initializer with every collaborator explicit — what tests use.
     /// The iOS production defaults live in the convenience initializer (in
@@ -66,13 +83,17 @@ public final class PlaybackController {
         output: any AudioOutput,
         nowPlayingCenter: any NowPlayingPresenting,
         pausedReleaseTimeout: Duration = .seconds(10 * 60),
-        stallTimeout: Duration = .seconds(90)
+        stallTimeout: Duration = .seconds(90),
+        maxReconnectAttempts: Int = 3,
+        reconnectBaseDelay: Duration = .seconds(2)
     ) {
         self.directory = directory
         self.output = output
         self.nowPlayingCenter = nowPlayingCenter
         self.pausedReleaseTimeout = pausedReleaseTimeout
         self.stallTimeout = stallTimeout
+        self.maxReconnectAttempts = maxReconnectAttempts
+        self.reconnectBaseDelay = reconnectBaseDelay
 
         configureOutput()
         configureRemoteCommands()
@@ -81,11 +102,15 @@ public final class PlaybackController {
     // MARK: - Intents
 
     public func play(_ station: Station) {
+        reconnectAttempts = 0
         startPlayback(of: station)
         onStationPlayed?(station)
     }
 
     public func pause() {
+        // A user pause must win over a pending auto-reconnect, or a stream the
+        // user just stopped would resurrect itself when the reconnect fires.
+        reconnectTimer.cancel()
         // Pausing while the stream endpoint is still resolving must cancel the
         // pending start, or audio would begin after the user asked it not to.
         if case let .loading(station) = state {
@@ -145,6 +170,8 @@ public final class PlaybackController {
         albumArtTask = nil
         pausedReleaseTimer.cancel()
         stallCeilingTimer.cancel()
+        reconnectTimer.cancel()
+        reconnectAttempts = 0
         output.stop()
         activeStation = nil
         state = .idle
@@ -172,214 +199,5 @@ public final class PlaybackController {
         case .idle:
             return .idle
         }
-    }
-}
-
-// MARK: - Wiring
-
-private extension PlaybackController {
-    /// Starts (or restarts) the stream for `station` without treating it as a
-    /// new listening choice: `onStationPlayed` (recents logging, play
-    /// reporting) fires only from ``play(_:)``, so internal restarts — resume
-    /// after the paused-release teardown, retry after a failure — don't
-    /// double-log or double-report.
-    func startPlayback(of station: Station) {
-        resolveTask?.cancel()
-        albumArtTask?.cancel()
-        albumArtTask = nil
-        pausedReleaseTimer.cancel()
-        stallCeilingTimer.cancel()
-        activeStation = station
-        state = .loading(station)
-        nowPlaying = nil
-        albumArtURL = nil
-        outputStarted = false
-        resumeAfterInterruption = false
-
-        resolveTask = Task { [weak self] in
-            guard let self else { return }
-            do {
-                let endpoint = try await directory.streamEndpoint(for: station)
-                guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
-                self.output.start(url: endpoint.url)
-                self.outputStarted = true
-                self.nowPlayingCenter.update(station: station, track: nil, isPlaying: true, artworkURL: nil)
-            } catch {
-                guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
-                self.state = .failed(error.localizedDescription)
-                self.activeStation = nil
-            }
-        }
-    }
-
-    func configureOutput() {
-        output.onStatusChange = { [weak self] status in
-            self?.handleStatusChange(status)
-        }
-        output.onTrackInfo = { [weak self] info in
-            self?.handleTrackInfo(info)
-        }
-    }
-
-    var isOutputPlaying: Bool {
-        if case .playing = state { return true }
-        return false
-    }
-
-    func handleStatusChange(_ status: AudioStatus) {
-        guard let station = activeStation else { return }
-        switch status {
-        case .buffering:
-            pausedReleaseTimer.cancel()
-            state = .buffering(station)
-            scheduleStallCeiling(for: station)
-        case .playing:
-            pausedReleaseTimer.cancel()
-            stallCeilingTimer.cancel()
-            state = .playing(station)
-            nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: true, artworkURL: albumArtURL)
-        case .paused:
-            stallCeilingTimer.cancel()
-            state = .paused(station)
-            nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
-            schedulePausedRelease()
-        case let .failed(message):
-            pausedReleaseTimer.cancel()
-            stallCeilingTimer.cancel()
-            state = .failed(message)
-        case .interruptionBegan:
-            handleInterruptionBegan(station: station)
-        case let .interruptionEnded(shouldResume):
-            if resumeAfterInterruption, shouldResume {
-                resume()
-            }
-            resumeAfterInterruption = false
-        }
-    }
-
-    func handleTrackInfo(_ info: AudioTrackInfo) {
-        guard let station = activeStation else { return }
-
-        // ICY pushes often repeat identical track info (the Live Activity
-        // coordinator dedupes for the same reason). Ignore duplicates so the
-        // lock screen doesn't flash back to station art and the album art
-        // lookup isn't refired for a track already resolved.
-        if let current = nowPlaying,
-           current.stationID == station.id,
-           current.title == info.title,
-           current.artist == info.artist {
-            return
-        }
-
-        let metadata = NowPlayingMetadata(
-            stationID: station.id,
-            title: info.title,
-            artist: info.artist,
-            receivedAt: Date()
-        )
-        nowPlaying = metadata
-        // Clear any art from a previous track while resolution is in flight.
-        albumArtURL = nil
-
-        nowPlayingCenter.update(
-            station: station,
-            track: metadata,
-            isPlaying: isOutputPlaying,
-            artworkURL: albumArtURL
-        )
-
-        resolveAlbumArt(for: info)
-    }
-
-    /// Best-effort album art resolution: resolve asynchronously and re-push
-    /// the now-playing surface with the resolved URL.
-    func resolveAlbumArt(for info: AudioTrackInfo) {
-        guard let provider = albumArtURLProvider else { return }
-        albumArtTask?.cancel()
-        albumArtTask = Task { [weak self] in
-            let resolvedURL = await provider(info)
-            guard Task.isCancelled == false, let self else { return }
-            // Only apply if the track hasn't changed while we awaited.
-            guard self.nowPlaying?.title == info.title,
-                  self.nowPlaying?.artist == info.artist else { return }
-            self.albumArtURL = resolvedURL
-            guard let station = self.activeStation, let resolvedURL else { return }
-            self.nowPlayingCenter.update(
-                station: station,
-                track: self.nowPlaying,
-                isPlaying: self.isOutputPlaying,
-                artworkURL: resolvedURL
-            )
-        }
-    }
-
-    func handleInterruptionBegan(station: Station) {
-        switch state {
-        case .playing, .buffering:
-            // The system already paused the player; remember to resume.
-            resumeAfterInterruption = true
-            stallCeilingTimer.cancel()
-            state = .paused(station)
-            schedulePausedRelease()
-        case .loading:
-            // Don't let a pending start fire mid-interruption.
-            resumeAfterInterruption = true
-            resolveTask?.cancel()
-            outputStarted = false
-            state = .paused(station)
-            schedulePausedRelease()
-        default:
-            break
-        }
-        nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
-    }
-
-    // MARK: - Resource hygiene
-
-    /// Releases the player and audio session once playback has sat paused for
-    /// `pausedReleaseTimeout` — otherwise a paused app keeps the `audio`
-    /// background assertion (and the resident AVPlayerItem) alive for hours.
-    /// Live radio has no position to lose: `resume()` restarts the stream via
-    /// its `outputStarted == false` path. `state`, `nowPlaying`, and the
-    /// lock-screen surface stay untouched, so the release is invisible and
-    /// the lock-screen play button keeps working.
-    func schedulePausedRelease() {
-        pausedReleaseTimer.schedule(after: pausedReleaseTimeout) { [weak self] in
-            guard let self, case .paused = self.state else { return }
-            self.output.stop()
-            self.outputStarted = false
-        }
-    }
-
-    /// Bounds how long a stalled stream may sit buffering — AVPlayer's
-    /// `automaticallyWaitsToMinimizeStalling` otherwise retries a stalled
-    /// live stream forever, churning the network radio in the background.
-    /// The stream is parked as `.paused` rather than `.failed`: a stall isn't
-    /// a user error, and paused keeps the lock screen accurate with a play
-    /// button that routes to the restart path.
-    func scheduleStallCeiling(for station: Station) {
-        stallCeilingTimer.schedule(after: stallTimeout) { [weak self] in
-            guard let self, case .buffering = self.state else { return }
-            self.output.stop()
-            self.outputStarted = false
-            self.state = .paused(station)
-            // Teardown invalidated the player's observation before pausing,
-            // so no `.paused` status callback arrives — push the lock-screen
-            // surface manually. No paused-release is scheduled: the player
-            // and session are already gone.
-            self.nowPlayingCenter.update(
-                station: station,
-                track: self.nowPlaying,
-                isPlaying: false,
-                artworkURL: self.albumArtURL
-            )
-        }
-    }
-
-    func configureRemoteCommands() {
-        nowPlayingCenter.onPlay = { [weak self] in self?.resume() }
-        nowPlayingCenter.onPause = { [weak self] in self?.pause() }
-        nowPlayingCenter.onStop = { [weak self] in self?.stop() }
-        nowPlayingCenter.onToggle = { [weak self] in self?.togglePlayPause() }
     }
 }
