@@ -10,6 +10,7 @@ it ships in the binary, add its license text to the in-app Licenses screen
 | Name | Version | License | Used in | URL |
 | ---- | ------- | ------- | ------- | --- |
 | swift-algorithms | 1.2.1+ (`from: "1.2.1"`) | Apache-2.0 (with Runtime Library Exception) | RadioDirectory — order-preserving, case-insensitive de-duplication (`uniqued(on:)`) of merged station/genre lists | <https://github.com/apple/swift-algorithms> |
+| swift-collections | 1.6.0+ (`from: "1.6.0"`) | Apache-2.0 (with Runtime Library Exception) | DesignSystem — `OrderedDictionary` backs the Now Playing artwork store's bounded FIFO cache | <https://github.com/apple/swift-collections> |
 
 ## Development-only tools
 
