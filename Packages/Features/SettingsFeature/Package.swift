@@ -23,6 +23,7 @@ let package = Package(
                 "Persistence"
             ],
             resources: [
+                .copy("Resources/apache-2.0.txt"),
                 .copy("Resources/gpl-3.0.txt"),
                 .copy("Resources/mit.txt"),
                 .process("Resources/Localizable.xcstrings")

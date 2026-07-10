@@ -13,12 +13,17 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../RadioDirectory"),
-        .package(path: "../Playback")
+        .package(path: "../Playback"),
+        .package(url: "https://github.com/apple/swift-collections.git", from: "1.6.0")
     ],
     targets: [
         .target(
             name: "DesignSystem",
-            dependencies: ["RadioDirectory", "Playback"],
+            dependencies: [
+                "RadioDirectory",
+                "Playback",
+                .product(name: "OrderedCollections", package: "swift-collections")
+            ],
             resources: [.process("Resources/Localizable.xcstrings")],
             swiftSettings: [.defaultIsolation(MainActor.self)]
         )

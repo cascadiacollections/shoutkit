@@ -1,3 +1,4 @@
+import OrderedCollections
 import SwiftUI
 import UIKit
 
@@ -78,8 +79,7 @@ public enum ArtworkLoader {
     private actor ArtworkStore {
         static let shared = ArtworkStore()
 
-        private var entries: [URL: Task<LoadedArtwork?, Never>] = [:]
-        private var order: [URL] = []
+        private var entries: OrderedDictionary<URL, Task<LoadedArtwork?, Never>> = [:]
         private let capacity = 6
 
         /// Purges the store when the system reports memory pressure, so the
@@ -99,16 +99,14 @@ public enum ArtworkLoader {
 
             let task = Task { await ArtworkLoader.fetchAndDecode(url) }
             entries[url] = task
-            order.append(url)
-            if order.count > capacity {
-                entries.removeValue(forKey: order.removeFirst())
+            if entries.count > capacity {
+                entries.remove(at: 0)
             }
 
             let artwork = await task.value
             if artwork == nil {
                 // A transient failure must not pin a miss until eviction.
                 entries.removeValue(forKey: url)
-                order.removeAll { $0 == url }
             }
             return artwork
         }
@@ -136,7 +134,6 @@ public enum ArtworkLoader {
         /// complete; only the cached results are released.
         private func purge() {
             entries.removeAll()
-            order.removeAll()
         }
     }
 
