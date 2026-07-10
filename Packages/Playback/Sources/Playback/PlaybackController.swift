@@ -40,15 +40,13 @@ public final class PlaybackController {
     @ObservationIgnored private var resolveTask: Task<Void, Never>?
     @ObservationIgnored private var albumArtTask: Task<Void, Never>?
 
-    /// How long playback may sit paused before the player and audio session
-    /// are released (see ``schedulePausedRelease()``).
+    /// Battery hygiene windows (see the schedule methods below). Both are
+    /// injectable so tests can use short values; there is deliberately no
+    /// user-facing setting — this is invisible housekeeping.
     @ObservationIgnored private let pausedReleaseTimeout: Duration
-    @ObservationIgnored private var pausedReleaseTask: Task<Void, Never>?
-
-    /// How long a stream may sit buffering before it is parked as paused
-    /// (see ``scheduleStallCeiling(for:)``).
+    @ObservationIgnored private let pausedReleaseTimer = OneShotTimer()
     @ObservationIgnored private let stallTimeout: Duration
-    @ObservationIgnored private var stallCeilingTask: Task<Void, Never>?
+    @ObservationIgnored private let stallCeilingTimer = OneShotTimer()
 
     /// Whether `output.start` has run for the active station. False while the
     /// stream endpoint is still resolving, or after a pause during loading —
@@ -60,8 +58,9 @@ public final class PlaybackController {
     @ObservationIgnored private var resumeAfterInterruption = false
 
     /// Designated initializer with every collaborator explicit — what tests use.
-    /// The iOS production defaults live in the convenience initializer below so
-    /// this type (and its tests) build on platforms without AVAudioSession/UIKit.
+    /// The iOS production defaults live in the convenience initializer (in
+    /// PlaybackControllerPlatform.swift) so this type (and its tests) build on
+    /// platforms without AVAudioSession/UIKit.
     public init(
         directory: any RadioDirectoryProviding,
         output: any AudioOutput,
@@ -79,70 +78,11 @@ public final class PlaybackController {
         configureRemoteCommands()
     }
 
-    #if canImport(UIKit)
-    /// Production wiring: AVPlayer-backed audio and the system now-playing center.
-    /// On iOS 27+ the now-playing surface is the NowPlaying framework's typed
-    /// MediaSession; iOS 26 keeps the legacy MediaPlayer bridge. Both sit behind
-    /// ``NowPlayingPresenting``, so nothing else changes with the OS version.
-    public convenience init(directory: any RadioDirectoryProviding) {
-        let nowPlayingCenter: any NowPlayingPresenting
-        #if canImport(NowPlaying)
-        if #available(iOS 27, *) {
-            nowPlayingCenter = MediaSessionNowPlayingCenter()
-        } else {
-            nowPlayingCenter = NowPlayingCenter()
-        }
-        #else
-        nowPlayingCenter = NowPlayingCenter()
-        #endif
-
-        self.init(
-            directory: directory,
-            output: AVPlayerAudioOutput(),
-            nowPlayingCenter: nowPlayingCenter
-        )
-    }
-    #endif
-
     // MARK: - Intents
 
     public func play(_ station: Station) {
         startPlayback(of: station)
         onStationPlayed?(station)
-    }
-
-    /// Starts (or restarts) the stream for `station` without treating it as a
-    /// new listening choice: `onStationPlayed` (recents logging, play
-    /// reporting) fires only from ``play(_:)``, so internal restarts — resume
-    /// after the paused-release teardown, retry after a failure — don't
-    /// double-log or double-report.
-    private func startPlayback(of station: Station) {
-        resolveTask?.cancel()
-        albumArtTask?.cancel()
-        albumArtTask = nil
-        cancelPausedRelease()
-        cancelStallCeiling()
-        activeStation = station
-        state = .loading(station)
-        nowPlaying = nil
-        albumArtURL = nil
-        outputStarted = false
-        resumeAfterInterruption = false
-
-        resolveTask = Task { [weak self] in
-            guard let self else { return }
-            do {
-                let endpoint = try await directory.streamEndpoint(for: station)
-                guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
-                self.output.start(url: endpoint.url)
-                self.outputStarted = true
-                self.nowPlayingCenter.update(station: station, track: nil, isPlaying: true, artworkURL: nil)
-            } catch {
-                guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
-                self.state = .failed(error.localizedDescription)
-                self.activeStation = nil
-            }
-        }
     }
 
     public func pause() {
@@ -164,7 +104,7 @@ public final class PlaybackController {
         switch state {
         case .paused:
             if outputStarted {
-                cancelPausedRelease()
+                pausedReleaseTimer.cancel()
                 output.resume()
             } else {
                 // Paused during loading, or the paused-release timeout tore
@@ -203,8 +143,8 @@ public final class PlaybackController {
         resolveTask?.cancel()
         albumArtTask?.cancel()
         albumArtTask = nil
-        cancelPausedRelease()
-        cancelStallCeiling()
+        pausedReleaseTimer.cancel()
+        stallCeilingTimer.cancel()
         output.stop()
         activeStation = nil
         state = .idle
@@ -233,10 +173,46 @@ public final class PlaybackController {
             return .idle
         }
     }
+}
 
-    // MARK: - Wiring
+// MARK: - Wiring
 
-    private func configureOutput() {
+private extension PlaybackController {
+    /// Starts (or restarts) the stream for `station` without treating it as a
+    /// new listening choice: `onStationPlayed` (recents logging, play
+    /// reporting) fires only from ``play(_:)``, so internal restarts — resume
+    /// after the paused-release teardown, retry after a failure — don't
+    /// double-log or double-report.
+    func startPlayback(of station: Station) {
+        resolveTask?.cancel()
+        albumArtTask?.cancel()
+        albumArtTask = nil
+        pausedReleaseTimer.cancel()
+        stallCeilingTimer.cancel()
+        activeStation = station
+        state = .loading(station)
+        nowPlaying = nil
+        albumArtURL = nil
+        outputStarted = false
+        resumeAfterInterruption = false
+
+        resolveTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let endpoint = try await directory.streamEndpoint(for: station)
+                guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
+                self.output.start(url: endpoint.url)
+                self.outputStarted = true
+                self.nowPlayingCenter.update(station: station, track: nil, isPlaying: true, artworkURL: nil)
+            } catch {
+                guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
+                self.state = .failed(error.localizedDescription)
+                self.activeStation = nil
+            }
+        }
+    }
+
+    func configureOutput() {
         output.onStatusChange = { [weak self] status in
             self?.handleStatusChange(status)
         }
@@ -245,31 +221,31 @@ public final class PlaybackController {
         }
     }
 
-    private var isOutputPlaying: Bool {
+    var isOutputPlaying: Bool {
         if case .playing = state { return true }
         return false
     }
 
-    private func handleStatusChange(_ status: AudioStatus) {
+    func handleStatusChange(_ status: AudioStatus) {
         guard let station = activeStation else { return }
         switch status {
         case .buffering:
-            cancelPausedRelease()
+            pausedReleaseTimer.cancel()
             state = .buffering(station)
             scheduleStallCeiling(for: station)
         case .playing:
-            cancelPausedRelease()
-            cancelStallCeiling()
+            pausedReleaseTimer.cancel()
+            stallCeilingTimer.cancel()
             state = .playing(station)
             nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: true, artworkURL: albumArtURL)
         case .paused:
-            cancelStallCeiling()
+            stallCeilingTimer.cancel()
             state = .paused(station)
             nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
             schedulePausedRelease()
         case let .failed(message):
-            cancelPausedRelease()
-            cancelStallCeiling()
+            pausedReleaseTimer.cancel()
+            stallCeilingTimer.cancel()
             state = .failed(message)
         case .interruptionBegan:
             handleInterruptionBegan(station: station)
@@ -281,7 +257,7 @@ public final class PlaybackController {
         }
     }
 
-    private func handleTrackInfo(_ info: AudioTrackInfo) {
+    func handleTrackInfo(_ info: AudioTrackInfo) {
         guard let station = activeStation else { return }
 
         // ICY pushes often repeat identical track info (the Live Activity
@@ -317,7 +293,7 @@ public final class PlaybackController {
 
     /// Best-effort album art resolution: resolve asynchronously and re-push
     /// the now-playing surface with the resolved URL.
-    private func resolveAlbumArt(for info: AudioTrackInfo) {
+    func resolveAlbumArt(for info: AudioTrackInfo) {
         guard let provider = albumArtURLProvider else { return }
         albumArtTask?.cancel()
         albumArtTask = Task { [weak self] in
@@ -337,12 +313,12 @@ public final class PlaybackController {
         }
     }
 
-    private func handleInterruptionBegan(station: Station) {
+    func handleInterruptionBegan(station: Station) {
         switch state {
         case .playing, .buffering:
             // The system already paused the player; remember to resume.
             resumeAfterInterruption = true
-            cancelStallCeiling()
+            stallCeilingTimer.cancel()
             state = .paused(station)
             schedulePausedRelease()
         case .loading:
@@ -361,46 +337,29 @@ public final class PlaybackController {
     // MARK: - Resource hygiene
 
     /// Releases the player and audio session once playback has sat paused for
-    /// `pausedReleaseTimeout`. Holding them longer keeps the `audio`
-    /// background assertion (and the resident AVPlayerItem) alive for as long
-    /// as the user stays paused — hours of background battery for no benefit,
-    /// since live radio has no position to preserve: `resume()` restarts the
-    /// stream to identical effect via its `outputStarted == false` path.
-    ///
-    /// `state`, `nowPlaying`, and the now-playing surface are deliberately
-    /// left untouched — the lock screen keeps showing the paused station with
-    /// a working play button, and observers see no state change.
-    private func schedulePausedRelease() {
-        pausedReleaseTask?.cancel()
-        let timeout = pausedReleaseTimeout
-        pausedReleaseTask = Task { [weak self] in
-            try? await Task.sleep(for: timeout)
-            guard let self, Task.isCancelled == false else { return }
-            guard case .paused = self.state else { return }
+    /// `pausedReleaseTimeout` — otherwise a paused app keeps the `audio`
+    /// background assertion (and the resident AVPlayerItem) alive for hours.
+    /// Live radio has no position to lose: `resume()` restarts the stream via
+    /// its `outputStarted == false` path. `state`, `nowPlaying`, and the
+    /// lock-screen surface stay untouched, so the release is invisible and
+    /// the lock-screen play button keeps working.
+    func schedulePausedRelease() {
+        pausedReleaseTimer.schedule(after: pausedReleaseTimeout) { [weak self] in
+            guard let self, case .paused = self.state else { return }
             self.output.stop()
             self.outputStarted = false
         }
     }
 
-    private func cancelPausedRelease() {
-        pausedReleaseTask?.cancel()
-        pausedReleaseTask = nil
-    }
-
-    /// Bounds how long a stalled stream may sit buffering. AVPlayer's
-    /// `automaticallyWaitsToMinimizeStalling` retries a stalled live stream
-    /// indefinitely — with the app backgrounded (signal loss in a pocket)
-    /// that keeps the network radio churning with no ceiling. After
-    /// `stallTimeout` the stream is torn down and parked as `.paused` rather
-    /// than `.failed`: a stall isn't a user error, and paused keeps the lock
-    /// screen accurate with a play button that routes to the restart path.
-    private func scheduleStallCeiling(for station: Station) {
-        stallCeilingTask?.cancel()
-        let timeout = stallTimeout
-        stallCeilingTask = Task { [weak self] in
-            try? await Task.sleep(for: timeout)
-            guard let self, Task.isCancelled == false else { return }
-            guard case .buffering = self.state else { return }
+    /// Bounds how long a stalled stream may sit buffering — AVPlayer's
+    /// `automaticallyWaitsToMinimizeStalling` otherwise retries a stalled
+    /// live stream forever, churning the network radio in the background.
+    /// The stream is parked as `.paused` rather than `.failed`: a stall isn't
+    /// a user error, and paused keeps the lock screen accurate with a play
+    /// button that routes to the restart path.
+    func scheduleStallCeiling(for station: Station) {
+        stallCeilingTimer.schedule(after: stallTimeout) { [weak self] in
+            guard let self, case .buffering = self.state else { return }
             self.output.stop()
             self.outputStarted = false
             self.state = .paused(station)
@@ -417,25 +376,10 @@ public final class PlaybackController {
         }
     }
 
-    private func cancelStallCeiling() {
-        stallCeilingTask?.cancel()
-        stallCeilingTask = nil
-    }
-
-    private func configureRemoteCommands() {
+    func configureRemoteCommands() {
         nowPlayingCenter.onPlay = { [weak self] in self?.resume() }
         nowPlayingCenter.onPause = { [weak self] in self?.pause() }
         nowPlayingCenter.onStop = { [weak self] in self?.stop() }
         nowPlayingCenter.onToggle = { [weak self] in self?.togglePlayPause() }
     }
 }
-
-#if canImport(UIKit)
-public extension PlaybackController {
-    /// A controller wired to preview data for SwiftUI previews.
-    @MainActor
-    static func preview() -> PlaybackController {
-        PlaybackController(directory: PreviewRadioDirectory())
-    }
-}
-#endif
