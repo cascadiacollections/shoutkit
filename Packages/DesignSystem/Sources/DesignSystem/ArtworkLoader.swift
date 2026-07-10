@@ -36,7 +36,9 @@ public enum ArtworkLoader {
     /// backdrop consumes the same bitmap through a heavy blur, so it needs no
     /// more resolution either. Decoding through ImageIO with this cap keeps
     /// an oversized favicon from pinning a multi-megabyte bitmap.
-    private static let maxDecodePixelSize: CGFloat = 840
+    /// `nonisolated`: read from the nonisolated decode pipeline, and the
+    /// package's main-actor default would otherwise isolate it.
+    private nonisolated static let maxDecodePixelSize: CGFloat = 840
 
     /// Loads and decodes artwork, coalescing concurrent and repeated requests
     /// for the same URL. The Now Playing surface asks for the same artwork
@@ -118,10 +120,13 @@ public enum ArtworkLoader {
                 eventMask: [.warning, .critical],
                 queue: .global(qos: .utility)
             )
-            source.setEventHandler { [weak self] in
+            // Explicitly @Sendable: the handler leaves the actor and only
+            // captures a weak actor reference, which is safe to send.
+            let handler: @Sendable () -> Void = { [weak self] in
                 guard let self else { return }
                 Task { await self.purge() }
             }
+            source.setEventHandler(handler: handler)
             source.activate()
             memoryPressureSource = source
         }

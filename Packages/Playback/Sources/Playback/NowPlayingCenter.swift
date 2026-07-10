@@ -158,7 +158,7 @@ public final class NowPlayingCenter: NowPlayingPresenting {
             // Decode off the main actor — with `ShouldCacheImmediately` the
             // downsample decode is the expensive step, not `UIImage(data:)`.
             guard let image = await Task.detached(priority: .utility, operation: {
-                Self.decodedArtwork(from: data)
+                NowPlayingCenter.decodedArtwork(from: data)
             }).value else {
                 return
             }
