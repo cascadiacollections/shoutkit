@@ -36,8 +36,9 @@ public final class NowPlayingActivityCoordinator {
     private var artworkTask: Task<Void, Never>?
 
     /// Live Activity artwork renders no larger than a Dynamic Island tile, so a
-    /// small thumbnail is plenty and keeps the App Group file tiny.
-    private static let artworkMaxPixelSize = 256
+    /// small thumbnail is plenty and keeps the App Group file tiny. `nonisolated`
+    /// so the off-main staging path can read it.
+    private nonisolated static let artworkMaxPixelSize = 256
 
     public init() {}
 
