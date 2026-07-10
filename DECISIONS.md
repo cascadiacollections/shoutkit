@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-07-10 (swift-async-algorithms adopted, revisiting the audit's rejection)
+
+The FOSS audit below rejected swift-async-algorithms because it scored only the search
+debounce, where the hand-rolled `Task.sleep` version genuinely holds its own. Re-scored
+across the whole codebase, the package pays for itself — same ground rules as the audit
+(Apple-maintained, Apache-2.0 with Runtime Library Exception, pinned semver `from: "1.1.5"`),
+recorded in `THIRD_PARTY_LICENSES.md` and the in-app Licenses screen:
+
+- **`removeDuplicates()` in NowPlayingActivityKit**: both observation loops in
+  `NowPlayingActivityCoordinator` carried a mutable `previous` variable and a
+  `where state != previous` clause — hand-rolled duplicate suppression, exactly the operator's
+  job. The one behavioral wrinkle of the old code (a leading `nil` metadata value was skipped
+  because `nil != nil` is false, while `removeDuplicates()` always emits the first element) is
+  a no-op in practice: `nowPlayingChanged(nil)` clears already-nil state and returns before
+  touching ActivityKit.
+- **`debounce(for:)` in SearchFeature**: the view model now pushes trimmed queries into an
+  `AsyncStream` consumed through `.debounce(for: .milliseconds(300))`, replacing the
+  cancel-and-resleep task dance. Semantics preserved deliberately: clearing the query still
+  resets to `.idle` synchronously in `didSet` (the empty value also flows through the stream,
+  superseding any keystroke waiting in the debounce window); the spinner still appears only
+  when the debounce fires, never per keystroke; and each keystroke still cancels an in-flight
+  search immediately (in `didSet`, not just when the next debounced value lands) so a slow
+  response for a stale query can't flash results before the new search starts.
+- **Not applied to `SleepTimer`/`OneShotTimer`**: those are single one-shot delays, not
+  streams of values — `Task.sleep` is the right primitive and there is nothing for an
+  `AsyncSequence` operator to buy.
+
 ## 2026-07-10 (first third-party dependencies, after a FOSS audit)
 
 The zero-dependency posture (see 2026-07-05) was revisited deliberately: audit every area a
