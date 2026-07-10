@@ -77,7 +77,8 @@ jobs:
       # Checks API, so a build failure stays diagnosable from the API alone.
       - name: Emit compile errors as annotations
         if: failure()
-        run: grep -E "(error|fatal error): " build.log | sort -u | head -10 | sed 's/^/::error::/' || true
+        run: |
+          grep -E "(error|fatal error): " build.log | sort -u | head -10 | sed 's/^/::error::/' || true
 
   lint:
     name: SwiftLint
