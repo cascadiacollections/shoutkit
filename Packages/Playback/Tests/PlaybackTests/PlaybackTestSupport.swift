@@ -11,14 +11,19 @@ final class FakeAudioOutput: AudioOutput {
     var onTrackInfo: ((AudioTrackInfo) -> Void)?
 
     private(set) var startedURLs: [URL] = []
-    private(set) var stopCalled = false
+    private(set) var stopCount = 0
+    private(set) var resumeCount = 0
 
     var startedURL: URL? { startedURLs.last }
+    var stopCalled: Bool { stopCount > 0 }
 
     func start(url: URL) { startedURLs.append(url) }
     func pause() { onStatusChange?(.paused) }
-    func resume() { onStatusChange?(.playing) }
-    func stop() { stopCalled = true }
+    func resume() {
+        resumeCount += 1
+        onStatusChange?(.playing)
+    }
+    func stop() { stopCount += 1 }
 }
 
 /// Spy standing in for the system now-playing surface, so tests never touch
@@ -68,12 +73,16 @@ func station(_ id: String = "kexp") -> Station {
 func makeController(
     stations: [Station],
     output: FakeAudioOutput,
-    presenter: NowPlayingPresenterSpy = NowPlayingPresenterSpy()
+    presenter: NowPlayingPresenterSpy = NowPlayingPresenterSpy(),
+    pausedReleaseTimeout: Duration = .seconds(10 * 60),
+    stallTimeout: Duration = .seconds(90)
 ) -> PlaybackController {
     PlaybackController(
         directory: BundledRadioDirectory(stations: stations),
         output: output,
-        nowPlayingCenter: presenter
+        nowPlayingCenter: presenter,
+        pausedReleaseTimeout: pausedReleaseTimeout,
+        stallTimeout: stallTimeout
     )
 }
 
@@ -87,5 +96,15 @@ func waitForStart(_ output: FakeAudioOutput, count: Int = 1) async {
 func drainMainQueue() async {
     for _ in 0..<50 {
         await Task.yield()
+    }
+}
+
+/// Polls until `condition` holds or the deadline passes (same pattern as
+/// SleepTimerTests.waitUntilFired, shared here for the timeout-driven suites).
+@MainActor
+func waitUntil(_ condition: () -> Bool, upTo seconds: TimeInterval = 2) async {
+    let deadline = Date().addingTimeInterval(seconds)
+    while condition() == false, Date() < deadline {
+        try? await Task.sleep(for: .milliseconds(10))
     }
 }

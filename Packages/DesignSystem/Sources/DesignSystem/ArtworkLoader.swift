@@ -27,10 +27,18 @@ public struct LoadedArtwork: Sendable {
 }
 
 public enum ArtworkLoader {
-    /// Loads through the shared `URLCache`, so backdrop and hero requests for
-    /// the same station coalesce into a single network fetch.
+    /// Loads and decodes artwork, coalescing concurrent and repeated requests
+    /// for the same URL. The Now Playing surface asks for the same artwork
+    /// from several views at once (backdrop, hero, tint) — the store hands
+    /// them one shared decode + palette pass instead of three.
     public nonisolated static func load(_ url: URL?) async -> LoadedArtwork? {
         guard let url else { return nil }
+        return await ArtworkStore.shared.artwork(for: url)
+    }
+
+    /// The uncached fetch/decode pipeline: loads through the shared
+    /// `URLCache` and box-filters a 3×3 palette off the main actor.
+    fileprivate nonisolated static func fetchAndDecode(_ url: URL) async -> LoadedArtwork? {
         var request = URLRequest(url: url)
         request.cachePolicy = .returnCacheDataElseLoad
 
@@ -47,6 +55,39 @@ public enum ArtworkLoader {
             paletteGrid: samples.map(ambientColor),
             accentColor: accentColor(from: samples)
         )
+    }
+
+    /// Deduplicates artwork work per URL: in-flight and completed loads share
+    /// one map entry, so a second caller awaits the first caller's task
+    /// instead of re-fetching and re-decoding. Bounded FIFO — in practice only
+    /// the current and previous track's art are ever live at once.
+    private actor ArtworkStore {
+        static let shared = ArtworkStore()
+
+        private var entries: [URL: Task<LoadedArtwork?, Never>] = [:]
+        private var order: [URL] = []
+        private let capacity = 6
+
+        func artwork(for url: URL) async -> LoadedArtwork? {
+            if let existing = entries[url] {
+                return await existing.value
+            }
+
+            let task = Task { await ArtworkLoader.fetchAndDecode(url) }
+            entries[url] = task
+            order.append(url)
+            if order.count > capacity {
+                entries.removeValue(forKey: order.removeFirst())
+            }
+
+            let artwork = await task.value
+            if artwork == nil {
+                // A transient failure must not pin a miss until eviction.
+                entries.removeValue(forKey: url)
+                order.removeAll { $0 == url }
+            }
+            return artwork
+        }
     }
 
     private struct HSBSample {

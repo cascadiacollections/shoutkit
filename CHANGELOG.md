@@ -22,6 +22,20 @@ All notable changes to ShoutKit are documented here. The format follows
 - 0.3.0 release plan (`docs/releases/0.3.0.md`): iOS 27 platform adoption — App Intents entity
   schemas for the new Siri, quick-play widget, and an iOS 27 QA checklist
 
+### Changed
+- **Background battery hygiene**: playback left paused for 10 minutes now releases the player
+  and the audio session (lock-screen controls keep working — play restarts the live stream),
+  instead of holding the `audio` background assertion for as long as the app stays paused.
+  A stream that stalls buffering for over 90 seconds is likewise parked as paused instead of
+  retrying the network indefinitely in the background
+- Album-art lookups now also cache definitive catalog misses, so a track iTunes doesn't know
+  no longer re-queries the API on every ICY repeat; Now Playing artwork is fetched and decoded
+  once per URL and shared across the backdrop, hero, and tint views (previously three decodes)
+
+### Fixed
+- Resuming after a stream failure (or after pausing while a station was still loading) no longer
+  re-logs the station to recents and re-reports the play to Radio-Browser
+
 ## [0.2.0] — in progress (first TestFlight beta)
 
 ### Added

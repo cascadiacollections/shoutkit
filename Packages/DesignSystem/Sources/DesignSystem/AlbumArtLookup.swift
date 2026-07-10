@@ -21,11 +21,23 @@ public nonisolated enum AlbumArtLookup {
         return URLSession(configuration: config)
     }()
 
-    /// In-process positive-result cache. Negative results are NOT cached so a
-    /// transient network failure on one track doesn't permanently suppress art
-    /// for that track. Keyed on "artist|title" (lowercased). Values are tiny
-    /// (a URL apiece), so unbounded growth over a listening session is fine.
-    private static let cache = OSAllocatedUnfairLock<[String: URL]>(initialState: [:])
+    /// In-process lookup cache, keyed on "artist|title" (lowercased). Caches
+    /// both hits and definitive misses — a track the catalog simply doesn't
+    /// have would otherwise re-query iTunes on every ICY repeat, which over a
+    /// long background listening session is pure network/battery waste.
+    /// Transient failures (transport error, non-200, malformed payload) are
+    /// still NOT cached, so a network blip doesn't permanently suppress art.
+    private enum CachedLookup {
+        case artwork(URL)
+        case noMatch
+    }
+
+    /// Values are tiny, but a multi-day session shouldn't grow unbounded:
+    /// past the cap the cache is simply reset (a rare full re-warm is cheaper
+    /// than LRU bookkeeping on every lookup).
+    private static let maxCacheEntries = 256
+
+    private static let cache = OSAllocatedUnfairLock<[String: CachedLookup]>(initialState: [:])
 
     /// Resolves a high-quality artwork URL for the given artist and title.
     ///
@@ -42,7 +54,10 @@ public nonisolated enum AlbumArtLookup {
 
         let cacheKey = "\(artist.lowercased())|\(title.lowercased())"
         if let cached = cache.withLock({ $0[cacheKey] }) {
-            return cached
+            switch cached {
+            case let .artwork(url): return url
+            case .noMatch: return nil
+            }
         }
 
         guard let searchURL = buildSearchURL(artist: artist, title: title) else { return nil }
@@ -51,10 +66,16 @@ public nonisolated enum AlbumArtLookup {
               (response as? HTTPURLResponse)?.statusCode == 200
         else { return nil }
 
-        guard let artworkURL = parseArtworkURL(from: data) else { return nil }
-
-        cache.withLock { $0[cacheKey] = artworkURL }
-        return artworkURL
+        switch parseArtworkURL(from: data) {
+        case let .found(artworkURL):
+            store(.artwork(artworkURL), forKey: cacheKey)
+            return artworkURL
+        case .noMatch:
+            store(.noMatch, forKey: cacheKey)
+            return nil
+        case .malformed:
+            return nil
+        }
     }
 
     // MARK: - Private helpers
@@ -84,15 +105,33 @@ public nonisolated enum AlbumArtLookup {
         return components?.url
     }
 
+    private static func store(_ value: CachedLookup, forKey key: String) {
+        cache.withLock {
+            if $0.count >= maxCacheEntries { $0.removeAll(keepingCapacity: true) }
+            $0[key] = value
+        }
+    }
+
+    private enum ParseOutcome {
+        case found(URL)
+        /// The catalog answered and has no artwork for this track — cacheable.
+        case noMatch
+        /// Undecodable payload — treat like a transport failure, don't cache.
+        case malformed
+    }
+
     /// Parses the first result's `artworkUrl100` field and up-sizes it to
     /// 600 × 600 for crisp rendering on high-density displays.
-    private static func parseArtworkURL(from data: Data) -> URL? {
-        guard let response = try? JSONDecoder().decode(SearchResponse.self, from: data),
-              let urlString = response.results.first?.artworkUrl100
-        else { return nil }
+    private static func parseArtworkURL(from data: Data) -> ParseOutcome {
+        guard let response = try? JSONDecoder().decode(SearchResponse.self, from: data) else {
+            return .malformed
+        }
 
         // Apple returns 100×100; replace with 600×600 for album-art quality.
-        let highRes = urlString.replacingOccurrences(of: "100x100bb", with: "600x600bb")
-        return URL(string: highRes)
+        guard let urlString = response.results.first?.artworkUrl100,
+              let url = URL(string: urlString.replacingOccurrences(of: "100x100bb", with: "600x600bb"))
+        else { return .noMatch }
+
+        return .found(url)
     }
 }
