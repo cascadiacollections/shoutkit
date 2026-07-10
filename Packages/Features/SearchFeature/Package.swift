@@ -15,7 +15,8 @@ let package = Package(
         .package(path: "../../DesignSystem"),
         .package(path: "../../Playback"),
         .package(path: "../../Persistence"),
-        .package(path: "../../RadioDirectory")
+        .package(path: "../../RadioDirectory"),
+        .package(url: "https://github.com/apple/swift-async-algorithms.git", from: "1.1.5")
     ],
     targets: [
         .target(
@@ -24,7 +25,8 @@ let package = Package(
                 "DesignSystem",
                 "Playback",
                 "Persistence",
-                "RadioDirectory"
+                "RadioDirectory",
+                .product(name: "AsyncAlgorithms", package: "swift-async-algorithms")
             ],
             resources: [.process("Resources/Localizable.xcstrings")],
             swiftSettings: [.defaultIsolation(MainActor.self)]

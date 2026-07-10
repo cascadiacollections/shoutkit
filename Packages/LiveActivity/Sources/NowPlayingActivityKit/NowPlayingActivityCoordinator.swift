@@ -1,4 +1,5 @@
 import ActivityKit
+import AsyncAlgorithms
 import Foundation
 import NowPlayingActivityCore
 import Observation
@@ -31,14 +32,12 @@ public final class NowPlayingActivityCoordinator {
 
     /// Follows the controller's playback state and live track metadata for the
     /// life of this coordinator. Call once at bootstrap. Values are deduplicated
-    /// here: ICY pushes often repeat identical track info, and redundant
-    /// ActivityKit updates are wasted IPC.
+    /// (`removeDuplicates()`): ICY pushes often repeat identical track info, and
+    /// redundant ActivityKit updates are wasted IPC.
     public func observe(_ controller: PlaybackController) {
         let states = Observations { controller.state }
         observationTasks.append(Task { [weak self] in
-            var previous: PlaybackState?
-            for await state in states where state != previous {
-                previous = state
+            for await state in states.removeDuplicates() {
                 guard let self else { return }
                 self.playbackStateChanged(state)
             }
@@ -46,9 +45,7 @@ public final class NowPlayingActivityCoordinator {
 
         let tracks = Observations { controller.nowPlaying }
         observationTasks.append(Task { [weak self] in
-            var previous: NowPlayingMetadata?
-            for await metadata in tracks where metadata != previous {
-                previous = metadata
+            for await metadata in tracks.removeDuplicates() {
                 guard let self else { return }
                 self.nowPlayingChanged(metadata)
             }

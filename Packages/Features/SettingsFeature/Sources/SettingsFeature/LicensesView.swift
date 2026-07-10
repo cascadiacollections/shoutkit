@@ -24,6 +24,9 @@ struct LicensesView: View {
                 NavigationLink("swift-algorithms — Apache-2.0") {
                     LicenseTextView(title: "Apache-2.0", resource: "apache-2.0")
                 }
+                NavigationLink("swift-async-algorithms — Apache-2.0") {
+                    LicenseTextView(title: "Apache-2.0", resource: "apache-2.0")
+                }
                 NavigationLink("swift-collections — Apache-2.0") {
                     LicenseTextView(title: "Apache-2.0", resource: "apache-2.0")
                 }
@@ -31,7 +34,8 @@ struct LicensesView: View {
                 Text("Third-Party")
             } footer: {
                 Text("""
-                Apple's swift-algorithms and swift-collections packages, \
+                Apple's swift-algorithms, swift-async-algorithms, and \
+                swift-collections packages, \
                 Apache-2.0 with the Swift Runtime Library Exception. \
                 The full inventory lives in THIRD_PARTY_LICENSES.md in the repository.
                 """)

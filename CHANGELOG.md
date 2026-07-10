@@ -23,13 +23,20 @@ All notable changes to ShoutKit are documented here. The format follows
   schemas for the new Siri, quick-play widget, and an iOS 27 QA checklist
 
 ### Changed
+- Adopted swift-async-algorithms (Apple-maintained, Apache-2.0, pinned to a stable release;
+  recorded in `THIRD_PARTY_LICENSES.md` and shown in Settings → Licenses), revisiting the
+  FOSS audit's initial rejection: `removeDuplicates()` replaces the Live Activity
+  coordinator's two hand-rolled duplicate-suppression loops, and Search's 300 ms debounce
+  moves from a cancel-and-resleep task to a query stream with `debounce(for:)` — behavior
+  unchanged (see `DECISIONS.md`)
 - Adopted the first two third-party dependencies after a FOSS audit (both Apple-maintained,
   Apache-2.0, pinned to stable releases; recorded in `THIRD_PARTY_LICENSES.md` and shown in
   Settings → Licenses): swift-algorithms replaces RadioDirectory's three hand-rolled
   de-duplication helpers with `uniqued(on:)`, and swift-collections replaces the Now Playing
   artwork store's dictionary-plus-eviction-order bookkeeping with an `OrderedDictionary`.
   Candidates evaluated and rejected as not paying for themselves: Nuke, GRDB, Defaults,
-  swift-async-algorithms, Alamofire (see `DECISIONS.md`)
+  Alamofire, and initially swift-async-algorithms — adopted after the wider re-score above
+  (see `DECISIONS.md`)
 - **Runtime memory hygiene for older devices**: all artwork is now decoded at the size its
   surface actually needs (ImageIO downsampling) instead of the server's native resolution —
   including the lock-screen artwork that stays resident while listening in the background.
