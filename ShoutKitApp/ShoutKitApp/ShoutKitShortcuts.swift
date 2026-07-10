@@ -9,7 +9,7 @@ import SwiftData
 /// A radio station as Siri/Shortcuts sees it. Carries the full snapshot needed to
 /// play without a directory round-trip, mirroring how Persistence snapshots
 /// stations for the same reason.
-struct StationEntity: AppEntity, Codable {
+struct StationEntity: AppEntity, Codable, Sendable {
     static let typeDisplayRepresentation: TypeDisplayRepresentation = "Radio Station"
     static let defaultQuery = StationEntityQuery()
 
@@ -100,15 +100,11 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
 /// UserDefaults-backed memory of stations previously handed to Shortcuts, so the
 /// entity query can reconstruct them from a bare id.
 enum IntentStationCache {
-    private static let key = "intents.station.cache"
+    private static let key = DefaultsKey<[StationEntity]>.codable("intents.station.cache", default: [])
     private static let capacity = 50
 
     static func load() -> [StationEntity] {
-        guard let data = UserDefaults.standard.data(forKey: key),
-              let entities = try? JSONDecoder().decode([StationEntity].self, from: data) else {
-            return []
-        }
-        return entities
+        UserDefaults.standard.value(for: key)
     }
 
     static func remember(_ entities: [StationEntity]) {
@@ -118,9 +114,7 @@ enum IntentStationCache {
         let merged = (entities + load()).filter { seen.insert($0.id).inserted }
         let capped = Array(merged.prefix(capacity))
 
-        if let data = try? JSONEncoder().encode(capped) {
-            UserDefaults.standard.set(data, forKey: key)
-        }
+        UserDefaults.standard.set(capped, for: key)
     }
 }
 
