@@ -9,6 +9,10 @@ import UIKit
 /// resolution-independent ambient backdrops.
 public struct LoadedArtwork: Sendable {
     public let image: UIImage
+    /// The decoded bitmap's pixel size. Decoding is capped at the loader's
+    /// 840 px ceiling, so for oversized sources this is the downsampled size —
+    /// every consumer decision (upscale caps, blur-wash gates) resolves well
+    /// below the ceiling, so the distinction never shows.
     public let pixelSize: CGSize
     /// Row-major 3×3 grid of box-filtered colors, top-left first — shaped to
     /// feed a `MeshGradient` directly. Empty if sampling failed.
@@ -27,6 +31,13 @@ public struct LoadedArtwork: Sendable {
 }
 
 public enum ArtworkLoader {
+    /// Decode ceiling in pixels. The largest surface this pipeline feeds is
+    /// the 280 pt Now Playing hero — 840 px on a 3× display; the ambient
+    /// backdrop consumes the same bitmap through a heavy blur, so it needs no
+    /// more resolution either. Decoding through ImageIO with this cap keeps
+    /// an oversized favicon from pinning a multi-megabyte bitmap.
+    private static let maxDecodePixelSize: CGFloat = 840
+
     /// Loads and decodes artwork, coalescing concurrent and repeated requests
     /// for the same URL. The Now Playing surface asks for the same artwork
     /// from several views at once (backdrop, hero, tint) — the store hands
@@ -37,14 +48,15 @@ public enum ArtworkLoader {
     }
 
     /// The uncached fetch/decode pipeline: loads through the shared
-    /// `URLCache` and box-filters a 3×3 palette off the main actor.
+    /// `URLCache`, downsample-decodes to the display ceiling, and box-filters
+    /// a 3×3 palette — all off the main actor.
     fileprivate nonisolated static func fetchAndDecode(_ url: URL) async -> LoadedArtwork? {
         var request = URLRequest(url: url)
         request.cachePolicy = .returnCacheDataElseLoad
 
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse).map({ (200 ..< 300).contains($0.statusCode) }) ?? true,
-              let image = UIImage(data: data),
+              let image = ImageDownsampler.decode(data, maxPixelSize: maxDecodePixelSize),
               let cgImage = image.cgImage
         else { return nil }
 
@@ -68,7 +80,17 @@ public enum ArtworkLoader {
         private var order: [URL] = []
         private let capacity = 6
 
+        /// Purges the store when the system reports memory pressure, so the
+        /// worst case (six hero-sized bitmaps, ~17 MB) is always reclaimable
+        /// on constrained devices. A dispatch source rather than
+        /// `didReceiveMemoryWarning`: no UIKit plumbing, and it also fires
+        /// for pressure while backgrounded. Installed lazily on first use so
+        /// the actor's init stays trivial.
+        private var memoryPressureSource: DispatchSourceMemoryPressure?
+
         func artwork(for url: URL) async -> LoadedArtwork? {
+            installMemoryPressureSourceIfNeeded()
+
             if let existing = entries[url] {
                 return await existing.value
             }
@@ -87,6 +109,29 @@ public enum ArtworkLoader {
                 order.removeAll { $0 == url }
             }
             return artwork
+        }
+
+        private func installMemoryPressureSourceIfNeeded() {
+            guard memoryPressureSource == nil else { return }
+
+            let source = DispatchSource.makeMemoryPressureSource(
+                eventMask: [.warning, .critical],
+                queue: .global(qos: .utility)
+            )
+            source.setEventHandler { [weak self] in
+                guard let self else { return }
+                Task { await self.purge() }
+            }
+            source.activate()
+            memoryPressureSource = source
+        }
+
+        /// Drops everything, including in-flight tasks — callers already
+        /// awaiting a task hold their own reference, so their loads still
+        /// complete; only the cached results are released.
+        private func purge() {
+            entries.removeAll()
+            order.removeAll()
         }
     }
 

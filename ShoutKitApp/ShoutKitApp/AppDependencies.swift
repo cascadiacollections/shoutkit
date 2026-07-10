@@ -37,6 +37,16 @@ enum AppDependencies {
             return services
         }
 
+        // Size the shared URL cache for RAM-constrained devices: raw bytes
+        // (artwork, directory JSON) belong on disk — cheap, and they survive
+        // relaunch — while the in-memory tier stays small; decoded bitmaps
+        // have their own bounded caches in DesignSystem. Set here, before the
+        // first request, so every `URLSession.shared` consumer picks it up.
+        URLCache.shared = URLCache(
+            memoryCapacity: 2 * 1024 * 1024,
+            diskCapacity: 64 * 1024 * 1024
+        )
+
         let container = ShoutKitModelContainer.makeContainer()
         let store = LibraryStore(context: container.mainContext)
         let settings = SettingsStore()

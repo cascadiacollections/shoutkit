@@ -23,6 +23,14 @@ All notable changes to ShoutKit are documented here. The format follows
   schemas for the new Siri, quick-play widget, and an iOS 27 QA checklist
 
 ### Changed
+- **Runtime memory hygiene for older devices**: all artwork is now decoded at the size its
+  surface actually needs (ImageIO downsampling) instead of the server's native resolution —
+  including the lock-screen artwork that stays resident while listening in the background.
+  List, card, and mini-player thumbnails moved from `AsyncImage` to a shared thumbnail
+  pipeline whose decoded-image cache auto-evicts under system memory pressure; the Now Playing
+  artwork store likewise purges when the system signals pressure. The shared URL byte cache is
+  explicitly sized (2 MB memory / 64 MB disk), shifting raw-byte caching from RAM to disk and
+  letting artwork survive relaunches
 - **Background battery hygiene**: playback left paused for 10 minutes now releases the player
   and the audio session (lock-screen controls keep working — play restarts the live stream),
   instead of holding the `audio` background assertion for as long as the app stays paused.

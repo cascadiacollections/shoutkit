@@ -1,5 +1,52 @@
 # Decisions
 
+## 2026-07-10 (runtime memory on older devices)
+
+Companion to the battery audit below, same philosophy: bound resource *retention*, and lean on
+platform behavior (ImageIO, NSCache, dispatch memory-pressure sources) instead of hand-rolled
+bookkeeping. Bitmaps are the only meaningful runtime allocation in this app — directory models
+are tiny value structs and audio buffers are ~16 KB/s — so every change targets the artwork
+pipeline.
+
+- **All artwork decodes are downsampled via ImageIO**
+  (`CGImageSourceCreateThumbnailAtIndex` + `kCGImageSourceThumbnailMaxPixelSize`, with
+  `kCGImageSourceShouldCacheImmediately` so the decode happens off-main at load time, not
+  lazily at first render). `UIImage(data:)` decodes at the server's native resolution — a
+  2000×2000 favicon is ~16 MB of bitmap behind a 56 pt cell. Decoded size now scales with the
+  surface: 840 px ceiling for the Now Playing pipeline (280 pt hero at 3×; the ambient
+  backdrop consumes the same bitmap through a 60 pt blur, so it needs no more), cell size ×
+  `displayScale` for list thumbnails, 768 px for lock-screen art. `LoadedArtwork.pixelSize`
+  consequently reports the *decoded* size; every consumer decision (the 2.5× upscale cap, the
+  ≥512 px blur-wash gate) resolves below the ceiling, so behavior is unchanged except for
+  extreme-aspect sources (e.g. 2000×600 now downsamples to 840×252 and gets the palette mesh
+  instead of the blur wash — the designed fallback for low-detail art).
+- **`AsyncImage` replaced with `ArtworkThumbnailLoader`** (station rows, cards, mini-player,
+  Browse spotlight). `AsyncImage` re-decodes at native size on every cell reuse and caches
+  nothing but URLCache bytes. The loader still fetches through the shared `URLCache`, but
+  keeps decoded thumbs in an `NSCache` (16 MB cost ceiling, costs = bitmap bytes) — chosen
+  precisely because NSCache sizes itself to the device and auto-evicts under system memory
+  pressure, which is the whole point on older hardware.
+- **`ArtworkLoader`'s coalescing store purges on memory pressure** via
+  `DispatchSource.makeMemoryPressureSource(eventMask: [.warning, .critical])`. The FIFO-of-6
+  keeps steady-state behavior; the source guarantees the worst case (six hero-sized bitmaps,
+  ~17 MB) is reclaimable instead of resident forever. A dispatch source rather than
+  `UIApplication.didReceiveMemoryWarningNotification`: no UIKit plumbing into an actor, and
+  it also fires for pressure while backgrounded — where a music app spends most of its life.
+- **Lock-screen artwork (`NowPlayingCenter`) gets a private copy of the downsampler** rather
+  than a new dependency: Playback deliberately doesn't import DesignSystem (see the
+  `AlbumArtLookup` decision below). The decoded artwork is retained for the whole listening
+  session, usually backgrounded — exactly when jetsam hunts — so it's the single most
+  important decode to bound. The iOS 27 `MediaSession` path is untouched: it hands raw bytes
+  to `ArtworkRepresentation` and the system manages decoding.
+- **`URLCache.shared` explicitly sized: 2 MB memory / 64 MB disk**, set in
+  `AppDependencies.bootstrap()` before the first request. On a RAM-constrained device byte
+  caching belongs on disk (re-decoding from disk cache is cheap next to the network); the
+  larger disk tier also means artwork survives relaunch.
+- **Not done, deliberately**: capping `AVPlayerItem.preferredForwardBufferDuration`. A
+  128 kbps live stream buffers ~1 MB/min, so the savings are negligible while the stall risk
+  on flaky radio links is real; the 90 s stall ceiling (below) already bounds pathological
+  buffering.
+
 ## 2026-07-10 (background battery hygiene)
 
 Prompted by a real-world battery report: ShoutKit at 14% of a day's battery with 2h42m

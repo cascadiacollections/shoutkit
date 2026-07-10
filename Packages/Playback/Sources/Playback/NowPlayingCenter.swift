@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 import MediaPlayer
 import os
 import RadioDirectory
@@ -150,8 +151,15 @@ public final class NowPlayingCenter: NowPlayingPresenting {
         artworkTask?.cancel()
 
         artworkTask = Task { [weak self] in
-            guard let (data, _) = try? await URLSession.shared.data(from: url),
-                  let image = UIImage(data: data) else {
+            guard let (data, _) = try? await URLSession.shared.data(from: url) else {
+                return
+            }
+
+            // Decode off the main actor — with `ShouldCacheImmediately` the
+            // downsample decode is the expensive step, not `UIImage(data:)`.
+            guard let image = await Task.detached(priority: .utility, operation: {
+                Self.decodedArtwork(from: data)
+            }).value else {
                 return
             }
 
@@ -167,6 +175,35 @@ public final class NowPlayingCenter: NowPlayingPresenting {
                 MPNowPlayingInfoCenter.default().nowPlayingInfo = info
             }
         }
+    }
+
+    /// Downsample-decodes lock-screen artwork via ImageIO instead of
+    /// `UIImage(data:)`. The decoded bitmap lives in `cachedArtwork` for the
+    /// whole listening session — usually backgrounded, exactly when the
+    /// system reclaims memory — so an oversized station favicon must not pin
+    /// a native-resolution decode. 768 px comfortably covers the lock-screen
+    /// tile; typical 600 px album art passes through untouched.
+    ///
+    /// A private copy of DesignSystem's downsampler: Playback deliberately
+    /// doesn't depend on DesignSystem (see DECISIONS.md on `AlbumArtLookup`).
+    private nonisolated static func decodedArtwork(from data: Data) -> UIImage? {
+        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
+            return nil
+        }
+
+        let thumbnailOptions = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: 768
+        ] as [CFString: Any] as CFDictionary
+
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions) else {
+            return nil
+        }
+
+        return UIImage(cgImage: cgImage)
     }
 }
 
