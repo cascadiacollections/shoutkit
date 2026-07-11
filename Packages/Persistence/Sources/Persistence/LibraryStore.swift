@@ -197,12 +197,12 @@ public final class LibraryStore {
     }
 
     private func trimRecentlyHeardTracks() {
-        var descriptor = FetchDescriptor<RecentlyHeardTrack>(
+        var trimDescriptor = FetchDescriptor<RecentlyHeardTrack>(
             sortBy: [SortDescriptor(\.heardAt, order: .reverse)]
         )
-        descriptor.fetchLimit = Self.recentlyHeardLimit + Self.recentlyHeardTrimHeadroom
+        trimDescriptor.fetchLimit = Self.recentlyHeardLimit + Self.recentlyHeardTrimHeadroom
 
-        guard let tracks = try? context.fetch(descriptor), tracks.count > Self.recentlyHeardLimit else {
+        guard let tracks = try? context.fetch(trimDescriptor), tracks.count > Self.recentlyHeardLimit else {
             return
         }
 
