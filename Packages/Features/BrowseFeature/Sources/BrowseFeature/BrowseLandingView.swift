@@ -83,11 +83,28 @@ public struct BrowseLandingView: View {
 
         if loaded.genres.isEmpty == false {
             genreFilter(loaded.genres)
+        } else if let error = viewModel.genresError {
+            genreLoadFailure(error)
         }
 
         popularCarousel(loaded)
 
         allStations(loaded)
+    }
+
+    private func genreLoadFailure(_ error: RadioDirectoryError) -> some View {
+        ContentUnavailableView {
+            Label("Couldn't Load Genres", systemImage: "wifi.exclamationmark")
+        } description: {
+            Text(error.localizedDescription)
+        } actions: {
+            if error.isRetryable {
+                Button("Try Again") {
+                    Task { await viewModel.refresh() }
+                }
+                .buttonStyle(.glassProminent)
+            }
+        }
     }
 
     private func genreFilter(_ genres: [Genre]) -> some View {

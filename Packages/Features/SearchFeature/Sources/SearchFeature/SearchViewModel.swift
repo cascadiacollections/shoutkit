@@ -35,6 +35,7 @@ public final class SearchViewModel {
 
     public private(set) var phase: SearchPhase = .idle
     public private(set) var genres: [Genre] = []
+    public private(set) var genreLoadError: RadioDirectoryError?
 
     @ObservationIgnored private let directory: any RadioDirectoryProviding
     @ObservationIgnored private var searchTask: Task<Void, Never>?
@@ -63,7 +64,16 @@ public final class SearchViewModel {
     }
 
     public func loadGenres() async {
-        genres = (try? await directory.genres()) ?? []
+        do {
+            genres = try await directory.genres()
+            genreLoadError = nil
+        } catch let error as RadioDirectoryError {
+            genres = []
+            genreLoadError = error
+        } catch {
+            genres = []
+            genreLoadError = .transport(error.localizedDescription)
+        }
     }
 
     public func selectGenre(_ genre: Genre) {

@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import OSLog
 import RadioDirectory
 import SwiftData
 
@@ -15,8 +16,10 @@ public final class LibraryStore {
     /// Station IDs the user has favorited. Kept in sync with the persistent store so
     /// SwiftUI views observing this store update immediately on toggle.
     public private(set) var favoriteIDs: Set<String> = []
+    public private(set) var lastErrorMessage: String?
 
     @ObservationIgnored private let context: ModelContext
+    @ObservationIgnored private let logger = Logger(subsystem: "ShoutKit.Persistence", category: "LibraryStore")
 
     public init(context: ModelContext) {
         self.context = context
@@ -38,10 +41,10 @@ public final class LibraryStore {
     public func toggleFavorite(_ station: Station) -> Bool {
         if isFavorite(station) {
             removeFavorite(stationID: station.id)
-            return false
+            return isFavorite(station)
         } else {
             addFavorite(station)
-            return true
+            return isFavorite(station)
         }
     }
 
@@ -58,7 +61,7 @@ public final class LibraryStore {
         )
         context.insert(favorite)
         favoriteIDs.insert(station.id)
-        save()
+        save(operation: "add favorite \(station.id)")
     }
 
     /// Reorders favorites to match a SwiftUI `.onMove` drag and rewrites `sortIndex`
@@ -77,7 +80,7 @@ public final class LibraryStore {
         for (index, favorite) in reordered.enumerated() where favorite.sortIndex != index {
             favorite.sortIndex = index
         }
-        save()
+        save(operation: "move favorites")
     }
 
     /// The next ordering slot, one past the current maximum, so new favorites append
@@ -87,7 +90,7 @@ public final class LibraryStore {
             sortBy: [SortDescriptor(\.sortIndex, order: .reverse)]
         )
         descriptor.fetchLimit = 1
-        let maxIndex = (try? context.fetch(descriptor))?.first?.sortIndex
+        let maxIndex = fetch(descriptor, operation: "compute next sort index")?.first?.sortIndex
         return (maxIndex ?? -1) + 1
     }
 
@@ -95,13 +98,15 @@ public final class LibraryStore {
         let predicate = #Predicate<FavoriteStation> { $0.stationID == stationID }
         let descriptor = FetchDescriptor<FavoriteStation>(predicate: predicate)
 
-        if let matches = try? context.fetch(descriptor) {
-            for match in matches {
-                context.delete(match)
-            }
+        guard let matches = fetch(descriptor, operation: "remove favorite \(stationID)") else {
+            return
+        }
+
+        for match in matches {
+            context.delete(match)
         }
         favoriteIDs.remove(stationID)
-        save()
+        save(operation: "remove favorite \(stationID)")
     }
 
     // MARK: - Recents
@@ -112,7 +117,11 @@ public final class LibraryStore {
         let predicate = #Predicate<RecentStation> { $0.stationID == stationID }
         let descriptor = FetchDescriptor<RecentStation>(predicate: predicate)
 
-        if let existing = try? context.fetch(descriptor).first {
+        guard let matches = fetch(descriptor, operation: "log recent \(stationID)") else {
+            return
+        }
+
+        if let existing = matches.first {
             existing.playedAt = .now
             existing.name = station.name
             existing.genre = station.genre
@@ -130,7 +139,7 @@ public final class LibraryStore {
         }
 
         trimRecents()
-        save()
+        save(operation: "log recent \(stationID)")
     }
 
     private func trimRecents() {
@@ -139,7 +148,7 @@ public final class LibraryStore {
         )
         descriptor.fetchLimit = Self.recentsLimit + 50
 
-        guard let recents = try? context.fetch(descriptor), recents.count > Self.recentsLimit else {
+        guard let recents = fetch(descriptor, operation: "trim recents"), recents.count > Self.recentsLimit else {
             return
         }
 
@@ -152,7 +161,11 @@ public final class LibraryStore {
 
     private func reloadFavoriteIDs() {
         let descriptor = FetchDescriptor<FavoriteStation>()
-        let favorites = (try? context.fetch(descriptor)) ?? []
+        guard let favorites = fetch(descriptor, operation: "reload favorites") else {
+            favoriteIDs = []
+            return
+        }
+
         favoriteIDs = Set(favorites.map(\.stationID))
     }
 
@@ -165,7 +178,7 @@ public final class LibraryStore {
         let descriptor = FetchDescriptor<FavoriteStation>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
-        guard let favorites = try? context.fetch(descriptor), favorites.count > 1 else { return }
+        guard let favorites = fetch(descriptor, operation: "normalize sort indices"), favorites.count > 1 else { return }
 
         let indices = favorites.map(\.sortIndex)
         guard Set(indices).count != indices.count else { return }
@@ -173,10 +186,36 @@ public final class LibraryStore {
         for (index, favorite) in favorites.enumerated() {
             favorite.sortIndex = index
         }
-        save()
+        save(operation: "normalize sort indices")
     }
 
-    private func save() {
-        try? context.save()
+    private func fetch<Model>(
+        _ descriptor: FetchDescriptor<Model>,
+        operation: String
+    ) -> [Model]? where Model: PersistentModel {
+        do {
+            return try context.fetch(descriptor)
+        } catch {
+            record(error, operation: operation)
+            return nil
+        }
+    }
+
+    @discardableResult
+    private func save(operation: String) -> Bool {
+        do {
+            try context.save()
+            return true
+        } catch {
+            context.rollback()
+            reloadFavoriteIDs()
+            record(error, operation: operation)
+            return false
+        }
+    }
+
+    private func record(_ error: Error, operation: String) {
+        lastErrorMessage = error.localizedDescription
+        logger.error("LibraryStore \(operation, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
     }
 }
