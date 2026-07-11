@@ -33,7 +33,7 @@ struct HTTPTransportTests {
 
         let data = try await transport.retryingData(
             retryPolicy: RetryPolicy(maximumRetries: 1, timeout: 1, baseDelay: 0),
-            attempts: 2,
+            totalAttempts: 2,
             shouldRetry: { error in
                 (error as? HTTPTransportError) == .transport("offline")
             },

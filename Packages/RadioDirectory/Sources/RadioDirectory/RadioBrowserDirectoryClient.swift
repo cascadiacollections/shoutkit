@@ -238,7 +238,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         do {
             return try await transport.retryingData(
                 retryPolicy: retryPolicy,
-                attempts: hosts.count,
+                totalAttempts: hosts.count,
                 onRetry: { _, delay in
                     logger.debug(
                         "Radio-Browser request failed; trying next mirror in \(delay, privacy: .public) seconds"

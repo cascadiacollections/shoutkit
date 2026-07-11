@@ -235,7 +235,8 @@ public final class NowPlayingActivityCoordinator {
         pushArtworkUpdate()
 
         artworkTask = Task { [weak self] in
-            guard let self, await self.stageArtwork(from: targetURL, token: token) else { return }
+            guard let self else { return }
+            guard await self.stageArtwork(from: targetURL, token: token) else { return }
             guard Task.isCancelled == false, self.latestArtworkURL == targetURL else { return }
             self.latestArtworkToken = token
             // Purge here — serialized on the main actor with other adoptions —
@@ -261,7 +262,7 @@ public final class NowPlayingActivityCoordinator {
         request.cachePolicy = .returnCacheDataElseLoad
         guard let data = try? await transport.data(for: request) else { return false }
         let png = await Task.detached(priority: .utility) {
-            Self.encodePNG(downsampling: data, maxPixelSize: artworkMaxPixelSize)
+            Self.downsampleAndEncodePNG(from: data, maxPixelSize: artworkMaxPixelSize)
         }.value
         // Re-check between the detached encode (which can't observe the outer
         // task's cancellation) and the write, so a superseded download doesn't
@@ -272,9 +273,9 @@ public final class NowPlayingActivityCoordinator {
         }.value
     }
 
-    private nonisolated static func encodePNG(downsampling data: Data, maxPixelSize: Int) -> Data? {
+    private nonisolated static func downsampleAndEncodePNG(from imageData: Data, maxPixelSize: Int) -> Data? {
         let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
+        guard let source = CGImageSourceCreateWithData(imageData as CFData, sourceOptions) else {
             return nil
         }
 

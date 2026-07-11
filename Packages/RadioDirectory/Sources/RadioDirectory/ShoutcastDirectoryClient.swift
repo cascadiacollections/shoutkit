@@ -93,7 +93,7 @@ public actor ShoutcastDirectoryClient: RadioDirectoryProviding {
         do {
             return try await transport.retryingData(
                 retryPolicy: retryPolicy,
-                attempts: retryPolicy.maximumRetries + 1,
+                totalAttempts: retryPolicy.maximumRetries + 1,
                 shouldRetry: { error in
                     // Retrying a permanent failure (a 4xx from a bad API key,
                     // say) just delays the error surfacing by the whole

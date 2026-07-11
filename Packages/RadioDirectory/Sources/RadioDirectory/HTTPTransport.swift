@@ -1,7 +1,7 @@
 import Foundation
 
 public enum HTTPTransportError: Error, Equatable, Sendable {
-    case transport(String?)
+    case transport(String)
     case invalidResponse
     case httpStatus(Int)
 }
@@ -35,30 +35,35 @@ public extension HTTPTransporting {
             throw HTTPTransportError.invalidResponse
         }
 
-        guard 200 ..< 300 ~= httpResponse.statusCode else {
+        guard 200..<300 ~= httpResponse.statusCode else {
             throw HTTPTransportError.httpStatus(httpResponse.statusCode)
         }
 
         return data
     }
 
+    /// Runs the request builder up to `totalAttempts` times with exponential
+    /// backoff delays from `retryPolicy`. `attempt` in callbacks is 0-indexed.
+    /// `totalAttempts` is the full budget (initial try + retries), independent
+    /// from `RetryPolicy.maximumRetries`, so callers can model custom loops
+    /// (like mirror lists) while still sharing one retry implementation.
     func retryingData(
         retryPolicy: RetryPolicy,
-        attempts: Int,
+        totalAttempts: Int,
         shouldRetry: @Sendable (Error) -> Bool = { _ in true },
         onRetry: @Sendable (_ attempt: Int, _ delay: TimeInterval) -> Void = { _, _ in },
         request: @Sendable (_ attempt: Int) throws -> URLRequest
     ) async throws -> Data {
-        let totalAttempts = max(attempts, 1)
+        let maximumAttempts = max(totalAttempts, 1)
         var lastError: Error?
 
-        for attempt in 0 ..< totalAttempts {
+        for attempt in 0 ..< maximumAttempts {
             do {
                 let nextRequest = try request(attempt)
                 return try await data(for: nextRequest)
             } catch {
                 lastError = error
-                guard shouldRetry(error), attempt < totalAttempts - 1 else {
+                guard shouldRetry(error), attempt < maximumAttempts - 1 else {
                     break
                 }
 
@@ -70,13 +75,14 @@ public extension HTTPTransporting {
             }
         }
 
-        throw lastError ?? HTTPTransportError.transport(nil)
+        throw lastError ?? HTTPTransportError.transport("Unknown transport error")
     }
 }
 
 public extension URLComponents {
     /// `URLComponents` leaves `+` unescaped in query values, but web servers
-    /// conventionally form-decode it as a space. Escape it explicitly.
+    /// conventionally form-decode it as a space, so "C+C" arrives as "C C".
+    /// Call this after assigning `queryItems` when `+` must round-trip.
     mutating func escapePlusInQueryValues() {
         if let escapedQuery = percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B") {
             percentEncodedQuery = escapedQuery
