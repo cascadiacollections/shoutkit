@@ -102,6 +102,12 @@ public nonisolated enum AlbumArtLookup {
             queryItems.append(URLQueryItem(name: "country", value: region))
         }
         components?.queryItems = queryItems
+        // `URLComponents` leaves `+` unescaped in query values, and the iTunes
+        // API form-decodes it as a space — "Florence + The Machine" would lose
+        // its `+` server-side. Escape it explicitly.
+        if let escapedQuery = components?.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B") {
+            components?.percentEncodedQuery = escapedQuery
+        }
         return components?.url
     }
 

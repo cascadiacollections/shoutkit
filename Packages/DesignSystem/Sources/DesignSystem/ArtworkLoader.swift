@@ -148,23 +148,32 @@ public enum ArtworkLoader {
     private nonisolated static func hsbSamples(from cgImage: CGImage) -> [HSBSample] {
         let side = 3
         var pixels = [UInt8](repeating: 0, count: side * side * 4)
-        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
-              let context = CGContext(
-                  data: &pixels,
-                  width: side,
-                  height: side,
-                  bitsPerComponent: 8,
-                  bytesPerRow: side * 4,
-                  space: space,
-                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-              )
-        else { return [] }
+        // The buffer is passed via `withUnsafeMutableBytes` (not `&pixels`):
+        // an inout-to-pointer conversion is only valid for the duration of
+        // the initializer call, but the context writes through the pointer
+        // again later, in `draw`.
+        let rendered = pixels.withUnsafeMutableBytes { buffer -> Bool in
+            guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+                  let context = CGContext(
+                      data: buffer.baseAddress,
+                      width: side,
+                      height: side,
+                      bitsPerComponent: 8,
+                      bytesPerRow: side * 4,
+                      space: space,
+                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                  )
+            else { return false }
 
-        context.interpolationQuality = .medium
-        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: side, height: side))
+            context.interpolationQuality = .medium
+            context.draw(cgImage, in: CGRect(x: 0, y: 0, width: side, height: side))
+            return true
+        }
+        guard rendered else { return [] }
 
-        // CoreGraphics rows run bottom-up; reverse so the grid reads top-first.
-        return (0 ..< side).reversed().flatMap { row in
+        // A bitmap context's first scanline in memory is the drawn image's TOP
+        // row, so reading rows in buffer order already yields top-left first.
+        return (0 ..< side).flatMap { row in
             (0 ..< side).map { column in
                 let offset = (row * side + column) * 4
                 var hue: CGFloat = 0

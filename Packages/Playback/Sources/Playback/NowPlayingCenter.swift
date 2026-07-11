@@ -152,6 +152,10 @@ public final class NowPlayingCenter: NowPlayingPresenting {
 
         artworkTask = Task { [weak self] in
             guard let (data, _) = try? await URLSession.shared.data(from: url) else {
+                // Forget the failed URL so the next update retries it — a
+                // transient network error at play start must not leave the
+                // lock screen artless for the whole session.
+                self?.resetArtworkCache(ifStill: url)
                 return
             }
 
@@ -175,6 +179,14 @@ public final class NowPlayingCenter: NowPlayingPresenting {
                 MPNowPlayingInfoCenter.default().nowPlayingInfo = info
             }
         }
+    }
+
+    /// Clears the artwork cache marker after a failed download, but only if a
+    /// newer load hasn't already claimed it for a different URL — and never
+    /// for a cancelled load, whose replacement owns the marker now.
+    private func resetArtworkCache(ifStill url: URL) {
+        guard Task.isCancelled == false, artworkCacheURL == url else { return }
+        artworkCacheURL = nil
     }
 
     /// Downsample-decodes lock-screen artwork via ImageIO instead of

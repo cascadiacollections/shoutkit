@@ -33,6 +33,10 @@ public struct NowPlayingView: View {
         .tint(accent)
         .task(id: effectiveArtworkURL) {
             let loaded = await ArtworkLoader.load(effectiveArtworkURL)
+            // The store's await isn't cancellation-responsive, so a task
+            // cancelled by a URL change still resumes here — without this
+            // guard it would overwrite the new URL's accent with the old.
+            guard Task.isCancelled == false else { return }
             withAnimation(.easeInOut(duration: 0.6)) {
                 artworkAccent = loaded?.accentColor
             }

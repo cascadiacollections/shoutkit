@@ -65,6 +65,36 @@ All notable changes to ShoutKit are documented here. The format follows
   once per URL and shared across the backdrop, hero, and tint views (previously three decodes)
 
 ### Fixed
+- **Playback recovery hardening** (comprehensive bug sweep):
+  - Pausing during a phone call no longer auto-resumes playback against the user's wish when
+    the call ends
+  - A failed stream's dead player is torn down before reconnecting, so pause-then-play after a
+    mid-play failure restarts the stream instead of silently doing nothing; the give-up path no
+    longer keeps the player and audio session resident behind a terminal "failed" state
+  - A stream-endpoint lookup that fails mid-reconnect now uses the remaining retry budget
+    instead of surfacing failure immediately, and a failed state can always be retried from the
+    mini-player and lock screen (previously the active station was forgotten)
+  - Unplugging headphones (or a phone call) while a reconnect was pending no longer lets the
+    reconnect fire and resurrect audio on the speaker / mid-call
+  - A reconnect no longer blanks the last-known track and artwork from the lock screen while
+    the stream re-buffers
+  - Out-of-order ICY metadata loads can no longer regress the displayed track to the previous
+    song; a transient artwork-download failure at play start no longer leaves the lock screen
+    artless for the whole session
+- **Live Activity correctness**: the lock screen / Dynamic Island activity no longer shows
+  "Live" while playback is paused after rapid pause/track-change races (updates are now applied
+  in order with the play state tracked at the source), and a superseded artwork download can no
+  longer delete the artwork file the activity is currently showing
+- **Artwork race fixes**: rapidly switching stations can no longer leave the previous station's
+  artwork (or ambient backdrop tint) permanently on the Now Playing screen, and a reused list
+  row no longer shows the previous station's logo while the new one loads. The ambient backdrop's
+  color mesh was vertically mirrored relative to the artwork for small favicons
+- **Directory robustness**: PLS playlist and SHOUTcast XML parsing are now locale-independent
+  (they could fail entirely on Turkish-locale devices), a `File1=` playlist entry with no value
+  no longer produces a garbage stream URL, searches containing `+` (e.g. "C+C Music Factory")
+  are no longer corrupted server-side, permanent directory errors (bad API key) surface
+  immediately instead of after a retry backoff, and concurrent mixed-limit top-station fetches
+  no longer duplicate requests or downgrade a fresher cache
 - The now-playing equalizer animation no longer runs while the app is backgrounded or the screen
   is locked. It was the app's only continuous UI render loop (~8 fps); it now rests whenever the
   scene isn't foreground-active, so hours of background/locked playback do no needless UI work

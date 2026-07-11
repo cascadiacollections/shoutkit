@@ -27,8 +27,11 @@ public struct DefaultsKey<Value>: Sendable where Value: Sendable {
 }
 
 public extension DefaultsKey {
-    /// Property-list-native values: Bool, Int, Double, String, Data, Date, URL,
-    /// and arrays/dictionaries thereof. Stored directly.
+    /// Property-list-native values: Bool, Int, Double, String, Data, Date,
+    /// and arrays/dictionaries thereof. Stored directly. (Not URL — it isn't
+    /// a property-list type, so writing one through the generic
+    /// `set(_:forKey:)` would raise `NSInvalidArgumentException`; use
+    /// `codable` for URLs.)
     static func plist(_ name: String, default defaultValue: Value) -> DefaultsKey<Value> {
         DefaultsKey(
             name: name,

@@ -26,7 +26,19 @@ public actor CachingRadioDirectory: RadioDirectoryProviding {
     }
 
     private var topStationsCache: TopStationsCache?
-    private var topStationsInFlight: (task: Task<Result<[Station], RadioDirectoryError>, Never>, limit: Int)?
+    /// An in-flight top-stations base fetch and the limit it was issued with.
+    /// The generation distinguishes concurrent mixed-limit fetches: a
+    /// larger-limit request replaces a smaller in-flight registration, and the
+    /// smaller fetch must not deregister (or cache over) the newer one when it
+    /// completes.
+    private struct TopStationsInFlight {
+        let task: Task<Result<[Station], RadioDirectoryError>, Never>
+        let limit: Int
+        let generation: Int
+    }
+
+    private var topStationsInFlight: TopStationsInFlight?
+    private var topStationsGeneration = 0
 
     public init(
         base: any RadioDirectoryProviding,
@@ -92,12 +104,23 @@ public actor CachingRadioDirectory: RadioDirectoryProviding {
             }
         }
 
-        topStationsInFlight = (task, limit)
+        topStationsGeneration += 1
+        let generation = topStationsGeneration
+        topStationsInFlight = TopStationsInFlight(task: task, limit: limit, generation: generation)
         let result = await task.value
-        topStationsInFlight = nil
+        // Only deregister our own registration — a concurrent larger-limit
+        // fetch may have replaced it while we awaited.
+        if topStationsInFlight?.generation == generation {
+            topStationsInFlight = nil
+        }
 
         if case let .success(stations) = result {
-            topStationsCache = TopStationsCache(value: stations, fetchedLimit: limit, fetchedAt: now())
+            // Don't let a slower, smaller fetch downgrade a fresher, larger
+            // cache entry a concurrent caller already stored.
+            let keepExisting = topStationsCache.map { isFresh($0.fetchedAt) && $0.fetchedLimit > limit } ?? false
+            if !keepExisting {
+                topStationsCache = TopStationsCache(value: stations, fetchedLimit: limit, fetchedAt: now())
+            }
         }
         return try Array(result.get().prefix(limit))
     }

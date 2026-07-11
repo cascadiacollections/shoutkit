@@ -42,6 +42,10 @@ public struct AmbientArtworkBackdrop: View {
         .accessibilityHidden(true)
         .task(id: artworkURL) {
             let loaded = await ArtworkLoader.load(artworkURL)
+            // The store's await isn't cancellation-responsive, so a task
+            // cancelled by a URL change still resumes here — without this
+            // guard it would overwrite the new URL's artwork with the old.
+            guard Task.isCancelled == false else { return }
             withAnimation(.easeInOut(duration: 0.6)) {
                 artwork = loaded
             }
