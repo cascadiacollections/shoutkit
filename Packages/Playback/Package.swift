@@ -15,12 +15,16 @@ let package = Package(
         .library(name: "Playback", targets: ["Playback"])
     ],
     dependencies: [
+        .package(path: "../ImageIODownsample"),
         .package(path: "../RadioDirectory")
     ],
     targets: [
         .target(
             name: "Playback",
-            dependencies: ["RadioDirectory"]
+            dependencies: [
+                "ImageIODownsample",
+                "RadioDirectory"
+            ]
         ),
         .testTarget(
             name: "PlaybackTests",
