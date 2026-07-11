@@ -219,4 +219,12 @@ public enum ArtworkLoader {
             brightness: min(0.72, max(0.38, best.brightness))
         )
     }
+
+    nonisolated static func paletteHSBSamples(
+        from cgImage: CGImage
+    ) -> [(hue: CGFloat, saturation: CGFloat, brightness: CGFloat)] {
+        hsbSamples(from: cgImage).map { sample in
+            (hue: sample.hue, saturation: sample.saturation, brightness: sample.brightness)
+        }
+    }
 }

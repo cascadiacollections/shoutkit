@@ -20,6 +20,7 @@ public enum LiveActivityArtworkStore {
     /// Subdirectory inside the container so artwork can't collide with anything
     /// else the group might hold later.
     private static let directoryName = "LiveActivityArtwork"
+    static var directoryURLOverride: URL?
 
     /// A filesystem-safe token identifying `url`'s artwork.
     ///
@@ -82,6 +83,9 @@ public enum LiveActivityArtworkStore {
     }
 
     private static var directoryURL: URL? {
+        if let directoryURLOverride {
+            return directoryURLOverride
+        }
         FileManager.default
             .containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier)?
             .appendingPathComponent(directoryName, isDirectory: true)
