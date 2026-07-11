@@ -6,11 +6,14 @@ SwiftLint `--strict` was the only automated code-quality gate; the rest of CI ju
 tests. Rounding this out before a real release, using the GHE-hosted tooling that's already free
 for this repo rather than reaching for a paid third-party service:
 
-- **CodeQL (Swift) over a third-party SAST vendor**: it's built into GitHub Actions with no new
-  account/billing relationship, and `github/codeql-action` handles SARIF upload to the Security
-  tab for free on a repo already hosted here. `build-mode: manual` mirrors the existing `build`
-  job's `xcodebuild` invocation — CodeQL's Swift extractor needs an actual compile to trace
-  through, autobuild isn't reliable for xcworkspace projects.
+- **CodeQL (Swift): no custom workflow needed.** A first attempt added a `codeql.yml` with
+  `build-mode: manual` mirroring the `build` job's `xcodebuild` invocation. Its first real run
+  failed at upload: *"CodeQL analyses from advanced configurations cannot be processed when the
+  default setup is enabled"* — this repo already has GitHub's zero-config **default setup** for
+  code scanning turned on at the repo/org level, and GitHub refuses to run both an advanced
+  (checked-in-workflow) configuration and default setup at once. Since default setup already covers
+  Swift, the custom workflow was removed rather than filing a settings change to disable default
+  setup for a marginal customization win.
 - **Dependency Review action, not a standalone license-scanner dependency**: it reads the same
   policy already written down in `THIRD_PARTY_LICENSES.md` (GPL/LGPL/AGPL rejected) and runs only
   on the PR diff, so it costs nothing on an unshared runner and doesn't need a config file of its
