@@ -16,12 +16,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Fails the PR on newly-introduced vulnerable or GPL/LGPL/AGPL-incompatible
-      # dependencies, matching the policy already written down in
-      # THIRD_PARTY_LICENSES.md instead of relying on manual review to catch it.
+      # Fails the PR on newly-introduced vulnerable dependencies or any license
+      # outside the permissive allowlist below, matching the policy already
+      # written down in THIRD_PARTY_LICENSES.md instead of relying on manual
+      # review to catch it. An allowlist (rather than the deprecated
+      # deny-licenses) inverts the check so GPL/LGPL/AGPL and any other
+      # copyleft license is rejected by default; keep it in sync with the
+      # licenses recorded in THIRD_PARTY_LICENSES.md.
       - name: Dependency Review
         uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: moderate
-          deny-licenses: GPL-2.0, GPL-3.0, LGPL-2.1, LGPL-3.0, AGPL-3.0
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD
           comment-summary-in-pr: always
