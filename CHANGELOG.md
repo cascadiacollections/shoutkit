@@ -22,6 +22,11 @@ All notable changes to ShoutKit are documented here. The format follows
   the Now Playing hero, mini-player thumbnail, and lock screen / Control Center. Falls back to
   the station's own artwork if the lookup fails or returns no result. Opt-out via
   **Settings → Privacy → Fetch Album Artwork** (defaults on)
+- **Open in Apple Music**: long-press the Now Playing artwork to reveal **View in Apple Music**,
+  which opens the matched song in the Apple Music app (or its web player). The link comes from the
+  same iTunes Search lookup that resolves album art — no extra network request — so it honors the
+  same **Settings → Privacy → Fetch Album Artwork** toggle. The menu appears only when a link is
+  found for the current track
 - Settings → About shows the build's short git commit next to the version (`0.2.0 (12) · a1b2c3d`),
   so a beta tester's screenshot maps to an exact source revision for bug repro. Stamped at build
   time via the `GIT_COMMIT_SHA` setting; the line stays clean (no commit) for local dev builds
