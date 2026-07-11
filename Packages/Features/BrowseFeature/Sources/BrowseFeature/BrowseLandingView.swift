@@ -156,14 +156,16 @@ public struct BrowseLandingView: View {
     }
 
     private func stationRows(_ stations: [Station]) -> some View {
-        ForEach(stations) { station in
-            StationRow(
-                station: station,
-                phase: playback?.phase(for: station) ?? .idle,
-                isFavorite: library?.isFavorite(station) ?? false,
-                onTap: { playback?.toggle(station) },
-                onToggleFavorite: library.map { store in { store.toggleFavorite(station) } }
-            )
+        LazyVGrid(columns: ShoutKitLayout.stationColumns, spacing: ShoutKitSpacing.small) {
+            ForEach(stations) { station in
+                StationRow(
+                    station: station,
+                    phase: playback?.phase(for: station) ?? .idle,
+                    isFavorite: library?.isFavorite(station) ?? false,
+                    onTap: { playback?.toggle(station) },
+                    onToggleFavorite: library.map { store in { store.toggleFavorite(station) } }
+                )
+            }
         }
     }
 }

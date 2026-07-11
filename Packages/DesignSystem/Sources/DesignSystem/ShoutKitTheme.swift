@@ -15,6 +15,20 @@ public enum ShoutKitRadius {
     public static let card: CGFloat = 20
 }
 
+public enum ShoutKitLayout {
+    /// Adaptive columns for station-row collections: one column at iPhone
+    /// widths, two or more as the window widens (iPad, Split View, Stage
+    /// Manager). The maximum keeps a row from stretching across a full iPad
+    /// screen, which pushes the play affordance arm's-length from the label.
+    public static let stationColumns = [
+        GridItem(
+            .adaptive(minimum: 330, maximum: 640),
+            spacing: ShoutKitSpacing.small,
+            alignment: .top
+        )
+    ]
+}
+
 public extension Color {
     /// Brand accent — used for tint, active playback, and prominent controls.
     static let shoutKitAccent = Color(red: 0.04, green: 0.44, blue: 0.72)

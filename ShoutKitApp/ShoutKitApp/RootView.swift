@@ -100,6 +100,9 @@ struct RootView: View {
                 }
             }
         }
+        // iPhone keeps the bottom tab bar; iPad gets the Apple Music-style
+        // sidebar with a user toggle back to a top tab bar.
+        .tabViewStyle(.sidebarAdaptable)
     }
 
     private func handle(_ link: StationLink) {

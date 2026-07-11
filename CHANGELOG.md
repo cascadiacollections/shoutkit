@@ -7,6 +7,12 @@ All notable changes to ShoutKit are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **iPadOS support**: on iPad the root tab bar adopts the sidebar-adaptable style (an Apple
+  Music-style sidebar with a built-in toggle back to a top tab bar; iPhone is unchanged), and the
+  station lists in Listen Now, Browse, and Search flow into adaptive multi-column grids on wide
+  layouts — full-screen iPad, Split View, and Stage Manager — instead of stretching rows across
+  the whole window. The app already declared both device families and all four iPad orientations,
+  so multitasking and rotation worked before; this makes the layouts native to the space
 - **Reorderable Favorites**: the Favorites tab now supports drag-to-reorder. Tap **Edit** (or
   long-press a row) to drag favorites into any order; the arrangement is persisted across launches
   via a new `sortIndex` on the favorite. New favorites append to the bottom so they never disturb
