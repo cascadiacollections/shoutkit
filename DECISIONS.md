@@ -1,5 +1,29 @@
 # Decisions
 
+## 2026-07-11 (background battery hygiene, follow-on)
+
+A "runs hot while streaming" report against the app whose dominant mode is hours of *background*
+audio (screen locked). A second audit — this time of the streaming/audio layer, not just resource
+retention — plus the one UI change it surfaced:
+
+- **The audio/network layer had no additional heat source.** `AVPlayerAudioOutput` uses the
+  correct `.playback`/`.default` session, its `automaticallyWaitsToMinimizeStalling` is already
+  bounded by the 90s stall ceiling, ICY metadata is push-delivered (not polled), and status is
+  KVO/event-driven. `PlaybackController`'s timers are all one-shot, reconnect is bounded (3
+  attempts, 2/4/8s backoff) with a budget guard, and `NowPlayingCenter` updates fire only on
+  discrete transitions. Nothing here was changed — this bullet records that the layer was audited
+  and cleared, so a future "battery" report doesn't re-tread it.
+- **`PlayingIndicator` now rests when the scene isn't foreground-active.** The 3-bar equalizer is
+  the app's only continuous UI render loop — a `TimelineView(.animation(minimumInterval: 0.12))`
+  recomputing `sin()` bar heights ~8×/second. It already self-paused on `!isAnimating` and Reduce
+  Motion but not on `scenePhase`, so it kept doing ~8 fps re-layout during backgrounded/locked
+  playback where nothing is visible. Folding `scenePhase != .active` into a single `isPaused`
+  gate (shared by the `TimelineView` `paused:` argument and the `barHeight` rest guard) drops that
+  to zero off-screen work; SwiftUI re-evaluates `body` on the environment change, so the bars
+  settle to their resting height instead of freezing mid-swing. Foreground behavior is unchanged.
+  This is the first `scenePhase` use in the app — explicit hygiene in the same spirit as the
+  2026-07-10 paused-player release, rather than trusting the OS to suspend the timeline implicitly.
+
 ## 2026-07-10 (CI/CD hardening ahead of a production release)
 
 SwiftLint `--strict` was the only automated code-quality gate; the rest of CI just built and ran
