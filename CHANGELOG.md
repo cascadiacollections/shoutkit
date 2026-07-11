@@ -60,6 +60,9 @@ All notable changes to ShoutKit are documented here. The format follows
   once per URL and shared across the backdrop, hero, and tint views (previously three decodes)
 
 ### Fixed
+- The now-playing equalizer animation no longer runs while the app is backgrounded or the screen
+  is locked. It was the app's only continuous UI render loop (~8 fps); it now rests whenever the
+  scene isn't foreground-active, so hours of background/locked playback do no needless UI work
 - Resuming after a stream failure (or after pausing while a station was still loading) no longer
   re-logs the station to recents and re-reports the play to Radio-Browser
 
