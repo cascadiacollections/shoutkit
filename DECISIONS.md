@@ -25,6 +25,15 @@ for this repo rather than reaching for a paid third-party service:
   runners and is nicklockwood/SwiftFormat's own documented install path — adding a version pin for
   a tool nobody pins locally would be gate-keeping without a matching local workflow to keep it
   honest.
+- **`swiftformat --lint` is `continue-on-error: true` for now, unlike SwiftLint.** First CI run
+  found 58/90 files don't conform (mostly `indent` and `wrapMultilineStatementBraces`) — the tree
+  has never had it enforced, unlike SwiftLint (which was already clean when `--strict` landed, per
+  the 2026-07-03 entry below). Fixing that needs a byte-exact `swiftformat` run from an actual
+  toolchain to avoid hand-introducing subtly-wrong formatting across 58 files; this environment has
+  neither Xcode nor a Linux Swift toolchain available (`download.swift.org` is blocked by egress
+  policy). CI surfaces the drift without blocking merges until someone with a real toolchain runs
+  `swiftformat ShoutKitApp Packages` as a one-time reformat commit — drop `continue-on-error` once
+  that lands.
 - **Release automation stops at drafting a GitHub Release from `CHANGELOG.md`.** A tag push
   extracts the matching `## [X.Y.Z]` section and fails loudly if it's missing (i.e., someone
   tagged before cutting the changelog over from `[Unreleased]`). It deliberately does **not**

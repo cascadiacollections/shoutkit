@@ -60,8 +60,9 @@ swift test --skip-build
 - **Style** is enforced by the checked-in `.swiftformat` and `.swiftlint.yml`. CI runs
   SwiftLint **0.65.0** with `--strict` (warnings fail the build), pinned in `.github/workflows/ci.yml`;
   install that version locally (e.g. `mise use swiftlint@0.65.0`) so your results match CI. CI also
-  runs `swiftformat --lint` — run `swiftformat ShoutKitApp Packages` locally before pushing to
-  avoid a formatting-only CI failure.
+  runs `swiftformat --lint` (currently non-blocking — the tree isn't fully conformant yet, see
+  `DECISIONS.md`) — run `swiftformat ShoutKitApp Packages` locally before pushing to help close
+  that gap.
 - Directory errors are typed (`throws(RadioDirectoryError)`); user-facing failures should carry
   the error, not a bare `String`.
 
