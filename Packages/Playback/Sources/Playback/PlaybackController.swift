@@ -51,6 +51,11 @@ public final class PlaybackController {
     /// consumers follow them with `Observations`; a play is a discrete action.)
     @ObservationIgnored public var onStationPlayed: ((Station) -> Void)?
 
+    /// Invoked when parsed now-playing track metadata is received for the active
+    /// station (and again when Apple Music resolution completes for that track).
+    /// The app layer uses this to persist local listening history.
+    @ObservationIgnored public var onTrackHeard: ((Station, NowPlayingMetadata, URL?) -> Void)?
+
     /// Resolves supplemental resources (album art + Apple Music link) for a
     /// track. Injected by the app layer so the Playback package stays free of
     /// any artwork/UI dependency. The closure runs on the main actor (hop off

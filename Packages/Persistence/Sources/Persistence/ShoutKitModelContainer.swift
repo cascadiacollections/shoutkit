@@ -2,10 +2,11 @@ import Foundation
 import SwiftData
 
 public enum ShoutKitModelContainer {
-    /// The SwiftData schema backing favorites and recents.
+    /// The SwiftData schema backing favorites, recents, and recently heard tracks.
     public static let schema = Schema([
         FavoriteStation.self,
-        RecentStation.self
+        RecentStation.self,
+        RecentlyHeardTrack.self
     ])
 
     /// Builds the app-wide persistent container. Falls back to an in-memory

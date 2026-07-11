@@ -65,6 +65,16 @@ enum AppDependencies {
             }
         }
 
+        controller.onTrackHeard = { station, track, appleMusicURL in
+            store.logRecentlyHeardTrack(
+                station: station,
+                title: track.title,
+                artist: track.artist,
+                heardAt: track.receivedAt,
+                appleMusicURL: appleMusicURL
+            )
+        }
+
         // Best-effort album art + Apple Music link from a single iTunes Search
         // API hit. Gated here, at the source, so opting out stops the
         // supplemental network request itself — the toggle lives under Privacy

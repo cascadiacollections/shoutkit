@@ -11,6 +11,7 @@ public struct LibraryView: View {
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openURL) private var openURL
 
     @Query(sort: \FavoriteStation.sortIndex, order: .forward)
     private var favorites: [FavoriteStation]
@@ -18,11 +19,14 @@ public struct LibraryView: View {
     @Query(sort: \RecentStation.playedAt, order: .reverse)
     private var recents: [RecentStation]
 
+    @Query(sort: \RecentlyHeardTrack.heardAt, order: .reverse)
+    private var recentlyHeardTracks: [RecentlyHeardTrack]
+
     public init() {}
 
     public var body: some View {
         Group {
-            if favorites.isEmpty && recents.isEmpty {
+            if favorites.isEmpty && recents.isEmpty && recentlyHeardTracks.isEmpty {
                 emptyState
             } else {
                 List {
@@ -40,6 +44,14 @@ public struct LibraryView: View {
                         Section("Recently Played") {
                             ForEach(recents.prefix(15)) { recent in
                                 row(for: recent.station)
+                            }
+                        }
+                    }
+
+                    if recentlyHeardTracks.isEmpty == false {
+                        Section("Recently Heard") {
+                            ForEach(recentlyHeardTracks) { track in
+                                recentlyHeardRow(for: track)
                             }
                         }
                     }
@@ -73,8 +85,48 @@ public struct LibraryView: View {
         ContentUnavailableView {
             Label("No Favorites Yet", systemImage: "heart")
         } description: {
-            Text("Stations you favorite and recently play will appear here.")
+            Text("Favorites, recently played stations, and recently heard tracks appear here.")
         }
+    }
+
+    private func recentlyHeardRow(for track: RecentlyHeardTrack) -> some View {
+        Group {
+            if let url = track.appleMusicURLString.flatMap(URL.init(string:)) {
+                Button {
+                    openURL(url)
+                } label: {
+                    recentlyHeardRowContent(for: track, isLinked: true)
+                }
+                .buttonStyle(.plain)
+            } else {
+                recentlyHeardRowContent(for: track, isLinked: false)
+            }
+        }
+    }
+
+    private func recentlyHeardRowContent(for track: RecentlyHeardTrack, isLinked: Bool) -> some View {
+        VStack(alignment: .leading, spacing: ShoutKitSpacing.extraSmall) {
+            Text(track.title ?? "Unknown Track")
+                .font(.headline)
+            Text(track.artist ?? "Unknown Artist")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            HStack {
+                Text(track.stationName)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(track.heardAt, style: .time)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                if isLinked {
+                    Image(systemName: "apple.logo")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(.vertical, 4)
     }
 
     private func deleteFavorites(at offsets: IndexSet) {

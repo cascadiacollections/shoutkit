@@ -3,7 +3,8 @@ import Observation
 import RadioDirectory
 import SwiftData
 
-/// App-wide store for user library state (favorites + recents), backed by SwiftData.
+/// App-wide store for user library state (favorites, recents, recently heard),
+/// backed by SwiftData.
 ///
 /// Views can read `favoriteIDs` reactively for instant heart-toggle feedback, while
 /// the `FavoriteStation` / `RecentStation` models remain queryable via `@Query`.
@@ -11,6 +12,7 @@ import SwiftData
 @Observable
 public final class LibraryStore {
     public static let recentsLimit = 25
+    public static let recentlyHeardLimit = 250
 
     /// Station IDs the user has favorited. Kept in sync with the persistent store so
     /// SwiftUI views observing this store update immediately on toggle.
@@ -144,6 +146,64 @@ public final class LibraryStore {
         }
 
         for stale in recents[Self.recentsLimit...] {
+            context.delete(stale)
+        }
+    }
+
+    // MARK: - Recently heard tracks
+
+    /// Records parsed now-playing metadata as local track history, de-duplicating
+    /// only consecutive repeats and trimming to `recentlyHeardLimit`.
+    public func logRecentlyHeardTrack(
+        station: Station,
+        title: String?,
+        artist: String?,
+        heardAt: Date = .now,
+        appleMusicURL: URL? = nil
+    ) {
+        guard title != nil || artist != nil else { return }
+
+        var latestDescriptor = FetchDescriptor<RecentlyHeardTrack>(
+            sortBy: [SortDescriptor(\.heardAt, order: .reverse)]
+        )
+        latestDescriptor.fetchLimit = 1
+
+        if let latest = try? context.fetch(latestDescriptor).first,
+           latest.stationID == station.id,
+           latest.title == title,
+           latest.artist == artist {
+            latest.stationName = station.name
+            latest.heardAt = heardAt
+            if let appleMusicURL {
+                latest.appleMusicURLString = appleMusicURL.absoluteString
+            }
+        } else {
+            let track = RecentlyHeardTrack(
+                stationID: station.id,
+                stationName: station.name,
+                title: title,
+                artist: artist,
+                heardAt: heardAt,
+                appleMusicURLString: appleMusicURL?.absoluteString
+            )
+            context.insert(track)
+        }
+
+        trimRecentlyHeardTracks()
+        save()
+    }
+
+    private func trimRecentlyHeardTracks() {
+        var descriptor = FetchDescriptor<RecentlyHeardTrack>(
+            sortBy: [SortDescriptor(\.heardAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = Self.recentlyHeardLimit + 100
+
+        guard let tracks = try? context.fetch(descriptor), tracks.count > Self.recentlyHeardLimit else {
+            return
+        }
+
+        for stale in tracks[Self.recentlyHeardLimit...] {
             context.delete(stale)
         }
     }
