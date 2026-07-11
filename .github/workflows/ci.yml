@@ -105,6 +105,9 @@ jobs:
       # macOS runners; --lint fails instead of rewriting, so drift from the
       # checked-in `.swiftformat` config shows up as a CI failure.
       - name: Install SwiftFormat
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
         run: brew install swiftformat
 
       # continue-on-error: the tree has never had swiftformat enforced (58/90

@@ -30,7 +30,6 @@ jobs:
       # Fail fast if a tag was pushed before the changelog was cut over from
       # [Unreleased] — better than a Release with an empty/wrong body.
       - name: Extract CHANGELOG section
-        id: notes
         run: |
           version="${{ steps.version.outputs.version }}"
           # Version headers carry trailing text (e.g. "## [0.2.0] — 2026-06-25"),
