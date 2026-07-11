@@ -34,6 +34,7 @@ extension PlaybackController {
         if !isReconnect {
             nowPlaying = nil
             albumArtURL = nil
+            appleMusicURL = nil
         }
 
         resolveTask = Task { [weak self] in
@@ -156,8 +157,9 @@ extension PlaybackController {
             receivedAt: Date()
         )
         nowPlaying = metadata
-        // Clear any art from a previous track while resolution is in flight.
+        // Clear any art/link from a previous track while resolution is in flight.
         albumArtURL = nil
+        appleMusicURL = nil
 
         nowPlayingCenter.update(
             station: station,
@@ -166,27 +168,29 @@ extension PlaybackController {
             artworkURL: albumArtURL
         )
 
-        resolveAlbumArt(for: info)
+        resolveTrackResources(for: info)
     }
 
-    /// Best-effort album art resolution: resolve asynchronously and re-push
-    /// the now-playing surface with the resolved URL.
-    func resolveAlbumArt(for info: AudioTrackInfo) {
-        guard let provider = albumArtURLProvider else { return }
+    /// Best-effort resource resolution: resolve album art and the Apple Music
+    /// link asynchronously, publish both, and re-push the now-playing surface
+    /// with the resolved artwork (the lock screen has no link affordance).
+    func resolveTrackResources(for info: AudioTrackInfo) {
+        guard let provider = trackResourcesProvider else { return }
         albumArtTask?.cancel()
         albumArtTask = Task { [weak self] in
-            let resolvedURL = await provider(info)
+            let resources = await provider(info)
             guard Task.isCancelled == false, let self else { return }
             // Only apply if the track hasn't changed while we awaited.
             guard self.nowPlaying?.title == info.title,
                   self.nowPlaying?.artist == info.artist else { return }
-            self.albumArtURL = resolvedURL
-            guard let station = self.activeStation, let resolvedURL else { return }
+            self.albumArtURL = resources.artworkURL
+            self.appleMusicURL = resources.appleMusicURL
+            guard let station = self.activeStation, let artworkURL = resources.artworkURL else { return }
             self.nowPlayingCenter.update(
                 station: station,
                 track: self.nowPlaying,
                 isPlaying: self.isOutputPlaying,
-                artworkURL: resolvedURL
+                artworkURL: artworkURL
             )
         }
     }

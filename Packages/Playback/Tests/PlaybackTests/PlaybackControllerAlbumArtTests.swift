@@ -13,7 +13,7 @@ struct PlaybackControllerAlbumArtTests {
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(stations: [station()], output: output, presenter: presenter)
         let art = try #require(URL(string: "https://example.com/art/600x600bb.jpg"))
-        controller.albumArtURLProvider = { _ in art }
+        controller.trackResourcesProvider = { _ in TrackResources(artworkURL: art) }
 
         controller.play(station())
         await waitForStart(output)
@@ -27,14 +27,48 @@ struct PlaybackControllerAlbumArtTests {
         ))
     }
 
+    @Test func resolvedAppleMusicLinkIsPublished() async throws {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station()], output: output)
+        let art = try #require(URL(string: "https://example.com/art.jpg"))
+        let link = try #require(URL(string: "https://music.apple.com/us/album/song/1?i=2"))
+        controller.trackResourcesProvider = { _ in
+            TrackResources(artworkURL: art, appleMusicURL: link)
+        }
+
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        await drainMainQueue()
+
+        #expect(controller.appleMusicURL == link)
+    }
+
+    @Test func appleMusicLinkResolvesWithoutArtwork() async throws {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station()], output: output)
+        let link = try #require(URL(string: "https://music.apple.com/us/album/song/1?i=2"))
+        controller.trackResourcesProvider = { _ in TrackResources(appleMusicURL: link) }
+
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        await drainMainQueue()
+
+        #expect(controller.albumArtURL == nil)
+        #expect(controller.appleMusicURL == link)
+    }
+
     @Test func duplicateTrackInfoDoesNotRefireLookup() async throws {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
         let art = try #require(URL(string: "https://example.com/art.jpg"))
         var lookups = 0
-        controller.albumArtURLProvider = { _ in
+        controller.trackResourcesProvider = { _ in
             lookups += 1
-            return art
+            return TrackResources(artworkURL: art)
         }
 
         controller.play(station())
@@ -55,14 +89,14 @@ struct PlaybackControllerAlbumArtTests {
         let controller = makeController(stations: [station()], output: output)
         let oldArt = try #require(URL(string: "https://example.com/old.jpg"))
         let newArt = try #require(URL(string: "https://example.com/new.jpg"))
-        controller.albumArtURLProvider = { track in
+        controller.trackResourcesProvider = { track in
             if track.title == "Old" {
                 // Outlast the track change below; cancellation and the
                 // staleness guard must keep this result from applying.
                 for _ in 0..<400 { await Task.yield() }
-                return oldArt
+                return TrackResources(artworkURL: oldArt)
             }
-            return newArt
+            return TrackResources(artworkURL: newArt)
         }
 
         controller.play(station())
@@ -79,7 +113,10 @@ struct PlaybackControllerAlbumArtTests {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
         let art = try #require(URL(string: "https://example.com/art.jpg"))
-        controller.albumArtURLProvider = { _ in art }
+        let link = try #require(URL(string: "https://music.apple.com/us/album/song/1?i=2"))
+        controller.trackResourcesProvider = { _ in
+            TrackResources(artworkURL: art, appleMusicURL: link)
+        }
 
         controller.play(station())
         await waitForStart(output)
@@ -87,8 +124,10 @@ struct PlaybackControllerAlbumArtTests {
         output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
         await drainMainQueue()
         #expect(controller.albumArtURL == art)
+        #expect(controller.appleMusicURL == link)
 
         controller.stop()
         #expect(controller.albumArtURL == nil)
+        #expect(controller.appleMusicURL == nil)
     }
 }
