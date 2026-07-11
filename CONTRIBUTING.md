@@ -59,7 +59,10 @@ swift test --skip-build
   what. Read it before proposing architectural changes; it's the project's memory.
 - **Style** is enforced by the checked-in `.swiftformat` and `.swiftlint.yml`. CI runs
   SwiftLint **0.65.0** with `--strict` (warnings fail the build), pinned in `.github/workflows/ci.yml`;
-  install that version locally (e.g. `mise use swiftlint@0.65.0`) so your results match CI.
+  install that version locally (e.g. `mise use swiftlint@0.65.0`) so your results match CI. CI also
+  runs `swiftformat --lint` (currently non-blocking — the tree isn't fully conformant yet, see
+  `DECISIONS.md`) — run `swiftformat ShoutKitApp Packages` locally before pushing to help close
+  that gap.
 - Directory errors are typed (`throws(RadioDirectoryError)`); user-facing failures should carry
   the error, not a bare `String`.
 
@@ -119,3 +122,13 @@ touch: GPL-3.0 for the app and feature packages, MIT for `RadioDirectory`, `Play
 - CI must pass: app build, host test suites, and lint.
 - The ShoutKit name and icon are trademark-reserved (see `TRADEMARK.md`) — forks are welcome and
   must rebrand; contributions here need no special permission.
+
+## Releasing
+
+1. Move the relevant `CHANGELOG.md` entries out of `## [Unreleased]` into a new
+   `## [X.Y.Z] — <date>` section.
+2. Merge that to `main`, then push a `vX.Y.Z` tag pointing at the merge commit.
+3. `.github/workflows/release.yml` drafts a GitHub Release from that CHANGELOG section — review
+   and publish it manually. The workflow only drafts release notes; it does not sign or upload a
+   build (no Apple signing credentials are configured in this repo yet), so TestFlight/App Store
+   distribution is still a separate, manual Xcode Organizer step.

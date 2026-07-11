@@ -81,7 +81,7 @@ jobs:
           grep -E "(error|fatal error): " build.log | sort -u | head -10 | sed 's/^/::error::/' || true
 
   lint:
-    name: SwiftLint
+    name: Lint & format
     runs-on: macos-26
     timeout-minutes: 10
     steps:
@@ -100,3 +100,22 @@ jobs:
       # this keeps it that way (new warnings fail the build instead of rotting).
       - name: Lint
         run: swiftlint lint --strict --reporter github-actions-logging
+
+      # Homebrew ships current SwiftFormat and is preinstalled on GitHub-hosted
+      # macOS runners; --lint fails instead of rewriting, so drift from the
+      # checked-in `.swiftformat` config shows up as a CI failure.
+      - name: Install SwiftFormat
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+        run: brew install swiftformat
+
+      # continue-on-error: the tree has never had swiftformat enforced (58/90
+      # files fail --lint today, mostly indent/brace-wrap rules), and fixing
+      # that needs a byte-exact `swiftformat` run from a real toolchain, which
+      # isn't available in every contributor's environment. Surfaces drift
+      # without blocking merges until a one-time reformat lands (see
+      # DECISIONS.md); drop continue-on-error once the tree is clean.
+      - name: Format check
+        continue-on-error: true
+        run: swiftformat ShoutKitApp Packages --lint
