@@ -1,0 +1,47 @@
+name: Deploy marketing site
+
+# Publishes the static marketing site in `site/` to GitHub Pages. The site is
+# plain HTML with no build step, so we just upload the folder as-is.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
+  # Allow manual runs from the Actions tab (e.g. first deploy).
+  workflow_dispatch:
+
+# Least privilege for Pages deploys: read the repo, mint the OIDC token the
+# deploy step needs, and write to the Pages environment.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deploy at a time; don't cancel an in-flight publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
