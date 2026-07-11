@@ -33,6 +33,92 @@ struct LibraryStoreTests {
         #expect(store.isFavorite(station) == false)
     }
 
+    // MARK: - Favorite ordering
+
+    private func favoritesBySortIndex(_ context: ModelContext) throws -> [FavoriteStation] {
+        try context.fetch(
+            FetchDescriptor<FavoriteStation>(sortBy: [SortDescriptor(\.sortIndex, order: .forward)])
+        )
+    }
+
+    @Test func addFavoriteAssignsIncreasingContiguousSortIndex() throws {
+        let (store, context) = makeStoreAndContext()
+
+        store.addFavorite(station("a"))
+        store.addFavorite(station("b"))
+        store.addFavorite(station("c"))
+
+        let favorites = try favoritesBySortIndex(context)
+        #expect(favorites.map(\.stationID) == ["a", "b", "c"])
+        #expect(favorites.map(\.sortIndex) == [0, 1, 2])
+    }
+
+    @Test func moveFavoriteDownReordersAndRewritesContiguously() throws {
+        let (store, context) = makeStoreAndContext()
+        for id in ["a", "b", "c", "d"] { store.addFavorite(station(id)) }
+
+        // Move the first row to the end.
+        store.moveFavorites(try favoritesBySortIndex(context), from: IndexSet(integer: 0), to: 4)
+
+        let favorites = try favoritesBySortIndex(context)
+        #expect(favorites.map(\.stationID) == ["b", "c", "d", "a"])
+        #expect(favorites.map(\.sortIndex) == [0, 1, 2, 3])
+    }
+
+    @Test func moveFavoriteUpReordersAndRewritesContiguously() throws {
+        let (store, context) = makeStoreAndContext()
+        for id in ["a", "b", "c", "d"] { store.addFavorite(station(id)) }
+
+        // Move the last row to the front.
+        store.moveFavorites(try favoritesBySortIndex(context), from: IndexSet(integer: 3), to: 0)
+
+        let favorites = try favoritesBySortIndex(context)
+        #expect(favorites.map(\.stationID) == ["d", "a", "b", "c"])
+        #expect(favorites.map(\.sortIndex) == [0, 1, 2, 3])
+    }
+
+    @Test func backfillNormalizesLegacyRowsByCreatedAtDescending() throws {
+        let (_, context) = makeStoreAndContext()
+
+        // Simulate a pre-migration store: every row shares sortIndex 0.
+        let old = FavoriteStation(stationID: "old", name: "Old", genre: "T", createdAt: .now.addingTimeInterval(-120))
+        let mid = FavoriteStation(stationID: "mid", name: "Mid", genre: "T", createdAt: .now.addingTimeInterval(-60))
+        let new = FavoriteStation(stationID: "new", name: "New", genre: "T", createdAt: .now)
+        for favorite in [old, mid, new] { context.insert(favorite) }
+        try context.save()
+
+        // Constructing a new store triggers the one-time normalization.
+        _ = LibraryStore(context: context)
+
+        let favorites = try favoritesBySortIndex(context)
+        #expect(favorites.map(\.stationID) == ["new", "mid", "old"])
+        #expect(favorites.map(\.sortIndex) == [0, 1, 2])
+    }
+
+    @Test func backfillIsNoOpWhenIndicesAlreadyDistinct() throws {
+        let (store, context) = makeStoreAndContext()
+        for id in ["a", "b", "c"] { store.addFavorite(station(id)) }
+
+        let before = try favoritesBySortIndex(context).map { ($0.stationID, $0.sortIndex) }
+
+        // A fresh store over the same context must not disturb an existing arrangement.
+        _ = LibraryStore(context: context)
+
+        let after = try favoritesBySortIndex(context).map { ($0.stationID, $0.sortIndex) }
+        #expect(before.map(\.0) == after.map(\.0))
+        #expect(before.map(\.1) == after.map(\.1))
+    }
+
+    @Test func deletingFavoriteKeepsRemainingOrderStable() throws {
+        let (store, context) = makeStoreAndContext()
+        for id in ["a", "b", "c"] { store.addFavorite(station(id)) }
+
+        store.removeFavorite(stationID: "b")
+
+        let favorites = try favoritesBySortIndex(context)
+        #expect(favorites.map(\.stationID) == ["a", "c"])
+    }
+
     @Test func loggingSameStationTwiceKeepsOneRecent() throws {
         let (store, context) = makeStoreAndContext()
 

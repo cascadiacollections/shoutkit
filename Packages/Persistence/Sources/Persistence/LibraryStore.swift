@@ -21,6 +21,7 @@ public final class LibraryStore {
     public init(context: ModelContext) {
         self.context = context
         reloadFavoriteIDs()
+        normalizeSortIndicesIfNeeded()
     }
 
     // MARK: - Favorites
@@ -52,11 +53,36 @@ public final class LibraryStore {
             name: station.name,
             genre: station.genre,
             artworkURLString: station.artworkURL?.absoluteString,
-            streamURLString: station.preferredStreamURL?.absoluteString
+            streamURLString: station.preferredStreamURL?.absoluteString,
+            sortIndex: nextSortIndex()
         )
         context.insert(favorite)
         favoriteIDs.insert(station.id)
         save()
+    }
+
+    /// Reorders favorites to match a SwiftUI `.onMove` drag and rewrites `sortIndex`
+    /// contiguously (0..<count) so the persisted order is stable and gap-free.
+    /// `favorites` must be the currently displayed rows, in display order.
+    public func moveFavorites(_ favorites: [FavoriteStation], from source: IndexSet, to destination: Int) {
+        var reordered = favorites
+        reordered.move(fromOffsets: source, toOffset: destination)
+
+        for (index, favorite) in reordered.enumerated() where favorite.sortIndex != index {
+            favorite.sortIndex = index
+        }
+        save()
+    }
+
+    /// The next ordering slot, one past the current maximum, so new favorites append
+    /// to the bottom of the user's arrangement.
+    private func nextSortIndex() -> Int {
+        var descriptor = FetchDescriptor<FavoriteStation>(
+            sortBy: [SortDescriptor(\.sortIndex, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+        let maxIndex = (try? context.fetch(descriptor))?.first?.sortIndex
+        return (maxIndex ?? -1) + 1
     }
 
     public func removeFavorite(stationID: String) {
@@ -122,6 +148,26 @@ public final class LibraryStore {
         let descriptor = FetchDescriptor<FavoriteStation>()
         let favorites = (try? context.fetch(descriptor)) ?? []
         favoriteIDs = Set(favorites.map(\.stationID))
+    }
+
+    /// One-time repair after the `sortIndex` migration: pre-existing rows all migrate
+    /// to `sortIndex == 0`. When duplicate indices are detected, rewrite contiguous
+    /// indices following the legacy newest-first (`createdAt` descending) order so the
+    /// list looks unchanged after upgrading. Distinct indices short-circuit, making
+    /// this a no-op on every subsequent launch.
+    private func normalizeSortIndicesIfNeeded() {
+        let descriptor = FetchDescriptor<FavoriteStation>(
+            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+        )
+        guard let favorites = try? context.fetch(descriptor), favorites.count > 1 else { return }
+
+        let indices = favorites.map(\.sortIndex)
+        guard Set(indices).count != indices.count else { return }
+
+        for (index, favorite) in favorites.enumerated() {
+            favorite.sortIndex = index
+        }
+        save()
     }
 
     private func save() {

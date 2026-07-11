@@ -10,6 +10,10 @@ public final class FavoriteStation {
     public var artworkURLString: String?
     public var streamURLString: String?
     public var createdAt: Date
+    /// User-defined ordering for the Favorites list, ascending (0 = top). A default
+    /// value keeps the schema change a lightweight, additive migration; existing rows
+    /// migrate to 0 and are re-based on first launch by `LibraryStore`.
+    public var sortIndex: Int = 0
 
     public init(
         stationID: String,
@@ -17,7 +21,8 @@ public final class FavoriteStation {
         genre: String,
         artworkURLString: String? = nil,
         streamURLString: String? = nil,
-        createdAt: Date = .now
+        createdAt: Date = .now,
+        sortIndex: Int = 0
     ) {
         self.stationID = stationID
         self.name = name
@@ -25,6 +30,7 @@ public final class FavoriteStation {
         self.artworkURLString = artworkURLString
         self.streamURLString = streamURLString
         self.createdAt = createdAt
+        self.sortIndex = sortIndex
     }
 
     public var station: Station {
