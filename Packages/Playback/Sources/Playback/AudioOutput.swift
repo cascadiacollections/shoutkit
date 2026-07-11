@@ -216,45 +216,53 @@ public final class AVPlayerAudioOutput: NSObject, AudioOutput {
 extension AVPlayerAudioOutput: AVPlayerItemMetadataOutputPushDelegate {
     public nonisolated func metadataOutput(
         _ output: AVPlayerItemMetadataOutput,
-        didOutputTimedMetadataGroups groups: [AVTimedMetadataGroup],
+        didOutputTimedMetadataGroups groups: sending [AVTimedMetadataGroup],
         from track: AVPlayerItemTrack?
     ) {
-        // Extract the Sendable stream title before crossing the isolation boundary.
-        // A push can carry several rotations; the latest group wins.
-        var streamTitle: String?
-        for group in groups.reversed() {
-            if let value = Self.title(in: group.items) {
-                streamTitle = value
-                break
-            }
-        }
-
-        guard let streamTitle else { return }
-        let trackInfo = ICYMetadataParser.parseTrack(from: streamTitle)
-
-        // Delegate queue is `.main` (set in `start`), so we are on the main actor.
+        // Delegate queue is `.main` (set in `start`), so keep AVFoundation
+        // metadata objects on the main actor while loading their async values.
         MainActor.assumeIsolated {
-            // Drop late deliveries from a previous item after a station switch.
-            guard output === metadataOutput else { return }
-            onTrackInfo?(trackInfo)
+            _ = Task { @MainActor in
+                // A push can carry several rotations; the latest group wins.
+                guard let streamTitle = await Self.title(in: groups) else { return }
+                let trackInfo = ICYMetadataParser.parseTrack(from: streamTitle)
+
+                // Drop late deliveries from a previous item after a station switch.
+                guard output === metadataOutput else { return }
+                onTrackInfo?(trackInfo)
+            }
         }
     }
 
     /// ICY streams carry `StreamTitle` and `StreamUrl` as separate items in the
     /// same group — prefer the explicit title, then a generic title (ID3/HLS
     /// streams), and never surface the URL item as a track name.
-    private nonisolated static func title(in items: [AVMetadataItem]) -> String? {
-        if let icy = items.first(where: { $0.identifier == .icyMetadataStreamTitle })?.stringValue,
+    private static func title(in groups: [AVTimedMetadataGroup]) async -> String? {
+        for group in groups.reversed() {
+            if let value = await Self.title(in: group.items) {
+                return value
+            }
+        }
+        return nil
+    }
+
+    private static func title(in items: [AVMetadataItem]) async -> String? {
+        if let item = items.first(where: { $0.identifier == .icyMetadataStreamTitle }),
+           let icy = try? await item.load(.stringValue),
            icy.isEmpty == false {
             return icy
         }
-        if let common = items.first(where: { $0.commonKey == .commonKeyTitle })?.stringValue,
+        if let item = items.first(where: { $0.commonKey == .commonKeyTitle }),
+           let common = try? await item.load(.stringValue),
            common.isEmpty == false {
             return common
         }
-        return items.first {
-            $0.identifier != .icyMetadataStreamURL && $0.stringValue?.isEmpty == false
-        }?.stringValue
+        for item in items where item.identifier != .icyMetadataStreamURL {
+            if let value = try? await item.load(.stringValue), value.isEmpty == false {
+                return value
+            }
+        }
+        return nil
     }
 }
 
