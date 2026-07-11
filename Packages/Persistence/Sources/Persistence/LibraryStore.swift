@@ -175,6 +175,8 @@ public final class LibraryStore {
            latest.stationID == station.id,
            latest.title == title,
            latest.artist == artist {
+            // Consecutive dedupe keeps one row but refreshes its timestamp so it
+            // reflects the most recent hearing of that still-current track.
             latest.stationName = station.name
             latest.heardAt = heardAt
             if let appleMusicURL {
