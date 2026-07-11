@@ -106,7 +106,7 @@ public actor CachingRadioDirectory: RadioDirectoryProviding {
 
         topStationsGeneration += 1
         let generation = topStationsGeneration
-        topStationsInFlight = (task, limit, generation)
+        topStationsInFlight = TopStationsInFlight(task: task, limit: limit, generation: generation)
         let result = await task.value
         // Only deregister our own registration — a concurrent larger-limit
         // fetch may have replaced it while we awaited.
