@@ -90,16 +90,20 @@ public struct LibraryView: View {
     }
 
     private func recentlyHeardRow(for track: RecentlyHeardTrack) -> some View {
+        let content = recentlyHeardRowContent(
+            for: track,
+            isLinked: track.appleMusicURLString.flatMap(URL.init(string:)) != nil
+        )
         Group {
             if let url = track.appleMusicURLString.flatMap(URL.init(string:)) {
                 Button {
                     openURL(url)
                 } label: {
-                    recentlyHeardRowContent(for: track, isLinked: true)
+                    content
                 }
                 .buttonStyle(.plain)
             } else {
-                recentlyHeardRowContent(for: track, isLinked: false)
+                content
             }
         }
     }

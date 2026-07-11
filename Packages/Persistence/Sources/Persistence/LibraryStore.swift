@@ -166,12 +166,12 @@ public final class LibraryStore {
     ) {
         guard title != nil || artist != nil else { return }
 
-        var latestDescriptor = FetchDescriptor<RecentlyHeardTrack>(
+        var singleTrackDescriptor = FetchDescriptor<RecentlyHeardTrack>(
             sortBy: [SortDescriptor(\.heardAt, order: .reverse)]
         )
-        latestDescriptor.fetchLimit = 1
+        singleTrackDescriptor.fetchLimit = 1
 
-        if let latest = try? context.fetch(latestDescriptor).first,
+        if let latest = try? context.fetch(singleTrackDescriptor).first,
            latest.stationID == station.id,
            latest.title == title,
            latest.artist == artist {
