@@ -61,7 +61,7 @@ public final class LibraryStore {
         )
         context.insert(favorite)
         favoriteIDs.insert(station.id)
-        save(operation: "add favorite \(station.id)")
+        save(operation: "add favorite \(safeForLogs(station.id))")
     }
 
     /// Reorders favorites to match a SwiftUI `.onMove` drag and rewrites `sortIndex`
@@ -98,7 +98,7 @@ public final class LibraryStore {
         let predicate = #Predicate<FavoriteStation> { $0.stationID == stationID }
         let descriptor = FetchDescriptor<FavoriteStation>(predicate: predicate)
 
-        guard let matches = fetch(descriptor, operation: "remove favorite \(stationID)") else {
+        guard let matches = fetch(descriptor, operation: "remove favorite \(safeForLogs(stationID))") else {
             return
         }
 
@@ -106,7 +106,7 @@ public final class LibraryStore {
             context.delete(match)
         }
         favoriteIDs.remove(stationID)
-        save(operation: "remove favorite \(stationID)")
+        save(operation: "remove favorite \(safeForLogs(stationID))")
     }
 
     // MARK: - Recents
@@ -117,7 +117,7 @@ public final class LibraryStore {
         let predicate = #Predicate<RecentStation> { $0.stationID == stationID }
         let descriptor = FetchDescriptor<RecentStation>(predicate: predicate)
 
-        guard let matches = fetch(descriptor, operation: "log recent \(stationID)") else {
+        guard let matches = fetch(descriptor, operation: "log recent \(safeForLogs(stationID))") else {
             return
         }
 
@@ -139,7 +139,7 @@ public final class LibraryStore {
         }
 
         trimRecents()
-        save(operation: "log recent \(stationID)")
+        save(operation: "log recent \(safeForLogs(stationID))")
     }
 
     private func trimRecents() {
@@ -222,5 +222,12 @@ public final class LibraryStore {
         let debugDescription = String(describing: error)
         lastErrorMessage = localizedMessage
         logger.error("LibraryStore \(operation, privacy: .public) failed: \(debugDescription, privacy: .public)")
+    }
+
+    private func safeForLogs(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "\r", with: " ")
+            .replacingOccurrences(of: "\t", with: " ")
     }
 }
