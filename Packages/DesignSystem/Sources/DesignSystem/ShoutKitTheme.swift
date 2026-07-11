@@ -15,6 +15,24 @@ public enum ShoutKitRadius {
     public static let card: CGFloat = 20
 }
 
+public enum ShoutKitLayout {
+    /// Adaptive columns for station-row collections: one column at iPhone
+    /// widths, two or more as the window widens (iPad, Split View, Stage
+    /// Manager). The minimum is the narrowest supported pane — a 320 pt
+    /// Split View / Slide Over window minus the screens' 16 pt horizontal
+    /// padding — because an adaptive grid honors its minimum even when the
+    /// container is narrower, overflowing instead of shrinking. The maximum
+    /// keeps a row from stretching across a full iPad screen, which pushes
+    /// the play affordance arm's-length from the label.
+    public static let stationColumns = [
+        GridItem(
+            .adaptive(minimum: 288, maximum: 640),
+            spacing: ShoutKitSpacing.small,
+            alignment: .top
+        )
+    ]
+}
+
 public extension Color {
     /// Brand accent — used for tint, active playback, and prominent controls.
     static let shoutKitAccent = Color(red: 0.04, green: 0.44, blue: 0.72)

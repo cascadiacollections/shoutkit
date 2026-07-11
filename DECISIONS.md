@@ -1,5 +1,36 @@
 # Decisions
 
+## 2026-07-11 (iPadOS support)
+
+The project has always *launched* on iPad — `TARGETED_DEVICE_FAMILY` was already `1,2`, the app's
+Info.plist declares all four iPad orientations, and `UIRequiresFullScreen` was never set, so Split
+View / Stage Manager resizing worked from day one — but every surface rendered as a stretched
+phone layout. Closing that gap is UI adaptation, not project surgery:
+
+- **`.tabViewStyle(.sidebarAdaptable)` on the root `TabView`, not a `NavigationSplitView`
+  rewrite.** On iPhone the style resolves to the same bottom tab bar as before; on iPad it yields
+  the Apple Music-style sidebar with the system's own toggle back to a top tab bar. A
+  `NavigationSplitView` would have duplicated the tab structure behind a size-class branch and
+  left `tabViewBottomAccessory` — the mini-player's home, and the reason the accessory must stay
+  structurally attached (see RootView's comment) — without a host.
+- **Station rows flow into an adaptive `LazyVGrid` (`ShoutKitLayout.stationColumns`, 288–640 pt
+  columns) rather than branching on `horizontalSizeClass`.** `GridItem(.adaptive(...))` derives
+  the column count from actual available width, so one code path covers iPhone (one column), iPad
+  Split View (one–two), and full-screen iPad (two–three) — including Stage Manager's arbitrary
+  window widths, which a two-case size-class branch mishandles by design. The 288 pt floor is the
+  narrowest supported pane (a 320 pt Split View / Slide Over window minus the screens' 16 pt
+  horizontal padding): an adaptive grid honors its minimum even when the container is narrower,
+  overflowing instead of shrinking, so a larger minimum would clip rows there (Copilot caught
+  this on the PR — the first draft used 330 pt). The 640 pt ceiling stops a lone row on a wide
+  window from parking the play affordance arm's-length from the station name. The columns are a
+  shared DesignSystem token so Listen Now, Browse, and Search can't drift apart.
+- **Deliberately left alone**: `LibraryView` stays a `List` — its edit mode drives drag-to-reorder
+  and swipe-to-delete (the reorderable-favorites feature), which `LazyVGrid` has no counterpart for,
+  and inset-grouped lists are already at home at iPad widths. The Now Playing surface stays a
+  sheet: `presentationDetents([.large])` is a no-op on iPad, where the system presents it as a
+  centered page sheet, which the artwork-centered layout fits comfortably. The widget target
+  already declared both device families, so widgets needed nothing.
+
 ## 2026-07-11 (background battery hygiene, follow-on)
 
 A "runs hot while streaming" report against the app whose dominant mode is hours of *background*
