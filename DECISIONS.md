@@ -13,13 +13,17 @@ phone layout. Closing that gap is UI adaptation, not project surgery:
   `NavigationSplitView` would have duplicated the tab structure behind a size-class branch and
   left `tabViewBottomAccessory` — the mini-player's home, and the reason the accessory must stay
   structurally attached (see RootView's comment) — without a host.
-- **Station rows flow into an adaptive `LazyVGrid` (`ShoutKitLayout.stationColumns`, 330–640 pt
+- **Station rows flow into an adaptive `LazyVGrid` (`ShoutKitLayout.stationColumns`, 288–640 pt
   columns) rather than branching on `horizontalSizeClass`.** `GridItem(.adaptive(...))` derives
   the column count from actual available width, so one code path covers iPhone (one column), iPad
   Split View (one–two), and full-screen iPad (two–three) — including Stage Manager's arbitrary
-  window widths, which a two-case size-class branch mishandles by design. The 640 pt ceiling stops
-  a lone row on a wide window from parking the play affordance arm's-length from the station name.
-  The columns are a shared DesignSystem token so Listen Now, Browse, and Search can't drift apart.
+  window widths, which a two-case size-class branch mishandles by design. The 288 pt floor is the
+  narrowest supported pane (a 320 pt Split View / Slide Over window minus the screens' 16 pt
+  horizontal padding): an adaptive grid honors its minimum even when the container is narrower,
+  overflowing instead of shrinking, so a larger minimum would clip rows there (Copilot caught
+  this on the PR — the first draft used 330 pt). The 640 pt ceiling stops a lone row on a wide
+  window from parking the play affordance arm's-length from the station name. The columns are a
+  shared DesignSystem token so Listen Now, Browse, and Search can't drift apart.
 - **Deliberately left alone**: `LibraryView` stays a `List` — its edit mode drives drag-to-reorder
   and swipe-to-delete (the reorderable-favorites feature), which `LazyVGrid` has no counterpart for,
   and inset-grouped lists are already at home at iPad widths. The Now Playing surface stays a
