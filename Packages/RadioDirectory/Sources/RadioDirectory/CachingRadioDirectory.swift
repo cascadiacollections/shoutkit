@@ -26,11 +26,18 @@ public actor CachingRadioDirectory: RadioDirectoryProviding {
     }
 
     private var topStationsCache: TopStationsCache?
-    private typealias TopStationsFetch = Task<Result<[Station], RadioDirectoryError>, Never>
-    private var topStationsInFlight: (task: TopStationsFetch, limit: Int, generation: Int)?
-    /// Distinguishes concurrent mixed-limit fetches: a larger-limit request
-    /// replaces a smaller in-flight registration, and the smaller fetch must
-    /// not deregister (or cache over) the newer one when it completes.
+    /// An in-flight top-stations base fetch and the limit it was issued with.
+    /// The generation distinguishes concurrent mixed-limit fetches: a
+    /// larger-limit request replaces a smaller in-flight registration, and the
+    /// smaller fetch must not deregister (or cache over) the newer one when it
+    /// completes.
+    private struct TopStationsInFlight {
+        let task: Task<Result<[Station], RadioDirectoryError>, Never>
+        let limit: Int
+        let generation: Int
+    }
+
+    private var topStationsInFlight: TopStationsInFlight?
     private var topStationsGeneration = 0
 
     public init(

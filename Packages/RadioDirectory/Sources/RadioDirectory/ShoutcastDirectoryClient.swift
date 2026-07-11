@@ -159,8 +159,9 @@ public struct ShoutcastEndpoints: Sendable {
         // `URLComponents` leaves `+` unescaped in query values, but web servers
         // conventionally form-decode it as a space — "C+C Music Factory" would
         // arrive as "C C Music Factory". Escape it explicitly.
-        components?.percentEncodedQuery = components?.percentEncodedQuery?
-            .replacingOccurrences(of: "+", with: "%2B")
+        if let escapedQuery = components?.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B") {
+            components?.percentEncodedQuery = escapedQuery
+        }
 
         guard let url = components?.url else {
             throw RadioDirectoryError.invalidURL
