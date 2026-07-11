@@ -41,10 +41,10 @@ public final class LibraryStore {
     public func toggleFavorite(_ station: Station) -> Bool {
         if isFavorite(station) {
             removeFavorite(stationID: station.id)
-            return isFavorite(station)
+            return false
         } else {
             addFavorite(station)
-            return isFavorite(station)
+            return true
         }
     }
 
@@ -218,8 +218,9 @@ public final class LibraryStore {
     }
 
     private func record(_ error: Error, operation: String) {
-        let description = String(describing: error)
-        lastErrorMessage = description
-        logger.error("LibraryStore \(operation, privacy: .public) failed: \(description, privacy: .public)")
+        let localizedMessage = error.localizedDescription
+        let debugDescription = String(describing: error)
+        lastErrorMessage = localizedMessage
+        logger.error("LibraryStore \(operation, privacy: .public) failed: \(debugDescription, privacy: .public)")
     }
 }
