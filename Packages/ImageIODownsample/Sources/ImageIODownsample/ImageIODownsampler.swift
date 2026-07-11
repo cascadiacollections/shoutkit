@@ -15,11 +15,15 @@ public nonisolated enum ImageIODownsampler {
             return nil
         }
 
+        // `kCGImageSourceThumbnailMaxPixelSize` is an integer pixel count.
+        // Callers pass a `CGFloat` for API convenience, so coerce to a positive
+        // `Int` here rather than letting a fractional value bridge to CFNumber.
+        let maxPixelDimension = max(1, Int(maxPixelSize.rounded()))
         let thumbnailOptions = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceCreateThumbnailWithTransform: true,
             kCGImageSourceShouldCacheImmediately: true,
-            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelDimension
         ] as [CFString: Any] as CFDictionary
 
         return CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions)

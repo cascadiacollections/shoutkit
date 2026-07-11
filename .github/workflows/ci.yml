@@ -46,6 +46,10 @@ jobs:
         working-directory: Packages/Persistence
         run: swift test
 
+      - name: ImageIODownsample tests
+        working-directory: Packages/ImageIODownsample
+        run: swift test
+
   build:
     name: Build app + compile Playback tests (iOS Simulator)
     runs-on: macos-26

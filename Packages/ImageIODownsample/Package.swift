@@ -12,6 +12,10 @@ let package = Package(
         .library(name: "ImageIODownsample", targets: ["ImageIODownsample"])
     ],
     targets: [
-        .target(name: "ImageIODownsample")
+        .target(name: "ImageIODownsample"),
+        .testTarget(
+            name: "ImageIODownsampleTests",
+            dependencies: ["ImageIODownsample"]
+        )
     ]
 )
