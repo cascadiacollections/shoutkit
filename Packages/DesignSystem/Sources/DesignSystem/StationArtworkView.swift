@@ -16,6 +16,9 @@ public struct StationArtworkView: View {
     private let isPlaying: Bool
 
     @State private var thumbnail: UIImage?
+    /// The URL `thumbnail` was loaded for, so a reused row can drop the
+    /// previous station's artwork instead of showing it under the new one.
+    @State private var thumbnailURL: URL?
     @Environment(\.displayScale) private var displayScale
 
     public init(
@@ -58,10 +61,22 @@ public struct StationArtworkView: View {
                     .stroke(.white.opacity(0.12), lineWidth: 0.5)
             }
             .task(id: artworkURL) {
-                thumbnail = await ArtworkThumbnailLoader.thumbnail(
+                // A reused row must not keep showing the previous station's
+                // artwork while the new one loads.
+                if thumbnailURL != artworkURL {
+                    thumbnail = nil
+                    thumbnailURL = nil
+                }
+                let loaded = await ArtworkThumbnailLoader.thumbnail(
                     for: artworkURL,
                     maxPixelSize: size * displayScale
                 )
+                // A task cancelled by a URL change can still resume here with
+                // a stale (or nil, from a cancelled fetch) result — don't let
+                // it clobber the replacement task's image.
+                guard Task.isCancelled == false else { return }
+                thumbnail = loaded
+                thumbnailURL = artworkURL
             }
     }
 

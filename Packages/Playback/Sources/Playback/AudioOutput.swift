@@ -59,6 +59,12 @@ public final class AVPlayerAudioOutput: NSObject, AudioOutput {
     /// instead of being attributed to the newly started station.
     private var generation = 0
 
+    /// Incremented on every metadata push. Each push loads its string values
+    /// asynchronously, so a slow load from an older push could otherwise
+    /// complete *after* a newer one and regress the track info; only the
+    /// latest push is allowed to deliver.
+    private var metadataPushSequence = 0
+
     // Block-based notification observers are not auto-removed on dealloc, so
     // deinit is isolated to read this on the main actor without an escape hatch.
     private var notificationTokens: [NSObjectProtocol] = []
@@ -222,13 +228,17 @@ extension AVPlayerAudioOutput: AVPlayerItemMetadataOutputPushDelegate {
         // Delegate queue is `.main` (set in `start`), so keep AVFoundation
         // metadata objects on the main actor while loading their async values.
         MainActor.assumeIsolated {
+            metadataPushSequence += 1
+            let sequence = metadataPushSequence
             _ = Task { @MainActor in
                 // A push can carry several rotations; the latest group wins.
                 guard let streamTitle = await Self.title(in: groups) else { return }
                 let trackInfo = ICYMetadataParser.parseTrack(from: streamTitle)
 
-                // Drop late deliveries from a previous item after a station switch.
-                guard output === metadataOutput else { return }
+                // Drop late deliveries from a previous item after a station
+                // switch, and out-of-order completions from an older push
+                // whose value load lost the race to a newer one.
+                guard output === metadataOutput, sequence == metadataPushSequence else { return }
                 onTrackInfo?(trackInfo)
             }
         }

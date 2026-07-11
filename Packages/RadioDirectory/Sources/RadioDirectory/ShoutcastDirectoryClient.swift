@@ -96,7 +96,9 @@ public actor ShoutcastDirectoryClient: RadioDirectoryProviding {
                 return try await performRequest(request)
             } catch {
                 lastError = error
-                guard attempt < retryPolicy.maximumRetries else {
+                // Retrying a permanent failure (a 4xx from a bad API key, say)
+                // just delays the error surfacing by the whole backoff window.
+                guard error.isRetryable, attempt < retryPolicy.maximumRetries else {
                     break
                 }
 
@@ -154,6 +156,11 @@ public struct ShoutcastEndpoints: Sendable {
         let endpointURL = legacyBaseURL.appendingPathComponent(endpoint)
         var components = URLComponents(url: endpointURL, resolvingAgainstBaseURL: false)
         components?.queryItems = [URLQueryItem(name: "k", value: apiKey)] + queryItems
+        // `URLComponents` leaves `+` unescaped in query values, but web servers
+        // conventionally form-decode it as a space — "C+C Music Factory" would
+        // arrive as "C C Music Factory". Escape it explicitly.
+        components?.percentEncodedQuery = components?.percentEncodedQuery?
+            .replacingOccurrences(of: "+", with: "%2B")
 
         guard let url = components?.url else {
             throw RadioDirectoryError.invalidURL
@@ -242,14 +249,17 @@ enum PlaylistParser {
             .split(whereSeparator: \.isNewline)
             .map { line in line.trimmingCharacters(in: .whitespacesAndNewlines) }
 
-        for line in lines where line.localizedCaseInsensitiveContains("File") {
-            guard let value = line.split(separator: "=", maxSplits: 1).last else {
-                continue
-            }
-
-            if let url = URL(string: String(value)) {
-                return url
-            }
+        // PLS entries are `FileN=<url>`. Match the key by prefix — a substring
+        // match would also hit `Title1=filedrop.fm` — and case-insensitively
+        // via locale-independent lowercasing (localized folding breaks the
+        // i/I match under e.g. the Turkish locale). A `File` line with no
+        // value (`File1=`) is skipped rather than returning the key itself
+        // as a relative URL.
+        for line in lines where line.lowercased().hasPrefix("file") {
+            guard let equals = line.firstIndex(of: "=") else { continue }
+            let value = line[line.index(after: equals)...].trimmingCharacters(in: .whitespaces)
+            guard value.isEmpty == false, let url = URL(string: value) else { continue }
+            return url
         }
 
         for line in lines where line.hasPrefix("http://") || line.hasPrefix("https://") {
@@ -297,7 +307,9 @@ private final class GenreParserDelegate: NSObject, XMLParserDelegate {
         qualifiedName _: String?,
         attributes attributeDict: [String: String] = [:]
     ) {
-        guard elementName.localizedCaseInsensitiveCompare("genre") == .orderedSame else {
+        // Locale-independent: XML element names are protocol tokens, and
+        // localized folding fails on i/I under e.g. the Turkish locale.
+        guard elementName.caseInsensitiveCompare("genre") == .orderedSame else {
             return
         }
 
@@ -322,7 +334,8 @@ private final class StationParserDelegate: NSObject, XMLParserDelegate {
         qualifiedName _: String?,
         attributes attributeDict: [String: String] = [:]
     ) {
-        guard elementName.localizedCaseInsensitiveCompare("station") == .orderedSame else {
+        // Locale-independent for the same reason as the genre parser above.
+        guard elementName.caseInsensitiveCompare("station") == .orderedSame else {
             return
         }
 

@@ -42,9 +42,13 @@ public enum LiveActivityArtworkStore {
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
-    /// Writes `pngData` under `token`, replacing whatever art was there before so
-    /// the container holds only the current track's file. Write side, used by the
-    /// app.
+    /// Writes `pngData` under `token`. Write side, used by the app.
+    ///
+    /// Deliberately does NOT purge older files: staging runs off the main
+    /// actor and can complete late for a download that has already been
+    /// superseded — purging here could delete the file the activity currently
+    /// points at. The coordinator purges after *adopting* a token, where
+    /// adoptions are serialized.
     ///
     /// `.noFileProtection`: the Live Activity renders on the lock screen while the
     /// device is locked, and the default protection class would make the file
@@ -56,7 +60,6 @@ public enum LiveActivityArtworkStore {
         guard let directory = directoryURL, let fileURL = fileURL(for: token) else { return nil }
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            purge(except: token)
             try pngData.write(to: fileURL, options: [.atomic, .noFileProtection])
             return token
         } catch {

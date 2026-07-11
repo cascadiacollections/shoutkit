@@ -43,12 +43,36 @@ extension PlaybackController {
                 guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
                 self.output.start(url: endpoint.url)
                 self.outputStarted = true
-                self.nowPlayingCenter.update(station: station, track: nil, isPlaying: true, artworkURL: nil)
+                // Pass the preserved track/art through: on a reconnect the
+                // last-known track must stay on the lock screen while the
+                // stream re-buffers (both are nil on a fresh start anyway).
+                self.nowPlayingCenter.update(
+                    station: station,
+                    track: self.nowPlaying,
+                    isPlaying: true,
+                    artworkURL: self.albumArtURL
+                )
             } catch {
                 guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
-                self.state = .failed(error.localizedDescription)
-                self.activeStation = nil
+                self.handleResolutionFailure(error, for: station)
             }
+        }
+    }
+
+    /// Endpoint resolution fails for the same transient reasons the stream
+    /// itself does (tunnel, cell handoff), so retryable failures get the same
+    /// bounded reconnect budget instead of surfacing `.failed` at once — which
+    /// matters most when the failure happens *during* a scheduled reconnect,
+    /// where bailing out would abandon the rest of the budget. `activeStation`
+    /// is kept either way so the failed state stays recoverable via
+    /// `resume()`/`togglePlayPause()`.
+    func handleResolutionFailure(_ error: any Error, for station: Station) {
+        let fallback = PlaybackState.failed(error.localizedDescription)
+        if (error as? RadioDirectoryError)?.isRetryable == false {
+            state = fallback
+            nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
+        } else {
+            attemptReconnect(for: station, fallback: fallback)
         }
     }
 
@@ -83,12 +107,22 @@ extension PlaybackController {
             nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: true, artworkURL: albumArtURL)
         case .paused:
             stallCeilingTimer.cancel()
+            // A system-initiated pause (headphones unplugged, route change)
+            // must win over a pending auto-reconnect just like a user pause.
+            reconnectTimer.cancel()
             state = .paused(station)
             nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
             schedulePausedRelease()
         case let .failed(message):
             pausedReleaseTimer.cancel()
             stallCeilingTimer.cancel()
+            // Tear the dead player down before retrying: a failed AVPlayerItem
+            // is unrecoverable, so `resume()` must never find `outputStarted`
+            // still true and try to resume it — and on the give-up path the
+            // player and audio session must not stay resident behind a
+            // terminal `.failed`.
+            output.stop()
+            outputStarted = false
             // A mid-play failure is usually transient; retry before giving up.
             attemptReconnect(for: station, fallback: .failed(message))
         case .interruptionBegan:
@@ -158,6 +192,10 @@ extension PlaybackController {
     }
 
     func handleInterruptionBegan(station: Station) {
+        // A reconnect must not fire mid-interruption: it would try to grab the
+        // audio session during the call and clobber `resumeAfterInterruption`
+        // in `startPlayback`, killing the auto-resume when the call ends.
+        reconnectTimer.cancel()
         switch state {
         case .playing, .buffering:
             // The system already paused the player; remember to resume.

@@ -111,6 +111,9 @@ public final class PlaybackController {
         // A user pause must win over a pending auto-reconnect, or a stream the
         // user just stopped would resurrect itself when the reconnect fires.
         reconnectTimer.cancel()
+        // Likewise it must win over a pending interruption auto-resume: pausing
+        // during a phone call means "stay paused" when the call ends.
+        resumeAfterInterruption = false
         // Pausing while the stream endpoint is still resolving must cancel the
         // pending start, or audio would begin after the user asked it not to.
         if case let .loading(station) = state {

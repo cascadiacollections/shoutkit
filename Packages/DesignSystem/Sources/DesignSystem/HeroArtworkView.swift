@@ -49,6 +49,10 @@ public struct HeroArtworkView: View {
             .animation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.75), value: isPlaying)
             .task(id: artworkURL) {
                 let loaded = await ArtworkLoader.load(artworkURL)
+                // The store's await isn't cancellation-responsive, so a task
+                // cancelled by a URL change still resumes here — without this
+                // guard it would overwrite the new URL's artwork with the old.
+                guard Task.isCancelled == false else { return }
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                     artwork = loaded
                 }

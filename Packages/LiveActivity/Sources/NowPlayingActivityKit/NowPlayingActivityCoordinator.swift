@@ -26,6 +26,17 @@ public final class NowPlayingActivityCoordinator {
     private var currentStation: Station?
     private var latestMetadata: NowPlayingMetadata?
 
+    /// The play/pause flag last *requested*, tracked locally like
+    /// `latestMetadata`. `activity.content.state.isPlaying` lags the
+    /// fire-and-forget update tasks, so reading it back would let a track or
+    /// artwork push resurrect a stale "playing" onto a just-paused activity.
+    private var latestIsPlaying = false
+
+    /// Tail of the ActivityKit update chain. `Activity.update`/`end` are
+    /// async and fired from unstructured tasks; chaining each onto the
+    /// previous keeps them applying in the order they were requested.
+    private var updateTask: Task<Void, Never>?
+
     /// The artwork URL currently reflected in the activity, and the token of the
     /// bitmap staged for it. Kept in step so a redundant push is skipped and a
     /// station switch clears stale art.
@@ -97,13 +108,13 @@ public final class NowPlayingActivityCoordinator {
         latestMetadata = metadata
         guard let activity else { return }
 
-        let isPlaying = activity.content.state.isPlaying
-        update(activity, isPlaying: isPlaying)
+        update(activity, isPlaying: latestIsPlaying)
     }
 
     // MARK: - Lifecycle
 
     private func activate(for station: Station, isPlaying: Bool) {
+        latestIsPlaying = isPlaying
         if let activity, currentStation?.id == station.id {
             update(activity, isPlaying: isPlaying)
             return
@@ -137,7 +148,13 @@ public final class NowPlayingActivityCoordinator {
         // ActivityKit's Activity handle is thread-safe but not Sendable-annotated,
         // and update/end are async so the call must leave the main actor.
         nonisolated(unsafe) let activity = activity
-        Task {
+        let previous = updateTask
+        updateTask = Task {
+            // Chain onto the previous request so updates apply in the order
+            // they were made — two unstructured tasks have no ordering of
+            // their own, and a reordered pair could leave a stale state (an
+            // old "playing") as the last one applied.
+            await previous?.value
             await activity.update(ActivityContent(state: state, staleDate: nil))
         }
     }
@@ -157,7 +174,12 @@ public final class NowPlayingActivityCoordinator {
         let finalState = contentState(isPlaying: false)
         // See note in update(_:isPlaying:) about the unsafe binding.
         nonisolated(unsafe) let endingActivity = activity
-        Task {
+        let previous = updateTask
+        updateTask = Task {
+            // Keep the end ordered after any in-flight updates for the same
+            // activity; a replacement activity's updates simply chain after
+            // it, which is harmless.
+            await previous?.value
             await endingActivity.end(
                 ActivityContent(state: finalState, staleDate: nil),
                 dismissalPolicy: .immediate
@@ -199,6 +221,7 @@ public final class NowPlayingActivityCoordinator {
         // adopt it without a refetch.
         if LiveActivityArtworkStore.fileURL(forToken: token) != nil {
             latestArtworkToken = token
+            LiveActivityArtworkStore.purge(except: token)
             pushArtworkUpdate()
             return
         }
@@ -212,13 +235,17 @@ public final class NowPlayingActivityCoordinator {
             guard await Self.stageArtwork(from: targetURL, token: token) else { return }
             guard let self, Task.isCancelled == false, self.latestArtworkURL == targetURL else { return }
             self.latestArtworkToken = token
+            // Purge here — serialized on the main actor with other adoptions —
+            // rather than inside `stage`, where a superseded download's late
+            // write could delete the PNG the activity currently points at.
+            LiveActivityArtworkStore.purge(except: token)
             self.pushArtworkUpdate()
         }
     }
 
     private func pushArtworkUpdate() {
         guard let activity else { return }
-        update(activity, isPlaying: activity.content.state.isPlaying)
+        update(activity, isPlaying: latestIsPlaying)
     }
 
     /// Downloads, downsample-decodes, and stages artwork in the shared container —
@@ -228,11 +255,15 @@ public final class NowPlayingActivityCoordinator {
     /// - Returns: `true` once the PNG is written and readable by the widget.
     private nonisolated static func stageArtwork(from url: URL, token: String) async -> Bool {
         guard let (data, _) = try? await URLSession.shared.data(from: url) else { return false }
+        let png = await Task.detached(priority: .utility) {
+            encodePNG(downsampling: data, maxPixelSize: artworkMaxPixelSize)
+        }.value
+        // Re-check between the detached encode (which can't observe the outer
+        // task's cancellation) and the write, so a superseded download doesn't
+        // stage a stale file after its replacement already ran.
+        guard let png, Task.isCancelled == false else { return false }
         return await Task.detached(priority: .utility) {
-            guard let png = encodePNG(downsampling: data, maxPixelSize: artworkMaxPixelSize) else {
-                return false
-            }
-            return LiveActivityArtworkStore.stage(png, forToken: token) != nil
+            LiveActivityArtworkStore.stage(png, forToken: token) != nil
         }.value
     }
 

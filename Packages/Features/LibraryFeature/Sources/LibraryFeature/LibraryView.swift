@@ -70,9 +70,11 @@ public struct LibraryView: View {
     }
 
     private func deleteFavorites(at offsets: IndexSet) {
-        for index in offsets {
-            let favorite = favorites[index]
-            library?.removeFavorite(stationID: favorite.stationID)
+        // Resolve every offset before the first removal — deleting while
+        // indexing into the live query result would shift later offsets.
+        let stationIDs = offsets.map { favorites[$0].stationID }
+        for stationID in stationIDs {
+            library?.removeFavorite(stationID: stationID)
         }
     }
 }
