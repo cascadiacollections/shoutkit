@@ -61,7 +61,7 @@ public final class LibraryStore {
         )
         context.insert(favorite)
         favoriteIDs.insert(station.id)
-        save(operation: "add favorite \(safeForLogs(station.id))")
+        save(operation: "add favorite \(sanitizedForLogs(station.id))")
     }
 
     /// Reorders favorites to match a SwiftUI `.onMove` drag and rewrites `sortIndex`
@@ -98,7 +98,7 @@ public final class LibraryStore {
         let predicate = #Predicate<FavoriteStation> { $0.stationID == stationID }
         let descriptor = FetchDescriptor<FavoriteStation>(predicate: predicate)
 
-        guard let matches = fetch(descriptor, operation: "remove favorite \(safeForLogs(stationID))") else {
+        guard let matches = fetch(descriptor, operation: "remove favorite \(sanitizedForLogs(stationID))") else {
             return
         }
 
@@ -106,7 +106,7 @@ public final class LibraryStore {
             context.delete(match)
         }
         favoriteIDs.remove(stationID)
-        save(operation: "remove favorite \(safeForLogs(stationID))")
+        save(operation: "remove favorite \(sanitizedForLogs(stationID))")
     }
 
     // MARK: - Recents
@@ -117,7 +117,7 @@ public final class LibraryStore {
         let predicate = #Predicate<RecentStation> { $0.stationID == stationID }
         let descriptor = FetchDescriptor<RecentStation>(predicate: predicate)
 
-        guard let matches = fetch(descriptor, operation: "log recent \(safeForLogs(stationID))") else {
+        guard let matches = fetch(descriptor, operation: "log recent \(sanitizedForLogs(stationID))") else {
             return
         }
 
@@ -139,7 +139,7 @@ public final class LibraryStore {
         }
 
         trimRecents()
-        save(operation: "log recent \(safeForLogs(stationID))")
+        save(operation: "log recent \(sanitizedForLogs(stationID))")
     }
 
     private func trimRecents() {
@@ -221,10 +221,12 @@ public final class LibraryStore {
         let localizedMessage = error.localizedDescription
         let debugDescription = String(describing: error)
         lastErrorMessage = localizedMessage
-        logger.error("LibraryStore \(operation, privacy: .public) failed: \(debugDescription, privacy: .public)")
+        logger.error(
+            "LibraryStore \(operation, privacy: .public) failed: \(localizedMessage, privacy: .public) [\(debugDescription, privacy: .public)]"
+        )
     }
 
-    private func safeForLogs(_ value: String) -> String {
+    private func sanitizedForLogs(_ value: String) -> String {
         value
             .replacingOccurrences(of: "\n", with: " ")
             .replacingOccurrences(of: "\r", with: " ")
