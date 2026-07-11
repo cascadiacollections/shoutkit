@@ -194,7 +194,9 @@ public final class LibraryStore {
         operation: String
     ) -> [Model]? where Model: PersistentModel {
         do {
-            return try context.fetch(descriptor)
+            let models = try context.fetch(descriptor)
+            lastErrorMessage = nil
+            return models
         } catch {
             record(error, operation: operation)
             return nil
@@ -205,6 +207,7 @@ public final class LibraryStore {
     private func save(operation: String) -> Bool {
         do {
             try context.save()
+            lastErrorMessage = nil
             return true
         } catch {
             context.rollback()
@@ -215,7 +218,8 @@ public final class LibraryStore {
     }
 
     private func record(_ error: Error, operation: String) {
-        lastErrorMessage = error.localizedDescription
-        logger.error("LibraryStore \(operation, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+        let description = String(describing: error)
+        lastErrorMessage = description
+        logger.error("LibraryStore \(operation, privacy: .public) failed: \(description, privacy: .public)")
     }
 }
