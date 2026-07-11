@@ -26,17 +26,17 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     ]
 
     private let hosts: [URL]
-    private let session: URLSession
+    private let transport: any HTTPTransporting
     private let retryPolicy: RetryPolicy
     private let logger = Logger(subsystem: "ShoutKit.RadioDirectory", category: "RadioBrowserDirectoryClient")
 
     public init(
         hosts: [URL] = RadioBrowserDirectoryClient.defaultHosts,
-        session: URLSession = .shared,
+        transport: any HTTPTransporting = URLSessionHTTPTransport.shared,
         retryPolicy: RetryPolicy = .default
     ) {
         self.hosts = hosts.isEmpty ? RadioBrowserDirectoryClient.defaultHosts : hosts
-        self.session = session
+        self.transport = transport
         self.retryPolicy = retryPolicy
     }
 
@@ -230,66 +230,65 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     /// Walks the mirror list in order with backoff between attempts, so one dead
     /// mirror doesn't take discovery down.
     private func request(path: String, queryItems: [URLQueryItem]) async throws(RadioDirectoryError) -> Data {
-        var lastError: RadioDirectoryError?
+        let transport = self.transport
+        let retryPolicy = self.retryPolicy
+        let logger = self.logger
+        let hosts = self.hosts
 
-        for (attempt, host) in hosts.enumerated() {
-            do {
-                return try await request(url: url(host: host, path: path, queryItems: queryItems))
-            } catch {
-                lastError = error
-                guard attempt < hosts.count - 1 else { break }
-
-                let delay = retryPolicy.delay(forAttempt: attempt)
-                logger.debug("Radio-Browser request failed; trying next mirror in \(delay, privacy: .public) seconds")
-                // A cancelled sleep just skips the backoff; the next attempt's
-                // network call fails fast on cancellation anyway.
-                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-            }
-        }
-
-        throw lastError ?? .transport(nil)
-    }
-
-    private func request(url: URL) async throws(RadioDirectoryError) -> Data {
-        var request = URLRequest(url: url, timeoutInterval: retryPolicy.timeout)
-        // Radio-Browser asks clients to identify themselves with a speaking agent.
-        request.setValue("ShoutKit/0.1", forHTTPHeaderField: "User-Agent")
-
-        let data: Data
-        let response: URLResponse
         do {
-            (data, response) = try await session.data(for: request)
+            return try await transport.retryingData(
+                retryPolicy: retryPolicy,
+                attempts: hosts.count,
+                onRetry: { _, delay in
+                    logger.debug(
+                        "Radio-Browser request failed; trying next mirror in \(delay, privacy: .public) seconds"
+                    )
+                },
+                request: { attempt in
+                    var request = URLRequest(
+                        url: try url(host: hosts[attempt], path: path, queryItems: queryItems),
+                        timeoutInterval: retryPolicy.timeout
+                    )
+                    // Radio-Browser asks clients to identify themselves with a speaking agent.
+                    request.setValue("ShoutKit/0.1", forHTTPHeaderField: "User-Agent")
+                    return request
+                }
+            )
         } catch {
-            throw .transport(error.localizedDescription)
+            throw Self.directoryError(from: error)
         }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw .invalidResponse
-        }
-
-        guard 200..<300 ~= httpResponse.statusCode else {
-            throw .httpStatus(httpResponse.statusCode)
-        }
-
-        return data
     }
 
     private func url(host: URL, path: String, queryItems: [URLQueryItem]) throws(RadioDirectoryError) -> URL {
         var components = URLComponents(url: host, resolvingAgainstBaseURL: false)
         components?.path = path
         components?.queryItems = queryItems.isEmpty ? nil : queryItems
-        // `URLComponents` leaves `+` unescaped in query values, but web servers
-        // conventionally form-decode it as a space — a search for "C+C Music
-        // Factory" would arrive as "C C Music Factory". Escape it explicitly.
-        if let escapedQuery = components?.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B") {
-            components?.percentEncodedQuery = escapedQuery
-        }
+        components?.escapePlusInQueryValues()
 
         guard let url = components?.url else {
             throw RadioDirectoryError.invalidURL
         }
 
         return url
+    }
+
+    private static func directoryError(from error: Error) -> RadioDirectoryError {
+        if let radioDirectoryError = error as? RadioDirectoryError {
+            return radioDirectoryError
+        }
+
+        if let transportError = error as? HTTPTransportError {
+            switch transportError {
+            case let .transport(message):
+                return .transport(message)
+            case .invalidResponse:
+                return .invalidResponse
+            case let .httpStatus(statusCode):
+                return .httpStatus(statusCode)
+            }
+        }
+
+        return .transport(error.localizedDescription)
     }
 }
 

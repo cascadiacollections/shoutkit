@@ -4,19 +4,19 @@ import OSLog
 public actor ShoutcastDirectoryClient: RadioDirectoryProviding {
     private let apiKey: String
     private let endpoints: ShoutcastEndpoints
-    private let session: URLSession
+    private let transport: any HTTPTransporting
     private let retryPolicy: RetryPolicy
     private let logger = Logger(subsystem: "ShoutKit.RadioDirectory", category: "ShoutcastDirectoryClient")
 
     public init(
         apiKey: String,
         endpoints: ShoutcastEndpoints = .production,
-        session: URLSession = .shared,
+        transport: any HTTPTransporting = URLSessionHTTPTransport.shared,
         retryPolicy: RetryPolicy = .default
     ) {
         self.apiKey = apiKey
         self.endpoints = endpoints
-        self.session = session
+        self.transport = transport
         self.retryPolicy = retryPolicy
     }
 
@@ -86,51 +86,51 @@ public actor ShoutcastDirectoryClient: RadioDirectoryProviding {
             throw RadioDirectoryError.missingAPIKey
         }
 
-        var request = URLRequest(url: url, timeoutInterval: retryPolicy.timeout)
-        request.setValue("ShoutKit/0.1", forHTTPHeaderField: "User-Agent")
+        let transport = self.transport
+        let retryPolicy = self.retryPolicy
+        let logger = self.logger
 
-        var lastError: RadioDirectoryError?
-
-        for attempt in 0...retryPolicy.maximumRetries {
-            do {
-                return try await performRequest(request)
-            } catch {
-                lastError = error
-                // Retrying a permanent failure (a 4xx from a bad API key, say)
-                // just delays the error surfacing by the whole backoff window.
-                guard error.isRetryable, attempt < retryPolicy.maximumRetries else {
-                    break
+        do {
+            return try await transport.retryingData(
+                retryPolicy: retryPolicy,
+                attempts: retryPolicy.maximumRetries + 1,
+                shouldRetry: { error in
+                    // Retrying a permanent failure (a 4xx from a bad API key,
+                    // say) just delays the error surfacing by the whole
+                    // backoff window.
+                    Self.directoryError(from: error).isRetryable
+                },
+                onRetry: { _, delay in
+                    logger.debug("Directory request failed; retrying in \(delay, privacy: .public) seconds")
+                },
+                request: { _ in
+                    var request = URLRequest(url: url, timeoutInterval: retryPolicy.timeout)
+                    request.setValue("ShoutKit/0.1", forHTTPHeaderField: "User-Agent")
+                    return request
                 }
+            )
+        } catch {
+            throw Self.directoryError(from: error)
+        }
+    }
 
-                let delay = retryPolicy.delay(forAttempt: attempt)
-                logger.debug("Directory request failed; retrying in \(delay, privacy: .public) seconds")
-                // A cancelled sleep just skips the backoff; the next attempt's
-                // network call fails fast on cancellation anyway.
-                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+    private static func directoryError(from error: Error) -> RadioDirectoryError {
+        if let radioDirectoryError = error as? RadioDirectoryError {
+            return radioDirectoryError
+        }
+
+        if let transportError = error as? HTTPTransportError {
+            switch transportError {
+            case let .transport(message):
+                return .transport(message)
+            case .invalidResponse:
+                return .invalidResponse
+            case let .httpStatus(statusCode):
+                return .httpStatus(statusCode)
             }
         }
 
-        throw lastError ?? .transport(nil)
-    }
-
-    private func performRequest(_ request: URLRequest) async throws(RadioDirectoryError) -> Data {
-        let data: Data
-        let response: URLResponse
-        do {
-            (data, response) = try await session.data(for: request)
-        } catch {
-            throw .transport(error.localizedDescription)
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw .invalidResponse
-        }
-
-        guard 200..<300 ~= httpResponse.statusCode else {
-            throw .httpStatus(httpResponse.statusCode)
-        }
-
-        return data
+        return .transport(error.localizedDescription)
     }
 }
 
@@ -156,12 +156,7 @@ public struct ShoutcastEndpoints: Sendable {
         let endpointURL = legacyBaseURL.appendingPathComponent(endpoint)
         var components = URLComponents(url: endpointURL, resolvingAgainstBaseURL: false)
         components?.queryItems = [URLQueryItem(name: "k", value: apiKey)] + queryItems
-        // `URLComponents` leaves `+` unescaped in query values, but web servers
-        // conventionally form-decode it as a space — "C+C Music Factory" would
-        // arrive as "C C Music Factory". Escape it explicitly.
-        if let escapedQuery = components?.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B") {
-            components?.percentEncodedQuery = escapedQuery
-        }
+        components?.escapePlusInQueryValues()
 
         guard let url = components?.url else {
             throw RadioDirectoryError.invalidURL
