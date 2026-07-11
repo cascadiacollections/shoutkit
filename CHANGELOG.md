@@ -7,6 +7,11 @@ All notable changes to ShoutKit are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Reorderable Favorites**: the Favorites tab now supports drag-to-reorder. Tap **Edit** (or
+  long-press a row) to drag favorites into any order; the arrangement is persisted across launches
+  via a new `sortIndex` on the favorite. New favorites append to the bottom so they never disturb
+  your ordering, and existing users' lists are re-based from their previous newest-first order on
+  first launch, so nothing looks different until you reorder
 - **Live Activity artwork**: the lock screen / Dynamic Island now-playing Live Activity now shows
   the current album (or station) artwork, matching the Now Playing screen and mini-player toolbar.
   Because Live Activity views can't fetch network images, the app downsamples the art into a shared
