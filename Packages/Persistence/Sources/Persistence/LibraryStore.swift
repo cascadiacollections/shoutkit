@@ -13,6 +13,9 @@ import SwiftData
 public final class LibraryStore {
     public static let recentsLimit = 25
     public static let recentlyHeardLimit = 250
+    /// Fetch/deletion headroom for bounded-history trimming; deleting in batches
+    /// avoids churn from trimming on every insert near the cap.
+    public static let recentlyHeardTrimHeadroom = 100
 
     /// Station IDs the user has favorited. Kept in sync with the persistent store so
     /// SwiftUI views observing this store update immediately on toggle.
@@ -197,7 +200,7 @@ public final class LibraryStore {
         var descriptor = FetchDescriptor<RecentlyHeardTrack>(
             sortBy: [SortDescriptor(\.heardAt, order: .reverse)]
         )
-        descriptor.fetchLimit = Self.recentlyHeardLimit + 100
+        descriptor.fetchLimit = Self.recentlyHeardLimit + Self.recentlyHeardTrimHeadroom
 
         guard let tracks = try? context.fetch(descriptor), tracks.count > Self.recentlyHeardLimit else {
             return

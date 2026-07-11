@@ -116,7 +116,7 @@ public struct LibraryView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text(track.heardAt, style: .time)
+                Text(track.heardAt, style: .relative)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 if isLinked {
