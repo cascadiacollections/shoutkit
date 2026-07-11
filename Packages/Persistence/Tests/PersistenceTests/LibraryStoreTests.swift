@@ -77,6 +77,18 @@ struct LibraryStoreTests {
         #expect(favorites.map(\.sortIndex) == [0, 1, 2, 3])
     }
 
+    @Test func moveFavoriteWithOutOfRangeIndicesIsNoOp() throws {
+        let (store, context) = makeStoreAndContext()
+        for id in ["a", "b", "c"] { store.addFavorite(station(id)) }
+        let favorites = try favoritesBySortIndex(context)
+
+        // Source past the end and destination past count must not trap or reorder.
+        store.moveFavorites(favorites, from: IndexSet(integer: 5), to: 1)
+        store.moveFavorites(favorites, from: IndexSet(integer: 0), to: 99)
+
+        #expect(try favoritesBySortIndex(context).map(\.stationID) == ["a", "b", "c"])
+    }
+
     @Test func backfillNormalizesLegacyRowsByCreatedAtDescending() throws {
         let (_, context) = makeStoreAndContext()
 

@@ -65,6 +65,12 @@ public final class LibraryStore {
     /// contiguously (0..<count) so the persisted order is stable and gap-free.
     /// `favorites` must be the currently displayed rows, in display order.
     public func moveFavorites(_ favorites: [FavoriteStation], from source: IndexSet, to destination: Int) {
+        // `Array.move(fromOffsets:toOffset:)` traps on out-of-range offsets. SwiftUI's
+        // `.onMove` always supplies valid indices, but guard so this public API can't
+        // crash on accidental misuse. An empty/invalid move is a no-op.
+        let count = favorites.count
+        guard let maxSource = source.max(), maxSource < count, (0...count).contains(destination) else { return }
+
         var reordered = favorites
         reordered.move(fromOffsets: source, toOffset: destination)
 
