@@ -40,7 +40,7 @@ struct HTTPTransportTests {
             request: { _ in URLRequest(url: URL(string: "https://example.com")!) }
         )
 
-        #expect(String(decoding: data, as: UTF8.self) == "ok")
+        #expect(String(bytes: data, encoding: .utf8) == "ok")
     }
 
     @Test

@@ -259,7 +259,13 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         }
     }
 
-    private func url(host: URL, path: String, queryItems: [URLQueryItem]) throws(RadioDirectoryError) -> URL {
+    // `nonisolated`: pure URL assembly touching no actor state, so the shared
+    // transport's synchronous `request` builder can call it off the actor.
+    private nonisolated func url(
+        host: URL,
+        path: String,
+        queryItems: [URLQueryItem]
+    ) throws(RadioDirectoryError) -> URL {
         var components = URLComponents(url: host, resolvingAgainstBaseURL: false)
         components?.path = path
         components?.queryItems = queryItems.isEmpty ? nil : queryItems
