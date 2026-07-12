@@ -66,9 +66,8 @@ extension PlaybackController {
     /// where bailing out would abandon the rest of the budget. `activeStation`
     /// is kept either way so the failed state stays recoverable via
     /// `resume()`/`togglePlayPause()`.
-    func handleResolutionFailure(_ error: any Error, for station: Station) {
-        let playbackError: PlaybackError = (error as? RadioDirectoryError)
-            .map(PlaybackError.directory) ?? .streamFailed(error.localizedDescription)
+    func handleResolutionFailure(_ error: RadioDirectoryError, for station: Station) {
+        let playbackError = PlaybackError.directory(error)
         let fallback = PlaybackState.failed(playbackError)
         if playbackError.isRetryable == false {
             state = fallback
