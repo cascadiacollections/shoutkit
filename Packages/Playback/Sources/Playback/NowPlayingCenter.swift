@@ -1,5 +1,5 @@
 import Foundation
-import ImageIO
+import ImageIODownsample
 import MediaPlayer
 import os
 import RadioDirectory
@@ -196,25 +196,12 @@ public final class NowPlayingCenter: NowPlayingPresenting {
     /// a native-resolution decode. 768 px comfortably covers the lock-screen
     /// tile; typical 600 px album art passes through untouched.
     ///
-    /// A private copy of DesignSystem's downsampler: Playback deliberately
+    /// Uses the shared leaf ImageIO downsampler module; Playback deliberately
     /// doesn't depend on DesignSystem (see DECISIONS.md on `AlbumArtLookup`).
     private nonisolated static func decodedArtwork(from data: Data) -> UIImage? {
-        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
+        guard let cgImage = ImageIODownsampler.decodeCGImage(data, maxPixelSize: 768) else {
             return nil
         }
-
-        let thumbnailOptions = [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceShouldCacheImmediately: true,
-            kCGImageSourceThumbnailMaxPixelSize: 768
-        ] as [CFString: Any] as CFDictionary
-
-        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions) else {
-            return nil
-        }
-
         return UIImage(cgImage: cgImage)
     }
 }

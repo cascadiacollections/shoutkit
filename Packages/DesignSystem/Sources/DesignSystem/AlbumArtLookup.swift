@@ -112,7 +112,7 @@ public nonisolated enum AlbumArtLookup {
         let trackViewUrl: String?
     }
 
-    private static func buildSearchURL(artist: String, title: String) -> URL? {
+    static func buildSearchURL(artist: String, title: String, regionIdentifier: String?) -> URL? {
         var components = URLComponents(string: "https://itunes.apple.com/search")
         var queryItems = [
             URLQueryItem(name: "term", value: "\(artist) \(title)"),
@@ -122,7 +122,7 @@ public nonisolated enum AlbumArtLookup {
         ]
         // Search the user's storefront — the API defaults to the US catalog,
         // which misses regional releases and returns wrong-region art.
-        if let region = Locale.current.region?.identifier {
+        if let region = regionIdentifier {
             queryItems.append(URLQueryItem(name: "country", value: region))
         }
         components?.queryItems = queryItems
@@ -133,6 +133,10 @@ public nonisolated enum AlbumArtLookup {
             components?.percentEncodedQuery = escapedQuery
         }
         return components?.url
+    }
+
+    private static func buildSearchURL(artist: String, title: String) -> URL? {
+        buildSearchURL(artist: artist, title: title, regionIdentifier: Locale.current.region?.identifier)
     }
 
     private static func store(_ value: CachedLookup, forKey key: String) {
@@ -162,8 +166,7 @@ public nonisolated enum AlbumArtLookup {
         guard let result = response.results.first else { return .noMatch }
 
         // Apple returns 100×100; replace with 600×600 for album-art quality.
-        let artworkURL = result.artworkUrl100
-            .flatMap { URL(string: $0.replacingOccurrences(of: "100x100bb", with: "600x600bb")) }
+        let artworkURL = upsizedArtworkURL(from: result.artworkUrl100)
         let appleMusicURL = validatedStoreURL(result.trackViewUrl)
 
         guard artworkURL != nil || appleMusicURL != nil else { return .noMatch }
@@ -181,5 +184,11 @@ public nonisolated enum AlbumArtLookup {
               host == "music.apple.com" || host == "itunes.apple.com"
         else { return nil }
         return url
+    }
+
+    static func upsizedArtworkURL(from artworkURL100: String?) -> URL? {
+        artworkURL100
+            .map { $0.replacingOccurrences(of: "100x100bb", with: "600x600bb") }
+            .flatMap(URL.init(string:))
     }
 }
