@@ -130,4 +130,26 @@ struct PlaybackControllerAlbumArtTests {
         #expect(controller.albumArtURL == nil)
         #expect(controller.appleMusicURL == nil)
     }
+
+    @Test func onTrackHeardFiresForParsedTrackAndResolvedLink() async throws {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station()], output: output)
+        let link = try #require(URL(string: "https://music.apple.com/us/album/song/1?i=2"))
+        controller.trackResourcesProvider = { _ in TrackResources(appleMusicURL: link) }
+
+        var events: [HeardTrack] = []
+        controller.onTrackHeard = { events.append($0) }
+
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        await drainMainQueue()
+
+        #expect(events.count == 2)
+        #expect(events[0].track.title == "Song")
+        #expect(events[0].track.artist == "Band")
+        #expect(events[0].appleMusicURL == nil)
+        #expect(events[1].appleMusicURL == link)
+    }
 }
