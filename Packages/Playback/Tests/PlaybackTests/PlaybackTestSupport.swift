@@ -146,17 +146,18 @@ private func observeChanges<Value>(
     token: ObservationToken,
     onChange: @escaping @MainActor (Value) -> Void
 ) {
-    withObservationTracking {
+    withObservationTracking({
         // Read once to register the dependency; the test only cares about
         // subsequent changes, so the initial value is intentionally ignored.
         _ = value()
-    } onChange: {
-        MainActor.assumeIsolated {
-            // The tracked read above is MainActor-isolated, so re-entry here is
-            // also on MainActor and `assumeIsolated` is safe.
+    }, onChange: {
+        // `onChange` fires before the triggering mutation is actually applied,
+        // so reading `value()` synchronously here would still observe the old
+        // value. Hop through a Task so the read lands after the mutation.
+        Task { @MainActor in
             guard !token.isCancelled else { return }
             onChange(value())
             observeChanges(of: value, token: token, onChange: onChange)
         }
-    }
+    })
 }
