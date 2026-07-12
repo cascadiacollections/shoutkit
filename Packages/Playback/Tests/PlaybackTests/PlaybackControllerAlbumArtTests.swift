@@ -173,6 +173,8 @@ struct PlaybackControllerAlbumArtTests {
         await drainMainQueue()
         #expect(controller.albumArtURL == oldArt)
 
+        // `observeChanges` re-enters on MainActor, so these callbacks append in
+        // the same serialized order the properties publish changes.
         var events: [String] = []
         let albumArtObservation = observeChanges(of: { controller.albumArtURL }) { url in
             events.append("art:\(url?.absoluteString ?? "nil")")

@@ -146,6 +146,8 @@ private func observeChanges<Value>(
     onChange: @escaping @MainActor (Value) -> Void
 ) {
     withObservationTracking {
+        // Read once to register the dependency; the test only cares about
+        // subsequent changes, so the initial value is intentionally ignored.
         _ = value()
     } onChange: {
         MainActor.assumeIsolated {
