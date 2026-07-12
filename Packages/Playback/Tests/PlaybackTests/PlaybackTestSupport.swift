@@ -126,7 +126,8 @@ final class ObservationToken {
 /// Registers a one-property observation and re-arms it after each change, so
 /// tests can record a sequence of values using the macOS 15-compatible
 /// `withObservationTracking` API. Call `cancel()` on the returned token when the
-/// test is done to stop further recursive re-registration.
+/// test is done to stop further recursive re-registration. Must be called from
+/// MainActor context.
 @MainActor
 @discardableResult
 func observeChanges<Value>(
@@ -151,6 +152,8 @@ private func observeChanges<Value>(
         _ = value()
     } onChange: {
         MainActor.assumeIsolated {
+            // The tracked read above is MainActor-isolated, so re-entry here is
+            // also on MainActor and `assumeIsolated` is safe.
             guard !token.isCancelled else { return }
             onChange(value())
             observeChanges(of: value, token: token, onChange: onChange)
