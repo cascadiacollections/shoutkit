@@ -95,7 +95,7 @@ public struct LibraryView: View {
             for: track,
             isLinked: appleMusicURL != nil
         )
-        Group {
+        return Group {
             if let url = appleMusicURL {
                 Button {
                     openURL(url)
