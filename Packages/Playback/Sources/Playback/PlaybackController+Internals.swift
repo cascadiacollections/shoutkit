@@ -157,7 +157,7 @@ extension PlaybackController {
             receivedAt: Date()
         )
         nowPlaying = metadata
-        onTrackHeard?(station, metadata, nil)
+        onTrackHeard?(HeardTrack(station: station, track: metadata, appleMusicURL: nil))
         // Clear any art/link from a previous track while resolution is in flight.
         albumArtURL = nil
         appleMusicURL = nil
@@ -187,7 +187,9 @@ extension PlaybackController {
             self.albumArtURL = resources.artworkURL
             self.appleMusicURL = resources.appleMusicURL
             if let station = self.activeStation, let metadata = self.nowPlaying {
-                self.onTrackHeard?(station, metadata, resources.appleMusicURL)
+                self.onTrackHeard?(
+                    HeardTrack(station: station, track: metadata, appleMusicURL: resources.appleMusicURL)
+                )
             }
             guard let station = self.activeStation, let artworkURL = resources.artworkURL else { return }
             self.nowPlayingCenter.update(

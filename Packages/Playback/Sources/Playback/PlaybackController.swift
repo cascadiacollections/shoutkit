@@ -18,6 +18,21 @@ public struct TrackResources: Sendable, Equatable {
     public static let none = TrackResources()
 }
 
+/// A track the listener heard on a station, handed to the app layer's local
+/// listening-history log. Emitted at parse time (before any Apple Music link
+/// is known) and again once resource resolution attaches one.
+public struct HeardTrack {
+    public let station: Station
+    public let track: NowPlayingMetadata
+    public let appleMusicURL: URL?
+
+    public init(station: Station, track: NowPlayingMetadata, appleMusicURL: URL?) {
+        self.station = station
+        self.track = track
+        self.appleMusicURL = appleMusicURL
+    }
+}
+
 /// App-wide, observable playback state. Injected through the SwiftUI environment so
 /// the mini-player, Now Playing screen, and every station row read and drive the same
 /// playback. Owns the ``AudioOutput`` and mirrors its status into ``PlaybackState``.
@@ -54,7 +69,7 @@ public final class PlaybackController {
     /// Invoked when parsed now-playing track metadata is received for the active
     /// station (and again when Apple Music resolution completes for that track).
     /// The app layer uses this to persist local listening history.
-    @ObservationIgnored public var onTrackHeard: ((Station, NowPlayingMetadata, URL?) -> Void)?
+    @ObservationIgnored public var onTrackHeard: ((HeardTrack) -> Void)?
 
     /// Resolves supplemental resources (album art + Apple Music link) for a
     /// track. Injected by the app layer so the Playback package stays free of
