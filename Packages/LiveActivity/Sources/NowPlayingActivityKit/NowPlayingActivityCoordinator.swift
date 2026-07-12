@@ -2,12 +2,11 @@ import ActivityKit
 import AsyncAlgorithms
 import CoreGraphics
 import Foundation
-import ImageIO
+import ImageIODownsample
 import NowPlayingActivityCore
 import Observation
 import Playback
 import RadioDirectory
-import UniformTypeIdentifiers
 
 /// Drives the now-playing Live Activity from playback state by observing
 /// `PlaybackController`'s `@Observable` state directly (`Observations` async
@@ -268,33 +267,6 @@ public final class NowPlayingActivityCoordinator {
     }
 
     private nonisolated static func encodePNG(downsampling data: Data, maxPixelSize: Int) -> Data? {
-        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
-            return nil
-        }
-
-        let thumbnailOptions = [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceShouldCacheImmediately: true,
-            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize
-        ] as [CFString: Any] as CFDictionary
-
-        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions) else {
-            return nil
-        }
-
-        let encoded = NSMutableData()
-        guard let destination = CGImageDestinationCreateWithData(
-            encoded as CFMutableData,
-            UTType.png.identifier as CFString,
-            1,
-            nil
-        ) else {
-            return nil
-        }
-        CGImageDestinationAddImage(destination, cgImage, nil)
-        guard CGImageDestinationFinalize(destination) else { return nil }
-        return encoded as Data
+        ImageIODownsampler.encode(data, maxPixelSize: CGFloat(maxPixelSize), outputType: .png)
     }
 }

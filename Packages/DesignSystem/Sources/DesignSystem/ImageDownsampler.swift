@@ -1,4 +1,4 @@
-import ImageIO
+import ImageIODownsample
 import UIKit
 
 /// Bounded-memory bitmap decoding via ImageIO thumbnailing.
@@ -15,23 +15,9 @@ nonisolated enum ImageDownsampler {
     /// calling (non-main) executor, so the first render never pays a lazy
     /// decode on the main thread mid-scroll.
     static func decode(_ data: Data, maxPixelSize: CGFloat) -> UIImage? {
-        // Don't let ImageIO keep a full-size decode we never want.
-        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
+        guard let cgImage = ImageIODownsampler.decodeCGImage(data, maxPixelSize: maxPixelSize) else {
             return nil
         }
-
-        let thumbnailOptions = [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceShouldCacheImmediately: true,
-            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize
-        ] as [CFString: Any] as CFDictionary
-
-        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions) else {
-            return nil
-        }
-
         return UIImage(cgImage: cgImage)
     }
 }
