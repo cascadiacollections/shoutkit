@@ -6,7 +6,7 @@ public enum AudioStatus: Equatable, Sendable {
     case buffering
     case playing
     case paused
-    case failed(String)
+    case failed(PlaybackError)
     /// The system interrupted playback (phone call, Siri, another app took focus).
     case interruptionBegan
     /// The interruption ended; `shouldResume` reflects the system's hint.
@@ -102,7 +102,7 @@ public final class AVPlayerAudioOutput: NSObject, AudioOutput {
                     playerError: self.player?.error,
                     itemError: item.error
                 )
-                self.onStatusChange?(.failed(failure.message))
+                self.onStatusChange?(.failed(.streamFailed(failure.message)))
             }
         }
 

@@ -25,7 +25,7 @@ struct PlaybackReconnectTests {
         output.onStatusChange?(.playing)
 
         // A mid-play failure retries rather than surfacing `.failed` at once.
-        output.onStatusChange?(.failed("drop"))
+        output.onStatusChange?(.failed(.streamFailed("drop")))
         await waitUntil { output.startedURLs.count == 2 }
         #expect(output.startedURLs.count == 2)
 
@@ -45,15 +45,15 @@ struct PlaybackReconnectTests {
         await waitForStart(output)
         output.onStatusChange?(.playing)
 
-        output.onStatusChange?(.failed("boom")) // attempt 1
+        output.onStatusChange?(.failed(.streamFailed("boom"))) // attempt 1
         await waitUntil { output.startedURLs.count == 2 }
-        output.onStatusChange?(.failed("boom")) // attempt 2
+        output.onStatusChange?(.failed(.streamFailed("boom"))) // attempt 2
         await waitUntil { output.startedURLs.count == 3 }
-        output.onStatusChange?(.failed("boom")) // budget spent → give up
+        output.onStatusChange?(.failed(.streamFailed("boom"))) // budget spent → give up
 
-        await waitUntil { controller.state == .failed("boom") }
+        await waitUntil { controller.state == .failed(.streamFailed("boom")) }
         #expect(output.startedURLs.count == 3, "two reconnects (start #2, #3), then no more")
-        #expect(controller.state == .failed("boom"))
+        #expect(controller.state == .failed(.streamFailed("boom")))
     }
 
     @Test func recoveryResetsReconnectBudget() async {
@@ -68,10 +68,10 @@ struct PlaybackReconnectTests {
         await waitForStart(output)
         output.onStatusChange?(.playing)
 
-        output.onStatusChange?(.failed("drop"))
+        output.onStatusChange?(.failed(.streamFailed("drop")))
         await waitUntil { output.startedURLs.count == 2 }
         output.onStatusChange?(.playing) // recovered → budget refreshes
-        output.onStatusChange?(.failed("drop"))
+        output.onStatusChange?(.failed(.streamFailed("drop")))
         await waitUntil { output.startedURLs.count == 3 }
 
         #expect(output.startedURLs.count == 3, "a recovery between drops must refresh the budget")
@@ -88,7 +88,7 @@ struct PlaybackReconnectTests {
         controller.play(station())
         await waitForStart(output)
         output.onStatusChange?(.playing)
-        output.onStatusChange?(.failed("drop")) // schedules a retry in 200ms
+        output.onStatusChange?(.failed(.streamFailed("drop"))) // schedules a retry in 200ms
         controller.pause() // must beat it
 
         try? await Task.sleep(for: .milliseconds(300))

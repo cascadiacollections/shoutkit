@@ -243,8 +243,8 @@ public final class PlaybackController {
             return .playing
         case .paused:
             return .paused
-        case let .failed(message):
-            return .failed(message)
+        case let .failed(error):
+            return .failed(error)
         case .idle:
             return .idle
         }

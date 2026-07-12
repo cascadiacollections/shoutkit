@@ -42,8 +42,20 @@ All notable changes to ShoutKit are documented here. The format follows
   unchanged
 - 0.3.0 release plan (`docs/releases/0.3.0.md`): iOS 27 platform adoption — App Intents entity
   schemas for the new Siri, quick-play widget, and an iOS 27 QA checklist
+- **Station Spotlight discoverability**: `StationEntity` now conforms to `IndexedEntity`, and
+  the app pushes known stations (favorites, curated, recents) into Spotlight's semantic index
+  once per launch, so Siri and system search can resolve "play ⟨station⟩" for a station played
+  in a previous session, not only ones searched or played this run. iOS 27's newer
+  `AssistantSchema`/`@AssistantEntity` macros are deliberately not adopted yet — their generated
+  conformances are `@available(iOS 27, *)` only, which would make `StationEntity` unavailable
+  below iOS 27 while the deployment target stays 26 (see `DECISIONS.md`)
 
 ### Changed
+- **Typed playback failures**: `PlaybackState.failed`/`AudioStatus.failed` carry a new
+  `PlaybackError` (`.streamFailed`/`.directory`) instead of a raw `String`, mirroring
+  `RadioDirectoryError`'s `errorDescription`/`isRetryable` shape. The bounded auto-reconnect now
+  asks the error itself whether a failure is retryable rather than special-casing
+  `RadioDirectoryError` inline. No user-visible behavior change
 - Adopted swift-async-algorithms (Apple-maintained, Apache-2.0, pinned to a stable release;
   recorded in `THIRD_PARTY_LICENSES.md` and shown in Settings → Licenses), revisiting the
   FOSS audit's initial rejection: `removeDuplicates()` replaces the Live Activity
