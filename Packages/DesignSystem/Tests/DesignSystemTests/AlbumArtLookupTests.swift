@@ -12,7 +12,9 @@ struct AlbumArtLookupTests {
             regionIdentifier: "GB"
         ))
         let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
-        let queryItems = Dictionary(uniqueKeysWithValues: try #require(components.queryItems).map { ($0.name, $0.value ?? "") })
+        let queryItems = Dictionary(
+            uniqueKeysWithValues: try #require(components.queryItems).map { ($0.name, $0.value ?? "") }
+        )
 
         #expect(components.scheme == "https")
         #expect(components.host == "itunes.apple.com")

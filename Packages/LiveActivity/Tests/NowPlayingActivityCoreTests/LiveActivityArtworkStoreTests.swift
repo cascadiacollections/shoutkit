@@ -12,7 +12,8 @@ struct LiveActivityArtworkStoreTests {
 
     @Test
     func stageOverwritesExistingTokenFile() throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
         LiveActivityArtworkStore.directoryURLOverride = directory
         defer {
             LiveActivityArtworkStore.purge()
@@ -29,7 +30,8 @@ struct LiveActivityArtworkStoreTests {
 
     @Test
     func purgeRemovesStaleTokensAndKeepsCurrentOne() throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
         LiveActivityArtworkStore.directoryURLOverride = directory
         defer {
             LiveActivityArtworkStore.purge()
