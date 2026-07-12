@@ -137,10 +137,8 @@ struct PlaybackControllerAlbumArtTests {
         let link = try #require(URL(string: "https://music.apple.com/us/album/song/1?i=2"))
         controller.trackResourcesProvider = { _ in TrackResources(appleMusicURL: link) }
 
-        var events: [(title: String?, artist: String?, link: URL?)] = []
-        controller.onTrackHeard = { _, track, resolvedLink in
-            events.append((track.title, track.artist, resolvedLink))
-        }
+        var events: [HeardTrack] = []
+        controller.onTrackHeard = { events.append($0) }
 
         controller.play(station())
         await waitForStart(output)
@@ -149,9 +147,9 @@ struct PlaybackControllerAlbumArtTests {
         await drainMainQueue()
 
         #expect(events.count == 2)
-        #expect(events[0].title == "Song")
-        #expect(events[0].artist == "Band")
-        #expect(events[0].link == nil)
-        #expect(events[1].link == link)
+        #expect(events[0].track.title == "Song")
+        #expect(events[0].track.artist == "Band")
+        #expect(events[0].appleMusicURL == nil)
+        #expect(events[1].appleMusicURL == link)
     }
 }
