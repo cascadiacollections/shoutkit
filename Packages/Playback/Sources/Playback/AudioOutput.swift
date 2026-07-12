@@ -6,7 +6,7 @@ public enum AudioStatus: Equatable, Sendable {
     case buffering
     case playing
     case paused
-    case failed(String)
+    case failed(PlaybackError)
     /// The system interrupted playback (phone call, Siri, another app took focus).
     case interruptionBegan
     /// The interruption ended; `shouldResume` reflects the system's hint.
@@ -99,7 +99,7 @@ public final class AVPlayerAudioOutput: NSObject, AudioOutput {
             let message = item.error?.localizedDescription ?? "Stream failed to load."
             Task { @MainActor [weak self] in
                 guard let self, self.generation == generation else { return }
-                self.onStatusChange?(.failed(message))
+                self.onStatusChange?(.failed(.streamFailed(message)))
             }
         }
 

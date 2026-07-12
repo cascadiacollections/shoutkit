@@ -1,8 +1,10 @@
 import AppIntents
+import CoreSpotlight
 import Foundation
 import Persistence
 import RadioDirectory
 import SwiftData
+import UniformTypeIdentifiers
 
 // MARK: - Station entity
 
@@ -40,6 +42,27 @@ struct StationEntity: AppEntity, Codable, Sendable {
             artworkURL: artworkURLString.flatMap(URL.init(string:)),
             preferredStreamURL: streamURLString.flatMap(URL.init(string:))
         )
+    }
+}
+
+// MARK: - Spotlight / semantic-index discoverability
+
+/// Lets Siri and system search resolve a station by name/genre even before the
+/// user has ever asked to play it by voice — the "entity schema" half of iOS
+/// 27's App Intents discoverability push. `IndexedEntity` itself has been
+/// available since iOS 18; adopting it costs nothing against the iOS 26
+/// deployment floor (unlike the iOS-27-only `AssistantSchema`/`@AssistantEntity`
+/// macros, which generate conformances gated `@available(iOS 27, *)` and would
+/// make `StationEntity` — used as a plain `@Parameter` type on iOS 26 too —
+/// unavailable below 27; that adoption waits for the deployment target to
+/// follow, per DECISIONS.md).
+extension StationEntity: IndexedEntity {
+    var attributeSet: CSSearchableItemAttributeSet {
+        let set = CSSearchableItemAttributeSet(contentType: .audio)
+        set.title = name
+        set.contentDescription = genre
+        set.keywords = [name, genre]
+        return set
     }
 }
 
@@ -94,6 +117,19 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
 
         var seen = Set<String>()
         return candidates.filter { seen.insert($0.id).inserted }
+    }
+
+    /// Pushes the currently known stations into Spotlight's semantic index so
+    /// Siri can resolve "play ⟨station⟩" for a station from a previous
+    /// session, not just ones searched or played this run. Called once at
+    /// launch (`AppDependencies.bootstrap()`); a favorite toggled mid-session
+    /// isn't re-indexed until the next launch — an accepted v1 gap, same
+    /// category as the album-art lookup's "best effort" framing.
+    @MainActor
+    func indexKnownStationsForSpotlight() async {
+        let entities = knownStations()
+        guard entities.isEmpty == false else { return }
+        try? await CSSearchableIndex.default().indexAppEntities(entities)
     }
 }
 
