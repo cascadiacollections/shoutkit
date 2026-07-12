@@ -53,9 +53,12 @@ extension PlaybackController {
                     isPlaying: true,
                     artworkURL: self.albumArtURL
                 )
-            } catch {
+            } catch let error as RadioDirectoryError {
                 guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
                 self.handleResolutionFailure(error, for: station)
+            } catch {
+                guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
+                self.handleResolutionFailure(.transport(error.localizedDescription), for: station)
             }
         }
     }
@@ -67,9 +70,10 @@ extension PlaybackController {
     /// where bailing out would abandon the rest of the budget. `activeStation`
     /// is kept either way so the failed state stays recoverable via
     /// `resume()`/`togglePlayPause()`.
-    func handleResolutionFailure(_ error: any Error, for station: Station) {
-        let fallback = PlaybackState.failed(error.localizedDescription)
-        if (error as? RadioDirectoryError)?.isRetryable == false {
+    func handleResolutionFailure(_ error: RadioDirectoryError, for station: Station) {
+        let playbackError = PlaybackError.directory(error)
+        let fallback = PlaybackState.failed(playbackError)
+        if playbackError.isRetryable == false {
             state = fallback
             nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
         } else {
@@ -114,7 +118,7 @@ extension PlaybackController {
             state = .paused(station)
             nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
             schedulePausedRelease()
-        case let .failed(message):
+        case let .failed(playbackError):
             pausedReleaseTimer.cancel()
             stallCeilingTimer.cancel()
             // Tear the dead player down before retrying: a failed AVPlayerItem
@@ -125,7 +129,7 @@ extension PlaybackController {
             output.stop()
             outputStarted = false
             // A mid-play failure is usually transient; retry before giving up.
-            attemptReconnect(for: station, fallback: .failed(message))
+            attemptReconnect(for: station, fallback: .failed(playbackError))
         case .interruptionBegan:
             handleInterruptionBegan(station: station)
         case let .interruptionEnded(shouldResume):

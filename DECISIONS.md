@@ -1,5 +1,43 @@
 # Decisions
 
+## 2026-07-12 (App Intents entity schemas + typed playback failures)
+
+Two 0.3.0 workstream items, picked up together since both mirror an existing pattern
+(`RadioDirectoryError`) rather than introducing a new one:
+
+- **`StationEntity: IndexedEntity`, not the `AssistantSchema` macros.** The 0.3.0 plan's
+  Workstream B calls for "entity schemas so Siri discovers app content through Spotlight's
+  semantic index." The iOS 27 SDK has two distinct mechanisms here: `IndexedEntity`
+  (`attributeSet: CSSearchableItemAttributeSet`, available since iOS 18) and the new
+  `@AssistantEntity`/`@AssistantIntent` macros, which generate conformances gated
+  `@available(iOS 27, *)` and expose a purpose-built `LiveRadioStationEntity` schema under
+  `AppSchema.audio`. The macro route is the more complete answer, but its generated extension
+  is `@available(iOS 27, *)` on the type itself — attaching it to `StationEntity` would make the
+  type (used as a plain `@Parameter` on `PlayStationIntent`, which must build for the iOS 26
+  floor) unavailable below iOS 27. Raising the deployment target for this is explicitly out of
+  scope per the 2026-07-06 iOS 27 adoption entry. So this change adopts only `IndexedEntity`
+  (buildable at iOS 26) and pushes known stations into Spotlight's index via
+  `CSSearchableIndex.indexAppEntities(_:)`, called once per launch from
+  `AppDependencies.bootstrap()`. Revisit the `AssistantSchema` macros when the floor moves to
+  iOS 27.
+- **Indexed once per launch, not on every favorite/recent change.** `StationEntityQuery`
+  already has `knownStations()` (favorites → curated → recents → the Shortcuts search cache);
+  `indexKnownStationsForSpotlight()` reuses it verbatim. A favorite toggled mid-session doesn't
+  re-index until the next launch — accepted for v1, same "best effort" category as the
+  album-art lookup's next-track-only lock-screen catch-up (2026-07-09 entry).
+- **`PlaybackError` mirrors `RadioDirectoryError`'s shape exactly**: `Error, Equatable,
+  LocalizedError, Sendable`, an `errorDescription`, and an `isRetryable`. `PlaybackState.failed`
+  and `AudioStatus.failed` moved from a raw `String` to this type (`.streamFailed(String)` for
+  the one `AVPlayerItem` KVO failure site, `.directory(RadioDirectoryError)` for endpoint
+  resolution failures). This closes the last stringly-typed error surface named in the 0.3.0
+  plan (Workstream E) and lets `handleResolutionFailure` ask `playbackError.isRetryable`
+  instead of inline-checking `(error as? RadioDirectoryError)?.isRetryable == false`. No call
+  site destructures the associated value except `NowPlayingView`'s status badge (now reads
+  `error.errorDescription`) and the Playback test suite (literal strings wrapped in
+  `.streamFailed(...)`); every other consumer (`MiniPlayerView`, `StationRow`/`StationCard`/
+  `StationCarousel`/`SpotlightCard`, the Live Activity coordinator) only pattern-matched the
+  case, not the payload, so `Equatable` conformance was the only requirement carried forward.
+
 ## 2026-07-11 (iPadOS support)
 
 The project has always *launched* on iPad — `TARGETED_DEVICE_FAMILY` was already `1,2`, the app's

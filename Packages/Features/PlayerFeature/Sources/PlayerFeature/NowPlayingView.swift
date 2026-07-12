@@ -118,8 +118,8 @@ public struct NowPlayingView: View {
             Label("Live", systemImage: "dot.radiowaves.left.and.right")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.tint)
-        case let .failed(message):
-            Text(message)
+        case let .failed(error):
+            Text(error.errorDescription ?? "Playback failed.")
                 .font(.caption)
                 .foregroundStyle(.red)
                 .multilineTextAlignment(.center)

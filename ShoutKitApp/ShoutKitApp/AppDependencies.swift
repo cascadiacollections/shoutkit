@@ -77,6 +77,13 @@ enum AppDependencies {
             activityCoordinator: activityCoordinator,
             stationLaunchRouter: StationLaunchRouter()
         )
+        // Push known stations (favorites, curated, recents) into Spotlight's
+        // semantic index once per launch so Siri can resolve "play ⟨station⟩"
+        // for a station from a previous session.
+        Task {
+            await StationEntityQuery().indexKnownStationsForSpotlight()
+        }
+
         Self.services = services
         return services
     }
