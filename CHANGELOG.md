@@ -51,6 +51,16 @@ All notable changes to ShoutKit are documented here. The format follows
   below iOS 27 while the deployment target stays 26 (see `DECISIONS.md`)
 
 ### Changed
+- **Tighter playback error → user-message mapping**: `PlaybackError` gains two new typed cases —
+  `.noInternet` and `.stationNotAvailable(errorCode:)` — mirroring Pocket Casts iOS's
+  `PlaybackManager.PlaybackError` pattern. Each case now carries `userMessage` (full-length,
+  for the Now Playing screen) and `shortUserMessage` (compact, for the mini player and lock
+  screen) computed directly on the type; the UI layer no longer interprets raw error codes or
+  supplies fallback strings. `AVPlayerAudioOutput` translates `PlaybackFailure` into the
+  appropriate typed case instead of collapsing to `.streamFailed(String)`. `RadioDirectoryError`
+  gains the same `userMessage`/`shortUserMessage` pair so `.directory` errors delegate cleanly.
+  The mini player now shows the typed short message (e.g. "No connection", "Unavailable") in
+  place of the previous hardcoded "Tap to retry"
 - **Typed playback failures**: `PlaybackState.failed`/`AudioStatus.failed` carry a new
   `PlaybackError` (`.streamFailed`/`.directory`) instead of a raw `String`, mirroring
   `RadioDirectoryError`'s `errorDescription`/`isRetryable` shape. The bounded auto-reconnect now

@@ -102,7 +102,16 @@ public final class AVPlayerAudioOutput: NSObject, AudioOutput {
                     playerError: self.player?.error,
                     itemError: item.error
                 )
-                self.onStatusChange?(.failed(.streamFailed(failure.message)))
+                let playbackError: PlaybackError
+                switch failure {
+                case .noInternet:
+                    playbackError = .noInternet
+                case let .stationNotAvailable(errorCode: code):
+                    playbackError = .stationNotAvailable(errorCode: code)
+                case let .playback(message):
+                    playbackError = .streamFailed(message)
+                }
+                self.onStatusChange?(.failed(playbackError))
             }
         }
 

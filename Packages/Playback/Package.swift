@@ -4,6 +4,7 @@ import PackageDescription
 
 let package = Package(
     name: "Playback",
+    defaultLocalization: "en",
     platforms: [
         .iOS(.v26),
         // Declared so the controller/state-machine test suite can run on the mac
@@ -24,7 +25,8 @@ let package = Package(
             dependencies: [
                 "ImageIODownsample",
                 "RadioDirectory"
-            ]
+            ],
+            resources: [.process("Resources/Localizable.xcstrings")]
         ),
         .testTarget(
             name: "PlaybackTests",

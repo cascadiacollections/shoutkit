@@ -119,7 +119,7 @@ public struct NowPlayingView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.tint)
         case let .failed(error):
-            Text(error.errorDescription ?? "Playback failed.")
+            Text(error.userMessage)
                 .font(.caption)
                 .foregroundStyle(.red)
                 .multilineTextAlignment(.center)
