@@ -37,8 +37,11 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
 
     private let state = SessionState()
     private var session: MediaSession<SessionState>?
+    private let transport: any HTTPTransporting
 
-    public init() {}
+    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.shared) {
+        self.transport = transport
+    }
 
     public func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool, artworkURL: URL?) {
         if session == nil {
@@ -83,8 +86,11 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
     /// manual cache-vs-station bookkeeping like the legacy path needed.
     private func artwork(for url: URL?) -> Artwork? {
         guard let url else { return nil }
+        let transport = self.transport
         return Artwork(id: url.absoluteString) { @Sendable _ in
-            let (data, _) = try await URLSession.shared.data(from: url)
+            var request = URLRequest(url: url)
+            request.cachePolicy = .returnCacheDataElseLoad
+            let data = try await transport.data(for: request)
             if let representation = try? ArtworkRepresentation(data: data) {
                 return representation
             }

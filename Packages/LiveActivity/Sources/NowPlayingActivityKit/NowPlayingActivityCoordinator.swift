@@ -44,13 +44,16 @@ public final class NowPlayingActivityCoordinator {
 
     private var observationTasks: [Task<Void, Never>] = []
     private var artworkTask: Task<Void, Never>?
+    private let transport: any HTTPTransporting
 
     /// Live Activity artwork renders no larger than a Dynamic Island tile, so a
     /// small thumbnail is plenty and keeps the App Group file tiny. `nonisolated`
     /// so the off-main staging path can read it.
     private nonisolated static let artworkMaxPixelSize = 256
 
-    public init() {}
+    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.shared) {
+        self.transport = transport
+    }
 
     isolated deinit {
         for task in observationTasks {
@@ -231,8 +234,9 @@ public final class NowPlayingActivityCoordinator {
         pushArtworkUpdate()
 
         artworkTask = Task { [weak self] in
-            guard await Self.stageArtwork(from: targetURL, token: token) else { return }
-            guard let self, Task.isCancelled == false, self.latestArtworkURL == targetURL else { return }
+            guard let self else { return }
+            guard await self.stageArtwork(from: targetURL, token: token) else { return }
+            guard Task.isCancelled == false, self.latestArtworkURL == targetURL else { return }
             self.latestArtworkToken = token
             // Purge here — serialized on the main actor with other adoptions —
             // rather than inside `stage`, where a superseded download's late
@@ -252,10 +256,12 @@ public final class NowPlayingActivityCoordinator {
     /// (see `NowPlayingCenter`): an oversized station favicon must not pin a
     /// native-resolution decode, and the staged file stays small.
     /// - Returns: `true` once the PNG is written and readable by the widget.
-    private nonisolated static func stageArtwork(from url: URL, token: String) async -> Bool {
-        guard let (data, _) = try? await URLSession.shared.data(from: url) else { return false }
+    private func stageArtwork(from url: URL, token: String) async -> Bool {
+        var request = URLRequest(url: url)
+        request.cachePolicy = .returnCacheDataElseLoad
+        guard let data = try? await transport.data(for: request) else { return false }
         let png = await Task.detached(priority: .utility) {
-            encodePNG(downsampling: data, maxPixelSize: artworkMaxPixelSize)
+            Self.encodePNG(downsampling: data, maxPixelSize: Self.artworkMaxPixelSize)
         }.value
         // Re-check between the detached encode (which can't observe the outer
         // task's cancellation) and the write, so a superseded download doesn't

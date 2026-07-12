@@ -1,5 +1,6 @@
 import Foundation
 import os
+import RadioDirectory
 
 /// Best-effort track discovery via the public iTunes Search API.
 ///
@@ -36,10 +37,10 @@ public nonisolated enum AlbumArtLookup {
     /// Shared URL session configured with a short timeout; artwork is a
     /// nicety, not a requirement, so we fail fast rather than block the UI.
     private static let requestTimeout: TimeInterval = 8
-    private static let session: URLSession = {
+    private static let defaultTransport: any HTTPTransporting = {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = requestTimeout
-        return URLSession(configuration: config)
+        return URLSessionHTTPTransport(session: URLSession(configuration: config))
     }()
 
     /// In-process lookup cache, keyed on "artist|title" (lowercased). Caches
@@ -68,7 +69,15 @@ public nonisolated enum AlbumArtLookup {
     /// - Returns: A ``Match`` carrying the artwork URL (up to 600 × 600 points)
     ///   and/or the Apple Music link. Returns an empty `Match` (both fields
     ///   `nil`) when either parameter is absent/empty or when the lookup fails.
-    public static func lookup(artist: String?, title: String?) async -> Match {
+    public static func lookup(
+        artist: String?,
+        title: String?,
+        transport: (any HTTPTransporting)? = nil
+    ) async -> Match {
+        // Resolved here, not as a default argument: `defaultTransport` is
+        // private, and a public function's default argument can't reference a
+        // less-accessible declaration.
+        let transport = transport ?? defaultTransport
         guard let artist = artist?.trimmingCharacters(in: .whitespacesAndNewlines),
               let title = title?.trimmingCharacters(in: .whitespacesAndNewlines),
               artist.isEmpty == false, title.isEmpty == false
@@ -84,9 +93,9 @@ public nonisolated enum AlbumArtLookup {
 
         guard let searchURL = buildSearchURL(artist: artist, title: title) else { return .empty }
 
-        guard let (data, response) = try? await session.data(from: searchURL),
-              (response as? HTTPURLResponse)?.statusCode == 200
-        else { return .empty }
+        var request = URLRequest(url: searchURL)
+        request.timeoutInterval = requestTimeout
+        guard let data = try? await transport.data(for: request) else { return .empty }
 
         switch parseMatch(from: data) {
         case let .match(match):
@@ -126,12 +135,7 @@ public nonisolated enum AlbumArtLookup {
             queryItems.append(URLQueryItem(name: "country", value: region))
         }
         components?.queryItems = queryItems
-        // `URLComponents` leaves `+` unescaped in query values, and the iTunes
-        // API form-decodes it as a space — "Florence + The Machine" would lose
-        // its `+` server-side. Escape it explicitly.
-        if let escapedQuery = components?.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B") {
-            components?.percentEncodedQuery = escapedQuery
-        }
+        components?.escapePlusInQueryValues()
         return components?.url
     }
 
