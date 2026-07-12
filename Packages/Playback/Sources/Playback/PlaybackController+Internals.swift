@@ -52,7 +52,7 @@ extension PlaybackController {
                     isPlaying: true,
                     artworkURL: self.albumArtURL
                 )
-            } catch {
+            } catch let error {
                 guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
                 self.handleResolutionFailure(error, for: station)
             }
