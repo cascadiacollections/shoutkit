@@ -237,6 +237,33 @@ public enum RadioDirectoryError: Error, Equatable, LocalizedError, Sendable {
             false
         }
     }
+
+    /// Friendly, full-length message suitable for the Now Playing screen.
+    /// Each case returns a pre-mapped string; the UI layer never interprets
+    /// raw error codes.
+    public var userMessage: String {
+        switch self {
+        case .transport:
+            String(localized: "Can't reach the station. Check your connection.", bundle: .module)
+        case .emptyPlaylist, .httpStatus, .invalidResponse:
+            String(localized: "The station isn't available right now.", bundle: .module)
+        case .invalidURL, .missingAPIKey, .parsingFailed:
+            String(localized: "The station has a configuration problem.", bundle: .module)
+        }
+    }
+
+    /// Short message suitable for compact surfaces such as the mini player
+    /// or lock screen.
+    public var shortUserMessage: String {
+        switch self {
+        case .transport:
+            String(localized: "No connection", bundle: .module)
+        case .emptyPlaylist, .httpStatus, .invalidResponse:
+            String(localized: "Unavailable", bundle: .module)
+        case .invalidURL, .missingAPIKey, .parsingFailed:
+            String(localized: "Station error", bundle: .module)
+        }
+    }
 }
 
 enum PlaylistParser {

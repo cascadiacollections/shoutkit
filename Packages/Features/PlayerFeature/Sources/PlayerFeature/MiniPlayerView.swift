@@ -118,8 +118,8 @@ public struct MiniPlayerView: View {
         switch playback.state {
         case .loading, .buffering:
             return "Connecting…"
-        case .failed:
-            return "Tap to retry"
+        case let .failed(error):
+            return error.shortUserMessage
         default:
             if let track = playback.nowPlaying, let title = track.title {
                 if let artist = track.artist { return "\(title) — \(artist)" }
