@@ -9,7 +9,7 @@ public enum PlaybackState: Equatable, Sendable {
     case buffering(Station)
     case playing(Station)
     case paused(Station)
-    case failed(String)
+    case failed(PlaybackError)
 
     /// The station associated with the current state, if any.
     public var station: Station? {
@@ -40,5 +40,5 @@ public enum StationPlaybackPhase: Equatable, Sendable {
     case loading
     case playing
     case paused
-    case failed(String)
+    case failed(PlaybackError)
 }
