@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import Testing
 
 @testable import Playback
@@ -151,5 +152,65 @@ struct PlaybackControllerAlbumArtTests {
         #expect(events[0].track.artist == "Band")
         #expect(events[0].appleMusicURL == nil)
         #expect(events[1].appleMusicURL == link)
+    }
+
+    @Test func trackChangeClearsPublishedArtworkBeforePublishingNewMetadata() async throws {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station()], output: output)
+        let oldArt = try #require(URL(string: "https://example.com/old.jpg"))
+        let newArt = try #require(URL(string: "https://example.com/new.jpg"))
+        controller.trackResourcesProvider = { track in
+            if track.title == "New" {
+                for _ in 0..<200 { await Task.yield() }
+                return TrackResources(artworkURL: newArt)
+            }
+            return TrackResources(artworkURL: oldArt)
+        }
+
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        output.onTrackInfo?(AudioTrackInfo(title: "Old", artist: "Band"))
+        await drainMainQueue()
+        #expect(controller.albumArtURL == oldArt)
+
+        var events: [String] = []
+        let albumArtChanges = Observations { controller.albumArtURL }
+        let metadataChanges = Observations { controller.nowPlaying?.title }
+        let albumArtTask = Task { @MainActor in
+            var skippedInitial = false
+            for await url in albumArtChanges {
+                if skippedInitial == false {
+                    skippedInitial = true
+                    continue
+                }
+                events.append("art:\(url?.absoluteString ?? "nil")")
+                if events.count >= 2 { return }
+            }
+        }
+        let metadataTask = Task { @MainActor in
+            var skippedInitial = false
+            for await title in metadataChanges {
+                if skippedInitial == false {
+                    skippedInitial = true
+                    continue
+                }
+                events.append("track:\(title ?? "nil")")
+                if events.count >= 2 { return }
+            }
+        }
+        defer {
+            albumArtTask.cancel()
+            metadataTask.cancel()
+        }
+
+        await Task.yield()
+        output.onTrackInfo?(AudioTrackInfo(title: "New", artist: "Band"))
+        await waitUntil({ events.count >= 2 })
+
+        #expect(Array(events.prefix(2)) == [
+            "art:nil",
+            "track:New"
+        ])
     }
 }
