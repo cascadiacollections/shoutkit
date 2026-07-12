@@ -17,13 +17,14 @@ enum PlaybackFailure: Equatable, Sendable {
     }
 
     static func classify(playerError: (any Error)?, itemError: (any Error)?) -> PlaybackFailure {
-        let errors = [playerError, itemError]
+        let knownURLCandidateErrors = [playerError, itemError]
+        let fallbackErrors = [itemError, playerError]
 
-        if let classified = errors.lazy.compactMap(classifyKnownURLError).first {
+        if let classified = knownURLCandidateErrors.lazy.compactMap(classifyKnownURLError).first {
             return classified
         }
 
-        if let error = errors.compactMap({ $0 }).first {
+        if let error = fallbackErrors.compactMap({ $0 }).first {
             return .playback(message: error.localizedDescription)
         }
 

@@ -54,4 +54,22 @@ struct PlaybackFailureTests {
                 == .playback(message: "The operation could not be completed.")
         )
     }
+
+    @Test func unknownErrorsPreferItemDescriptionWhenBothSourcesFail() {
+        let playerError = NSError(
+            domain: "AVFoundationErrorDomain",
+            code: -11800,
+            userInfo: [NSLocalizedDescriptionKey: "The player failed."]
+        )
+        let itemError = NSError(
+            domain: "AVFoundationErrorDomain",
+            code: -11819,
+            userInfo: [NSLocalizedDescriptionKey: "The item failed."]
+        )
+
+        #expect(
+            PlaybackFailure.classify(playerError: playerError, itemError: itemError)
+                == .playback(message: "The item failed.")
+        )
+    }
 }
