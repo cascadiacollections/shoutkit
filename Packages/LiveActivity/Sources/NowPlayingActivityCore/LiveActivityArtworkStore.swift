@@ -89,7 +89,7 @@ public enum LiveActivityArtworkStore {
         if let directoryURLOverride {
             return directoryURLOverride
         }
-        FileManager.default
+        return FileManager.default
             .containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier)?
             .appendingPathComponent(directoryName, isDirectory: true)
     }
