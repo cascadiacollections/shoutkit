@@ -261,7 +261,7 @@ public final class NowPlayingActivityCoordinator {
         request.cachePolicy = .returnCacheDataElseLoad
         guard let data = try? await transport.data(for: request) else { return false }
         let png = await Task.detached(priority: .utility) {
-            Self.encodePNG(downsampling: data, maxPixelSize: artworkMaxPixelSize)
+            Self.encodePNG(downsampling: data, maxPixelSize: Self.artworkMaxPixelSize)
         }.value
         // Re-check between the detached encode (which can't observe the outer
         // task's cancellation) and the write, so a superseded download doesn't
