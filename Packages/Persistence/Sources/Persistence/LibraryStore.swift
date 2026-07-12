@@ -178,7 +178,8 @@ public final class LibraryStore {
         let descriptor = FetchDescriptor<FavoriteStation>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
-        guard let favorites = fetch(descriptor, operation: "normalize sort indices"), favorites.count > 1 else { return }
+        guard let favorites = fetch(descriptor, operation: "normalize sort indices"),
+              favorites.count > 1 else { return }
 
         let indices = favorites.map(\.sortIndex)
         guard Set(indices).count != indices.count else { return }
@@ -222,7 +223,10 @@ public final class LibraryStore {
         let debugDescription = String(describing: error)
         lastErrorMessage = localizedMessage
         logger.error(
-            "LibraryStore \(operation, privacy: .public) failed: \(localizedMessage, privacy: .public) [\(debugDescription, privacy: .public)]"
+            """
+            LibraryStore \(operation, privacy: .public) failed: \
+            \(localizedMessage, privacy: .public) [\(debugDescription, privacy: .public)]
+            """
         )
     }
 
