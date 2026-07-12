@@ -53,9 +53,12 @@ extension PlaybackController {
                     isPlaying: true,
                     artworkURL: self.albumArtURL
                 )
-            } catch let error {
+            } catch let error as RadioDirectoryError {
                 guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
                 self.handleResolutionFailure(error, for: station)
+            } catch {
+                guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
+                self.handleResolutionFailure(.transport(error.localizedDescription), for: station)
             }
         }
     }
