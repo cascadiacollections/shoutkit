@@ -174,11 +174,15 @@ struct PlaybackControllerAlbumArtTests {
         #expect(controller.albumArtURL == oldArt)
 
         var events: [String] = []
-        observeChanges(of: { controller.albumArtURL }) { url in
+        let albumArtObservation = observeChanges(of: { controller.albumArtURL }) { url in
             events.append("art:\(url?.absoluteString ?? "nil")")
         }
-        observeChanges(of: { controller.nowPlaying?.title }) { title in
+        let metadataObservation = observeChanges(of: { controller.nowPlaying?.title }) { title in
             events.append("track:\(title ?? "nil")")
+        }
+        defer {
+            albumArtObservation.cancel()
+            metadataObservation.cancel()
         }
 
         output.onTrackInfo?(AudioTrackInfo(title: "New", artist: "Band"))

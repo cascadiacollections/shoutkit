@@ -115,16 +115,43 @@ func waitUntil(_ condition: () -> Bool, upTo seconds: TimeInterval = 2) async {
 }
 
 @MainActor
+final class ObservationToken {
+    private(set) var isCancelled = false
+
+    func cancel() {
+        isCancelled = true
+    }
+}
+
+/// Registers a one-property observation and re-arms it after each change, so
+/// tests can record a sequence of values using the macOS 15-compatible
+/// `withObservationTracking` API. Call `cancel()` on the returned token when the
+/// test is done to stop further recursive re-registration.
+@MainActor
+@discardableResult
 func observeChanges<Value>(
     of value: @escaping @MainActor () -> Value,
+    onChange: @escaping @MainActor (Value) -> Void
+) -> ObservationToken {
+    let token = ObservationToken()
+
+    observeChanges(of: value, token: token, onChange: onChange)
+    return token
+}
+
+@MainActor
+private func observeChanges<Value>(
+    of value: @escaping @MainActor () -> Value,
+    token: ObservationToken,
     onChange: @escaping @MainActor (Value) -> Void
 ) {
     withObservationTracking {
         _ = value()
     } onChange: {
         MainActor.assumeIsolated {
+            guard token.isCancelled == false else { return }
             onChange(value())
-            observeChanges(of: value, onChange: onChange)
+            observeChanges(of: value, token: token, onChange: onChange)
         }
     }
 }
