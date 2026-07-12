@@ -31,7 +31,7 @@ enum PlaybackFailure: Equatable, Sendable {
     }
 
     private static func classifyKnownURLError(_ error: (any Error)?) -> PlaybackFailure? {
-        guard let nsError = error as NSError?, nsError.domain == NSURLErrorDomain else {
+        guard let error, let nsError = error as? NSError, nsError.domain == NSURLErrorDomain else {
             return nil
         }
 

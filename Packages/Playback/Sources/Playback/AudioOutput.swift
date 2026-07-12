@@ -100,7 +100,7 @@ public final class AVPlayerAudioOutput: NSObject, AudioOutput {
                 guard let self, self.generation == generation else { return }
                 let failure = PlaybackFailure.classify(
                     playerError: self.player?.error,
-                    itemError: self.player?.currentItem?.error ?? item.error
+                    itemError: item.error
                 )
                 self.onStatusChange?(.failed(failure.message))
             }
