@@ -19,9 +19,9 @@ public enum PlaybackError: Error, Equatable, LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .noInternet:
-            "No internet connection."
+            String(localized: "No internet connection. Check your network and try again.", bundle: .module)
         case .stationNotAvailable:
-            "This station is not available right now."
+            String(localized: "This station isn't available right now. Try again later.", bundle: .module)
         case let .streamFailed(message):
             message
         case let .directory(error):
