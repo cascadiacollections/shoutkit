@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import RadioDirectory
 
 @testable import Playback
@@ -111,4 +112,52 @@ func waitUntil(_ condition: () -> Bool, upTo seconds: TimeInterval = 2) async {
     while condition() == false, Date() < deadline {
         try? await Task.sleep(for: .milliseconds(10))
     }
+}
+
+@MainActor
+final class ObservationToken {
+    private(set) var isCancelled = false
+
+    func cancel() {
+        isCancelled = true
+    }
+}
+
+/// Registers a one-property observation and re-arms it after each change, so
+/// tests can record a sequence of values using the macOS 15-compatible
+/// `withObservationTracking` API. Call `cancel()` on the returned token when the
+/// test is done to stop further recursive re-registration. Must be called from
+/// MainActor context.
+@MainActor
+@discardableResult
+func observeChanges<Value>(
+    of value: @escaping @MainActor () -> Value,
+    onChange: @escaping @MainActor (Value) -> Void
+) -> ObservationToken {
+    let token = ObservationToken()
+
+    observeChanges(of: value, token: token, onChange: onChange)
+    return token
+}
+
+@MainActor
+private func observeChanges<Value>(
+    of value: @escaping @MainActor () -> Value,
+    token: ObservationToken,
+    onChange: @escaping @MainActor (Value) -> Void
+) {
+    withObservationTracking({
+        // Read once to register the dependency; the test only cares about
+        // subsequent changes, so the initial value is intentionally ignored.
+        _ = value()
+    }, onChange: {
+        // `onChange` fires before the triggering mutation is actually applied,
+        // so reading `value()` synchronously here would still observe the old
+        // value. Hop through a Task so the read lands after the mutation.
+        Task { @MainActor in
+            guard !token.isCancelled else { return }
+            onChange(value())
+            observeChanges(of: value, token: token, onChange: onChange)
+        }
+    })
 }

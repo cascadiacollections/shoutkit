@@ -152,4 +152,47 @@ struct PlaybackControllerAlbumArtTests {
         #expect(events[0].appleMusicURL == nil)
         #expect(events[1].appleMusicURL == link)
     }
+
+    @Test func trackChangeClearsPublishedArtworkBeforePublishingNewMetadata() async throws {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station()], output: output)
+        let oldArt = try #require(URL(string: "https://example.com/old.jpg"))
+        let newArt = try #require(URL(string: "https://example.com/new.jpg"))
+        controller.trackResourcesProvider = { track in
+            if track.title == "New" {
+                for _ in 0..<200 { await Task.yield() }
+                return TrackResources(artworkURL: newArt)
+            }
+            return TrackResources(artworkURL: oldArt)
+        }
+
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        output.onTrackInfo?(AudioTrackInfo(title: "Old", artist: "Band"))
+        await drainMainQueue()
+        #expect(controller.albumArtURL == oldArt)
+
+        // `observeChanges` re-enters on MainActor, so these callbacks append in
+        // the same serialized order the properties publish changes.
+        var events: [String] = []
+        let albumArtObservation = observeChanges(of: { controller.albumArtURL }, onChange: { url in
+            events.append("art:\(url?.absoluteString ?? "nil")")
+        })
+        let metadataObservation = observeChanges(of: { controller.nowPlaying?.title }, onChange: { title in
+            events.append("track:\(title ?? "nil")")
+        })
+        defer {
+            albumArtObservation.cancel()
+            metadataObservation.cancel()
+        }
+
+        output.onTrackInfo?(AudioTrackInfo(title: "New", artist: "Band"))
+        await waitUntil({ events.count >= 2 })
+
+        #expect(Array(events.prefix(2)) == [
+            "art:nil",
+            "track:New"
+        ])
+    }
 }

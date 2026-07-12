@@ -154,6 +154,12 @@ extension PlaybackController {
             return
         }
 
+        // Clear any art/link from a previous track while resolution is in flight.
+        // Order matters: observers (including the Live Activity coordinator)
+        // must see the stale artwork clear before they see the new metadata, or
+        // they can momentarily pair the new title with the previous track's art.
+        albumArtURL = nil
+        appleMusicURL = nil
         let metadata = NowPlayingMetadata(
             stationID: station.id,
             title: info.title,
@@ -162,9 +168,6 @@ extension PlaybackController {
         )
         nowPlaying = metadata
         onTrackHeard?(HeardTrack(station: station, track: metadata, appleMusicURL: nil))
-        // Clear any art/link from a previous track while resolution is in flight.
-        albumArtURL = nil
-        appleMusicURL = nil
 
         nowPlayingCenter.update(
             station: station,
