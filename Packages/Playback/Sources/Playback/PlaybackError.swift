@@ -35,11 +35,11 @@ public enum PlaybackError: Error, Equatable, LocalizedError, Sendable {
     public var userMessage: String {
         switch self {
         case .noInternet:
-            "No internet connection. Check your network and try again."
+            String(localized: "No internet connection. Check your network and try again.", bundle: .module)
         case .stationNotAvailable:
-            "This station isn't available right now. Try again later."
+            String(localized: "This station isn't available right now. Try again later.", bundle: .module)
         case .streamFailed:
-            "The stream stopped unexpectedly. Tap to retry."
+            String(localized: "The stream stopped unexpectedly. Tap to retry.", bundle: .module)
         case let .directory(error):
             error.userMessage
         }
@@ -50,11 +50,11 @@ public enum PlaybackError: Error, Equatable, LocalizedError, Sendable {
     public var shortUserMessage: String {
         switch self {
         case .noInternet:
-            "No connection"
+            String(localized: "No connection", bundle: .module)
         case .stationNotAvailable:
-            "Unavailable"
+            String(localized: "Unavailable", bundle: .module)
         case .streamFailed:
-            "Stream error"
+            String(localized: "Stream error", bundle: .module)
         case let .directory(error):
             error.shortUserMessage
         }
