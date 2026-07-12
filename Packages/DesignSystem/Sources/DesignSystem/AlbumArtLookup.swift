@@ -72,8 +72,12 @@ public nonisolated enum AlbumArtLookup {
     public static func lookup(
         artist: String?,
         title: String?,
-        transport: any HTTPTransporting = defaultTransport
+        transport: (any HTTPTransporting)? = nil
     ) async -> Match {
+        // Resolved here, not as a default argument: `defaultTransport` is
+        // private, and a public function's default argument can't reference a
+        // less-accessible declaration.
+        let transport = transport ?? defaultTransport
         guard let artist = artist?.trimmingCharacters(in: .whitespacesAndNewlines),
               let title = title?.trimmingCharacters(in: .whitespacesAndNewlines),
               artist.isEmpty == false, title.isEmpty == false
