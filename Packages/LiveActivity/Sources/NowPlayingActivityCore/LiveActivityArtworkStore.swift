@@ -20,6 +20,10 @@ public enum LiveActivityArtworkStore {
     /// Subdirectory inside the container so artwork can't collide with anything
     /// else the group might hold later.
     private static let directoryName = "LiveActivityArtwork"
+    /// Test-only override for the container directory, so tests can stage files
+    /// in an isolated temp directory without an App Group. Mutated only from
+    /// test setup/teardown (never concurrently), hence `nonisolated(unsafe)`.
+    nonisolated(unsafe) static var directoryURLOverride: URL?
 
     /// A filesystem-safe token identifying `url`'s artwork.
     ///
@@ -82,7 +86,10 @@ public enum LiveActivityArtworkStore {
     }
 
     private static var directoryURL: URL? {
-        FileManager.default
+        if let directoryURLOverride {
+            return directoryURLOverride
+        }
+        return FileManager.default
             .containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier)?
             .appendingPathComponent(directoryName, isDirectory: true)
     }

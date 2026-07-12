@@ -137,7 +137,7 @@ public enum ArtworkLoader {
         }
     }
 
-    private struct HSBSample {
+    struct HSBSample {
         let hue: CGFloat
         let saturation: CGFloat
         let brightness: CGFloat
@@ -218,5 +218,9 @@ public enum ArtworkLoader {
             saturation: max(0.55, min(1, best.saturation * 1.3)),
             brightness: min(0.72, max(0.38, best.brightness))
         )
+    }
+
+    nonisolated static func paletteHSBSamples(from cgImage: CGImage) -> [HSBSample] {
+        hsbSamples(from: cgImage)
     }
 }

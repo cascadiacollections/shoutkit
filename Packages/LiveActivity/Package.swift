@@ -31,6 +31,10 @@ let package = Package(
                 .product(name: "RadioDirectory", package: "RadioDirectory"),
                 .product(name: "AsyncAlgorithms", package: "swift-async-algorithms")
             ]
+        ),
+        .testTarget(
+            name: "NowPlayingActivityCoreTests",
+            dependencies: ["NowPlayingActivityCore"]
         )
     ]
 )
