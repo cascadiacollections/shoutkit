@@ -1,3 +1,4 @@
+import Algorithms
 import Foundation
 
 public protocol RadioDirectoryProviding: Sendable {
@@ -60,13 +61,13 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
     public func genres() async throws(RadioDirectoryError) -> [Genre] {
         let genres = try await base.genres()
         let preferredGenres = preferredStations.map { Genre(name: $0.genre) }
-        return deduplicated(preferredGenres + genres, key: \.name)
+        return (preferredGenres + genres).uniqued { $0.name.lowercased() }
     }
 
     public func topStations(limit: Int) async throws(RadioDirectoryError) -> [Station] {
         let remainingLimit = max(limit - preferredStations.count, 0)
         let stations = try await base.topStations(limit: remainingLimit)
-        return Array(deduplicated(preferredStations + stations).prefix(limit))
+        return Array((preferredStations + stations).uniqued { $0.name.lowercased() }.prefix(limit))
     }
 
     public func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
@@ -82,7 +83,7 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
 
         let baseLimit = max(limit - preferredMatches.count, 0)
         let stations = try await base.searchStations(matching: query, limit: baseLimit)
-        return Array(deduplicated(preferredMatches + stations).prefix(limit))
+        return Array((preferredMatches + stations).uniqued { $0.name.lowercased() }.prefix(limit))
     }
 
     public func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
@@ -95,7 +96,7 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
 
         let baseLimit = max(limit - preferredMatches.count, 0)
         let stations = try await base.stations(inGenre: genre, limit: baseLimit)
-        return Array(deduplicated(preferredMatches + stations).prefix(limit))
+        return Array((preferredMatches + stations).uniqued { $0.name.lowercased() }.prefix(limit))
     }
 
     public func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
@@ -109,23 +110,6 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
 
         return try await base.streamEndpoint(for: station)
     }
-
-    private func deduplicated(_ stations: [Station]) -> [Station] {
-        var seen = Set<String>()
-
-        return stations.filter { station in
-            let key = station.name.lowercased()
-            return seen.insert(key).inserted
-        }
-    }
-
-    private func deduplicated(_ genres: [Genre], key: KeyPath<Genre, String>) -> [Genre] {
-        var seen = Set<String>()
-
-        return genres.filter { genre in
-            seen.insert(genre[keyPath: key].lowercased()).inserted
-        }
-    }
 }
 
 public struct BundledRadioDirectory: RadioDirectoryProviding {
@@ -136,7 +120,7 @@ public struct BundledRadioDirectory: RadioDirectoryProviding {
     }
 
     public func genres() async throws(RadioDirectoryError) -> [Genre] {
-        deduplicated(stations.map { Genre(name: $0.genre) }, key: \.name)
+        stations.map { Genre(name: $0.genre) }.uniqued { $0.name.lowercased() }
     }
 
     public func topStations(limit: Int) async throws(RadioDirectoryError) -> [Station] {
@@ -167,14 +151,6 @@ public struct BundledRadioDirectory: RadioDirectoryProviding {
             url: streamURL,
             format: StreamFormat(url: streamURL)
         )
-    }
-
-    private func deduplicated(_ genres: [Genre], key: KeyPath<Genre, String>) -> [Genre] {
-        var seen = Set<String>()
-
-        return genres.filter { genre in
-            seen.insert(genre[keyPath: key].lowercased()).inserted
-        }
     }
 }
 

@@ -278,6 +278,12 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         var components = URLComponents(url: host, resolvingAgainstBaseURL: false)
         components?.path = path
         components?.queryItems = queryItems.isEmpty ? nil : queryItems
+        // `URLComponents` leaves `+` unescaped in query values, but web servers
+        // conventionally form-decode it as a space — a search for "C+C Music
+        // Factory" would arrive as "C C Music Factory". Escape it explicitly.
+        if let escapedQuery = components?.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B") {
+            components?.percentEncodedQuery = escapedQuery
+        }
 
         guard let url = components?.url else {
             throw RadioDirectoryError.invalidURL

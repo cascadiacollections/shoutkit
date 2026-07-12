@@ -37,6 +37,16 @@ enum AppDependencies {
             return services
         }
 
+        // Size the shared URL cache for RAM-constrained devices: raw bytes
+        // (artwork, directory JSON) belong on disk — cheap, and they survive
+        // relaunch — while the in-memory tier stays small; decoded bitmaps
+        // have their own bounded caches in DesignSystem. Set here, before the
+        // first request, so every `URLSession.shared` consumer picks it up.
+        URLCache.shared = URLCache(
+            memoryCapacity: 2 * 1024 * 1024,
+            diskCapacity: 64 * 1024 * 1024
+        )
+
         let container = ShoutKitModelContainer.makeContainer()
         let store = LibraryStore(context: container.mainContext)
         let settings = SettingsStore()
@@ -55,14 +65,16 @@ enum AppDependencies {
             }
         }
 
-        // Best-effort album art from the iTunes Search API. Gated here, at the
-        // source, so opting out stops the supplemental network request itself —
-        // the toggle lives under Privacy and must mean what it says. The views
-        // also read the setting reactively (flipping it updates the UI
-        // immediately); the lock screen follows on the next track change.
-        controller.albumArtURLProvider = { track in
-            guard settings.isAlbumArtEnabled else { return nil }
-            return await AlbumArtLookup.artworkURL(artist: track.artist, title: track.title)
+        // Best-effort album art + Apple Music link from a single iTunes Search
+        // API hit. Gated here, at the source, so opting out stops the
+        // supplemental network request itself — the toggle lives under Privacy
+        // and must mean what it says. The views also read the setting reactively
+        // (flipping it updates the UI immediately); the lock screen follows on
+        // the next track change.
+        controller.trackResourcesProvider = { track in
+            guard settings.isAlbumArtEnabled else { return .none }
+            let match = await AlbumArtLookup.lookup(artist: track.artist, title: track.title)
+            return TrackResources(artworkURL: match.artworkURL, appleMusicURL: match.appleMusicURL)
         }
 
         // Lock screen / Dynamic Island Live Activity follows playback by

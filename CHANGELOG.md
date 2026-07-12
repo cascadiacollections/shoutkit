@@ -7,11 +7,32 @@ All notable changes to ShoutKit are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **iPadOS support**: on iPad the root tab bar adopts the sidebar-adaptable style (an Apple
+  Music-style sidebar with a built-in toggle back to a top tab bar; iPhone is unchanged), and the
+  station lists in Listen Now, Browse, and Search flow into adaptive multi-column grids on wide
+  layouts — full-screen iPad, Split View, and Stage Manager — instead of stretching rows across
+  the whole window. The app already declared both device families and all four iPad orientations,
+  so multitasking and rotation worked before; this makes the layouts native to the space
+- **Reorderable Favorites**: the Favorites tab now supports drag-to-reorder. Tap **Edit** (or
+  long-press a row) to drag favorites into any order; the arrangement is persisted across launches
+  via a new `sortIndex` on the favorite. New favorites append to the bottom so they never disturb
+  your ordering, and existing users' lists are re-based from their previous newest-first order on
+  first launch, so nothing looks different until you reorder.
+- **Live Activity artwork**: the lock screen / Dynamic Island now-playing Live Activity now shows
+  the current album (or station) artwork, matching the Now Playing screen and mini-player toolbar.
+  Because Live Activity views can't fetch network images, the app downsamples the art into a shared
+  App Group container (`group.com.cascadiacollections.shoutkit`) and hands the widget a small token;
+  the widget renders the file. Falls back to a playback glyph until art is staged
 - **Album art discovery**: when ICY stream metadata contains both artist and title, the app
   queries the iTunes Search API (keyless, best-effort) and shows the resolved album artwork in
   the Now Playing hero, mini-player thumbnail, and lock screen / Control Center. Falls back to
   the station's own artwork if the lookup fails or returns no result. Opt-out via
   **Settings → Privacy → Fetch Album Artwork** (defaults on)
+- **Open in Apple Music**: long-press the Now Playing artwork to reveal **View in Apple Music**,
+  which opens the matched song in the Apple Music app (or its web player). The link comes from the
+  same iTunes Search lookup that resolves album art — no extra network request — so it honors the
+  same **Settings → Privacy → Fetch Album Artwork** toggle. The menu appears only when a link is
+  found for the current track
 - Settings → About shows the build's short git commit next to the version (`0.2.0 (12) · a1b2c3d`),
   so a beta tester's screenshot maps to an exact source revision for bug repro. Stamped at build
   time via the `GIT_COMMIT_SHA` setting; the line stays clean (no commit) for local dev builds
@@ -22,17 +43,83 @@ All notable changes to ShoutKit are documented here. The format follows
 - 0.3.0 release plan (`docs/releases/0.3.0.md`): iOS 27 platform adoption — App Intents entity
   schemas for the new Siri, quick-play widget, and an iOS 27 QA checklist
 
+### Changed
+- Adopted swift-async-algorithms (Apple-maintained, Apache-2.0, pinned to a stable release;
+  recorded in `THIRD_PARTY_LICENSES.md` and shown in Settings → Licenses), revisiting the
+  FOSS audit's initial rejection: `removeDuplicates()` replaces the Live Activity
+  coordinator's two hand-rolled duplicate-suppression loops, and Search's 300 ms debounce
+  moves from a cancel-and-resleep task to a query stream with `debounce(for:)` — behavior
+  unchanged (see `DECISIONS.md`)
+- Adopted the first two third-party dependencies after a FOSS audit (both Apple-maintained,
+  Apache-2.0, pinned to stable releases; recorded in `THIRD_PARTY_LICENSES.md` and shown in
+  Settings → Licenses): swift-algorithms replaces RadioDirectory's three hand-rolled
+  de-duplication helpers with `uniqued(on:)`, and swift-collections replaces the Now Playing
+  artwork store's dictionary-plus-eviction-order bookkeeping with an `OrderedDictionary`.
+  Candidates evaluated and rejected as not paying for themselves: Nuke, GRDB, Defaults,
+  Alamofire, and initially swift-async-algorithms — adopted after the wider re-score above
+  (see `DECISIONS.md`)
+- **Runtime memory hygiene for older devices**: all artwork is now decoded at the size its
+  surface actually needs (ImageIO downsampling) instead of the server's native resolution —
+  including the lock-screen artwork that stays resident while listening in the background.
+  List, card, and mini-player thumbnails moved from `AsyncImage` to a shared thumbnail
+  pipeline whose decoded-image cache auto-evicts under system memory pressure; the Now Playing
+  artwork store likewise purges when the system signals pressure. The shared URL byte cache is
+  explicitly sized (2 MB memory / 64 MB disk), shifting raw-byte caching from RAM to disk and
+  letting artwork survive relaunches
+- **Background battery hygiene**: playback left paused for 10 minutes now releases the player
+  and the audio session (lock-screen controls keep working — play restarts the live stream),
+  instead of holding the `audio` background assertion for as long as the app stays paused.
+  A stream that stalls buffering for over 90 seconds is likewise parked as paused instead of
+  retrying the network indefinitely in the background
+- Album-art lookups now also cache definitive catalog misses, so a track iTunes doesn't know
+  no longer re-queries the API on every ICY repeat; Now Playing artwork is fetched and decoded
+  once per URL and shared across the backdrop, hero, and tint views (previously three decodes)
+
 ### Fixed
-- The ambient-fallback offer no longer hijacks playback when its station lookup loses a race
-  with the user: if the ad break ends, playback is stopped, or another station starts while the
-  directory search is in flight, the result is discarded instead of switching stations
+- **Playback recovery hardening** (comprehensive bug sweep):
+  - Pausing during a phone call no longer auto-resumes playback against the user's wish when
+    the call ends
+  - A failed stream's dead player is torn down before reconnecting, so pause-then-play after a
+    mid-play failure restarts the stream instead of silently doing nothing; the give-up path no
+    longer keeps the player and audio session resident behind a terminal "failed" state
+  - A stream-endpoint lookup that fails mid-reconnect now uses the remaining retry budget
+    instead of surfacing failure immediately, and a failed state can always be retried from the
+    mini-player and lock screen (previously the active station was forgotten)
+  - Unplugging headphones (or a phone call) while a reconnect was pending no longer lets the
+    reconnect fire and resurrect audio on the speaker / mid-call
+  - A reconnect no longer blanks the last-known track and artwork from the lock screen while
+    the stream re-buffers
+  - Out-of-order ICY metadata loads can no longer regress the displayed track to the previous
+    song; a transient artwork-download failure at play start no longer leaves the lock screen
+    artless for the whole session
+- **Live Activity correctness**: the lock screen / Dynamic Island activity no longer shows
+  "Live" while playback is paused after rapid pause/track-change races (updates are now applied
+  in order with the play state tracked at the source), and a superseded artwork download can no
+  longer delete the artwork file the activity is currently showing
+- **Artwork race fixes**: rapidly switching stations can no longer leave the previous station's
+  artwork (or ambient backdrop tint) permanently on the Now Playing screen, and a reused list
+  row no longer shows the previous station's logo while the new one loads. The ambient backdrop's
+  color mesh was vertically mirrored relative to the artwork for small favicons
+- **Directory robustness**: PLS playlist and SHOUTcast XML parsing are now locale-independent
+  (they could fail entirely on Turkish-locale devices), a `File1=` playlist entry with no value
+  no longer produces a garbage stream URL, searches containing `+` (e.g. "C+C Music Factory")
+  are no longer corrupted server-side, permanent directory errors (bad API key) surface
+  immediately instead of after a retry backoff, and concurrent mixed-limit top-station fetches
+  no longer duplicate requests or downgrade a fresher cache
+- The now-playing equalizer animation no longer runs while the app is backgrounded or the screen
+  is locked. It was the app's only continuous UI render loop (~8 fps); it now rests whenever the
+  scene isn't foreground-active, so hours of background/locked playback do no needless UI work
+- Resuming after a stream failure (or after pausing while a station was still loading) no longer
+  re-logs the station to recents and re-reports the play to Radio-Browser
+- **Ad-break ambient fallback**: during a detected ad break the Now Playing screen offers to swap
+  to a calm ambient station. The offer's station lookup no longer hijacks playback when it loses a
+  race with the user — if the ad break ends, playback is stopped, or another station starts while
+  the directory search is in flight, the result is discarded instead of switching stations — and
+  the lookup now fans its directory queries out concurrently (the sequential worst case was six
+  network round-trips, each walking three mirrors with backoff, while the listener waits through an
+  ad) with the first hit in priority order still winning
 - Ad-break cues with a present-but-empty artist field (`title="Commercial Break",artist=`) are
   suppressed again instead of showing the marker as a track title
-- The ambient-fallback station lookup fans out its directory queries concurrently (the
-  sequential worst case was six network round-trips, each walking three mirrors with backoff,
-  while the listener waits through an ad); the first hit in priority order still wins
-- `ArtworkLoader` renders its palette-sampling bitmap inside the pixel buffer's guaranteed
-  pointer lifetime instead of through a dangling inout pointer
 
 ## [0.2.0] — in progress (first TestFlight beta)
 

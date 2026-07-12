@@ -1,3 +1,4 @@
+import OrderedCollections
 import SwiftUI
 import UIKit
 
@@ -9,6 +10,10 @@ import UIKit
 /// resolution-independent ambient backdrops.
 public struct LoadedArtwork: Sendable {
     public let image: UIImage
+    /// The decoded bitmap's pixel size. Decoding is capped at the loader's
+    /// 840 px ceiling, so for oversized sources this is the downsampled size —
+    /// every consumer decision (upscale caps, blur-wash gates) resolves well
+    /// below the ceiling, so the distinction never shows.
     public let pixelSize: CGSize
     /// Row-major 3×3 grid of box-filtered colors, top-left first — shaped to
     /// feed a `MeshGradient` directly. Empty if sampling failed.
@@ -27,16 +32,34 @@ public struct LoadedArtwork: Sendable {
 }
 
 public enum ArtworkLoader {
-    /// Loads through the shared `URLCache`, so backdrop and hero requests for
-    /// the same station coalesce into a single network fetch.
+    /// Decode ceiling in pixels. The largest surface this pipeline feeds is
+    /// the 280 pt Now Playing hero — 840 px on a 3× display; the ambient
+    /// backdrop consumes the same bitmap through a heavy blur, so it needs no
+    /// more resolution either. Decoding through ImageIO with this cap keeps
+    /// an oversized favicon from pinning a multi-megabyte bitmap.
+    /// `nonisolated`: read from the nonisolated decode pipeline, and the
+    /// package's main-actor default would otherwise isolate it.
+    private nonisolated static let maxDecodePixelSize: CGFloat = 840
+
+    /// Loads and decodes artwork, coalescing concurrent and repeated requests
+    /// for the same URL. The Now Playing surface asks for the same artwork
+    /// from several views at once (backdrop, hero, tint) — the store hands
+    /// them one shared decode + palette pass instead of three.
     public nonisolated static func load(_ url: URL?) async -> LoadedArtwork? {
         guard let url else { return nil }
+        return await ArtworkStore.shared.artwork(for: url)
+    }
+
+    /// The uncached fetch/decode pipeline: loads through the shared
+    /// `URLCache`, downsample-decodes to the display ceiling, and box-filters
+    /// a 3×3 palette — all off the main actor.
+    fileprivate nonisolated static func fetchAndDecode(_ url: URL) async -> LoadedArtwork? {
         var request = URLRequest(url: url)
         request.cachePolicy = .returnCacheDataElseLoad
 
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse).map({ (200 ..< 300).contains($0.statusCode) }) ?? true,
-              let image = UIImage(data: data),
+              let image = ImageDownsampler.decode(data, maxPixelSize: maxDecodePixelSize),
               let cgImage = image.cgImage
         else { return nil }
 
@@ -47,6 +70,71 @@ public enum ArtworkLoader {
             paletteGrid: samples.map(ambientColor),
             accentColor: accentColor(from: samples)
         )
+    }
+
+    /// Deduplicates artwork work per URL: in-flight and completed loads share
+    /// one map entry, so a second caller awaits the first caller's task
+    /// instead of re-fetching and re-decoding. Bounded FIFO — in practice only
+    /// the current and previous track's art are ever live at once.
+    private actor ArtworkStore {
+        static let shared = ArtworkStore()
+
+        private var entries: OrderedDictionary<URL, Task<LoadedArtwork?, Never>> = [:]
+        private let capacity = 6
+
+        /// Purges the store when the system reports memory pressure, so the
+        /// worst case (six hero-sized bitmaps, ~17 MB) is always reclaimable
+        /// on constrained devices. A dispatch source rather than
+        /// `didReceiveMemoryWarning`: no UIKit plumbing, and it also fires
+        /// for pressure while backgrounded. Installed lazily on first use so
+        /// the actor's init stays trivial.
+        private var memoryPressureSource: DispatchSourceMemoryPressure?
+
+        func artwork(for url: URL) async -> LoadedArtwork? {
+            installMemoryPressureSourceIfNeeded()
+
+            if let existing = entries[url] {
+                return await existing.value
+            }
+
+            let task = Task { await ArtworkLoader.fetchAndDecode(url) }
+            entries[url] = task
+            if entries.count > capacity {
+                entries.remove(at: 0)
+            }
+
+            let artwork = await task.value
+            if artwork == nil {
+                // A transient failure must not pin a miss until eviction.
+                entries.removeValue(forKey: url)
+            }
+            return artwork
+        }
+
+        private func installMemoryPressureSourceIfNeeded() {
+            guard memoryPressureSource == nil else { return }
+
+            let source = DispatchSource.makeMemoryPressureSource(
+                eventMask: [.warning, .critical],
+                queue: .global(qos: .utility)
+            )
+            // Explicitly @Sendable: the handler leaves the actor and only
+            // captures a weak actor reference, which is safe to send.
+            let handler: @Sendable () -> Void = { [weak self] in
+                guard let self else { return }
+                Task { await self.purge() }
+            }
+            source.setEventHandler(handler: handler)
+            source.activate()
+            memoryPressureSource = source
+        }
+
+        /// Drops everything, including in-flight tasks — callers already
+        /// awaiting a task hold their own reference, so their loads still
+        /// complete; only the cached results are released.
+        private func purge() {
+            entries.removeAll()
+        }
     }
 
     private struct HSBSample {
@@ -60,10 +148,11 @@ public enum ArtworkLoader {
     private nonisolated static func hsbSamples(from cgImage: CGImage) -> [HSBSample] {
         let side = 3
         var pixels = [UInt8](repeating: 0, count: side * side * 4)
-        // The context writes into the array's storage during draw(), so the
-        // whole render must happen inside withUnsafeMutableBytes — an inout
-        // pointer (`&pixels`) is only valid for the initializer call itself.
-        let rendered = pixels.withUnsafeMutableBytes { buffer in
+        // The buffer is passed via `withUnsafeMutableBytes` (not `&pixels`):
+        // an inout-to-pointer conversion is only valid for the duration of
+        // the initializer call, but the context writes through the pointer
+        // again later, in `draw`.
+        let rendered = pixels.withUnsafeMutableBytes { buffer -> Bool in
             guard let space = CGColorSpace(name: CGColorSpace.sRGB),
                   let context = CGContext(
                       data: buffer.baseAddress,
@@ -82,8 +171,9 @@ public enum ArtworkLoader {
         }
         guard rendered else { return [] }
 
-        // CoreGraphics rows run bottom-up; reverse so the grid reads top-first.
-        return (0 ..< side).reversed().flatMap { row in
+        // A bitmap context's first scanline in memory is the drawn image's TOP
+        // row, so reading rows in buffer order already yields top-left first.
+        return (0 ..< side).flatMap { row in
             (0 ..< side).map { column in
                 let offset = (row * side + column) * 4
                 var hue: CGFloat = 0

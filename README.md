@@ -1,17 +1,18 @@
 # ShoutKit
 
-ShoutKit is a native iOS 26+ SwiftUI internet-radio client. It ships with real, keyless station
-discovery out of the box via [Radio-Browser](https://www.radio-browser.info) — a free, open-source
-community radio directory — plus an Apple Music-style persistent player: a Liquid Glass mini-player
-docked above the tab bar, a full-screen Now Playing surface with live ICY track metadata,
-lock-screen/Control Center controls, favorites and recents backed by SwiftData, and Siri/Shortcuts
-support ("Play KEXP on ShoutKit").
+ShoutKit is a native SwiftUI internet-radio client for iOS and iPadOS 26+. It ships with real,
+keyless station discovery out of the box via [Radio-Browser](https://www.radio-browser.info) — a
+free, open-source community radio directory — plus an Apple Music-style persistent player: a Liquid
+Glass mini-player docked above the tab bar, a full-screen Now Playing surface with live ICY track
+metadata, lock-screen/Control Center controls, favorites and recents backed by SwiftData, and
+Siri/Shortcuts support ("Play KEXP on ShoutKit"). On iPad the tab bar becomes a sidebar and
+browsing surfaces flow into adaptive multi-column layouts, including Split View and Stage Manager.
 
 ## Requirements
 
 - Xcode 26 with the iOS 26 SDK
 - Swift 6 strict concurrency
-- iOS 26.0+ deployment target
+- iOS / iPadOS 26.0+ deployment target
 
 If your active developer directory points at Command Line Tools, build with:
 
@@ -98,6 +99,11 @@ tracking. The complete list of network traffic the app produces:
 - **Stream and artwork fetches** directly from the stations you choose to play.
 
 Favorites and recents live in a local SwiftData store on your device.
+
+## Roadmap
+
+Release plans live in `docs/releases/*.md`; the sprint-by-sprint sequencing across releases
+is in [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Testing
 

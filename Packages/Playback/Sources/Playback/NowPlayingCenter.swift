@@ -1,4 +1,5 @@
 import Foundation
+import ImageIODownsample
 import MediaPlayer
 import os
 import RadioDirectory
@@ -150,8 +151,19 @@ public final class NowPlayingCenter: NowPlayingPresenting {
         artworkTask?.cancel()
 
         artworkTask = Task { [weak self] in
-            guard let (data, _) = try? await URLSession.shared.data(from: url),
-                  let image = UIImage(data: data) else {
+            guard let (data, _) = try? await URLSession.shared.data(from: url) else {
+                // Forget the failed URL so the next update retries it — a
+                // transient network error at play start must not leave the
+                // lock screen artless for the whole session.
+                self?.resetArtworkCache(ifStill: url)
+                return
+            }
+
+            // Decode off the main actor — with `ShouldCacheImmediately` the
+            // downsample decode is the expensive step, not `UIImage(data:)`.
+            guard let image = await Task.detached(priority: .utility, operation: {
+                NowPlayingCenter.decodedArtwork(from: data)
+            }).value else {
                 return
             }
 
@@ -167,6 +179,30 @@ public final class NowPlayingCenter: NowPlayingPresenting {
                 MPNowPlayingInfoCenter.default().nowPlayingInfo = info
             }
         }
+    }
+
+    /// Clears the artwork cache marker after a failed download, but only if a
+    /// newer load hasn't already claimed it for a different URL — and never
+    /// for a cancelled load, whose replacement owns the marker now.
+    private func resetArtworkCache(ifStill url: URL) {
+        guard Task.isCancelled == false, artworkCacheURL == url else { return }
+        artworkCacheURL = nil
+    }
+
+    /// Downsample-decodes lock-screen artwork via ImageIO instead of
+    /// `UIImage(data:)`. The decoded bitmap lives in `cachedArtwork` for the
+    /// whole listening session — usually backgrounded, exactly when the
+    /// system reclaims memory — so an oversized station favicon must not pin
+    /// a native-resolution decode. 768 px comfortably covers the lock-screen
+    /// tile; typical 600 px album art passes through untouched.
+    ///
+    /// Uses the shared leaf ImageIO downsampler module; Playback deliberately
+    /// doesn't depend on DesignSystem (see DECISIONS.md on `AlbumArtLookup`).
+    private nonisolated static func decodedArtwork(from data: Data) -> UIImage? {
+        guard let cgImage = ImageIODownsampler.decodeCGImage(data, maxPixelSize: 768) else {
+            return nil
+        }
+        return UIImage(cgImage: cgImage)
     }
 }
 

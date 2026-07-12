@@ -1,5 +1,341 @@
 # Decisions
 
+## 2026-07-11 (iPadOS support)
+
+The project has always *launched* on iPad — `TARGETED_DEVICE_FAMILY` was already `1,2`, the app's
+Info.plist declares all four iPad orientations, and `UIRequiresFullScreen` was never set, so Split
+View / Stage Manager resizing worked from day one — but every surface rendered as a stretched
+phone layout. Closing that gap is UI adaptation, not project surgery:
+
+- **`.tabViewStyle(.sidebarAdaptable)` on the root `TabView`, not a `NavigationSplitView`
+  rewrite.** On iPhone the style resolves to the same bottom tab bar as before; on iPad it yields
+  the Apple Music-style sidebar with the system's own toggle back to a top tab bar. A
+  `NavigationSplitView` would have duplicated the tab structure behind a size-class branch and
+  left `tabViewBottomAccessory` — the mini-player's home, and the reason the accessory must stay
+  structurally attached (see RootView's comment) — without a host.
+- **Station rows flow into an adaptive `LazyVGrid` (`ShoutKitLayout.stationColumns`, 288–640 pt
+  columns) rather than branching on `horizontalSizeClass`.** `GridItem(.adaptive(...))` derives
+  the column count from actual available width, so one code path covers iPhone (one column), iPad
+  Split View (one–two), and full-screen iPad (two–three) — including Stage Manager's arbitrary
+  window widths, which a two-case size-class branch mishandles by design. The 288 pt floor is the
+  narrowest supported pane (a 320 pt Split View / Slide Over window minus the screens' 16 pt
+  horizontal padding): an adaptive grid honors its minimum even when the container is narrower,
+  overflowing instead of shrinking, so a larger minimum would clip rows there (Copilot caught
+  this on the PR — the first draft used 330 pt). The 640 pt ceiling stops a lone row on a wide
+  window from parking the play affordance arm's-length from the station name. The columns are a
+  shared DesignSystem token so Listen Now, Browse, and Search can't drift apart.
+- **Deliberately left alone**: `LibraryView` stays a `List` — its edit mode drives drag-to-reorder
+  and swipe-to-delete (the reorderable-favorites feature), which `LazyVGrid` has no counterpart for,
+  and inset-grouped lists are already at home at iPad widths. The Now Playing surface stays a
+  sheet: `presentationDetents([.large])` is a no-op on iPad, where the system presents it as a
+  centered page sheet, which the artwork-centered layout fits comfortably. The widget target
+  already declared both device families, so widgets needed nothing.
+
+## 2026-07-11 (background battery hygiene, follow-on)
+
+A "runs hot while streaming" report against the app whose dominant mode is hours of *background*
+audio (screen locked). A second audit — this time of the streaming/audio layer, not just resource
+retention — plus the one UI change it surfaced:
+
+- **The audio/network layer had no additional heat source.** `AVPlayerAudioOutput` uses the
+  correct `.playback`/`.default` session, its `automaticallyWaitsToMinimizeStalling` is already
+  bounded by the 90s stall ceiling, ICY metadata is push-delivered (not polled), and status is
+  KVO/event-driven. `PlaybackController`'s timers are all one-shot, reconnect is bounded (3
+  attempts, 2/4/8s backoff) with a budget guard, and `NowPlayingCenter` updates fire only on
+  discrete transitions. Nothing here was changed — this bullet records that the layer was audited
+  and cleared, so a future "battery" report doesn't re-tread it.
+- **`PlayingIndicator` now rests when the scene isn't foreground-active.** The 3-bar equalizer is
+  the app's only continuous UI render loop — a `TimelineView(.animation(minimumInterval: 0.12))`
+  recomputing `sin()` bar heights ~8×/second. It already self-paused on `!isAnimating` and Reduce
+  Motion but not on `scenePhase`, so it kept doing ~8 fps re-layout during backgrounded/locked
+  playback where nothing is visible. Folding `scenePhase != .active` into a single `isPaused`
+  gate (shared by the `TimelineView` `paused:` argument and the `barHeight` rest guard) drops that
+  to zero off-screen work; SwiftUI re-evaluates `body` on the environment change, so the bars
+  settle to their resting height instead of freezing mid-swing. Foreground behavior is unchanged.
+  This is the first `scenePhase` use in the app — explicit hygiene in the same spirit as the
+  2026-07-10 paused-player release, rather than trusting the OS to suspend the timeline implicitly.
+
+## 2026-07-10 (CI/CD hardening ahead of a production release)
+
+SwiftLint `--strict` was the only automated code-quality gate; the rest of CI just built and ran
+tests. Rounding this out before a real release, using the GHE-hosted tooling that's already free
+for this repo rather than reaching for a paid third-party service:
+
+- **CodeQL (Swift): no custom workflow needed.** A first attempt added a `codeql.yml` with
+  `build-mode: manual` mirroring the `build` job's `xcodebuild` invocation. Its first real run
+  failed at upload: *"CodeQL analyses from advanced configurations cannot be processed when the
+  default setup is enabled"* — this repo already has GitHub's zero-config **default setup** for
+  code scanning turned on at the repo/org level, and GitHub refuses to run both an advanced
+  (checked-in-workflow) configuration and default setup at once. Since default setup already covers
+  Swift, the custom workflow was removed rather than filing a settings change to disable default
+  setup for a marginal customization win.
+- **Dependency Review action, not a standalone license-scanner dependency**: it reads the same
+  policy already written down in `THIRD_PARTY_LICENSES.md` (GPL/LGPL/AGPL rejected) and runs only
+  on the PR diff, so it costs nothing on an unshared runner and doesn't need a config file of its
+  own to drift out of sync with the license table.
+- **Dependabot `swift` ecosystem, scoped to the three packages with a remote dependency**
+  (RadioDirectory, DesignSystem, LiveActivity): the rest of `Packages/*` resolve exclusively
+  through local `.package(path:)` references, so a Dependabot entry for them would just poll for
+  nothing every week.
+- **`swiftformat --lint` via Homebrew, not a pinned portable binary like SwiftLint**: SwiftLint's
+  release ships a portable zip; SwiftFormat's doesn't, and this repo has no existing local pin for
+  it (`CONTRIBUTING.md` only pins SwiftLint). Homebrew is preinstalled on GitHub-hosted macOS
+  runners and is nicklockwood/SwiftFormat's own documented install path — adding a version pin for
+  a tool nobody pins locally would be gate-keeping without a matching local workflow to keep it
+  honest.
+- **`swiftformat --lint` is `continue-on-error: true` for now, unlike SwiftLint.** First CI run
+  found 58/90 files don't conform (mostly `indent` and `wrapMultilineStatementBraces`) — the tree
+  has never had it enforced, unlike SwiftLint (which was already clean when `--strict` landed, per
+  the 2026-07-03 entry below). Fixing that needs a byte-exact `swiftformat` run from an actual
+  toolchain to avoid hand-introducing subtly-wrong formatting across 58 files; this environment has
+  neither Xcode nor a Linux Swift toolchain available (`download.swift.org` is blocked by egress
+  policy). CI surfaces the drift without blocking merges until someone with a real toolchain runs
+  `swiftformat ShoutKitApp Packages` as a one-time reformat commit — drop `continue-on-error` once
+  that lands.
+- **Release automation stops at drafting a GitHub Release from `CHANGELOG.md`.** A tag push
+  extracts the matching `## [X.Y.Z]` section and fails loudly if it's missing (i.e., someone
+  tagged before cutting the changelog over from `[Unreleased]`). It deliberately does **not**
+  build, sign, or upload to TestFlight — this repo has no Apple signing credentials configured, and
+  faking that pipeline with `CODE_SIGNING_ALLOWED=NO` (as the CI `build` job does) would produce an
+  archive nobody can install. Wiring up notarized/signed builds is a follow-up once distribution
+  certificates exist as repository secrets.
+- **Branch protection, required status checks, and secret-scanning push protection are explicitly
+  out of scope for this change.** They're repository/organization settings, not files this repo's
+  git history can carry, and the GitHub tooling available to this session has no branch-protection
+  or repository-settings endpoint exposed — only content/PR/issue operations. Recommended for an
+  org admin to apply directly: require the `build`, `host-tests`, and `lint` checks (plus CodeQL
+  once it has a green run) before merging to `main`, and enable secret-scanning push protection
+  under repo Settings → Security.
+
+## 2026-07-10 (Live Activity artwork via App Group hand-off)
+
+The lock screen / Dynamic Island Live Activity shipped text-only (2026-07-03 entry below) on the
+reasoning that Live Activity views can't fetch network images. That's true, but it isn't the whole
+story: a view *can* render a local file, so the app can produce the bitmap and hand it over. The
+Now Playing screen, mini-player, and system (`MPNowPlayingInfoCenter` / `MediaSession`) surface all
+show artwork; the Live Activity was the one place that didn't. This reverses the scope-out.
+
+- **The bytes travel through a shared App Group container, not the content state.** ActivityKit
+  caps `ContentState` at ~4 KB, nowhere near a bitmap, and the state is serialized on every update.
+  So `NowPlayingActivityCore.LiveActivityArtworkStore` owns a directory in
+  `group.com.cascadiacollections.shoutkit` (entitled on both the app and the widget target); the
+  app writes a downsampled PNG there and the content state carries only a short `artworkToken`. The
+  widget resolves the token back to a file URL and renders it with `UIImage(contentsOfFile:)`.
+- **Token = FNV-1a of the source URL, not `Hashable`.** `Hasher` is seeded per launch, so its
+  output can't be a stable key shared across the app and widget processes. FNV-1a over the URL
+  string is deterministic and filesystem-safe, and the single-item cache makes collision risk moot.
+- **The coordinator observes `albumArtURL` too.** It already followed `state` and `nowPlaying`; a
+  third `Observations` stream on the controller's resolved album art lets the widget's artwork catch
+  up asynchronously exactly like the lock screen does — effective URL is album art when present,
+  else the station's own art. The download/downsample/stage all run off the main actor (mirroring
+  `NowPlayingCenter`'s ImageIO downsampler); only the tiny state mutation and re-push are on-main.
+- **`.noFileProtection` on the staged file.** The Live Activity renders on the lock screen while the
+  device is locked, and the default protection class would make the file unreadable exactly then.
+  Cover art isn't sensitive. The store keeps only the current track's file (`purge(except:)`), so
+  the container never grows.
+- **Simulator/CI-safe.** App Group entitlements work on the simulator without a provisioning profile,
+  so the `CODE_SIGNING_ALLOWED=NO` iOS-simulator build in CI is unaffected. On-device rendering still
+  needs a real provisioning profile with the group enabled (device-only verification, as before).
+
+## 2026-07-10 (bounded auto-reconnect for dropped streams)
+
+Live radio drops for transient reasons — a tunnel, a cell handoff, a flaky AP — far more often
+than permanent ones, but the two paths that ended playback (the 90 s stall ceiling and a
+mid-play `AVPlayerItem` failure) both gave up immediately: park as `.paused` / surface `.failed`
+and wait for a user tap. `PlaybackController` now attempts a bounded, backed-off reconnect
+before either give-up. Prompted by an evaluation of FRadioPlayer (MIT), whose `NWPathMonitor` +
+`StallRecovery` ladder was the one capability our stack lacked; the rest of FRadioPlayer would
+have been a regression against our multi-dialect ICY parser and strict-concurrency model, so we
+ported the idea, not the code.
+
+- **Reconnect is orchestration, so it lives in `PlaybackController`, not `AVPlayerAudioOutput`.**
+  A "reconnect" for live radio is just a fresh `startPlayback` — there's no position to resume —
+  so the controller (which already owns restart) drives it and the output layer stays a dumb,
+  fakeable AVPlayer wrapper. Both the attempt budget (`maxReconnectAttempts`, default 3) and the
+  base delay (`reconnectBaseDelay`, default 2 s → 2/4/8 s exponential backoff) are injected like
+  the existing hygiene timeouts, so tests use a small budget and millisecond delays; there is no
+  user-facing setting.
+- **The budget resets on a successful `.playing` and on a user `play()`, never inside the
+  reconnect path.** `startPlayback` gained an `isReconnect` flag that guards *both* the
+  attempt-counter reset and the `nowPlaying`/`albumArtURL` clear: resetting the counter on a
+  retry would refill the budget every attempt and loop forever, and clearing metadata would drop
+  the last-known track off the lock screen mid-reconnect. A reconnect holds `.buffering` so rows
+  keep spinning and ICY repopulates the track on success.
+- **A user pause/stop always beats a pending reconnect.** `pause()` and `stop()` cancel the
+  reconnect timer up front — otherwise a stream the user just stopped would resurrect itself when
+  the scheduled retry fired. Covered by `pauseCancelsPendingReconnect`.
+- **Reachability-gated reconnect (fire immediately when the network returns, instead of waiting
+  out the backoff) is deliberately deferred.** It's the other half of FRadioPlayer's edge and
+  wants a small `NWPathMonitor` wrapper injected behind a closure so the fake output stays
+  network-free; the bounded backoff is useful on its own and ships first.
+- **`PlaybackController`'s internal wiring moved to `PlaybackController+Internals.swift`.** The
+  reconnect code pushed the file past the 400-line `file_length` limit (CI runs
+  `swiftlint --strict`, so warnings fail). Rather than a lint-disable, the private extension
+  (stream start, status handling, album art, resource-hygiene timers) split into a sibling file,
+  matching the existing `PlaybackControllerPlatform.swift` precedent. The cost: the controller's
+  stored properties widened from `private` to module-`internal` (via `internal(set)` for the
+  public-read state); no public API changed.
+
+## 2026-07-10 (swift-async-algorithms adopted, revisiting the audit's rejection)
+
+The FOSS audit below rejected swift-async-algorithms because it scored only the search
+debounce, where the hand-rolled `Task.sleep` version genuinely holds its own. Re-scored
+across the whole codebase, the package pays for itself — same ground rules as the audit
+(Apple-maintained, Apache-2.0 with Runtime Library Exception, pinned semver `from: "1.1.5"`),
+recorded in `THIRD_PARTY_LICENSES.md` and the in-app Licenses screen:
+
+- **`removeDuplicates()` in NowPlayingActivityKit**: both observation loops in
+  `NowPlayingActivityCoordinator` carried a mutable `previous` variable and a
+  `where state != previous` clause — hand-rolled duplicate suppression, exactly the operator's
+  job. The one behavioral wrinkle of the old code (a leading `nil` metadata value was skipped
+  because `nil != nil` is false, while `removeDuplicates()` always emits the first element) is
+  a no-op in practice: `nowPlayingChanged(nil)` clears already-nil state and returns before
+  touching ActivityKit.
+- **`debounce(for:)` in SearchFeature**: the view model now pushes trimmed queries into an
+  `AsyncStream` consumed through `.debounce(for: .milliseconds(300))`, replacing the
+  cancel-and-resleep task dance. Semantics preserved deliberately: clearing the query still
+  resets to `.idle` synchronously in `didSet` (the empty value also flows through the stream,
+  superseding any keystroke waiting in the debounce window); the spinner still appears only
+  when the debounce fires, never per keystroke; and each keystroke still cancels an in-flight
+  search immediately (in `didSet`, not just when the next debounced value lands) so a slow
+  response for a stale query can't flash results before the new search starts.
+- **Not applied to `SleepTimer`/`OneShotTimer`**: those are single one-shot delays, not
+  streams of values — `Task.sleep` is the right primitive and there is nothing for an
+  `AsyncSequence` operator to buy.
+
+## 2026-07-10 (first third-party dependencies, after a FOSS audit)
+
+The zero-dependency posture (see 2026-07-05) was revisited deliberately: audit every area a
+common FOSS package could serve, adopt only where a dependency clearly beats the hand-rolled
+code, and keep the count minimal. Ground rules, now written down in `THIRD_PARTY_LICENSES.md`:
+GPL-3.0-compatible licenses only (MIT / Apache-2.0 / BSD — Apache-2.0 is one-way compatible
+with GPL-3.0, and fine *inside* the MIT packages since the Apache code keeps its own license),
+pinned stable semver (no branch refs), license recorded in that file and shipped in the in-app
+Licenses screen alongside GPL/MIT.
+
+**Adopted** (both Apple-maintained, Apache-2.0 with Runtime Library Exception, effectively
+standard-library extensions — the lowest-risk dependency class that exists):
+
+- **swift-algorithms 1.2.1** in RadioDirectory: `uniqued(on:)` replaced three private
+  `deduplicated(_:)` helpers duplicated across `PreferredRadioDirectory` and
+  `BundledRadioDirectory` (five call sites). Same semantics — first occurrence wins, keyed on
+  lowercased name, order preserved — with the helper duplication gone.
+- **swift-collections 1.6.0** in DesignSystem: `OrderedDictionary` replaced the artwork
+  store's dictionary + parallel eviction-order array, deleting the two-collection invariant
+  (the failure-removal path had to keep both in sync by hand). FIFO semantics unchanged.
+
+**Evaluated and rejected** — the codebase's Apple-framework-first choices already cover these,
+and each would add surface without deleting meaningful code:
+
+- **Nuke** (MIT): the artwork pipeline is deliberately bespoke — actor-coalesced loads with
+  3×3 palette extraction for the mesh backdrop, ImageIO downsample ceilings sized per surface,
+  NSCache + URLCache tiers, memory-pressure purge (all documented in the two entries below).
+  Nuke covers only the fetch/cache/downsample parts that already work, and none of the palette
+  work; swapping it in would re-litigate the memory-bounding decisions for zero user-visible
+  gain.
+- **GRDB** (MIT): persistence is SwiftData behind a thin `LibraryStore` (a favorites set plus
+  25 recents) with host tests. GRDB is the right call when you need SQL, migrations, or
+  observation at scale — none of which this data shape has. A full data-layer migration to
+  dodge a framework Apple ships is the opposite of minimal.
+- **Defaults** (MIT): `SettingsStore` is ~38 lines, two keys, already type-safe and
+  `@Observable`. A dependency cannot pay for itself against that.
+- **swift-async-algorithms** (Apache-2.0): the only candidate site is Search's 300 ms
+  debounce, which is eight idiomatic lines of `Task.sleep` + cancellation driven by an
+  `@Observable` `didSet`; restructuring the view model around an `AsyncSequence` of queries
+  would be more code, not less.
+- **Alamofire** (MIT): URLSession already handles the entire network surface (Radio-Browser
+  mirror walking, iTunes lookup, artwork); nothing here needs interceptors or multipart.
+- **SwiftLint / SwiftFormat** (MIT): already adopted — configs at the root, SwiftLint pinned
+  at 0.65.0 and `--strict` in CI. Dev-only tools, so they're listed in the dev section of
+  `THIRD_PARTY_LICENSES.md`, not the runtime table.
+
+Follow-up for a mac with Xcode: commit the workspace `Package.resolved`
+(`ShoutKit.xcworkspace/xcshareddata/swiftpm/`) so the exact resolved versions are locked in
+git, not just floored by `from:`.
+
+## 2026-07-10 (runtime memory on older devices)
+
+Companion to the battery audit below, same philosophy: bound resource *retention*, and lean on
+platform behavior (ImageIO, NSCache, dispatch memory-pressure sources) instead of hand-rolled
+bookkeeping. Bitmaps are the only meaningful runtime allocation in this app — directory models
+are tiny value structs and audio buffers are ~16 KB/s — so every change targets the artwork
+pipeline.
+
+- **All artwork decodes are downsampled via ImageIO**
+  (`CGImageSourceCreateThumbnailAtIndex` + `kCGImageSourceThumbnailMaxPixelSize`, with
+  `kCGImageSourceShouldCacheImmediately` so the decode happens off-main at load time, not
+  lazily at first render). `UIImage(data:)` decodes at the server's native resolution — a
+  2000×2000 favicon is ~16 MB of bitmap behind a 56 pt cell. Decoded size now scales with the
+  surface: 840 px ceiling for the Now Playing pipeline (280 pt hero at 3×; the ambient
+  backdrop consumes the same bitmap through a 60 pt blur, so it needs no more), cell size ×
+  `displayScale` for list thumbnails, 768 px for lock-screen art. `LoadedArtwork.pixelSize`
+  consequently reports the *decoded* size; every consumer decision (the 2.5× upscale cap, the
+  ≥512 px blur-wash gate) resolves below the ceiling, so behavior is unchanged except for
+  extreme-aspect sources (e.g. 2000×600 now downsamples to 840×252 and gets the palette mesh
+  instead of the blur wash — the designed fallback for low-detail art).
+- **`AsyncImage` replaced with `ArtworkThumbnailLoader`** (station rows, cards, mini-player,
+  Browse spotlight). `AsyncImage` re-decodes at native size on every cell reuse and caches
+  nothing but URLCache bytes. The loader still fetches through the shared `URLCache`, but
+  keeps decoded thumbs in an `NSCache` (16 MB cost ceiling, costs = bitmap bytes) — chosen
+  precisely because NSCache sizes itself to the device and auto-evicts under system memory
+  pressure, which is the whole point on older hardware.
+- **`ArtworkLoader`'s coalescing store purges on memory pressure** via
+  `DispatchSource.makeMemoryPressureSource(eventMask: [.warning, .critical])`. The FIFO-of-6
+  keeps steady-state behavior; the source guarantees the worst case (six hero-sized bitmaps,
+  ~17 MB) is reclaimable instead of resident forever. A dispatch source rather than
+  `UIApplication.didReceiveMemoryWarningNotification`: no UIKit plumbing into an actor, and
+  it also fires for pressure while backgrounded — where a music app spends most of its life.
+- **Lock-screen artwork (`NowPlayingCenter`) gets a private copy of the downsampler** rather
+  than a new dependency: Playback deliberately doesn't import DesignSystem (see the
+  `AlbumArtLookup` decision below). The decoded artwork is retained for the whole listening
+  session, usually backgrounded — exactly when jetsam hunts — so it's the single most
+  important decode to bound. The iOS 27 `MediaSession` path is untouched: it hands raw bytes
+  to `ArtworkRepresentation` and the system manages decoding.
+- **`URLCache.shared` explicitly sized: 2 MB memory / 64 MB disk**, set in
+  `AppDependencies.bootstrap()` before the first request. On a RAM-constrained device byte
+  caching belongs on disk (re-decoding from disk cache is cheap next to the network); the
+  larger disk tier also means artwork survives relaunch.
+- **Not done, deliberately**: capping `AVPlayerItem.preferredForwardBufferDuration`. A
+  128 kbps live stream buffers ~1 MB/min, so the savings are negligible while the stall risk
+  on flaky radio links is real; the 90 s stall ceiling (below) already bounds pathological
+  buffering.
+
+## 2026-07-10 (background battery hygiene)
+
+Prompted by a real-world battery report: ShoutKit at 14% of a day's battery with 2h42m
+background time. The audit found no polling or periodic work anywhere (metadata is push-based,
+now-playing updates are event-driven), so the fixes target resource *retention*, not activity.
+
+- **Paused playback releases the player and audio session after 10 minutes**
+  (`PlaybackController.schedulePausedRelease`). `pause()` used to keep the AVPlayerItem, its
+  observers, and the active audio session alive indefinitely — pause-and-pocket held the
+  `audio` background assertion for hours. Live radio has no position to preserve, so teardown
+  is invisible: `state`/`nowPlaying` and the lock-screen surface are left untouched, and the
+  play button routes through `resume()`'s existing `outputStarted == false` restart path.
+  10 minutes matches audio-app norms; it is an init parameter, not a user setting — this is
+  invisible hygiene, not behavior a listener should have to configure.
+- **Stalled buffering is bounded at 90 seconds** (`scheduleStallCeiling`). AVPlayer's
+  `automaticallyWaitsToMinimizeStalling` retries a stalled live stream forever; backgrounded
+  with signal loss that churns the network radio with no ceiling. On expiry the stream is torn
+  down and parked as **`.paused`, not `.failed`** — a stall isn't a user error, and paused
+  keeps the lock screen accurate with a working play button. The controller pushes that final
+  now-playing update itself, because teardown invalidates the player's KVO before pausing.
+- **Internal restarts don't refire `onStationPlayed`**: `play(_:)` split into the public
+  intent (fires the hook) and `startPlayback(of:)` (does the work). Resume-after-release and
+  retry-after-failure are not new listening choices, so they no longer double-log recents or
+  double-report the play to Radio-Browser.
+- **`AlbumArtLookup` now caches definitive misses too** (supersedes the 2026-07-09
+  "negative results are not cached" bullet, and resolves its recorded iTunes-budget risk).
+  The distinction that matters is *definitive* vs *transient*: an HTTP 200 whose decoded JSON
+  has no artwork is a catalog answer and is cached; transport errors, non-200s, and malformed
+  payloads still aren't, so a network blip can't permanently suppress art. Cache capped at 256
+  entries with reset-on-overflow — LRU bookkeeping isn't worth it for ~100-byte values.
+- **`ArtworkLoader` coalesces per-URL work through a small actor store**: backdrop, hero, and
+  tint views all request the same artwork on every track change; URLCache already coalesced
+  the network fetch but each caller re-decoded the bitmap and re-ran the palette box filter.
+  In-flight and completed loads now share one task per URL (FIFO-bounded at 6; nil results are
+  evicted immediately so failures stay retryable). Public API unchanged.
+
 ## 2026-07-09 (Album art discovery)
 
 - **Album art source**: iTunes Search API (`itunes.apple.com/search?entity=song&limit=1`).

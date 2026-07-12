@@ -1,6 +1,7 @@
 #if canImport(NowPlaying)
 
 import Foundation
+import ImageIODownsample
 import NowPlaying
 import Observation
 import RadioDirectory
@@ -84,8 +85,21 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
         guard let url else { return nil }
         return Artwork(id: url.absoluteString) { @Sendable _ in
             let (data, _) = try await URLSession.shared.data(from: url)
-            return try ArtworkRepresentation(data: data)
+            if let representation = try? ArtworkRepresentation(data: data) {
+                return representation
+            }
+            guard let normalizedData = Self.normalizedArtworkData(from: data) else {
+                throw URLError(.cannotDecodeContentData)
+            }
+            return try ArtworkRepresentation(data: normalizedData)
         }
+    }
+
+    /// Some remote album-art payloads decode fine in ImageIO but are rejected by
+    /// `ArtworkRepresentation(data:)`. Normalize through a decode + PNG re-encode
+    /// so lock-screen Now Playing can still present the image.
+    private nonisolated static func normalizedArtworkData(from data: Data) -> Data? {
+        ImageIODownsampler.encode(data, maxPixelSize: 1024, outputType: .png)
     }
 
     /// Command callbacks arrive on arbitrary executors; hop to the main actor

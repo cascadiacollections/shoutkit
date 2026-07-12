@@ -12,6 +12,7 @@ public struct NowPlayingView: View {
     @Environment(\.sleepTimer) private var sleepTimer
     @Environment(\.settingsStore) private var settings
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
 
     /// Control tint elected from the artwork palette so the transport
     /// controls sit in the same color world as the ambient backdrop.
@@ -33,6 +34,10 @@ public struct NowPlayingView: View {
         .tint(accent)
         .task(id: effectiveArtworkURL) {
             let loaded = await ArtworkLoader.load(effectiveArtworkURL)
+            // The store's await isn't cancellation-responsive, so a task
+            // cancelled by a URL change still resumes here — without this
+            // guard it would overwrite the new URL's accent with the old.
+            guard Task.isCancelled == false else { return }
             withAnimation(.easeInOut(duration: 0.6)) {
                 artworkAccent = loaded?.accentColor
             }
@@ -45,6 +50,15 @@ public struct NowPlayingView: View {
             playback: playback,
             station: playback?.currentStation
         )
+    }
+
+    /// The Apple Music link for the current track, gated on the same privacy
+    /// toggle as artwork so opting out of catalog lookups removes the "View in
+    /// Apple Music" affordance immediately — not just on the next track — even
+    /// though a link was already resolved for what's playing.
+    private var appleMusicURL: URL? {
+        guard settings?.isAlbumArtEnabled == true else { return nil }
+        return playback?.appleMusicURL
     }
 
     private var accent: Color {
@@ -61,6 +75,7 @@ public struct NowPlayingView: View {
                 isPlaying: isPlaying(playback)
             )
             .padding(.top, ShoutKitSpacing.medium)
+            .appleMusicContextMenu(url: appleMusicURL, openURL: openURL)
 
             VStack(spacing: ShoutKitSpacing.extraSmall) {
                 Text(station.name)
@@ -271,5 +286,26 @@ public struct NowPlayingView: View {
         guard let track = playback.nowPlaying, let title = track.title else { return nil }
         if let artist = track.artist { return "\(title) — \(artist)" }
         return title
+    }
+}
+
+private extension View {
+    /// Attaches a "View in Apple Music" context menu to the artwork when a link
+    /// was resolved for the current track. With no link the view is returned
+    /// untouched — an empty `contextMenu` still reacts to long-press, which
+    /// reads as a bug, so station-only artwork stays inert.
+    @ViewBuilder
+    func appleMusicContextMenu(url: URL?, openURL: OpenURLAction) -> some View {
+        if let url {
+            contextMenu {
+                Button {
+                    openURL(url)
+                } label: {
+                    Label("View in Apple Music", systemImage: "music.note")
+                }
+            }
+        } else {
+            self
+        }
     }
 }

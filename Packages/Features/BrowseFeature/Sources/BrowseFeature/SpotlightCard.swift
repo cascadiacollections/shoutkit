@@ -2,12 +2,20 @@ import DesignSystem
 import Playback
 import RadioDirectory
 import SwiftUI
+import UIKit
 
 /// A large editorial hero for the featured station.
 struct SpotlightCard: View {
+    /// Decode ceiling for the backdrop artwork. It renders full-bleed but at
+    /// 35% opacity under a gradient scrim — 900 px stays crisp even on iPad
+    /// widths while keeping an oversized favicon from decoding at native size.
+    private static let maxArtworkPixels: CGFloat = 900
+
     let station: Station
     let phase: StationPlaybackPhase
     let onPlay: () -> Void
+
+    @State private var artwork: UIImage?
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -49,14 +57,21 @@ struct SpotlightCard: View {
         .shadow(color: .black.opacity(0.15), radius: 16, y: 8)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Featured station, \(station.name), \(station.genre)")
+        .task(id: station.artworkURL) {
+            artwork = await ArtworkThumbnailLoader.thumbnail(
+                for: station.artworkURL,
+                maxPixelSize: Self.maxArtworkPixels
+            )
+        }
     }
 
     private var isPlaying: Bool { phase == .playing }
 
+    @ViewBuilder
     private var artworkOverlay: some View {
-        GeometryReader { proxy in
-            AsyncImage(url: station.artworkURL) { image in
-                image
+        if let artwork {
+            GeometryReader { proxy in
+                Image(uiImage: artwork)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: proxy.size.width, height: proxy.size.height)
@@ -66,8 +81,6 @@ struct SpotlightCard: View {
                         startPoint: .top,
                         endPoint: .bottom
                     ))
-            } placeholder: {
-                Color.clear
             }
         }
     }

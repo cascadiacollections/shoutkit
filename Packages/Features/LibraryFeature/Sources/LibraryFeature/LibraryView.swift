@@ -12,7 +12,7 @@ public struct LibraryView: View {
     @Environment(\.libraryStore) private var library
     @Environment(\.modelContext) private var modelContext
 
-    @Query(sort: \FavoriteStation.createdAt, order: .reverse)
+    @Query(sort: \FavoriteStation.sortIndex, order: .forward)
     private var favorites: [FavoriteStation]
 
     @Query(sort: \RecentStation.playedAt, order: .reverse)
@@ -32,6 +32,7 @@ public struct LibraryView: View {
                                 row(for: favorite.station)
                             }
                             .onDelete(perform: deleteFavorites)
+                            .onMove(perform: moveFavorites)
                         }
                     }
 
@@ -44,6 +45,13 @@ public struct LibraryView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+                .toolbar {
+                    if favorites.isEmpty == false {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            EditButton()
+                        }
+                    }
+                }
             }
         }
         .background(Color.shoutKitBackground)
@@ -70,9 +78,15 @@ public struct LibraryView: View {
     }
 
     private func deleteFavorites(at offsets: IndexSet) {
-        for index in offsets {
-            let favorite = favorites[index]
-            library?.removeFavorite(stationID: favorite.stationID)
+        // Resolve every offset before the first removal — deleting while
+        // indexing into the live query result would shift later offsets.
+        let stationIDs = offsets.map { favorites[$0].stationID }
+        for stationID in stationIDs {
+            library?.removeFavorite(stationID: stationID)
         }
+    }
+
+    private func moveFavorites(from source: IndexSet, to destination: Int) {
+        library?.moveFavorites(favorites, from: source, to: destination)
     }
 }

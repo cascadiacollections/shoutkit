@@ -15,8 +15,10 @@ let package = Package(
         .library(name: "NowPlayingActivityKit", targets: ["NowPlayingActivityKit"])
     ],
     dependencies: [
+        .package(path: "../ImageIODownsample"),
         .package(path: "../Playback"),
-        .package(path: "../RadioDirectory")
+        .package(path: "../RadioDirectory"),
+        .package(url: "https://github.com/apple/swift-async-algorithms.git", from: "1.1.5")
     ],
     targets: [
         .target(name: "NowPlayingActivityCore"),
@@ -24,8 +26,10 @@ let package = Package(
             name: "NowPlayingActivityKit",
             dependencies: [
                 "NowPlayingActivityCore",
+                .product(name: "ImageIODownsample", package: "ImageIODownsample"),
                 .product(name: "Playback", package: "Playback"),
-                .product(name: "RadioDirectory", package: "RadioDirectory")
+                .product(name: "RadioDirectory", package: "RadioDirectory"),
+                .product(name: "AsyncAlgorithms", package: "swift-async-algorithms")
             ]
         )
     ]

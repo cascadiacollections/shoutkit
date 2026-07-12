@@ -75,15 +75,17 @@ public struct ListenNowView: View {
         if recents.isEmpty == false {
             VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
                 SectionHeaderView(String(localized: "Recently Played", bundle: .module))
-                ForEach(recents.prefix(5)) { recent in
-                    let station = recent.station
-                    StationRow(
-                        station: station,
-                        phase: playback?.phase(for: station) ?? .idle,
-                        isFavorite: library?.isFavorite(station) ?? false,
-                        onTap: { playback?.toggle(station) },
-                        onToggleFavorite: library.map { store in { store.toggleFavorite(station) } }
-                    )
+                LazyVGrid(columns: ShoutKitLayout.stationColumns, spacing: ShoutKitSpacing.small) {
+                    ForEach(recents.prefix(5)) { recent in
+                        let station = recent.station
+                        StationRow(
+                            station: station,
+                            phase: playback?.phase(for: station) ?? .idle,
+                            isFavorite: library?.isFavorite(station) ?? false,
+                            onTap: { playback?.toggle(station) },
+                            onToggleFavorite: library.map { store in { store.toggleFavorite(station) } }
+                        )
+                    }
                 }
             }
         }

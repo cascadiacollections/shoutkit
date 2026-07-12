@@ -1,0 +1,6 @@
+# Fallback owner for anything not matched below.
+* @KevinTCoughlin
+
+# CI, security scanning, and dependency policy changes should always get a
+# maintainer's eyes before merging.
+/.github/ @KevinTCoughlin
