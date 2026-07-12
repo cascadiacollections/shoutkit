@@ -96,10 +96,13 @@ public final class AVPlayerAudioOutput: NSObject, AudioOutput {
 
         statusObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
             guard item.status == .failed else { return }
-            let message = item.error?.localizedDescription ?? "Stream failed to load."
             Task { @MainActor [weak self] in
                 guard let self, self.generation == generation else { return }
-                self.onStatusChange?(.failed(.streamFailed(message)))
+                let failure = PlaybackFailure.classify(
+                    playerError: self.player?.error,
+                    itemError: item.error
+                )
+                self.onStatusChange?(.failed(.streamFailed(failure.message)))
             }
         }
 
