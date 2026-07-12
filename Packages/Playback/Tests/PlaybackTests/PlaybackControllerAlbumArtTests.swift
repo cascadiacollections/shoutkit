@@ -176,12 +176,12 @@ struct PlaybackControllerAlbumArtTests {
         // `observeChanges` re-enters on MainActor, so these callbacks append in
         // the same serialized order the properties publish changes.
         var events: [String] = []
-        let albumArtObservation = observeChanges(of: { controller.albumArtURL }) { url in
+        let albumArtObservation = observeChanges(of: { controller.albumArtURL }, onChange: { url in
             events.append("art:\(url?.absoluteString ?? "nil")")
-        }
-        let metadataObservation = observeChanges(of: { controller.nowPlaying?.title }) { title in
+        })
+        let metadataObservation = observeChanges(of: { controller.nowPlaying?.title }, onChange: { title in
             events.append("track:\(title ?? "nil")")
-        }
+        })
         defer {
             albumArtObservation.cancel()
             metadataObservation.cancel()
