@@ -1,5 +1,4 @@
 import Foundation
-import Observation
 import Testing
 
 @testable import Playback
@@ -175,36 +174,13 @@ struct PlaybackControllerAlbumArtTests {
         #expect(controller.albumArtURL == oldArt)
 
         var events: [String] = []
-        let albumArtChanges = Observations { controller.albumArtURL }
-        let metadataChanges = Observations { controller.nowPlaying?.title }
-        let albumArtTask = Task { @MainActor in
-            var skippedInitial = false
-            for await url in albumArtChanges {
-                if skippedInitial == false {
-                    skippedInitial = true
-                    continue
-                }
-                events.append("art:\(url?.absoluteString ?? "nil")")
-                if events.count >= 2 { return }
-            }
+        observeChanges(of: { controller.albumArtURL }) { url in
+            events.append("art:\(url?.absoluteString ?? "nil")")
         }
-        let metadataTask = Task { @MainActor in
-            var skippedInitial = false
-            for await title in metadataChanges {
-                if skippedInitial == false {
-                    skippedInitial = true
-                    continue
-                }
-                events.append("track:\(title ?? "nil")")
-                if events.count >= 2 { return }
-            }
-        }
-        defer {
-            albumArtTask.cancel()
-            metadataTask.cancel()
+        observeChanges(of: { controller.nowPlaying?.title }) { title in
+            events.append("track:\(title ?? "nil")")
         }
 
-        await Task.yield()
         output.onTrackInfo?(AudioTrackInfo(title: "New", artist: "Band"))
         await waitUntil({ events.count >= 2 })
 

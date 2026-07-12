@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import RadioDirectory
 
 @testable import Playback
@@ -110,5 +111,20 @@ func waitUntil(_ condition: () -> Bool, upTo seconds: TimeInterval = 2) async {
     let deadline = Date().addingTimeInterval(seconds)
     while condition() == false, Date() < deadline {
         try? await Task.sleep(for: .milliseconds(10))
+    }
+}
+
+@MainActor
+func observeChanges<Value>(
+    of value: @escaping @MainActor () -> Value,
+    onChange: @escaping @MainActor (Value) -> Void
+) {
+    withObservationTracking {
+        _ = value()
+    } onChange: {
+        MainActor.assumeIsolated {
+            onChange(value())
+            observeChanges(of: value, onChange: onChange)
+        }
     }
 }
