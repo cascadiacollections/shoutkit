@@ -151,7 +151,7 @@ private func observeChanges<Value>(
         _ = value()
     } onChange: {
         MainActor.assumeIsolated {
-            guard token.isCancelled == false else { return }
+            guard !token.isCancelled else { return }
             onChange(value())
             observeChanges(of: value, token: token, onChange: onChange)
         }
