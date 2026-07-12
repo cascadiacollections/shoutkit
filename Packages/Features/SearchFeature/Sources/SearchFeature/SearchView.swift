@@ -53,12 +53,28 @@ public struct SearchView: View {
     @ViewBuilder
     private var browseGenres: some View {
         if viewModel.genres.isEmpty {
-            ContentUnavailableView(
-                "Find your sound",
-                systemImage: "magnifyingglass",
-                description: Text("Search for stations by name or genre.")
-            )
-            .frame(maxWidth: .infinity, minHeight: 240)
+            if let error = viewModel.genreLoadError {
+                ContentUnavailableView {
+                    Label("Couldn't Load Genres", systemImage: "wifi.exclamationmark")
+                } description: {
+                    Text(error.localizedDescription)
+                } actions: {
+                    if error.isRetryable {
+                        Button("Try Again") {
+                            Task { await viewModel.loadGenres() }
+                        }
+                        .buttonStyle(.glassProminent)
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: 240)
+            } else {
+                ContentUnavailableView(
+                    "Find your sound",
+                    systemImage: "magnifyingglass",
+                    description: Text("Search for stations by name or genre.")
+                )
+                .frame(maxWidth: .infinity, minHeight: 240)
+            }
         } else {
             SectionHeaderView(String(localized: "Browse by Genre", bundle: .module))
             FlowChips(genres: viewModel.genres) { genre in

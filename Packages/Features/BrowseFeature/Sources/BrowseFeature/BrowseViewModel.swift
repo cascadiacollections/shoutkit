@@ -29,6 +29,7 @@ public enum GenreStationsPhase: Equatable, Sendable {
 @Observable
 public final class BrowseViewModel {
     public private(set) var phase: BrowsePhase = .loading
+    public private(set) var genresError: RadioDirectoryError?
 
     /// Active genre filter. Selecting one queries the directory for that genre —
     /// the top-stations list is far too small to filter client-side.
@@ -46,17 +47,25 @@ public final class BrowseViewModel {
         if case .loaded = phase {} else {
             phase = .loading
         }
+        genresError = nil
 
         do {
-            async let stationsTask = directory.topStations(limit: 24)
-            async let genresTask = directory.genres()
-
-            let stations = try await stationsTask
-            let genres = (try? await genresTask) ?? []
+            let stations = try await directory.topStations(limit: 24)
 
             guard stations.isEmpty == false else {
                 phase = .empty
                 return
+            }
+
+            let genres: [Genre]
+            do {
+                genres = try await directory.genres()
+            } catch let error as RadioDirectoryError {
+                genresError = error
+                genres = []
+            } catch {
+                genresError = .transport(error.localizedDescription)
+                genres = []
             }
 
             let content = BrowseContent(
@@ -68,7 +77,6 @@ public final class BrowseViewModel {
         } catch let error as RadioDirectoryError {
             phase = .failed(error)
         } catch {
-            // `async let` erases the child task's typed error to `any Error`.
             phase = .failed(.transport(error.localizedDescription))
         }
     }

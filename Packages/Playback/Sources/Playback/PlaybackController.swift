@@ -2,6 +2,37 @@ import Foundation
 import Observation
 import RadioDirectory
 
+/// Supplemental, best-effort resources resolved for a track from an external
+/// catalog: album artwork and a link to open the track in Apple Music. Both
+/// are independently optional — a lookup may yield one, both, or neither.
+public struct TrackResources: Sendable, Equatable {
+    public var artworkURL: URL?
+    public var appleMusicURL: URL?
+
+    public init(artworkURL: URL? = nil, appleMusicURL: URL? = nil) {
+        self.artworkURL = artworkURL
+        self.appleMusicURL = appleMusicURL
+    }
+
+    /// No resources — the value returned when a lookup fails or is disabled.
+    public static let none = TrackResources()
+}
+
+/// A track the listener heard on a station, handed to the app layer's local
+/// listening-history log. Emitted at parse time (before any Apple Music link
+/// is known) and again once resource resolution attaches one.
+public struct HeardTrack {
+    public let station: Station
+    public let track: NowPlayingMetadata
+    public let appleMusicURL: URL?
+
+    public init(station: Station, track: NowPlayingMetadata, appleMusicURL: URL?) {
+        self.station = station
+        self.track = track
+        self.appleMusicURL = appleMusicURL
+    }
+}
+
 /// App-wide, observable playback state. Injected through the SwiftUI environment so
 /// the mini-player, Now Playing screen, and every station row read and drive the same
 /// playback. Owns the ``AudioOutput`` and mirrors its status into ``PlaybackState``.
@@ -21,18 +52,32 @@ public final class PlaybackController {
     /// artwork URL when this is `nil`.
     public internal(set) var albumArtURL: URL?
 
+    /// A link that opens the current track in Apple Music, or `nil` when no
+    /// track metadata is available, the lookup is still in progress, or the
+    /// catalog has no page for it. Follows the same lifecycle as
+    /// ``albumArtURL``: cleared on a track change, a fresh start, and stop, but
+    /// preserved across an automatic reconnect so the last-known link stays
+    /// available while the stream re-buffers (ICY repopulates it on success).
+    public internal(set) var appleMusicURL: URL?
+
     /// Invoked whenever a station is chosen for playback. The app layer uses this
     /// to log recents so Playback does not depend on the persistence layer.
     /// (An event hook, deliberately — `state`/`nowPlaying` are @Observable and
     /// consumers follow them with `Observations`; a play is a discrete action.)
     @ObservationIgnored public var onStationPlayed: ((Station) -> Void)?
 
-    /// Resolves album art for a track. Injected by the app layer so the
-    /// Playback package stays free of any artwork/UI dependency. The closure
-    /// runs on the main actor (hop off it internally for network work) and
-    /// should return `nil` on failure or when the feature is disabled.
-    /// Called once per unique track change.
-    @ObservationIgnored public var albumArtURLProvider: (@MainActor (AudioTrackInfo) async -> URL?)?
+    /// Invoked when parsed now-playing track metadata is received for the active
+    /// station (and again when Apple Music resolution completes for that track).
+    /// The app layer uses this to persist local listening history.
+    @ObservationIgnored public var onTrackHeard: ((HeardTrack) -> Void)?
+
+    /// Resolves supplemental resources (album art + Apple Music link) for a
+    /// track. Injected by the app layer so the Playback package stays free of
+    /// any artwork/UI dependency. The closure runs on the main actor (hop off
+    /// it internally for network work) and should return ``TrackResources/none``
+    /// on failure or when the feature is disabled. Called once per unique track
+    /// change.
+    @ObservationIgnored public var trackResourcesProvider: (@MainActor (AudioTrackInfo) async -> TrackResources)?
 
     public var currentStation: Station? { activeStation }
 
@@ -180,6 +225,7 @@ public final class PlaybackController {
         state = .idle
         nowPlaying = nil
         albumArtURL = nil
+        appleMusicURL = nil
         outputStarted = false
         resumeAfterInterruption = false
         nowPlayingCenter.clear()

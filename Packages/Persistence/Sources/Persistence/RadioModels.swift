@@ -81,3 +81,29 @@ public final class RecentStation {
         )
     }
 }
+
+@Model
+public final class RecentlyHeardTrack {
+    public var stationID: String
+    public var stationName: String
+    public var title: String?
+    public var artist: String?
+    public var heardAt: Date
+    public var appleMusicURLString: String?
+
+    public init(
+        stationID: String,
+        stationName: String,
+        title: String?,
+        artist: String?,
+        heardAt: Date = .now,
+        appleMusicURLString: String? = nil
+    ) {
+        self.stationID = stationID
+        self.stationName = stationName
+        self.title = title
+        self.artist = artist
+        self.heardAt = heardAt
+        self.appleMusicURLString = appleMusicURLString
+    }
+}

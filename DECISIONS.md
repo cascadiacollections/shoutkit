@@ -786,6 +786,25 @@ now-playing updates are event-driven), so the fixes target resource *retention*,
 - Kept the bundled/preferred/ShoutcastDirectoryClient seams unchanged; discovery is designed around the
   keyless bundled path and lights up automatically when `SHOUTCAST_DEV_KEY` is present.
 
+## 2026-07-12
+
+- Evaluated CarPlay as **architecturally viable but not this milestone's implementation work**.
+  The hard part is already centralized: `PlaybackController` is the single app-wide playback owner,
+  remote transport actions flow through the `NowPlayingPresenting` seam, and station snapshots
+  (`Station`, favorites/recents persistence rows, and `StationEntity`) already carry the name,
+  genre, artwork URL, and stream URL a minimal CarPlay browse list needs. That means a first pass
+  can stay thin — a `CPTemplateApplicationSceneDelegate`, one station-list template sourced from
+  favorites/recents/curated stations, row selection calling `PlaybackController.play(_:)`, and the
+  system `CPNowPlayingTemplate` for transport controls — with no separate playback stack and no
+  `MPPlayableContentManager` content tree.
+- Deferred actual implementation anyway because the blockers are platform rollout risk, not model
+  gaps. The checked-in app entitlements still do not include CarPlay audio, the app has no CarPlay
+  scene manifest yet, and `PlaybackController`'s production initializer still pins iOS 27 to the
+  legacy `NowPlayingCenter` while `MediaSession` parity is verified. Shipping a brand-new CarPlay
+  surface in the same window as the now-playing runtime prove-out would stack two moving platform
+  pieces at once, so the roadmap keeps CarPlay as a backlog item until the entitlement lands and
+  the `MediaSession` path becomes the production default.
+
 ## 2026-06-24
 
 - Created a real Xcode workspace plus local Swift packages instead of a single Swift package, because the MVP needs an iOS app target, assets, capabilities, and future extension targets.

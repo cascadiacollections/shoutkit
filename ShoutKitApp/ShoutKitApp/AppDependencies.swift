@@ -53,27 +53,7 @@ enum AppDependencies {
         let (directory, playReporter) = makeDirectory()
         let controller = PlaybackController(directory: directory)
 
-        controller.onStationPlayed = { station in
-            store.logRecent(station)
-            // Radio-Browser etiquette: report plays so the community directory
-            // can rank popularity. Fire-and-forget; never affects playback.
-            // User-toggleable in Settings (the README privacy story promises it).
-            if settings.isPlayReportingEnabled, let playReporter {
-                Task {
-                    await playReporter.reportPlay(stationID: station.id)
-                }
-            }
-        }
-
-        // Best-effort album art from the iTunes Search API. Gated here, at the
-        // source, so opting out stops the supplemental network request itself —
-        // the toggle lives under Privacy and must mean what it says. The views
-        // also read the setting reactively (flipping it updates the UI
-        // immediately); the lock screen follows on the next track change.
-        controller.albumArtURLProvider = { track in
-            guard settings.isAlbumArtEnabled else { return nil }
-            return await AlbumArtLookup.artworkURL(artist: track.artist, title: track.title)
-        }
+        configureCallbacks(for: controller, store: store, settings: settings, playReporter: playReporter)
 
         // Lock screen / Dynamic Island Live Activity follows playback by
         // observing the controller's @Observable state directly.
@@ -114,6 +94,51 @@ enum AppDependencies {
     /// PreferredRadioDirectory so curated stations (KEXP) always appear first,
     /// then in CachingRadioDirectory so Listen Now and Browse refreshing at
     /// launch share one fetch instead of hitting the directory twice.
+    /// Wires the controller's app-layer callbacks: recents + play reporting on
+    /// station change, local listening history on each heard track, and the
+    /// gated album-art / Apple Music resolver. Extracted from `bootstrap()` so
+    /// that method stays focused on constructing the dependency graph.
+    private static func configureCallbacks(
+        for controller: PlaybackController,
+        store: LibraryStore,
+        settings: SettingsStore,
+        playReporter: (any StationPlayReporting)?
+    ) {
+        controller.onStationPlayed = { station in
+            store.logRecent(station)
+            // Radio-Browser etiquette: report plays so the community directory
+            // can rank popularity. Fire-and-forget; never affects playback.
+            // User-toggleable in Settings (the README privacy story promises it).
+            if settings.isPlayReportingEnabled, let playReporter {
+                Task {
+                    await playReporter.reportPlay(stationID: station.id)
+                }
+            }
+        }
+
+        controller.onTrackHeard = { heard in
+            store.logRecentlyHeardTrack(
+                station: heard.station,
+                title: heard.track.title,
+                artist: heard.track.artist,
+                heardAt: heard.track.receivedAt,
+                appleMusicURL: heard.appleMusicURL
+            )
+        }
+
+        // Best-effort album art + Apple Music link from a single iTunes Search
+        // API hit. Gated here, at the source, so opting out stops the
+        // supplemental network request itself — the toggle lives under Privacy
+        // and must mean what it says. The views also read the setting reactively
+        // (flipping it updates the UI immediately); the lock screen follows on
+        // the next track change.
+        controller.trackResourcesProvider = { track in
+            guard settings.isAlbumArtEnabled else { return .none }
+            let match = await AlbumArtLookup.lookup(artist: track.artist, title: track.title)
+            return TrackResources(artworkURL: match.artworkURL, appleMusicURL: match.appleMusicURL)
+        }
+    }
+
     private static func makeDirectory() -> (any RadioDirectoryProviding, (any StationPlayReporting)?) {
         if let apiKey = shoutcastAPIKey() {
             let directory = PreferredRadioDirectory(base: ShoutcastDirectoryClient(apiKey: apiKey))

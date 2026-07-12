@@ -1,4 +1,5 @@
 import OrderedCollections
+import RadioDirectory
 import SwiftUI
 import UIKit
 
@@ -45,20 +46,25 @@ public enum ArtworkLoader {
     /// for the same URL. The Now Playing surface asks for the same artwork
     /// from several views at once (backdrop, hero, tint) — the store hands
     /// them one shared decode + palette pass instead of three.
-    public nonisolated static func load(_ url: URL?) async -> LoadedArtwork? {
+    public nonisolated static func load(
+        _ url: URL?,
+        transport: any HTTPTransporting = URLSessionHTTPTransport.shared
+    ) async -> LoadedArtwork? {
         guard let url else { return nil }
-        return await ArtworkStore.shared.artwork(for: url)
+        return await ArtworkStore.shared.artwork(for: url, transport: transport)
     }
 
     /// The uncached fetch/decode pipeline: loads through the shared
     /// `URLCache`, downsample-decodes to the display ceiling, and box-filters
     /// a 3×3 palette — all off the main actor.
-    fileprivate nonisolated static func fetchAndDecode(_ url: URL) async -> LoadedArtwork? {
+    fileprivate nonisolated static func fetchAndDecode(
+        _ url: URL,
+        transport: any HTTPTransporting
+    ) async -> LoadedArtwork? {
         var request = URLRequest(url: url)
         request.cachePolicy = .returnCacheDataElseLoad
 
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
-              (response as? HTTPURLResponse).map({ (200 ..< 300).contains($0.statusCode) }) ?? true,
+        guard let data = try? await transport.data(for: request),
               let image = ImageDownsampler.decode(data, maxPixelSize: maxDecodePixelSize),
               let cgImage = image.cgImage
         else { return nil }
@@ -90,14 +96,14 @@ public enum ArtworkLoader {
         /// the actor's init stays trivial.
         private var memoryPressureSource: DispatchSourceMemoryPressure?
 
-        func artwork(for url: URL) async -> LoadedArtwork? {
+        func artwork(for url: URL, transport: any HTTPTransporting) async -> LoadedArtwork? {
             installMemoryPressureSourceIfNeeded()
 
             if let existing = entries[url] {
                 return await existing.value
             }
 
-            let task = Task { await ArtworkLoader.fetchAndDecode(url) }
+            let task = Task { await ArtworkLoader.fetchAndDecode(url, transport: transport) }
             entries[url] = task
             if entries.count > capacity {
                 entries.remove(at: 0)
@@ -137,7 +143,7 @@ public enum ArtworkLoader {
         }
     }
 
-    private struct HSBSample {
+    struct HSBSample {
         let hue: CGFloat
         let saturation: CGFloat
         let brightness: CGFloat
@@ -218,5 +224,9 @@ public enum ArtworkLoader {
             saturation: max(0.55, min(1, best.saturation * 1.3)),
             brightness: min(0.72, max(0.38, best.brightness))
         )
+    }
+
+    nonisolated static func paletteHSBSamples(from cgImage: CGImage) -> [HSBSample] {
+        hsbSamples(from: cgImage)
     }
 }

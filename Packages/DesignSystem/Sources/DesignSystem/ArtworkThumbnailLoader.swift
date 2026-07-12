@@ -1,4 +1,5 @@
 import UIKit
+import RadioDirectory
 
 /// Decoded-thumbnail loading for station artwork in list rows, cards, and the
 /// mini-player — the small, many-instance surfaces.
@@ -28,7 +29,11 @@ public nonisolated enum ArtworkThumbnailLoader {
     /// `maxPixelSize`, returning a cached thumbnail when one exists.
     /// Runs off the main actor; returns `nil` on any failure — callers show
     /// their placeholder, matching the `AsyncImage` contract this replaces.
-    public static func thumbnail(for url: URL?, maxPixelSize: CGFloat) async -> UIImage? {
+    public static func thumbnail(
+        for url: URL?,
+        maxPixelSize: CGFloat,
+        transport: any HTTPTransporting = URLSessionHTTPTransport.shared
+    ) async -> UIImage? {
         guard let url, maxPixelSize > 0 else { return nil }
 
         let key = "\(Int(maxPixelSize.rounded(.up)))|\(url.absoluteString)" as NSString
@@ -39,8 +44,7 @@ public nonisolated enum ArtworkThumbnailLoader {
         var request = URLRequest(url: url)
         request.cachePolicy = .returnCacheDataElseLoad
 
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
-              (response as? HTTPURLResponse).map({ (200 ..< 300).contains($0.statusCode) }) ?? true,
+        guard let data = try? await transport.data(for: request),
               let image = ImageDownsampler.decode(data, maxPixelSize: maxPixelSize)
         else { return nil }
 

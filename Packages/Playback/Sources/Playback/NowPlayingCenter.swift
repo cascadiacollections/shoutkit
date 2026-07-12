@@ -1,5 +1,5 @@
 import Foundation
-import ImageIO
+import ImageIODownsample
 import MediaPlayer
 import os
 import RadioDirectory
@@ -47,6 +47,7 @@ public final class NowPlayingCenter: NowPlayingPresenting {
     private var artworkTask: Task<Void, Never>?
     private var artworkCacheURL: URL?
     private var cachedArtwork: MPMediaItemArtwork?
+    private let transport: any HTTPTransporting
 
     /// Whether a station is currently active. Written on the main actor, read from
     /// MediaRemote's queue by the command handlers, hence the lock.
@@ -57,7 +58,8 @@ public final class NowPlayingCenter: NowPlayingPresenting {
     // isolated to read this on the main actor without an escape hatch.
     private var commandTargets: [(MPRemoteCommand, Any)] = []
 
-    public init() {
+    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.shared) {
+        self.transport = transport
         configureRemoteCommands()
     }
 
@@ -149,9 +151,12 @@ public final class NowPlayingCenter: NowPlayingPresenting {
         // The old station's artwork must not survive a station switch.
         cachedArtwork = nil
         artworkTask?.cancel()
+        let transport = self.transport
 
         artworkTask = Task { [weak self] in
-            guard let (data, _) = try? await URLSession.shared.data(from: url) else {
+            var request = URLRequest(url: url)
+            request.cachePolicy = .returnCacheDataElseLoad
+            guard let data = try? await transport.data(for: request) else {
                 // Forget the failed URL so the next update retries it — a
                 // transient network error at play start must not leave the
                 // lock screen artless for the whole session.
@@ -196,25 +201,12 @@ public final class NowPlayingCenter: NowPlayingPresenting {
     /// a native-resolution decode. 768 px comfortably covers the lock-screen
     /// tile; typical 600 px album art passes through untouched.
     ///
-    /// A private copy of DesignSystem's downsampler: Playback deliberately
+    /// Uses the shared leaf ImageIO downsampler module; Playback deliberately
     /// doesn't depend on DesignSystem (see DECISIONS.md on `AlbumArtLookup`).
     private nonisolated static func decodedArtwork(from data: Data) -> UIImage? {
-        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
+        guard let cgImage = ImageIODownsampler.decodeCGImage(data, maxPixelSize: 768) else {
             return nil
         }
-
-        let thumbnailOptions = [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceShouldCacheImmediately: true,
-            kCGImageSourceThumbnailMaxPixelSize: 768
-        ] as [CFString: Any] as CFDictionary
-
-        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions) else {
-            return nil
-        }
-
         return UIImage(cgImage: cgImage)
     }
 }

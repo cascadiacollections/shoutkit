@@ -51,9 +51,11 @@ in an otherwise deliberately dumb-pipe player, so scope it tightly.
       consistent with the zero-accounts privacy story)
 - [ ] Search filters (bitrate, tag/genre, country) on top of Radio-Browser's existing query
       params
-- [ ] CarPlay: evaluate whether MediaSession + CarPlay templates can replace
-      `MPPlayableContentManager` outright now that the entitlement (applied for in 0.2.0)
-      should have landed
+- [ ] CarPlay stays in the backlog for now: triage says a minimal
+      `CPListTemplate` + `CPNowPlayingTemplate` scene can sit on today's
+      `PlaybackController`, but implementation should wait until the CarPlay
+      audio entitlement is actually present and the iOS 27 `MediaSession` path
+      is the production default
 
 **Engineering**
 - [ ] Make the headless-test CodeSign workaround (`xattr -cr` + ad-hoc `codesign` +
@@ -96,7 +98,7 @@ Everything gating a move from TestFlight to the public App Store listing.
       explicitly flagged in DECISIONS.md as swap-before-public-release)
 - [ ] Community translations beyond English (String Catalog infra shipped in 0.2.0;
       this is populating it)
-- [ ] CarPlay templates shipped (if Sprint 3's evaluation said yes)
+- [ ] CarPlay templates shipped once the entitlement + `MediaSession` gates above clear
 
 **Engineering**
 - [ ] App Store Connect listing: screenshots, privacy questionnaire, description —
@@ -113,6 +115,9 @@ Everything gating a move from TestFlight to the public App Store listing.
 - Home Screen widget variants beyond quick-play (recents, currently-playing)
 - Genre auto-tagging for unlabeled stations (explicitly deferred in 0.3.0's "not doing" list
   pending a concrete use case)
+- Minimal CarPlay scene (favorites/recents station list + system now-playing template), once the
+  entitlement is live and `PlaybackController`'s iOS 27 now-playing path graduates from parity
+  prove-out to the production default
 - watchOS companion — no current demand signal; don't speculate a design
 
 ## How to use this doc

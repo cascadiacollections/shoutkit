@@ -1,9 +1,11 @@
 import Foundation
 import Observation
+import OSLog
 import RadioDirectory
 import SwiftData
 
-/// App-wide store for user library state (favorites + recents), backed by SwiftData.
+/// App-wide store for user library state (favorites, recents, recently heard),
+/// backed by SwiftData.
 ///
 /// Views can read `favoriteIDs` reactively for instant heart-toggle feedback, while
 /// the `FavoriteStation` / `RecentStation` models remain queryable via `@Query`.
@@ -11,12 +13,18 @@ import SwiftData
 @Observable
 public final class LibraryStore {
     public static let recentsLimit = 25
+    public static let recentlyHeardLimit = 250
+    /// Fetch/deletion headroom for bounded-history trimming; deleting in batches
+    /// avoids churn from trimming on every insert near the cap.
+    public static let recentlyHeardTrimHeadroom = 100
 
     /// Station IDs the user has favorited. Kept in sync with the persistent store so
     /// SwiftUI views observing this store update immediately on toggle.
     public private(set) var favoriteIDs: Set<String> = []
+    public private(set) var lastErrorMessage: String?
 
     @ObservationIgnored private let context: ModelContext
+    @ObservationIgnored private let logger = Logger(subsystem: "ShoutKit.Persistence", category: "LibraryStore")
 
     public init(context: ModelContext) {
         self.context = context
@@ -58,7 +66,7 @@ public final class LibraryStore {
         )
         context.insert(favorite)
         favoriteIDs.insert(station.id)
-        save()
+        save(operation: "add favorite \(sanitizedForLogs(station.id))")
     }
 
     /// Reorders favorites to match a SwiftUI `.onMove` drag and rewrites `sortIndex`
@@ -77,7 +85,7 @@ public final class LibraryStore {
         for (index, favorite) in reordered.enumerated() where favorite.sortIndex != index {
             favorite.sortIndex = index
         }
-        save()
+        save(operation: "move favorites")
     }
 
     /// The next ordering slot, one past the current maximum, so new favorites append
@@ -87,7 +95,7 @@ public final class LibraryStore {
             sortBy: [SortDescriptor(\.sortIndex, order: .reverse)]
         )
         descriptor.fetchLimit = 1
-        let maxIndex = (try? context.fetch(descriptor))?.first?.sortIndex
+        let maxIndex = fetch(descriptor, operation: "compute next sort index")?.first?.sortIndex
         return (maxIndex ?? -1) + 1
     }
 
@@ -95,13 +103,15 @@ public final class LibraryStore {
         let predicate = #Predicate<FavoriteStation> { $0.stationID == stationID }
         let descriptor = FetchDescriptor<FavoriteStation>(predicate: predicate)
 
-        if let matches = try? context.fetch(descriptor) {
-            for match in matches {
-                context.delete(match)
-            }
+        guard let matches = fetch(descriptor, operation: "remove favorite \(sanitizedForLogs(stationID))") else {
+            return
+        }
+
+        for match in matches {
+            context.delete(match)
         }
         favoriteIDs.remove(stationID)
-        save()
+        save(operation: "remove favorite \(sanitizedForLogs(stationID))")
     }
 
     // MARK: - Recents
@@ -112,7 +122,11 @@ public final class LibraryStore {
         let predicate = #Predicate<RecentStation> { $0.stationID == stationID }
         let descriptor = FetchDescriptor<RecentStation>(predicate: predicate)
 
-        if let existing = try? context.fetch(descriptor).first {
+        guard let matches = fetch(descriptor, operation: "log recent \(sanitizedForLogs(stationID))") else {
+            return
+        }
+
+        if let existing = matches.first {
             existing.playedAt = .now
             existing.name = station.name
             existing.genre = station.genre
@@ -130,7 +144,7 @@ public final class LibraryStore {
         }
 
         trimRecents()
-        save()
+        save(operation: "log recent \(sanitizedForLogs(stationID))")
     }
 
     private func trimRecents() {
@@ -139,7 +153,7 @@ public final class LibraryStore {
         )
         descriptor.fetchLimit = Self.recentsLimit + 50
 
-        guard let recents = try? context.fetch(descriptor), recents.count > Self.recentsLimit else {
+        guard let recents = fetch(descriptor, operation: "trim recents"), recents.count > Self.recentsLimit else {
             return
         }
 
@@ -148,11 +162,75 @@ public final class LibraryStore {
         }
     }
 
+    // MARK: - Recently heard tracks
+
+    /// Records parsed now-playing metadata as local track history, de-duplicating
+    /// only consecutive repeats and trimming to `recentlyHeardLimit`.
+    public func logRecentlyHeardTrack(
+        station: Station,
+        title: String?,
+        artist: String?,
+        heardAt: Date = .now,
+        appleMusicURL: URL? = nil
+    ) {
+        guard title != nil || artist != nil else { return }
+
+        var singleTrackDescriptor = FetchDescriptor<RecentlyHeardTrack>(
+            sortBy: [SortDescriptor(\.heardAt, order: .reverse)]
+        )
+        singleTrackDescriptor.fetchLimit = 1
+
+        if let latest = try? context.fetch(singleTrackDescriptor).first,
+           latest.stationID == station.id,
+           latest.title == title,
+           latest.artist == artist {
+            // Consecutive dedupe keeps one row but refreshes its timestamp so it
+            // reflects the most recent hearing of that still-current track.
+            latest.stationName = station.name
+            latest.heardAt = heardAt
+            if let appleMusicURL {
+                latest.appleMusicURLString = appleMusicURL.absoluteString
+            }
+        } else {
+            let track = RecentlyHeardTrack(
+                stationID: station.id,
+                stationName: station.name,
+                title: title,
+                artist: artist,
+                heardAt: heardAt,
+                appleMusicURLString: appleMusicURL?.absoluteString
+            )
+            context.insert(track)
+        }
+
+        trimRecentlyHeardTracks()
+        save(operation: "log recently heard track \(sanitizedForLogs(station.id))")
+    }
+
+    private func trimRecentlyHeardTracks() {
+        var trimDescriptor = FetchDescriptor<RecentlyHeardTrack>(
+            sortBy: [SortDescriptor(\.heardAt, order: .reverse)]
+        )
+        trimDescriptor.fetchLimit = Self.recentlyHeardLimit + Self.recentlyHeardTrimHeadroom
+
+        guard let tracks = try? context.fetch(trimDescriptor), tracks.count > Self.recentlyHeardLimit else {
+            return
+        }
+
+        for stale in tracks[Self.recentlyHeardLimit...] {
+            context.delete(stale)
+        }
+    }
+
     // MARK: - Helpers
 
     private func reloadFavoriteIDs() {
         let descriptor = FetchDescriptor<FavoriteStation>()
-        let favorites = (try? context.fetch(descriptor)) ?? []
+        guard let favorites = fetch(descriptor, operation: "reload favorites") else {
+            favoriteIDs = []
+            return
+        }
+
         favoriteIDs = Set(favorites.map(\.stationID))
     }
 
@@ -165,7 +243,8 @@ public final class LibraryStore {
         let descriptor = FetchDescriptor<FavoriteStation>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
-        guard let favorites = try? context.fetch(descriptor), favorites.count > 1 else { return }
+        guard let favorites = fetch(descriptor, operation: "normalize sort indices"),
+              favorites.count > 1 else { return }
 
         let indices = favorites.map(\.sortIndex)
         guard Set(indices).count != indices.count else { return }
@@ -173,10 +252,53 @@ public final class LibraryStore {
         for (index, favorite) in favorites.enumerated() {
             favorite.sortIndex = index
         }
-        save()
+        save(operation: "normalize sort indices")
     }
 
-    private func save() {
-        try? context.save()
+    private func fetch<Model>(
+        _ descriptor: FetchDescriptor<Model>,
+        operation: String
+    ) -> [Model]? where Model: PersistentModel {
+        do {
+            let models = try context.fetch(descriptor)
+            lastErrorMessage = nil
+            return models
+        } catch {
+            record(error, operation: operation)
+            return nil
+        }
+    }
+
+    @discardableResult
+    private func save(operation: String) -> Bool {
+        do {
+            try context.save()
+            lastErrorMessage = nil
+            return true
+        } catch {
+            context.rollback()
+            reloadFavoriteIDs()
+            record(error, operation: operation)
+            return false
+        }
+    }
+
+    private func record(_ error: Error, operation: String) {
+        let localizedMessage = error.localizedDescription
+        let debugDescription = String(describing: error)
+        lastErrorMessage = localizedMessage
+        logger.error(
+            """
+            LibraryStore \(operation, privacy: .public) failed: \
+            \(localizedMessage, privacy: .public) [\(debugDescription, privacy: .public)]
+            """
+        )
+    }
+
+    private func sanitizedForLogs(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "\r", with: " ")
+            .replacingOccurrences(of: "\t", with: " ")
     }
 }
