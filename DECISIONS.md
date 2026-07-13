@@ -1,5 +1,121 @@
 # Decisions
 
+## 2026-07-13 (Pulse adopted for debug-only network inspection)
+
+- Adopted **Pulse 5.2.3** (MIT, `kean/Pulse`) for debug network inspection —
+  the `Pulse` product only (not `PulseProxy`'s method-swizzling auto-logger, nor
+  `PulseUI`'s viewer — no in-app UI was added this pass, see below). Listed
+  under `THIRD_PARTY_LICENSES.md`'s dev-tools section, not the runtime table
+  or the in-app Licenses screen, since by design it never ships in Release.
+- Every Pulse reference lives in one new file,
+  `RadioDirectory/PulseNetworkLogging.swift`, wrapped end to end in
+  `#if DEBUG` (including the `import Pulse` itself) — auditing "is Pulse
+  entirely gated" only requires reading that one file. `HTTPTransport.swift`
+  reaches in through a two-line `#if DEBUG` in `URLSessionHTTPTransport
+  .shared`'s initialization, installing `URLSessionProxyDelegate` on the
+  session it uses instead of plain `URLSession.shared`. Since Radio-Browser,
+  SHOUTcast, and artwork downloads (`ArtworkLoader`, `NowPlayingCenter`) all
+  default to that one shared transport, this single seam covers all of them
+  without touching any of those call sites. `AlbumArtLookup`'s separate,
+  short-timeout iTunes-lookup session is intentionally left alone — out of
+  scope for "Radio-Browser and artwork requests."
+- No in-app viewer was added (`PulseUI`'s `ConsoleView` or a Settings debug
+  entry): the task's acceptance bar was the logging proxy plus a Debug/Release
+  presence check, and a viewer screen wasn't asked for — logs are still
+  inspectable via Pulse's remote/Mac companion tooling. Revisit if a
+  discoverable in-app console turns out to be worth the added surface.
+- **Correction, found the hard way**: `#if DEBUG`-gating Pulse's Swift call
+  sites does *not* keep Pulse's own compiled module out of the Release binary.
+  SPM's dependency graph is configuration-independent —
+  `PackageDescription.TargetDependencyCondition.when` only takes
+  `platforms:`/`traits:`, never a build configuration (checked directly against
+  swift-package-manager's source; there's no such API at any shipped tools
+  version) — so a declared `.product(...)` dependency links into every
+  configuration that consumes it, regardless of whether any surviving
+  (post-preprocessor) source references it. CI's first Release build proved
+  this empirically: `nm` found `NetworkLogger` in the Release binary even
+  though the Release compile of `RadioDirectory` genuinely had no `-DDEBUG`
+  flag. A follow-up commit tried `condition: .when(configuration: .debug)` —
+  that parameter doesn't exist in `PackageDescription` and doesn't compile.
+  What `#if DEBUG` *does* guarantee, and what actually matters: none of
+  Pulse's logging/proxy code ever runs in Release — behaviorally, it's
+  identical to Pulse not being there. Its compiled-but-unreferenced module may
+  still be physically present in the Release binary; achieving true binary
+  absence would need Xcode-project-level linking changes beyond what a local
+  Package.swift can express, which is out of scope here.
+- `ci.yml`'s `build` job builds both Debug and Release against a shared
+  `-derivedDataPath` (Debug/Release each get their own
+  `Products/<Config>-iphonesimulator` output, but package resolution and
+  unchanged modules are reused across the pair) and `nm`-checks each binary
+  for a Pulse-specific symbol (`NetworkLogger`): a hard failure if it's
+  *missing* from Debug (that would mean the proxy isn't actually wired up),
+  and a non-blocking, informational report either way for Release (per the
+  correction above, present-but-unused there is expected, not a bug). Bumped
+  the job's timeout accordingly (30 → 45 min) since building the app twice
+  roughly doubles its wall time.
+
+## 2026-07-13 (AudioStreaming adopted as the playback engine)
+
+- Adopted **AudioStreaming 1.4.4** (MIT, `dimitris-c/AudioStreaming`) as the concrete
+  `RadioPlaybackEngine` (see the 2026-07-13 Factory entry below), backed by its
+  `AudioPlayer` (`AVAudioEngine`). `Container.radioPlaybackEngine`'s default now
+  constructs `AudioStreamingPlaybackEngine` on iOS; `PlaybackControllerPlatform`'s
+  production initializer resolves it via `Container.shared.radioPlaybackEngine()`
+  instead of constructing `AVPlayerAudioOutput()` directly. `AVPlayerAudioOutput`
+  stays in the tree (still conforms to `AudioOutput`) but is no longer wired to
+  production playback.
+- AudioStreaming transitively pulls `ogg-binary-xcframework` and
+  `vorbis-binary-xcframework` (both BSD, Xiph.org) for its Ogg Vorbis codec
+  support — unavoidable if adopting AudioStreaming at all, since that codec
+  bridge is baked into the library rather than an optional add-on. Recorded in
+  `THIRD_PARTY_LICENSES.md` and the in-app Licenses screen alongside
+  AudioStreaming itself.
+- AudioStreaming doesn't touch `AVAudioSession` itself (by design, per its own
+  source), so `AudioStreamingPlaybackEngine` owns session activation and
+  interruption/route-change handling directly — mirroring `AVPlayerAudioOutput`
+  line for line — rather than assuming the library does it. Both stay behind
+  `#if canImport(UIKit)`, and the `Playback` package's SPM manifest mirrors that
+  gate with `condition: .when(platforms: [.iOS])` on the AudioStreaming product
+  dependency, so the mac host test job (`swift test`) never fetches or links it.
+- Added a conservative `SongTitleFilter` (pure, in `Playback`) applied in
+  `PlaybackController.handleTrackInfo` before a parsed ICY track reaches
+  `nowPlaying`/`onTrackHeard` — shared by both playback engines, since both feed
+  `ICYMetadataParser` output through the same call site. Rejects only on a
+  positive junk signal (a URL, the station's own name, promotional copy, or a
+  bare single-word ID token); everything else passes through. A rejected update
+  is dropped, not blanked, so the previous good track stays on screen.
+- Added `StationNameFormatter` (`RadioDirectory`) to clean up station names at
+  ingestion — Radio-Browser and SHOUTcast names arrive with underscores standing
+  in for spaces and bracketed/parenthesized clutter tags (`[HD]`, `(128k)`).
+  Applied once, at `RadioBrowserDirectoryClient.station(from:)` and the
+  SHOUTcast SAX mapping, so every consumer (search, browse, the song-title
+  filter's station-name comparison) sees the same clean name.
+
+## 2026-07-13 (Factory adopted for dependency injection)
+
+- Adopted **Factory 3.3.1** (MIT, `hmlongco/Factory`) as a `Container`-based DI seam ahead of the
+  playback-engine swap (AudioStreaming) and debug network logging (Pulse) landing in later phases —
+  both need a registration point that can flip from a stub/AVPlayer default to a real implementation
+  without touching call sites. Import is `FactoryKit` (the module was renamed from `Factory` in the
+  3.x line); the package itself is still named `Factory`.
+- Two registrations so far: `Container.radioDirectory` (`RadioDirectory` package, defaults to
+  `RadioBrowserDirectoryClient()`) and `Container.radioPlaybackEngine` (`Playback` package, defaults
+  to a new `StubRadioPlaybackEngine` — a placeholder for the `AudioStreaming`-backed engine landing
+  next). Both use `.onPreview`/`.onTest` to force `PreviewRadioDirectory`/the stub in non-production
+  contexts, and `.scope(.singleton)` so the app shares one instance.
+  `AppDependencies.bootstrap()` overrides `radioDirectory` with the real decorated (preferred +
+  caching) instance via a free function (`registerProductionRadioDirectory`) kept in the
+  `RadioDirectory` package, so the app target itself never needs to import `FactoryKit` directly.
+- `BrowseViewModel`/`SearchViewModel` now default their `directory` initializer parameter to
+  `Container.shared.radioDirectory()` instead of direct instantiation (`PreviewRadioDirectory()` /
+  a required parameter). `RootView` no longer threads a `directory` instance through three call
+  sites — Factory resolves it instead.
+- `RadioPlaybackEngine` (`Playback` package) is `AudioOutput` with no new requirements — a marker
+  protocol so a future concrete engine can satisfy both the existing `PlaybackController` seam and
+  the new Factory registration. `PlaybackControllerPlatform`'s production wiring still constructs
+  `AVPlayerAudioOutput()` directly for now; the swap to a Factory-resolved engine happens once a
+  real implementation exists.
+
 ## 2026-07-12 (App Intents entity schemas + typed playback failures)
 
 Two 0.3.0 workstream items, picked up together since both mirror an existing pattern

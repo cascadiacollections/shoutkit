@@ -17,14 +17,21 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../ImageIODownsample"),
-        .package(path: "../RadioDirectory")
+        .package(path: "../RadioDirectory"),
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.1"),
+        .package(url: "https://github.com/dimitris-c/AudioStreaming.git", exact: "1.4.4")
     ],
     targets: [
         .target(
             name: "Playback",
             dependencies: [
                 "ImageIODownsample",
-                "RadioDirectory"
+                "RadioDirectory",
+                .product(name: "FactoryKit", package: "Factory"),
+                // iOS-only: mirrors the canImport(UIKit) gate on the concrete
+                // AVPlayer/AudioStreaming-backed production types, so the mac
+                // host test job never has to fetch or link it.
+                .product(name: "AudioStreaming", package: "AudioStreaming", condition: .when(platforms: [.iOS]))
             ],
             resources: [.process("Resources/Localizable.xcstrings")]
         ),

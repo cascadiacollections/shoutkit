@@ -1,4 +1,5 @@
 import AsyncAlgorithms
+import FactoryKit
 import Foundation
 import Observation
 import RadioDirectory
@@ -42,7 +43,7 @@ public final class SearchViewModel {
     @ObservationIgnored private var debounceTask: Task<Void, Never>?
     @ObservationIgnored private let queries: AsyncStream<String>.Continuation
 
-    public init(directory: any RadioDirectoryProviding) {
+    public init(directory: any RadioDirectoryProviding = Container.shared.radioDirectory()) {
         self.directory = directory
 
         let (stream, continuation) = AsyncStream.makeStream(of: String.self)

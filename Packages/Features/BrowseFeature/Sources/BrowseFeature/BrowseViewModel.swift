@@ -1,3 +1,4 @@
+import FactoryKit
 import Observation
 import RadioDirectory
 
@@ -39,7 +40,7 @@ public final class BrowseViewModel {
     @ObservationIgnored private let directory: any RadioDirectoryProviding
     @ObservationIgnored private var genreTask: Task<Void, Never>?
 
-    public init(directory: any RadioDirectoryProviding = PreviewRadioDirectory()) {
+    public init(directory: any RadioDirectoryProviding = Container.shared.radioDirectory()) {
         self.directory = directory
     }
 

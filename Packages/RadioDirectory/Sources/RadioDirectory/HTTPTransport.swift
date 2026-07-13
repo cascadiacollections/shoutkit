@@ -11,7 +11,14 @@ public protocol HTTPTransporting: Sendable {
 }
 
 public actor URLSessionHTTPTransport: HTTPTransporting {
+    // Debug builds route through Pulse's proxy session (see
+    // PulseNetworkLogging.swift) so Radio-Browser/SHOUTcast and artwork
+    // requests are inspectable; Release stays on plain `URLSession.shared`.
+    #if DEBUG
+    public static let shared = URLSessionHTTPTransport(session: PulseNetworkLogging.session)
+    #else
     public static let shared = URLSessionHTTPTransport()
+    #endif
 
     private let session: URLSession
 

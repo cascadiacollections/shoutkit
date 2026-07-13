@@ -143,6 +143,12 @@ extension PlaybackController {
     func handleTrackInfo(_ info: AudioTrackInfo) {
         guard let station = activeStation else { return }
 
+        // Conservative gate: junk (a URL, the station's own name, promo copy,
+        // a bare ID token) never reaches now-playing or history. A track that
+        // fails the check is dropped, not blanked — the previous good track
+        // (or nothing) stays on screen rather than flashing to empty.
+        guard SongTitleFilter.isLikelySongTitle(info, stationName: station.name) else { return }
+
         // ICY pushes often repeat identical track info (the Live Activity
         // coordinator dedupes for the same reason). Ignore duplicates so the
         // lock screen doesn't flash back to station art and the album art

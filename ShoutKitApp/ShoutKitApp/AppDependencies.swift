@@ -51,6 +51,10 @@ enum AppDependencies {
         let store = LibraryStore(context: container.mainContext)
         let settings = SettingsStore()
         let (directory, playReporter) = makeDirectory()
+        // Route the decorated (preferred + caching) instance through Factory so
+        // BrowseViewModel/SearchViewModel resolve it instead of it being threaded
+        // manually through RootView.
+        registerProductionRadioDirectory(directory)
         let controller = PlaybackController(directory: directory)
 
         configureCallbacks(for: controller, store: store, settings: settings, playReporter: playReporter)

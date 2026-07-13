@@ -19,7 +19,7 @@ struct ShoutKitApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView(directory: services.directory, launchRouter: services.stationLaunchRouter)
+            RootView(launchRouter: services.stationLaunchRouter)
                 .modelContainer(services.container)
                 .libraryStore(services.libraryStore)
                 .playbackController(services.playbackController)

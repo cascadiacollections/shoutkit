@@ -373,7 +373,7 @@ private final class StationParserDelegate: NSObject, XMLParserDelegate {
         stations.append(
             Station(
                 id: id,
-                name: name,
+                name: StationNameFormatter.normalize(name),
                 genre: genre,
                 listenerCount: listeners,
                 bitrate: bitrate

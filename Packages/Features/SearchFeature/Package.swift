@@ -16,7 +16,8 @@ let package = Package(
         .package(path: "../../Playback"),
         .package(path: "../../Persistence"),
         .package(path: "../../RadioDirectory"),
-        .package(url: "https://github.com/apple/swift-async-algorithms.git", from: "1.1.5")
+        .package(url: "https://github.com/apple/swift-async-algorithms.git", from: "1.1.5"),
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.1")
     ],
     targets: [
         .target(
@@ -26,7 +27,8 @@ let package = Package(
                 "Playback",
                 "Persistence",
                 "RadioDirectory",
-                .product(name: "AsyncAlgorithms", package: "swift-async-algorithms")
+                .product(name: "AsyncAlgorithms", package: "swift-async-algorithms"),
+                .product(name: "FactoryKit", package: "Factory")
             ],
             resources: [.process("Resources/Localizable.xcstrings")],
             swiftSettings: [.defaultIsolation(MainActor.self)]

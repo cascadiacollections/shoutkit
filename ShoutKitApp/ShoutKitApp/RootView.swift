@@ -10,7 +10,6 @@ import SettingsFeature
 import SwiftUI
 
 struct RootView: View {
-    let directory: any RadioDirectoryProviding
     let launchRouter: StationLaunchRouter
 
     // Read only to verify injection below; feature views read these themselves.
@@ -64,7 +63,7 @@ struct RootView: View {
         TabView(selection: $selectedTab) {
             Tab("Listen Now", systemImage: "play.circle", value: ShoutKitTab.listenNow) {
                 NavigationStack {
-                    ListenNowView(viewModel: BrowseViewModel(directory: directory))
+                    ListenNowView(viewModel: BrowseViewModel())
                         .navigationTitle("Listen Now")
                         .toolbar {
                             ToolbarItem(placement: .topBarTrailing) {
@@ -81,14 +80,14 @@ struct RootView: View {
 
             Tab("Browse", systemImage: "square.grid.2x2", value: ShoutKitTab.browse) {
                 NavigationStack {
-                    BrowseLandingView(viewModel: BrowseViewModel(directory: directory))
+                    BrowseLandingView(viewModel: BrowseViewModel())
                         .navigationTitle("Browse")
                 }
             }
 
             Tab("Search", systemImage: "magnifyingglass", value: ShoutKitTab.search, role: .search) {
                 NavigationStack {
-                    SearchView(viewModel: SearchViewModel(directory: directory))
+                    SearchView(viewModel: SearchViewModel())
                         .navigationTitle("Search")
                 }
             }
@@ -134,6 +133,6 @@ private enum ShoutKitTab: Hashable {
 }
 
 #Preview {
-    RootView(directory: PreviewRadioDirectory(), launchRouter: StationLaunchRouter())
+    RootView(launchRouter: StationLaunchRouter())
         .tint(.shoutKitAccent)
 }
