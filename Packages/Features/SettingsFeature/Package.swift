@@ -24,9 +24,12 @@ let package = Package(
             ],
             resources: [
                 .copy("Resources/apache-2.0.txt"),
+                .copy("Resources/audiostreaming-mit.txt"),
                 .copy("Resources/factory-mit.txt"),
                 .copy("Resources/gpl-3.0.txt"),
                 .copy("Resources/mit.txt"),
+                .copy("Resources/ogg-bsd.txt"),
+                .copy("Resources/vorbis-bsd.txt"),
                 .process("Resources/Localizable.xcstrings")
             ],
             swiftSettings: [.defaultIsolation(MainActor.self)]

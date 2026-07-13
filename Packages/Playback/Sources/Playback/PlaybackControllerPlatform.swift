@@ -1,18 +1,21 @@
 #if canImport(UIKit)
+import FactoryKit
 import Foundation
 import RadioDirectory
 
 public extension PlaybackController {
-    /// Production wiring: AVPlayer-backed audio and the system now-playing center.
-    /// Keep the lock-screen / Control Center surface on the MediaPlayer bridge for
-    /// now: on-device iOS 27 builds have shown Live Activity album art correctly
-    /// while the system Now Playing surface can stick to station artwork. Both
-    /// implementations sit behind ``NowPlayingPresenting``, so this is a safe
-    /// runtime switch until the typed MediaSession path is fully parity-tested.
+    /// Production wiring: the Factory-resolved playback engine (AudioStreaming-
+    /// backed by default; see ``Container/radioPlaybackEngine``) and the system
+    /// now-playing center. Keep the lock-screen / Control Center surface on the
+    /// MediaPlayer bridge for now: on-device iOS 27 builds have shown Live
+    /// Activity album art correctly while the system Now Playing surface can
+    /// stick to station artwork. Both implementations sit behind
+    /// ``NowPlayingPresenting``, so this is a safe runtime switch until the typed
+    /// MediaSession path is fully parity-tested.
     convenience init(directory: any RadioDirectoryProviding) {
         self.init(
             directory: directory,
-            output: AVPlayerAudioOutput(),
+            output: Container.shared.radioPlaybackEngine(),
             nowPlayingCenter: NowPlayingCenter()
         )
     }

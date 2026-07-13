@@ -1,5 +1,42 @@
 # Decisions
 
+## 2026-07-13 (AudioStreaming adopted as the playback engine)
+
+- Adopted **AudioStreaming 1.4.4** (MIT, `dimitris-c/AudioStreaming`) as the concrete
+  `RadioPlaybackEngine` (see the 2026-07-13 Factory entry below), backed by its
+  `AudioPlayer` (`AVAudioEngine`). `Container.radioPlaybackEngine`'s default now
+  constructs `AudioStreamingPlaybackEngine` on iOS; `PlaybackControllerPlatform`'s
+  production initializer resolves it via `Container.shared.radioPlaybackEngine()`
+  instead of constructing `AVPlayerAudioOutput()` directly. `AVPlayerAudioOutput`
+  stays in the tree (still conforms to `AudioOutput`) but is no longer wired to
+  production playback.
+- AudioStreaming transitively pulls `ogg-binary-xcframework` and
+  `vorbis-binary-xcframework` (both BSD, Xiph.org) for its Ogg Vorbis codec
+  support — unavoidable if adopting AudioStreaming at all, since that codec
+  bridge is baked into the library rather than an optional add-on. Recorded in
+  `THIRD_PARTY_LICENSES.md` and the in-app Licenses screen alongside
+  AudioStreaming itself.
+- AudioStreaming doesn't touch `AVAudioSession` itself (by design, per its own
+  source), so `AudioStreamingPlaybackEngine` owns session activation and
+  interruption/route-change handling directly — mirroring `AVPlayerAudioOutput`
+  line for line — rather than assuming the library does it. Both stay behind
+  `#if canImport(UIKit)`, and the `Playback` package's SPM manifest mirrors that
+  gate with `condition: .when(platforms: [.iOS])` on the AudioStreaming product
+  dependency, so the mac host test job (`swift test`) never fetches or links it.
+- Added a conservative `SongTitleFilter` (pure, in `Playback`) applied in
+  `PlaybackController.handleTrackInfo` before a parsed ICY track reaches
+  `nowPlaying`/`onTrackHeard` — shared by both playback engines, since both feed
+  `ICYMetadataParser` output through the same call site. Rejects only on a
+  positive junk signal (a URL, the station's own name, promotional copy, or a
+  bare single-word ID token); everything else passes through. A rejected update
+  is dropped, not blanked, so the previous good track stays on screen.
+- Added `StationNameFormatter` (`RadioDirectory`) to clean up station names at
+  ingestion — Radio-Browser and SHOUTcast names arrive with underscores standing
+  in for spaces and bracketed/parenthesized clutter tags (`[HD]`, `(128k)`).
+  Applied once, at `RadioBrowserDirectoryClient.station(from:)` and the
+  SHOUTcast SAX mapping, so every consumer (search, browse, the song-title
+  filter's station-name comparison) sees the same clean name.
+
 ## 2026-07-13 (Factory adopted for dependency injection)
 
 - Adopted **Factory 3.3.1** (MIT, `hmlongco/Factory`) as a `Container`-based DI seam ahead of the

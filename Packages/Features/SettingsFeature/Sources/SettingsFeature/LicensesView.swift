@@ -33,6 +33,15 @@ struct LicensesView: View {
                 NavigationLink("Factory — MIT") {
                     LicenseTextView(title: "MIT", resource: "factory-mit")
                 }
+                NavigationLink("AudioStreaming — MIT") {
+                    LicenseTextView(title: "MIT", resource: "audiostreaming-mit")
+                }
+                NavigationLink("libogg — BSD") {
+                    LicenseTextView(title: "BSD", resource: "ogg-bsd")
+                }
+                NavigationLink("libvorbis — BSD") {
+                    LicenseTextView(title: "BSD", resource: "vorbis-bsd")
+                }
             } header: {
                 Text("Third-Party")
             } footer: {
@@ -40,7 +49,8 @@ struct LicensesView: View {
                 Apple's swift-algorithms, swift-async-algorithms, and \
                 swift-collections packages, \
                 Apache-2.0 with the Swift Runtime Library Exception. \
-                Factory (hmlongco/Factory), MIT. \
+                Factory (hmlongco/Factory) and AudioStreaming (dimitris-c/AudioStreaming), MIT. \
+                AudioStreaming's bundled libogg/libvorbis (sbooth's xcframework builds), BSD. \
                 The full inventory lives in THIRD_PARTY_LICENSES.md in the repository.
                 """)
             }

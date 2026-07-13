@@ -175,7 +175,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
 
         return Station(
             id: dto.stationuuid,
-            name: name,
+            name: StationNameFormatter.normalize(name),
             genre: genre(from: dto),
             listenerCount: 0,
             bitrate: (dto.bitrate ?? 0) > 0 ? dto.bitrate : nil,
