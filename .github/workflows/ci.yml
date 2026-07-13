@@ -66,7 +66,7 @@ jobs:
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
           xcodebuild -version
 
-      # Also compiles the UIKit-gated production types (AVPlayerAudioOutput,
+      # Also compiles the UIKit-gated production types (AudioStreamingPlaybackEngine,
       # NowPlayingCenter) that the host test job never sees. GIT_COMMIT_SHA is
       # stamped into the app's Info.plist (surfaced in Settings → About) so a
       # distributed build maps back to an exact source revision; archive/release
@@ -89,17 +89,13 @@ jobs:
         run: |
           grep -E "(error|fatal error): " build.log | sort -u | head -10 | sed 's/^/::error::/' || true
 
-      # Pulse (kean/Pulse) is gated behind #if DEBUG end to end (see
-      # RadioDirectory/PulseNetworkLogging.swift): every reference to it compiles
-      # out of Release, so none of its logging ever runs there. SPM's dependency
-      # graph is configuration-independent, though (PackageDescription's
-      # TargetDependencyCondition only supports .when(platforms:)/.when(traits:),
-      # never a build configuration) — a declared package dependency links into
-      # every configuration that consumes it regardless of #if DEBUG in the
-      # consumer, so Pulse's own compiled module can still end up physically
-      # present (unused) in the Release binary. Verify what's actually
-      # guaranteed — present in Debug — and report Release's symbol status
-      # without failing the build on a bar SPM can't meet here.
+      # Pulse (kean/Pulse) is declared only by the app-side DebugSupport package
+      # and gated behind #if DEBUG end to end (see
+      # DebugSupport/DebugNetworkInspection.swift), so it must link into Debug
+      # and never into Release. Static linking + dead-code stripping means an
+      # entirely #if DEBUG-gated dependency simply doesn't get pulled into a
+      # Release binary — verify both sides of that contract by symbol-checking
+      # each configuration's build product directly, rather than trusting it.
       - name: Verify Pulse symbols are present in the Debug build
         run: |
           APP_BINARY="DerivedData/Build/Products/Debug-iphonesimulator/ShoutKit.app/ShoutKit"

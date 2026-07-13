@@ -13,32 +13,28 @@ updates:
     labels:
       - dependencies
 
-  # Only the packages with a remote `.package(url:)` dependency need an entry —
-  # the rest resolve exclusively through local `.package(path:)` references
-  # (see THIRD_PARTY_LICENSES.md for the three runtime deps this tracks).
+  # Every package with a remote `.package(url:)` dependency needs a directory
+  # here — the rest resolve exclusively through local `.package(path:)`
+  # references (see THIRD_PARTY_LICENSES.md for the full inventory). One
+  # multi-directory entry, not one entry per package, so `groups` can span
+  # directories: Factory is `exact`-pinned in four manifests, and an ungrouped
+  # bump of just one would leave the graph with conflicting exact pins.
   - package-ecosystem: swift
-    directory: "/Packages/RadioDirectory"
+    directories:
+      - "/Packages/RadioDirectory"
+      - "/Packages/DesignSystem"
+      - "/Packages/LiveActivity"
+      - "/Packages/Playback"
+      - "/Packages/DebugSupport"
+      - "/Packages/Features/BrowseFeature"
+      - "/Packages/Features/SearchFeature"
     schedule:
       interval: weekly
     commit-message:
       prefix: deps
     labels:
       - dependencies
-
-  - package-ecosystem: swift
-    directory: "/Packages/DesignSystem"
-    schedule:
-      interval: weekly
-    commit-message:
-      prefix: deps
-    labels:
-      - dependencies
-
-  - package-ecosystem: swift
-    directory: "/Packages/LiveActivity"
-    schedule:
-      interval: weekly
-    commit-message:
-      prefix: deps
-    labels:
-      - dependencies
+    groups:
+      factory:
+        patterns:
+          - "*actory*"

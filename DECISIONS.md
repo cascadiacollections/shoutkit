@@ -1,24 +1,49 @@
 # Decisions
 
+## 2026-07-13 (dependency-review follow-ups)
+
+Follow-ups from an adversarial review of the three-dependency branch, applied
+before merge:
+
+- **Dependabot's swift entries collapsed into one multi-directory block**
+  covering every manifest with a remote dependency (the old three-entry list
+  predated Playback/BrowseFeature/SearchFeature/DebugSupport gaining remote
+  deps and its "only three packages" comment had gone stale). A `groups`
+  config bundles Factory bumps into one PR: Factory is `exact`-pinned in four
+  manifests, and an ungrouped bump of a single one would leave SwiftPM with
+  unresolvable conflicting exact pins.
+- **swift-numerics attributed** in `THIRD_PARTY_LICENSES.md` and the in-app
+  Licenses screen. It's transitive-only (swift-algorithms' `RealModule`), but
+  the project's stated policy is to attribute what's in the shipped dependency
+  graph, and every other transitive (ogg/vorbis) already was.
+
 ## 2026-07-13 (Pulse adopted for debug-only network inspection)
 
 - Adopted **Pulse 5.2.3** (MIT, `kean/Pulse`) for debug network inspection —
   the `Pulse` product only (not `PulseProxy`'s method-swizzling auto-logger, nor
   `PulseUI`'s viewer — no in-app UI was added this pass, see below). Listed
-  under `THIRD_PARTY_LICENSES.md`'s dev-tools section, not the runtime table
-  or the in-app Licenses screen, since by design it never ships in Release.
-- Every Pulse reference lives in one new file,
-  `RadioDirectory/PulseNetworkLogging.swift`, wrapped end to end in
-  `#if DEBUG` (including the `import Pulse` itself) — auditing "is Pulse
-  entirely gated" only requires reading that one file. `HTTPTransport.swift`
-  reaches in through a two-line `#if DEBUG` in `URLSessionHTTPTransport
-  .shared`'s initialization, installing `URLSessionProxyDelegate` on the
-  session it uses instead of plain `URLSession.shared`. Since Radio-Browser,
-  SHOUTcast, and artwork downloads (`ArtworkLoader`, `NowPlayingCenter`) all
-  default to that one shared transport, this single seam covers all of them
-  without touching any of those call sites. `AlbumArtLookup`'s separate,
-  short-timeout iTunes-lookup session is intentionally left alone — out of
-  scope for "Radio-Browser and artwork requests."
+  under `THIRD_PARTY_LICENSES.md`'s dev-tools section, not the runtime table,
+  since by design it never ships in Release. Debug builds *do* carry it — and
+  testers receive Debug builds, and MIT's notice requirement has no
+  debug-builds exemption — so the in-app Licenses screen shows a
+  `#if DEBUG`-gated Pulse entry.
+- Pulse is declared only by **`Packages/DebugSupport`**, a small app-side
+  package that only the app target links — never by RadioDirectory or any other
+  reusable MIT package, so external consumers of those packages don't fetch or
+  build inspection tooling just to use a directory client. Every Pulse
+  reference lives in one file, `DebugSupport/DebugNetworkInspection.swift`,
+  wrapped end to end in `#if DEBUG` (including the `import Pulse` itself) —
+  auditing "is Pulse entirely gated" only requires reading that one file. The
+  seam it uses: `URLSessionHTTPTransport.installSharedSession(_:)` (first
+  install wins, and it must precede the first network call —
+  `AppDependencies.bootstrap()` calls it first thing), which swaps the session
+  behind `URLSessionHTTPTransport.shared` for one wired with
+  `URLSessionProxyDelegate`. Since Radio-Browser, SHOUTcast, and artwork
+  downloads (`ArtworkLoader`, `NowPlayingCenter`) all default to that one
+  shared transport, the single seam covers all of them without touching any of
+  those call sites. `AlbumArtLookup`'s separate, short-timeout iTunes-lookup
+  session is intentionally left alone — out of scope for "Radio-Browser and
+  artwork requests."
 - No in-app viewer was added (`PulseUI`'s `ConsoleView` or a Settings debug
   entry): the task's acceptance bar was the logging proxy plus a Debug/Release
   presence check, and a viewer screen wasn't asked for — logs are still
@@ -62,14 +87,21 @@
   constructs `AudioStreamingPlaybackEngine` on iOS; `PlaybackControllerPlatform`'s
   production initializer resolves it via `Container.shared.radioPlaybackEngine()`
   instead of constructing `AVPlayerAudioOutput()` directly. `AVPlayerAudioOutput`
-  stays in the tree (still conforms to `AudioOutput`) but is no longer wired to
-  production playback.
+  itself was **deleted** rather than kept as an unwired shadow engine: two
+  parallel engines with duplicated session/interruption handling is silent rot,
+  tests and previews already run on `StubRadioPlaybackEngine`, and git history
+  keeps it recoverable if an AVPlayer fallback is ever genuinely wanted.
 - AudioStreaming transitively pulls `ogg-binary-xcframework` and
   `vorbis-binary-xcframework` (both BSD, Xiph.org) for its Ogg Vorbis codec
   support — unavoidable if adopting AudioStreaming at all, since that codec
   bridge is baked into the library rather than an optional add-on. Recorded in
   `THIRD_PARTY_LICENSES.md` and the in-app Licenses screen alongside
-  AudioStreaming itself.
+  AudioStreaming itself. One accepted tradeoff, noted for honesty: these are
+  *prebuilt binaries*, so the integrity chain is closed (manifest revision →
+  SHA-256 checksum → artifact, locked by `Package.resolved`) but provenance is
+  trust-based — we trust sbooth's builds were produced from the Xiph sources
+  they claim. A small reproducibility concession for a FOSS project; rebuild
+  from Xiph source ourselves if it ever stops being acceptable.
 - AudioStreaming doesn't touch `AVAudioSession` itself (by design, per its own
   source), so `AudioStreamingPlaybackEngine` owns session activation and
   interruption/route-change handling directly — mirroring `AVPlayerAudioOutput`

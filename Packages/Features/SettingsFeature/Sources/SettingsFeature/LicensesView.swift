@@ -30,6 +30,9 @@ struct LicensesView: View {
                 NavigationLink("swift-collections — Apache-2.0") {
                     LicenseTextView(title: "Apache-2.0", resource: "apache-2.0")
                 }
+                NavigationLink("swift-numerics — Apache-2.0") {
+                    LicenseTextView(title: "Apache-2.0", resource: "apache-2.0")
+                }
                 NavigationLink("Factory — MIT") {
                     LicenseTextView(title: "MIT", resource: "factory-mit")
                 }
@@ -42,15 +45,19 @@ struct LicensesView: View {
                 NavigationLink("libvorbis — BSD") {
                     LicenseTextView(title: "BSD", resource: "vorbis-bsd")
                 }
-                NavigationLink("Pulse — MIT") {
+                // Debug builds link Pulse (never Release — CI symbol-checks
+                // that), so builds handed to testers still carry its notice.
+                #if DEBUG
+                NavigationLink("Pulse (Debug builds only) — MIT") {
                     LicenseTextView(title: "MIT", resource: "pulse-mit")
                 }
+                #endif
             } header: {
                 Text("Third-Party")
             } footer: {
                 Text("""
-                Apple's swift-algorithms, swift-async-algorithms, and \
-                swift-collections packages, \
+                Apple's swift-algorithms, swift-async-algorithms, \
+                swift-collections, and swift-numerics (transitive) packages, \
                 Apache-2.0 with the Swift Runtime Library Exception. \
                 Factory (hmlongco/Factory) and AudioStreaming (dimitris-c/AudioStreaming), MIT. \
                 AudioStreaming's bundled libogg/libvorbis (sbooth's xcframework builds), BSD. \

@@ -1,3 +1,4 @@
+import DebugSupport
 import DesignSystem
 import Foundation
 import NowPlayingActivityKit
@@ -36,6 +37,11 @@ enum AppDependencies {
         if let services {
             return services
         }
+
+        // Debug-only: route the shared HTTP transport through Pulse's logging
+        // proxy. Must run before anything below issues a network request, since
+        // the first touch of `URLSessionHTTPTransport.shared` locks the session in.
+        DebugNetworkInspection.install()
 
         // Size the shared URL cache for RAM-constrained devices: raw bytes
         // (artwork, directory JSON) belong on disk — cheap, and they survive

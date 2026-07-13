@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 public enum HTTPTransportError: Error, Equatable, Sendable {
     case transport(String)
@@ -11,14 +12,22 @@ public protocol HTTPTransporting: Sendable {
 }
 
 public actor URLSessionHTTPTransport: HTTPTransporting {
-    // Debug builds route through Pulse's proxy session (see
-    // PulseNetworkLogging.swift) so Radio-Browser/SHOUTcast and artwork
-    // requests are inspectable; Release stays on plain `URLSession.shared`.
-    #if DEBUG
-    public static let shared = URLSessionHTTPTransport(session: PulseNetworkLogging.session)
-    #else
-    public static let shared = URLSessionHTTPTransport()
-    #endif
+    /// The session `shared` is built with on first access, defaulting to
+    /// `URLSession.shared`. The app installs its Debug-only Pulse logging proxy
+    /// here (see the app-side DebugSupport package) so this package never
+    /// depends on inspection tooling.
+    private static let sharedSessionOverride = OSAllocatedUnfairLock<URLSession?>(initialState: nil)
+
+    /// Installs the session that backs `shared`. Only the first install wins,
+    /// and it must happen before the first network call touches `shared` —
+    /// call it at the top of the app's bootstrap, nowhere else.
+    public static func installSharedSession(_ session: URLSession) {
+        sharedSessionOverride.withLock { $0 = $0 ?? session }
+    }
+
+    public static let shared = URLSessionHTTPTransport(
+        session: sharedSessionOverride.withLock { $0 } ?? .shared
+    )
 
     private let session: URLSession
 
