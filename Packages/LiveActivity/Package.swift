@@ -5,10 +5,9 @@ import PackageDescription
 let package = Package(
     name: "LiveActivity",
     platforms: [
-        // SwiftPM's iOS platform enum does not expose a v16_1 case.
-        // Keep the package at iOS 16 and gate 16.1+ ActivityKit usage with
-        // @available at call sites/types.
-        .iOS(.v16)
+        // This package depends on Playback, which currently requires iOS 17.
+        // ActivityKit usage is additionally guarded with @available at call sites.
+        .iOS(.v17)
     ],
     products: [
         // Attributes only — linked by BOTH the app and the widget extension.
