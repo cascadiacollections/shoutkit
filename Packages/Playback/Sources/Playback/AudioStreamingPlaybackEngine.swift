@@ -6,8 +6,7 @@ import Foundation
 /// ``RadioPlaybackEngine`` backed by AudioStreaming's `AudioPlayer`
 /// (`AVAudioEngine`), registered as the production ``Container/radioPlaybackEngine``
 /// default. AudioStreaming doesn't touch `AVAudioSession` itself, so session
-/// activation/teardown and interruption/route-change handling here mirror
-/// ``AVPlayerAudioOutput``.
+/// activation/teardown and interruption/route-change handling live here.
 @MainActor
 public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     public var onStatusChange: ((AudioStatus) -> Void)?
@@ -106,8 +105,8 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         })
     }
 
-    /// Maps an AudioStreaming error to the same typed failure `AVPlayerAudioOutput`
-    /// surfaces, reusing its URL-error classification for the one case
+    /// Maps an AudioStreaming error to the app's typed `PlaybackError`, reusing
+    /// `PlaybackFailure`'s URL-error classification for the one case
     /// (`.networkError(.failure)`) that wraps a real `NSError`.
     private static func classify(_ error: AudioPlayerError) -> PlaybackError {
         let candidate: any Error
@@ -169,9 +168,9 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
 
     public nonisolated func audioPlayerDidCancel(player: AudioPlayer, queuedItems: [AudioEntryId]) {}
 
-    /// The one ICY metadata seam: extract `StreamTitle` and run it through the
-    /// same parser `AVPlayerAudioOutput` uses, so both engines feed
-    /// `PlaybackController` identically.
+    /// The one ICY metadata seam: extract `StreamTitle` and run it through
+    /// `ICYMetadataParser`, so `PlaybackController` receives track info in the
+    /// same shape its tests exercise.
     public nonisolated func audioPlayerDidReadMetadata(player: AudioPlayer, metadata: [String: String]) {
         guard let streamTitle = metadata["StreamTitle"] ?? metadata["streamtitle"] else { return }
         let trackInfo = ICYMetadataParser.parseTrack(from: streamTitle)

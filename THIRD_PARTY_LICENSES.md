@@ -12,11 +12,11 @@ it ships in the binary, add its license text to the in-app Licenses screen
 | swift-algorithms | 1.2.1+ (`from: "1.2.1"`) | Apache-2.0 (with Runtime Library Exception) | RadioDirectory — order-preserving, case-insensitive de-duplication (`uniqued(on:)`) of merged station/genre lists | <https://github.com/apple/swift-algorithms> |
 | swift-async-algorithms | 1.1.5+ (`from: "1.1.5"`) | Apache-2.0 (with Runtime Library Exception) | SearchFeature — `debounce` on the query stream; LiveActivity — `removeDuplicates()` on the playback-state and track-metadata observation sequences | <https://github.com/apple/swift-async-algorithms> |
 | swift-collections | 1.6.0+ (`from: "1.6.0"`) | Apache-2.0 (with Runtime Library Exception) | DesignSystem — `OrderedDictionary` backs the Now Playing artwork store's bounded FIFO cache | <https://github.com/apple/swift-collections> |
+| swift-numerics | 1.1.1 (transitive via swift-algorithms) | Apache-2.0 (with Runtime Library Exception) | Transitive only — `RealModule` dependency of swift-algorithms; no direct ShoutKit use | <https://github.com/apple/swift-numerics> |
 | Factory | 3.3.1 (`exact: "3.3.1"`) | MIT | RadioDirectory, Playback, BrowseFeature, SearchFeature — `Container`-based dependency injection for the station directory client and the playback engine | <https://github.com/hmlongco/Factory> |
 | AudioStreaming | 1.4.4 (`exact: "1.4.4"`) | MIT | Playback — `AudioStreamingPlaybackEngine`, the `AVAudioEngine`-backed production playback engine (iOS only) | <https://github.com/dimitris-c/AudioStreaming> |
 | ogg-binary-xcframework | 0.1.2 (transitive via AudioStreaming) | BSD (Xiph.org) | Playback — libogg, linked by AudioStreaming's Ogg Vorbis codec support | <https://github.com/sbooth/ogg-binary-xcframework> |
 | vorbis-binary-xcframework | 0.1.2 (transitive via AudioStreaming) | BSD (Xiph.org) | Playback — libvorbis, linked by AudioStreaming's Ogg Vorbis codec support | <https://github.com/sbooth/vorbis-binary-xcframework> |
-| Pulse | 5.2.3 (`exact: "5.2.3"`) | MIT | RadioDirectory — `#if DEBUG`-only network inspection (`PulseNetworkLogging.swift`). All logging is compile-time-removed from Release, but SPM's dependency graph is configuration-independent, so Pulse's compiled-but-unreferenced module may still be physically present (unused) in the Release binary — see the 2026-07-13 DECISIONS.md entry | <https://github.com/kean/Pulse> |
 
 ## Development-only tools
 
@@ -26,3 +26,4 @@ Not linked into the shipped binary; listed for completeness.
 | ---- | ------- | -------- | --- |
 | SwiftLint (pinned in CI, see `ci.yml`) | MIT | Linting, `--strict` in CI | <https://github.com/realm/SwiftLint> |
 | SwiftFormat | MIT | Formatting (`.swiftformat`) | <https://github.com/nicklockwood/SwiftFormat> |
+| Pulse | MIT | DebugSupport (app-side package) — `#if DEBUG`-only network inspection (`DebugNetworkInspection.swift`); never declared by the reusable packages, compiled out of Release entirely (CI symbol-checks this), and attributed in the in-app Licenses screen of Debug builds since testers do receive it | <https://github.com/kean/Pulse> |

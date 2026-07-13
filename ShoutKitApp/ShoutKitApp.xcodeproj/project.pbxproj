@@ -29,6 +29,7 @@
 		00000000000000000000007A /* NowPlayingLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000072 /* NowPlayingLiveActivity.swift */; };
 		00000000000000000000007F /* ShoutKitWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 000000000000000000000070 /* ShoutKitWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		000000000000000000000082 /* SettingsFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005A /* SettingsFeature */; };
+		0000000000000000000000A0 /* DebugSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005B /* DebugSupport */; };
 		000000000000000000000084 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000083 /* Localizable.xcstrings */; };
 		000000000000000000000086 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000085 /* Localizable.xcstrings */; };
 /* End PBXBuildFile section */
@@ -95,6 +96,7 @@
 				000000000000000000000066 /* SearchFeature in Frameworks */,
 				000000000000000000000067 /* LibraryFeature in Frameworks */,
 				000000000000000000000082 /* SettingsFeature in Frameworks */,
+				0000000000000000000000A0 /* DebugSupport in Frameworks */,
 				000000000000000000000068 /* NowPlayingActivityKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -206,6 +208,7 @@
 				000000000000000000000056 /* SearchFeature */,
 				000000000000000000000057 /* LibraryFeature */,
 				00000000000000000000005A /* SettingsFeature */,
+				00000000000000000000005B /* DebugSupport */,
 				000000000000000000000058 /* NowPlayingActivityKit */,
 			);
 			productName = ShoutKit;
@@ -272,6 +275,7 @@
 				000000000000000000000046 /* XCLocalSwiftPackageReference "../Packages/Features/SearchFeature" */,
 				000000000000000000000047 /* XCLocalSwiftPackageReference "../Packages/Features/LibraryFeature" */,
 				000000000000000000000049 /* XCLocalSwiftPackageReference "../Packages/Features/SettingsFeature" */,
+				00000000000000000000004A /* XCLocalSwiftPackageReference "../Packages/DebugSupport" */,
 				000000000000000000000048 /* XCLocalSwiftPackageReference "../Packages/LiveActivity" */,
 			);
 			productRefGroup = 000000000000000000000004 /* Products */;
@@ -616,6 +620,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/Features/SettingsFeature;
 		};
+		00000000000000000000004A /* XCLocalSwiftPackageReference "../Packages/DebugSupport" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/DebugSupport;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -673,6 +681,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 000000000000000000000049 /* XCLocalSwiftPackageReference "../Packages/Features/SettingsFeature" */;
 			productName = SettingsFeature;
+		};
+		00000000000000000000005B /* DebugSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 00000000000000000000004A /* XCLocalSwiftPackageReference "../Packages/DebugSupport" */;
+			productName = DebugSupport;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
