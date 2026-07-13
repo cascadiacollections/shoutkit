@@ -1,0 +1,23 @@
+[package]
+name = "shoutkit_rust_spike"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "shoutkit_rust_spike"
+# staticlib: linked into the iOS xcframework. cdylib: lets `uniffi-bindgen generate
+# --library` introspect the compiled library directly (also what we build+inspect
+# natively on non-Apple hosts to validate the bridge without an Xcode toolchain).
+crate-type = ["staticlib", "cdylib"]
+
+[dependencies]
+uniffi = { version = "0.32", features = ["cli"] }
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "uniffi-bindgen.rs"
+
+[profile.release]
+lto = true
+codegen-units = 1
