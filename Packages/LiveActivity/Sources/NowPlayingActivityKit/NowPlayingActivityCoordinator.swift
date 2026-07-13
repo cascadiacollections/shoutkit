@@ -19,6 +19,11 @@ import RadioDirectory
 /// - album art resolving (or station art) → stage the bitmap in the App Group
 ///   container and hand the widget its token
 /// - stop or failure → end the activity immediately
+///
+/// Requires iOS 17 because `PlaybackController` uses `@Observable` (Observation
+/// framework) and `Observations` async sequences, both of which require iOS 17.
+/// ActivityKit (Live Activities, Dynamic Island) additionally requires iOS 16.1.
+@available(iOS 17.0, *)
 @MainActor
 public final class NowPlayingActivityCoordinator {
     private var activity: Activity<NowPlayingActivityAttributes>?

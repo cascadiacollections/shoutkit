@@ -5,7 +5,11 @@ import PackageDescription
 let package = Package(
     name: "LiveActivity",
     platforms: [
-        .iOS(.v26)
+        // ActivityKit (Live Activities, Dynamic Island) requires iOS 16.1.
+        // NowPlayingActivityCoordinator additionally uses the Observation framework
+        // (@Observable, Observations async sequence) which requires iOS 17; see
+        // the @available annotation on that type.
+        .iOS(.v16_1)
     ],
     products: [
         // Attributes only — linked by BOTH the app and the widget extension.

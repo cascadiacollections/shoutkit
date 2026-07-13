@@ -6,7 +6,10 @@ let package = Package(
     name: "Playback",
     defaultLocalization: "en",
     platforms: [
-        .iOS(.v26),
+        // PlaybackController and SleepTimer use @Observable (Observation framework),
+        // which requires iOS 17. AudioStreamingPlaybackEngine additionally requires UIKit.
+        // Migrate @Observable → ObservableObject to reach iOS 16; tracked as follow-up.
+        .iOS(.v17),
         // Declared so the controller/state-machine test suite can run on the mac
         // host (`swift test`); the AVPlayer/UIKit-backed production types are
         // gated behind canImport(UIKit) and the app product remains iOS-only.

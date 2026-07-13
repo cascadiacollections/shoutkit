@@ -6,7 +6,9 @@ let package = Package(
     name: "DesignSystem",
     defaultLocalization: "en",
     platforms: [
-        .iOS(.v26)
+        // DesignSystem imports Playback (iOS 17 minimum) for StationPlaybackPhase.
+        // Move shared presentational types to a lower-level package to reach iOS 16.
+        .iOS(.v17)
     ],
     products: [
         .library(name: "DesignSystem", targets: ["DesignSystem"])

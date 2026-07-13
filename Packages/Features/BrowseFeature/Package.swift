@@ -6,7 +6,7 @@ let package = Package(
     name: "BrowseFeature",
     defaultLocalization: "en",
     platforms: [
-        .iOS(.v26)
+        .iOS(.v17)
     ],
     products: [
         .library(name: "BrowseFeature", targets: ["BrowseFeature"])

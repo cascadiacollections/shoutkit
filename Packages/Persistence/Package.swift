@@ -5,9 +5,10 @@ import PackageDescription
 let package = Package(
     name: "Persistence",
     platforms: [
-        .iOS(.v26),
-        // Declared so the pure-SwiftData test suite can run on the mac host
-        // (`swift test`); the app product itself remains iOS-only.
+        // SwiftData (@Model, ModelContainer) and the Observation framework
+        // (@Observable) require iOS 17. UserDefaults-backed fallback for iOS 16
+        // is tracked as a follow-up; add #available guards here as that work lands.
+        .iOS(.v17),
         .macOS(.v15)
     ],
     products: [
