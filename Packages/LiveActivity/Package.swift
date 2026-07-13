@@ -5,11 +5,10 @@ import PackageDescription
 let package = Package(
     name: "LiveActivity",
     platforms: [
-        // ActivityKit (Live Activities, Dynamic Island) requires iOS 16.1.
-        // NowPlayingActivityCoordinator additionally uses the Observation framework
-        // (@Observable, Observations async sequence) which requires iOS 17; see
-        // the @available annotation on that type.
-        .iOS(.v16_1)
+        // SwiftPM's iOS platform enum does not expose a v16_1 case.
+        // Keep the package at iOS 16 and gate 16.1+ ActivityKit usage with
+        // @available at call sites/types.
+        .iOS(.v16)
     ],
     products: [
         // Attributes only — linked by BOTH the app and the widget extension.
