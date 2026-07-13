@@ -63,11 +63,27 @@ SHOUTCAST_DEV_KEY = your_key_here
 - `Packages/RadioDirectory`: domain models, the `RadioDirectoryProviding` boundary, the
   Radio-Browser JSON client (default), the SHOUTcast XML client (optional, key-gated), and the
   curated/bundled directories.
-- `Packages/Playback`: `PlaybackController` (app-wide observable playback state), AVPlayer-backed
-  audio output with ICY metadata and audio-session interruption/route-change handling, and the
-  `MPNowPlayingInfoCenter`/`MPRemoteCommandCenter` bridge.
+- `Packages/Playback`: `PlaybackController` (app-wide observable playback state) driving an
+  `AudioStreamingPlaybackEngine` (AVAudioEngine-backed, via the MIT-licensed
+  [AudioStreaming](https://github.com/dimitris-c/AudioStreaming) library) with ICY metadata and
+  audio-session interruption/route-change handling, plus a `NowPlayingPresenting` bridge that
+  targets either `MPNowPlayingInfoCenter`/`MPRemoteCommandCenter` (iOS 26) or the iOS 27
+  `NowPlaying`/`MediaSession` framework, selected at runtime.
 - `Packages/Persistence`: SwiftData models and `LibraryStore` for favorites and recents.
+- `Packages/LiveActivity`: Live Activity attributes and the `NowPlayingActivityCoordinator`
+  driving the lock screen / Dynamic Island now-playing surface, including staging downsampled
+  artwork into a shared App Group container for the widget extension to render.
+- `Packages/ImageIODownsample`: a small leaf module wrapping ImageIO downsampling, shared by
+  `DesignSystem`'s artwork pipeline and Live Activity artwork staging so decoded images never
+  exceed the pixel size their surface actually needs.
 - `Packages/Features/*`: one package per tab surface.
+
+Dependency wiring across these packages goes through [Factory](https://github.com/hmlongco/Factory)
+(`Container`-based DI) rather than direct instantiation, so tests and previews can substitute fakes
+without touching production call sites. Debug builds also link an app-side `DebugSupport` package
+(`#if DEBUG`-only [Pulse](https://github.com/kean/Pulse) network inspection); it's never declared
+by the reusable packages and is compiled out of Release entirely. See
+[`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md) for the full dependency list.
 
 The app uses SwiftUI, Observation, SwiftData, async/await, and local Swift packages. View state
 lives in `@Observable` `@MainActor` models, while networking, playback, and persistence
@@ -78,10 +94,14 @@ implementation details stay behind protocol or actor boundaries.
 The app `Info.plist` declares `UIBackgroundModes = audio` for streaming playback and
 `NSSupportsLiveActivities` for the lock screen / Dynamic Island now-playing Live Activity (the
 `ShoutKitWidgets` extension target, driven by `NowPlayingActivityCoordinator` from playback
-state). App Intents power Siri/Shortcuts with headless background playback (no app foregrounding),
-and `shoutkit://station?...` deep links open the app to a station for promos, notifications, and
-other launch entry points. Later milestones will add Home Screen widgets, Control Center
-controls, and CarPlay.
+state, with synced album/station artwork). App Intents power Siri/Shortcuts with headless
+background playback (no app foregrounding); `StationEntity` also conforms to `IndexedEntity` so
+favorited, curated, and recently-played stations land in Spotlight's semantic index, letting Siri
+resolve "play ⟨station⟩" for a station from a previous session. `shoutkit://station?...` deep
+links open the app to a station for promos, notifications, and other launch entry points, and
+long-pressing Now Playing artwork surfaces a "View in Apple Music" link when a track match is
+found. Later milestones will add a Home Screen quick-play widget and CarPlay — the latter is
+architecturally scoped but deliberately deferred (see [`docs/ROADMAP.md`](docs/ROADMAP.md)).
 
 ## Privacy
 
@@ -116,7 +136,7 @@ codesign workaround.
 
 | Component | License |
 |---|---|
-| App target (`ShoutKitApp`), feature packages (`Packages/Features/*`), `Packages/LiveActivity` | [GPL-3.0](LICENSE) |
+| App target (`ShoutKitApp`, incl. the debug-only `DebugSupport` package), feature packages (`Packages/Features/*`), `Packages/LiveActivity`, `Packages/ImageIODownsample` | [GPL-3.0](LICENSE) |
 | `Packages/RadioDirectory`, `Packages/Playback`, `Packages/Persistence`, `Packages/DesignSystem` | [MIT](Packages/RadioDirectory/LICENSE) (per-package `LICENSE` files) |
 
 The reusable infrastructure packages are MIT so they can be adopted anywhere; the app itself is
