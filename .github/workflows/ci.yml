@@ -53,7 +53,11 @@ jobs:
   build:
     name: Build app + compile Playback tests (iOS Simulator)
     runs-on: macos-26
-    timeout-minutes: 30
+    # Debug + Release builds share one DerivedData root (package resolution
+    # and unchanged modules are reused across the pair), but building the app
+    # twice still roughly doubles this job's time versus the single-config
+    # baseline.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
 
@@ -72,6 +76,7 @@ jobs:
           set -o pipefail
           xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
             -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath DerivedData \
             CODE_SIGNING_ALLOWED=NO \
             GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" build 2>&1 | tee build.log
 
@@ -83,6 +88,53 @@ jobs:
         if: failure()
         run: |
           grep -E "(error|fatal error): " build.log | sort -u | head -10 | sed 's/^/::error::/' || true
+
+      # Pulse (kean/Pulse) is gated behind #if DEBUG end to end (see
+      # RadioDirectory/PulseNetworkLogging.swift), so it must link into Debug
+      # and never into Release. Static linking + dead-code stripping means an
+      # entirely #if DEBUG-gated dependency simply doesn't get pulled into a
+      # Release binary — verify both sides of that contract by symbol-checking
+      # each configuration's build product directly, rather than trusting it.
+      - name: Verify Pulse symbols are present in the Debug build
+        run: |
+          APP_BINARY="DerivedData/Build/Products/Debug-iphonesimulator/ShoutKit.app/ShoutKit"
+          if [ ! -f "$APP_BINARY" ]; then
+            echo "::error::Debug app binary not found at $APP_BINARY"
+            exit 1
+          fi
+          if ! nm "$APP_BINARY" 2>/dev/null | grep -q "NetworkLogger"; then
+            echo "::error::Expected Pulse (NetworkLogger) symbols in the Debug binary but found none"
+            exit 1
+          fi
+          echo "Confirmed: Pulse symbols are present in the Debug binary."
+
+      - name: Build app (Release)
+        run: |
+          set -o pipefail
+          xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
+            -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" build 2>&1 | tee build-release.log
+
+      - name: Emit Release compile errors as annotations
+        if: failure()
+        run: |
+          grep -E "(error|fatal error): " build-release.log | sort -u | head -10 | sed 's/^/::error::/' || true
+
+      - name: Verify Pulse symbols are absent from the Release build
+        run: |
+          APP_BINARY="DerivedData/Build/Products/Release-iphonesimulator/ShoutKit.app/ShoutKit"
+          if [ ! -f "$APP_BINARY" ]; then
+            echo "::error::Release app binary not found at $APP_BINARY"
+            exit 1
+          fi
+          if nm "$APP_BINARY" 2>/dev/null | grep -q "NetworkLogger"; then
+            echo "::error::Found Pulse (NetworkLogger) symbols in the Release binary — it must never ship"
+            exit 1
+          fi
+          echo "Confirmed: no Pulse symbols in the Release binary."
 
   lint:
     name: Lint & format

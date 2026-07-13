@@ -14,14 +14,16 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-algorithms.git", from: "1.2.1"),
-        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.1")
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.1"),
+        .package(url: "https://github.com/kean/Pulse.git", exact: "5.2.3")
     ],
     targets: [
         .target(
             name: "RadioDirectory",
             dependencies: [
                 .product(name: "Algorithms", package: "swift-algorithms"),
-                .product(name: "FactoryKit", package: "Factory")
+                .product(name: "FactoryKit", package: "Factory"),
+                .product(name: "Pulse", package: "Pulse")
             ],
             resources: [.process("Resources/Localizable.xcstrings")]
         ),

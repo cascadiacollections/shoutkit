@@ -1,5 +1,39 @@
 # Decisions
 
+## 2026-07-13 (Pulse adopted for debug-only network inspection)
+
+- Adopted **Pulse 5.2.3** (MIT, `kean/Pulse`) for debug network inspection —
+  the `Pulse` product only (not `PulseProxy`'s method-swizzling auto-logger, nor
+  `PulseUI`'s viewer — no in-app UI was added this pass, see below). Listed
+  under `THIRD_PARTY_LICENSES.md`'s dev-tools section, not the runtime table
+  or the in-app Licenses screen, since by design it never ships in Release.
+- Every Pulse reference lives in one new file,
+  `RadioDirectory/PulseNetworkLogging.swift`, wrapped end to end in
+  `#if DEBUG` (including the `import Pulse` itself) — auditing "is Pulse
+  entirely gated" only requires reading that one file. `HTTPTransport.swift`
+  reaches in through a two-line `#if DEBUG` in `URLSessionHTTPTransport
+  .shared`'s initialization, installing `URLSessionProxyDelegate` on the
+  session it uses instead of plain `URLSession.shared`. Since Radio-Browser,
+  SHOUTcast, and artwork downloads (`ArtworkLoader`, `NowPlayingCenter`) all
+  default to that one shared transport, this single seam covers all of them
+  without touching any of those call sites. `AlbumArtLookup`'s separate,
+  short-timeout iTunes-lookup session is intentionally left alone — out of
+  scope for "Radio-Browser and artwork requests."
+- No in-app viewer was added (`PulseUI`'s `ConsoleView` or a Settings debug
+  entry): the task's acceptance bar was the logging proxy plus a Debug/Release
+  presence check, and a viewer screen wasn't asked for — logs are still
+  inspectable via Pulse's remote/Mac companion tooling. Revisit if a
+  discoverable in-app console turns out to be worth the added surface.
+- Verifying "present in Debug, absent in Release" needs an actual compiled
+  binary — nothing else proves a `#if DEBUG`-gated dependency didn't leak into
+  Release. Extended `ci.yml`'s `build` job to build both configurations
+  against a shared `-derivedDataPath` (Debug/Release each get their own
+  `Products/<Config>-iphonesimulator` output, but package resolution and
+  unchanged modules are reused across the pair) and `nm`-check each binary
+  for a Pulse-specific symbol (`NetworkLogger`) — present in Debug, absent in
+  Release. Bumped the job's timeout accordingly (30 → 45 min) since building
+  the app twice roughly doubles its wall time.
+
 ## 2026-07-13 (AudioStreaming adopted as the playback engine)
 
 - Adopted **AudioStreaming 1.4.4** (MIT, `dimitris-c/AudioStreaming`) as the concrete

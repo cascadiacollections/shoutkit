@@ -25,3 +25,4 @@ Not linked into the shipped binary; listed for completeness.
 | ---- | ------- | -------- | --- |
 | SwiftLint (pinned in CI, see `ci.yml`) | MIT | Linting, `--strict` in CI | <https://github.com/realm/SwiftLint> |
 | SwiftFormat | MIT | Formatting (`.swiftformat`) | <https://github.com/nicklockwood/SwiftFormat> |
+| Pulse | MIT | RadioDirectory — `#if DEBUG`-only network inspection (`PulseNetworkLogging.swift`); compiled out of Release entirely, never ships | <https://github.com/kean/Pulse> |
