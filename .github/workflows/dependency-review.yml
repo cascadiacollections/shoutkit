@@ -20,12 +20,23 @@ jobs:
       # outside the permissive allowlist below, matching the policy already
       # written down in THIRD_PARTY_LICENSES.md instead of relying on manual
       # review to catch it. An allowlist (rather than the deprecated
-      # deny-licenses) inverts the check so GPL/LGPL/AGPL and any other
+      # deny-licenses) inverts the check so GPL/LGPL/AGPL and any other strong
       # copyleft license is rejected by default; keep it in sync with the
       # licenses recorded in THIRD_PARTY_LICENSES.md.
+      #
+      # MPL-2.0 and Unicode-3.0 are explicit, narrow exceptions for the
+      # rust-spike/ crate: MPL-2.0 (uniffi and its uniffi_* sub-crates) is
+      # file-level copyleft only and explicitly GPL-3.0-compatible per its
+      # own Section 3.3 and the FSF license list; Unicode-3.0 (unicode-ident's
+      # bundled Unicode data tables) is a permissive, MIT-style license.
       - name: Dependency Review
         uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: moderate
-          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD, MPL-2.0, Unicode-3.0
+          # fs-err@3.3.1 is MIT OR Apache-2.0 (verified against its published
+          # Cargo.toml) but isn't classified by the license-detection metadata
+          # for this version; allow it explicitly rather than widen the
+          # allowlist for a detection gap.
+          allow-dependencies-licenses: pkg:cargo/fs-err@3.3.1
           comment-summary-in-pr: always
