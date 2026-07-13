@@ -42,6 +42,9 @@ struct LicensesView: View {
                 NavigationLink("libvorbis — BSD") {
                     LicenseTextView(title: "BSD", resource: "vorbis-bsd")
                 }
+                NavigationLink("Pulse — MIT") {
+                    LicenseTextView(title: "MIT", resource: "pulse-mit")
+                }
             } header: {
                 Text("Third-Party")
             } footer: {
@@ -51,6 +54,8 @@ struct LicensesView: View {
                 Apache-2.0 with the Swift Runtime Library Exception. \
                 Factory (hmlongco/Factory) and AudioStreaming (dimitris-c/AudioStreaming), MIT. \
                 AudioStreaming's bundled libogg/libvorbis (sbooth's xcframework builds), BSD. \
+                Pulse (kean/Pulse), MIT — a debug-only network inspector; its logging never runs \
+                in this Release build, though its compiled module may still be present. \
                 The full inventory lives in THIRD_PARTY_LICENSES.md in the repository.
                 """)
             }

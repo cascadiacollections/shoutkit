@@ -16,6 +16,7 @@ it ships in the binary, add its license text to the in-app Licenses screen
 | AudioStreaming | 1.4.4 (`exact: "1.4.4"`) | MIT | Playback — `AudioStreamingPlaybackEngine`, the `AVAudioEngine`-backed production playback engine (iOS only) | <https://github.com/dimitris-c/AudioStreaming> |
 | ogg-binary-xcframework | 0.1.2 (transitive via AudioStreaming) | BSD (Xiph.org) | Playback — libogg, linked by AudioStreaming's Ogg Vorbis codec support | <https://github.com/sbooth/ogg-binary-xcframework> |
 | vorbis-binary-xcframework | 0.1.2 (transitive via AudioStreaming) | BSD (Xiph.org) | Playback — libvorbis, linked by AudioStreaming's Ogg Vorbis codec support | <https://github.com/sbooth/vorbis-binary-xcframework> |
+| Pulse | 5.2.3 (`exact: "5.2.3"`) | MIT | RadioDirectory — `#if DEBUG`-only network inspection (`PulseNetworkLogging.swift`). All logging is compile-time-removed from Release, but SPM's dependency graph is configuration-independent, so Pulse's compiled-but-unreferenced module may still be physically present (unused) in the Release binary — see the 2026-07-13 DECISIONS.md entry | <https://github.com/kean/Pulse> |
 
 ## Development-only tools
 
@@ -25,4 +26,3 @@ Not linked into the shipped binary; listed for completeness.
 | ---- | ------- | -------- | --- |
 | SwiftLint (pinned in CI, see `ci.yml`) | MIT | Linting, `--strict` in CI | <https://github.com/realm/SwiftLint> |
 | SwiftFormat | MIT | Formatting (`.swiftformat`) | <https://github.com/nicklockwood/SwiftFormat> |
-| Pulse | MIT | RadioDirectory — `#if DEBUG`-only network inspection (`PulseNetworkLogging.swift`); compiled out of Release entirely, never ships | <https://github.com/kean/Pulse> |

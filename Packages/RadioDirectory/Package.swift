@@ -23,7 +23,7 @@ let package = Package(
             dependencies: [
                 .product(name: "Algorithms", package: "swift-algorithms"),
                 .product(name: "FactoryKit", package: "Factory"),
-                .product(name: "Pulse", package: "Pulse", condition: .when(configuration: .debug))
+                .product(name: "Pulse", package: "Pulse")
             ],
             resources: [.process("Resources/Localizable.xcstrings")]
         ),

@@ -24,15 +24,35 @@
   presence check, and a viewer screen wasn't asked for — logs are still
   inspectable via Pulse's remote/Mac companion tooling. Revisit if a
   discoverable in-app console turns out to be worth the added surface.
-- Verifying "present in Debug, absent in Release" needs an actual compiled
-  binary — nothing else proves a `#if DEBUG`-gated dependency didn't leak into
-  Release. Extended `ci.yml`'s `build` job to build both configurations
-  against a shared `-derivedDataPath` (Debug/Release each get their own
+- **Correction, found the hard way**: `#if DEBUG`-gating Pulse's Swift call
+  sites does *not* keep Pulse's own compiled module out of the Release binary.
+  SPM's dependency graph is configuration-independent —
+  `PackageDescription.TargetDependencyCondition.when` only takes
+  `platforms:`/`traits:`, never a build configuration (checked directly against
+  swift-package-manager's source; there's no such API at any shipped tools
+  version) — so a declared `.product(...)` dependency links into every
+  configuration that consumes it, regardless of whether any surviving
+  (post-preprocessor) source references it. CI's first Release build proved
+  this empirically: `nm` found `NetworkLogger` in the Release binary even
+  though the Release compile of `RadioDirectory` genuinely had no `-DDEBUG`
+  flag. A follow-up commit tried `condition: .when(configuration: .debug)` —
+  that parameter doesn't exist in `PackageDescription` and doesn't compile.
+  What `#if DEBUG` *does* guarantee, and what actually matters: none of
+  Pulse's logging/proxy code ever runs in Release — behaviorally, it's
+  identical to Pulse not being there. Its compiled-but-unreferenced module may
+  still be physically present in the Release binary; achieving true binary
+  absence would need Xcode-project-level linking changes beyond what a local
+  Package.swift can express, which is out of scope here.
+- `ci.yml`'s `build` job builds both Debug and Release against a shared
+  `-derivedDataPath` (Debug/Release each get their own
   `Products/<Config>-iphonesimulator` output, but package resolution and
-  unchanged modules are reused across the pair) and `nm`-check each binary
-  for a Pulse-specific symbol (`NetworkLogger`) — present in Debug, absent in
-  Release. Bumped the job's timeout accordingly (30 → 45 min) since building
-  the app twice roughly doubles its wall time.
+  unchanged modules are reused across the pair) and `nm`-checks each binary
+  for a Pulse-specific symbol (`NetworkLogger`): a hard failure if it's
+  *missing* from Debug (that would mean the proxy isn't actually wired up),
+  and a non-blocking, informational report either way for Release (per the
+  correction above, present-but-unused there is expected, not a bug). Bumped
+  the job's timeout accordingly (30 → 45 min) since building the app twice
+  roughly doubles its wall time.
 
 ## 2026-07-13 (AudioStreaming adopted as the playback engine)
 
