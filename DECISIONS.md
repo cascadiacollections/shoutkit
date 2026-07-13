@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-07-13 (Factory adopted for dependency injection)
+
+- Adopted **Factory 3.3.1** (MIT, `hmlongco/Factory`) as a `Container`-based DI seam ahead of the
+  playback-engine swap (AudioStreaming) and debug network logging (Pulse) landing in later phases —
+  both need a registration point that can flip from a stub/AVPlayer default to a real implementation
+  without touching call sites. Import is `FactoryKit` (the module was renamed from `Factory` in the
+  3.x line); the package itself is still named `Factory`.
+- Two registrations so far: `Container.radioDirectory` (`RadioDirectory` package, defaults to
+  `RadioBrowserDirectoryClient()`) and `Container.radioPlaybackEngine` (`Playback` package, defaults
+  to a new `StubRadioPlaybackEngine` — a placeholder for the `AudioStreaming`-backed engine landing
+  next). Both use `.onPreview`/`.onTest` to force `PreviewRadioDirectory`/the stub in non-production
+  contexts, and `.scope(.singleton)` so the app shares one instance.
+  `AppDependencies.bootstrap()` overrides `radioDirectory` with the real decorated (preferred +
+  caching) instance via a free function (`registerProductionRadioDirectory`) kept in the
+  `RadioDirectory` package, so the app target itself never needs to import `FactoryKit` directly.
+- `BrowseViewModel`/`SearchViewModel` now default their `directory` initializer parameter to
+  `Container.shared.radioDirectory()` instead of direct instantiation (`PreviewRadioDirectory()` /
+  a required parameter). `RootView` no longer threads a `directory` instance through three call
+  sites — Factory resolves it instead.
+- `RadioPlaybackEngine` (`Playback` package) is `AudioOutput` with no new requirements — a marker
+  protocol so a future concrete engine can satisfy both the existing `PlaybackController` seam and
+  the new Factory registration. `PlaybackControllerPlatform`'s production wiring still constructs
+  `AVPlayerAudioOutput()` directly for now; the swap to a Factory-resolved engine happens once a
+  real implementation exists.
+
 ## 2026-07-12 (App Intents entity schemas + typed playback failures)
 
 Two 0.3.0 workstream items, picked up together since both mirror an existing pattern

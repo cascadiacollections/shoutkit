@@ -24,6 +24,7 @@ let package = Package(
             ],
             resources: [
                 .copy("Resources/apache-2.0.txt"),
+                .copy("Resources/factory-mit.txt"),
                 .copy("Resources/gpl-3.0.txt"),
                 .copy("Resources/mit.txt"),
                 .process("Resources/Localizable.xcstrings")

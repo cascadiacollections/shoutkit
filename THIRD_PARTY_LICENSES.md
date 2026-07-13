@@ -12,6 +12,7 @@ it ships in the binary, add its license text to the in-app Licenses screen
 | swift-algorithms | 1.2.1+ (`from: "1.2.1"`) | Apache-2.0 (with Runtime Library Exception) | RadioDirectory — order-preserving, case-insensitive de-duplication (`uniqued(on:)`) of merged station/genre lists | <https://github.com/apple/swift-algorithms> |
 | swift-async-algorithms | 1.1.5+ (`from: "1.1.5"`) | Apache-2.0 (with Runtime Library Exception) | SearchFeature — `debounce` on the query stream; LiveActivity — `removeDuplicates()` on the playback-state and track-metadata observation sequences | <https://github.com/apple/swift-async-algorithms> |
 | swift-collections | 1.6.0+ (`from: "1.6.0"`) | Apache-2.0 (with Runtime Library Exception) | DesignSystem — `OrderedDictionary` backs the Now Playing artwork store's bounded FIFO cache | <https://github.com/apple/swift-collections> |
+| Factory | 3.3.1 (`exact: "3.3.1"`) | MIT | RadioDirectory, Playback, BrowseFeature, SearchFeature — `Container`-based dependency injection for the station directory client and (from a later phase) the playback engine | <https://github.com/hmlongco/Factory> |
 
 ## Development-only tools
 

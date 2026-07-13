@@ -13,13 +13,15 @@ let package = Package(
         .library(name: "RadioDirectory", targets: ["RadioDirectory"])
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-algorithms.git", from: "1.2.1")
+        .package(url: "https://github.com/apple/swift-algorithms.git", from: "1.2.1"),
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.1")
     ],
     targets: [
         .target(
             name: "RadioDirectory",
             dependencies: [
-                .product(name: "Algorithms", package: "swift-algorithms")
+                .product(name: "Algorithms", package: "swift-algorithms"),
+                .product(name: "FactoryKit", package: "Factory")
             ],
             resources: [.process("Resources/Localizable.xcstrings")]
         ),

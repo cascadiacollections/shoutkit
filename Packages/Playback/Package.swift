@@ -17,14 +17,16 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../ImageIODownsample"),
-        .package(path: "../RadioDirectory")
+        .package(path: "../RadioDirectory"),
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.1")
     ],
     targets: [
         .target(
             name: "Playback",
             dependencies: [
                 "ImageIODownsample",
-                "RadioDirectory"
+                "RadioDirectory",
+                .product(name: "FactoryKit", package: "Factory")
             ],
             resources: [.process("Resources/Localizable.xcstrings")]
         ),

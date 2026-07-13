@@ -30,6 +30,9 @@ struct LicensesView: View {
                 NavigationLink("swift-collections — Apache-2.0") {
                     LicenseTextView(title: "Apache-2.0", resource: "apache-2.0")
                 }
+                NavigationLink("Factory — MIT") {
+                    LicenseTextView(title: "MIT", resource: "factory-mit")
+                }
             } header: {
                 Text("Third-Party")
             } footer: {
@@ -37,6 +40,7 @@ struct LicensesView: View {
                 Apple's swift-algorithms, swift-async-algorithms, and \
                 swift-collections packages, \
                 Apache-2.0 with the Swift Runtime Library Exception. \
+                Factory (hmlongco/Factory), MIT. \
                 The full inventory lives in THIRD_PARTY_LICENSES.md in the repository.
                 """)
             }
