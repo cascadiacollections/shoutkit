@@ -98,6 +98,8 @@ All notable changes to ShoutKit are documented here. The format follows
   once per URL and shared across the backdrop, hero, and tint views (previously three decodes)
 
 ### Fixed
+- Album artwork now appears on Tesla and other strict Bluetooth AVRCP clients by returning cover
+  art at the exact dimensions requested by the connected device
 - **Playback recovery hardening** (comprehensive bug sweep):
   - Pausing during a phone call no longer auto-resumes playback against the user's wish when
     the call ends

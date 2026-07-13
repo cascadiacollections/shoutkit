@@ -172,10 +172,12 @@ public final class NowPlayingCenter: NowPlayingPresenting {
                 return
             }
 
-            // MediaPlayer invokes this request handler on an arbitrary background
-            // queue, so it must be @Sendable / non-isolated — capturing main-actor
-            // context here traps under Swift 6 runtime isolation checks.
-            let artwork = MPMediaItemArtwork(boundsSize: image.size) { @Sendable _ in image }
+            // Bluetooth AVRCP clients request a device-specific cover-art size.
+            // Returning the source image unchanged can make strict clients (notably
+            // Tesla) reject the artwork while still accepting the text metadata.
+            let artwork = MPMediaItemArtwork(boundsSize: image.size) { @Sendable requestedSize in
+                NowPlayingCenter.artworkImage(image, requestedSize: requestedSize)
+            }
             guard let self, Task.isCancelled == false else { return }
             self.cachedArtwork = artwork
 
@@ -208,6 +210,34 @@ public final class NowPlayingCenter: NowPlayingPresenting {
             return nil
         }
         return UIImage(cgImage: cgImage)
+    }
+
+    /// MediaPlayer calls artwork request handlers off-main and expects the
+    /// returned image's logical size to match `requestedSize`. Render at scale 1
+    /// so Bluetooth clients receive exactly the pixel dimensions they advertised.
+    private nonisolated static func artworkImage(
+        _ image: UIImage,
+        requestedSize: CGSize
+    ) -> UIImage {
+        guard requestedSize.width > 0, requestedSize.height > 0 else { return image }
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = false
+        return UIGraphicsImageRenderer(size: requestedSize, format: format).image { _ in
+            let widthScale = requestedSize.width / image.size.width
+            let heightScale = requestedSize.height / image.size.height
+            let scale = max(widthScale, heightScale)
+            let drawSize = CGSize(
+                width: image.size.width * scale,
+                height: image.size.height * scale
+            )
+            let drawOrigin = CGPoint(
+                x: (requestedSize.width - drawSize.width) / 2,
+                y: (requestedSize.height - drawSize.height) / 2
+            )
+            image.draw(in: CGRect(origin: drawOrigin, size: drawSize))
+        }
     }
 }
 
