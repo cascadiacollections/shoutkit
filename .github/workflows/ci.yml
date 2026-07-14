@@ -137,6 +137,77 @@ jobs:
             echo "Pulse symbols are absent from the Release binary."
           fi
 
+  # Regression guard: verify that no Package.swift or the Xcode project has had
+  # its iOS deployment target raised above the documented minimums. This catches
+  # accidental bumps (e.g. auto-generated Xcode stubs defaulting to a newer OS).
+  #
+  # Expected minimums (update this table when a package is intentionally lowered):
+  #   RadioDirectory, ImageIODownsample, DebugSupport  → iOS 16.0
+  #   Playback, Persistence                            → iOS 17.0  (@Observable / SwiftData)
+  #   LiveActivity                                     → iOS 16.0  (16.1 APIs guarded with @available)
+  #   DesignSystem, feature packages                   → iOS 17.0  (depend on Playback/Persistence)
+  #   Xcode app target                                 → iOS 16.0  (stated minimum)
+  validate-deployment-targets:
+    name: Validate deployment targets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check Xcode project target (must be 16.0)
+        run: |
+          FOUND=$(grep -o 'IPHONEOS_DEPLOYMENT_TARGET = [^;]*' \
+            ShoutKitApp/ShoutKitApp.xcodeproj/project.pbxproj | sort -u)
+          EXPECTED="IPHONEOS_DEPLOYMENT_TARGET = 16.0"
+          if [ "$FOUND" != "$EXPECTED" ]; then
+            echo "::error::Expected deployment target '$EXPECTED' but found: $FOUND"
+            exit 1
+          fi
+          echo "OK: $FOUND"
+
+      - name: Check iOS-16 packages (.v16 floor)
+        run: |
+          FAIL=0
+          for pkg in \
+            Packages/RadioDirectory/Package.swift \
+            Packages/ImageIODownsample/Package.swift \
+            Packages/DebugSupport/Package.swift; do
+            if ! grep -q '\.iOS(\.v16)' "$pkg"; then
+              echo "::error::$pkg must declare .iOS(.v16)"
+              FAIL=1
+            fi
+          done
+          [ "$FAIL" -eq 0 ] && echo "OK: iOS-16 packages verified."
+          exit $FAIL
+
+      - name: Check iOS-16 packages (LiveActivity package floor)
+        run: |
+          if ! grep -q '\.iOS(\.v16)' Packages/LiveActivity/Package.swift; then
+            echo "::error::Packages/LiveActivity/Package.swift must declare .iOS(.v16)"
+            exit 1
+          fi
+          echo "OK: LiveActivity iOS-16 package floor verified."
+
+      - name: Check iOS-17 packages (.v17 floor)
+        run: |
+          FAIL=0
+          for pkg in \
+            Packages/Persistence/Package.swift \
+            Packages/Playback/Package.swift \
+            Packages/DesignSystem/Package.swift \
+            Packages/Features/BrowseFeature/Package.swift \
+            Packages/Features/SearchFeature/Package.swift \
+            Packages/Features/PlayerFeature/Package.swift \
+            Packages/Features/LibraryFeature/Package.swift \
+            Packages/Features/SettingsFeature/Package.swift; do
+            if ! grep -q '\.iOS(\.v17)' "$pkg"; then
+              echo "::error::$pkg must declare .iOS(.v17)"
+              FAIL=1
+            fi
+          done
+          [ "$FAIL" -eq 0 ] && echo "OK: iOS-17 packages verified."
+          exit $FAIL
+
   lint:
     name: Lint & format
     runs-on: macos-26
