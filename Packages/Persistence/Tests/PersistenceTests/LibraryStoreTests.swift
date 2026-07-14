@@ -131,6 +131,35 @@ struct LibraryStoreTests {
         #expect(favorites.map(\.stationID) == ["a", "c"])
     }
 
+    @Test func removingRecentDeletesItFromHistory() throws {
+        let (store, context) = makeStoreAndContext()
+
+        store.logRecent(station("a"))
+        store.logRecent(station("b"))
+        store.logRecent(station("c"))
+
+        store.removeRecent(stationID: "b")
+
+        let descriptor = FetchDescriptor<RecentStation>(
+            sortBy: [SortDescriptor(\.playedAt, order: .reverse)]
+        )
+        let recents = try context.fetch(descriptor)
+        let ids = recents.map(\.stationID)
+        #expect(ids.contains("b") == false)
+        #expect(ids.contains("a"))
+        #expect(ids.contains("c"))
+    }
+
+    @Test func removingNonExistentRecentIsNoOp() throws {
+        let (store, context) = makeStoreAndContext()
+
+        store.logRecent(station("a"))
+        store.removeRecent(stationID: "does-not-exist")
+
+        let recents = try context.fetch(FetchDescriptor<RecentStation>())
+        #expect(recents.count == 1)
+    }
+
     @Test func loggingSameStationTwiceKeepsOneRecent() throws {
         let (store, context) = makeStoreAndContext()
 

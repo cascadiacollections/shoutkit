@@ -147,6 +147,21 @@ public final class LibraryStore {
         save(operation: "log recent \(sanitizedForLogs(stationID))")
     }
 
+    /// Removes a single entry from the recently played history by station ID.
+    public func removeRecent(stationID: String) {
+        let predicate = #Predicate<RecentStation> { $0.stationID == stationID }
+        let descriptor = FetchDescriptor<RecentStation>(predicate: predicate)
+
+        guard let matches = fetch(descriptor, operation: "remove recent \(sanitizedForLogs(stationID))") else {
+            return
+        }
+
+        for match in matches {
+            context.delete(match)
+        }
+        save(operation: "remove recent \(sanitizedForLogs(stationID))")
+    }
+
     private func trimRecents() {
         var descriptor = FetchDescriptor<RecentStation>(
             sortBy: [SortDescriptor(\.playedAt, order: .reverse)]
