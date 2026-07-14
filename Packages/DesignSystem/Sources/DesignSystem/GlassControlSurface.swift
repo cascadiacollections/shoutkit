@@ -51,13 +51,33 @@ public struct GlassActionCluster<Content: View>: View {
             Button {} label: {
                 Label("Play", systemImage: "play.fill")
             }
-            .buttonStyle(.glassProminent)
+            .modifier(PreviewGlassProminentStyle())
 
             Button {} label: {
                 Label("Favorite", systemImage: "heart")
             }
-            .buttonStyle(.glass)
+            .modifier(PreviewGlassStyle())
         }
     }
     .padding()
+}
+
+private struct PreviewGlassProminentStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glassProminent)
+        } else {
+            content.buttonStyle(.borderedProminent)
+        }
+    }
+}
+
+private struct PreviewGlassStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glass)
+        } else {
+            content.buttonStyle(.bordered)
+        }
+    }
 }
