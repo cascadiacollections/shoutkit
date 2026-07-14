@@ -144,9 +144,9 @@ jobs:
   # Expected minimums (update this table when a package is intentionally lowered):
   #   RadioDirectory, ImageIODownsample, DebugSupport  → iOS 16.0
   #   Playback, Persistence                            → iOS 17.0  (@Observable / SwiftData)
-  #   LiveActivity                                     → iOS 16.0  (16.1 APIs guarded with @available)
+  #   LiveActivity                                     → iOS 17.0  (depends on Playback)
   #   DesignSystem, feature packages                   → iOS 17.0  (depend on Playback/Persistence)
-  #   Xcode app target                                 → iOS 16.0  (stated minimum)
+  #   Xcode app target                                 → iOS 17.0  (must not undercut package floors)
   validate-deployment-targets:
     name: Validate deployment targets
     runs-on: ubuntu-latest
@@ -154,11 +154,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Check Xcode project target (must be 16.0)
+      - name: Check Xcode project target (must be 17.0)
         run: |
           FOUND=$(grep -o 'IPHONEOS_DEPLOYMENT_TARGET = [^;]*' \
             ShoutKitApp/ShoutKitApp.xcodeproj/project.pbxproj | sort -u)
-          EXPECTED="IPHONEOS_DEPLOYMENT_TARGET = 16.0"
+          EXPECTED="IPHONEOS_DEPLOYMENT_TARGET = 17.0"
           if [ "$FOUND" != "$EXPECTED" ]; then
             echo "::error::Expected deployment target '$EXPECTED' but found: $FOUND"
             exit 1
@@ -180,13 +180,13 @@ jobs:
           [ "$FAIL" -eq 0 ] && echo "OK: iOS-16 packages verified."
           exit $FAIL
 
-      - name: Check iOS-16 packages (LiveActivity package floor)
+      - name: Check iOS-17 packages (LiveActivity package floor)
         run: |
-          if ! grep -q '\.iOS(\.v16)' Packages/LiveActivity/Package.swift; then
-            echo "::error::Packages/LiveActivity/Package.swift must declare .iOS(.v16)"
+          if ! grep -q '\.iOS(\.v17)' Packages/LiveActivity/Package.swift; then
+            echo "::error::Packages/LiveActivity/Package.swift must declare .iOS(.v17)"
             exit 1
           fi
-          echo "OK: LiveActivity iOS-16 package floor verified."
+          echo "OK: LiveActivity iOS-17 package floor verified."
 
       - name: Check iOS-17 packages (.v17 floor)
         run: |
