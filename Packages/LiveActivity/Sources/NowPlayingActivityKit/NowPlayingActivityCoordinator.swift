@@ -20,10 +20,10 @@ import RadioDirectory
 ///   container and hand the widget its token
 /// - stop or failure → end the activity immediately
 ///
-/// Requires iOS 17 because `PlaybackController` uses `@Observable` (Observation
-/// framework) and `Observations` async sequences, both of which require iOS 17.
-/// ActivityKit (Live Activities, Dynamic Island) additionally requires iOS 16.1.
-@available(iOS 17.0, *)
+/// Requires iOS 26 because `Observations` async sequences are iOS 26+ in the
+/// current toolchain. ActivityKit (Live Activities, Dynamic Island) itself is
+/// available earlier, but this coordinator implementation depends on both.
+@available(iOS 26.0, *)
 @MainActor
 public final class NowPlayingActivityCoordinator {
     private var activity: Activity<NowPlayingActivityAttributes>?

@@ -18,9 +18,9 @@ struct AppServices {
     let sleepTimer: SleepTimer
     let settingsStore: SettingsStore
     let directory: any RadioDirectoryProviding
-    /// Retained here: its observation tasks hold it weakly, so this reference
-    /// is what keeps the Live Activity following playback for the app's lifetime.
-    let activityCoordinator: NowPlayingActivityCoordinator
+    /// Retained here when available: its observation tasks hold it weakly, so
+    /// this reference is what keeps Live Activity following playback.
+    let activityCoordinator: AnyObject?
     let stationLaunchRouter: StationLaunchRouter
 }
 
@@ -66,9 +66,16 @@ enum AppDependencies {
         configureCallbacks(for: controller, store: store, settings: settings, playReporter: playReporter)
 
         // Lock screen / Dynamic Island Live Activity follows playback by
-        // observing the controller's @Observable state directly.
-        let activityCoordinator = NowPlayingActivityCoordinator()
-        activityCoordinator.observe(controller)
+        // observing controller state. This implementation currently depends on
+        // Observation's `Observations` async sequences, which are iOS 26+.
+        let activityCoordinator: AnyObject?
+        if #available(iOS 26.0, *) {
+            let coordinator = NowPlayingActivityCoordinator()
+            coordinator.observe(controller)
+            activityCoordinator = coordinator
+        } else {
+            activityCoordinator = nil
+        }
 
         // Sleep timer pauses (not stops) playback so the mini-player survives
         // and resuming in the morning is one tap.
