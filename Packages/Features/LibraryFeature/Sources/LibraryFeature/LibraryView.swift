@@ -45,6 +45,7 @@ public struct LibraryView: View {
                             ForEach(recents.prefix(15)) { recent in
                                 row(for: recent.station)
                             }
+                            .onDelete(perform: deleteRecents)
                         }
                     }
 
@@ -58,7 +59,7 @@ public struct LibraryView: View {
                 }
                 .listStyle(.insetGrouped)
                 .toolbar {
-                    if favorites.isEmpty == false {
+                    if favorites.isEmpty == false || recents.isEmpty == false {
                         ToolbarItem(placement: .topBarTrailing) {
                             EditButton()
                         }
@@ -132,6 +133,16 @@ public struct LibraryView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    private func deleteRecents(at offsets: IndexSet) {
+        // Materialise the displayed slice before any removal so that offset
+        // resolution is not affected by live-query updates during deletion.
+        let displayed = Array(recents.prefix(15))
+        let stationIDs = offsets.map { displayed[$0].stationID }
+        for stationID in stationIDs {
+            library?.removeRecent(stationID: stationID)
+        }
     }
 
     private func deleteFavorites(at offsets: IndexSet) {
