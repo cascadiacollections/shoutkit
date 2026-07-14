@@ -51,7 +51,7 @@ public struct ListenNowView: View {
                     Button("Try Again") {
                         Task { await viewModel.refresh() }
                     }
-                    .buttonStyle(.glassProminent)
+                    .shoutKitGlassProminentButtonStyle()
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 260)

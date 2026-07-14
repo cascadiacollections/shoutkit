@@ -113,9 +113,16 @@ public struct StationRow: View {
                 .background(.regularMaterial, in: Circle())
                 .overlay { Circle().stroke(.primary.opacity(0.18), lineWidth: 1) }
         } else {
-            icon
-                .frame(width: 44, height: 44)
-                .glassEffect(.regular, in: Circle())
+            if #available(iOS 26.0, *) {
+                icon
+                    .frame(width: 44, height: 44)
+                    .glassEffect(.regular, in: Circle())
+            } else {
+                icon
+                    .frame(width: 44, height: 44)
+                    .background(.regularMaterial, in: Circle())
+                    .overlay { Circle().stroke(.primary.opacity(0.18), lineWidth: 1) }
+            }
         }
     }
 

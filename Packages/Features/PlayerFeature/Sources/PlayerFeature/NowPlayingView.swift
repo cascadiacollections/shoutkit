@@ -137,7 +137,7 @@ public struct NowPlayingView: View {
                 Image(systemName: "stop.fill")
                     .font(.title2)
             }
-            .buttonStyle(.glass)
+            .shoutKitGlassButtonStyle()
             .buttonBorderShape(.circle)
             .accessibilityLabel("Stop")
 
@@ -148,7 +148,7 @@ public struct NowPlayingView: View {
                     .font(.system(size: 34, weight: .bold))
                     .frame(width: 72, height: 72)
             }
-            .buttonStyle(.glassProminent)
+            .shoutKitGlassProminentButtonStyle()
             .buttonBorderShape(.circle)
             .accessibilityLabel(isPlaying(playback) ? "Pause" : "Play")
 
@@ -165,7 +165,7 @@ public struct NowPlayingView: View {
                 Image(systemName: library.isFavorite(station) ? "heart.fill" : "heart")
                     .font(.title2)
             }
-            .buttonStyle(.glass)
+            .shoutKitGlassButtonStyle()
             .buttonBorderShape(.circle)
             .tint(library.isFavorite(station) ? (artworkAccent ?? .shoutKitHighlight) : .primary)
             .accessibilityLabel(library.isFavorite(station) ? "Remove favorite" : "Add favorite")

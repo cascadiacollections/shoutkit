@@ -43,7 +43,7 @@ struct SpotlightCard: View {
                         .font(.subheadline.weight(.semibold))
                         .padding(.horizontal, ShoutKitSpacing.small)
                 }
-                .buttonStyle(.glassProminent)
+                .shoutKitGlassProminentButtonStyle()
                 .tint(.white)
                 .foregroundStyle(Color.shoutKitAccent)
                 .padding(.top, ShoutKitSpacing.extraSmall)

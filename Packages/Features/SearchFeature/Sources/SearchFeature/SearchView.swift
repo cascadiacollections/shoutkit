@@ -63,7 +63,7 @@ public struct SearchView: View {
                         Button("Try Again") {
                             Task { await viewModel.loadGenres() }
                         }
-                        .buttonStyle(.glassProminent)
+                        .shoutKitGlassProminentButtonStyle()
                     }
                 }
                 .frame(maxWidth: .infinity, minHeight: 240)
@@ -116,7 +116,7 @@ private struct FlowChips: View {
                         .frame(maxWidth: .infinity)
                         .lineLimit(1)
                 }
-                .buttonStyle(.glass)
+                .shoutKitGlassButtonStyle()
             }
         }
     }

@@ -40,7 +40,7 @@ struct WelcomeOverlayView: View {
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.glassProminent)
+                .shoutKitGlassProminentButtonStyle()
                 .tint(.white)
                 .foregroundStyle(Color.shoutKitAccent)
                 .padding(.horizontal, ShoutKitSpacing.extraLarge)

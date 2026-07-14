@@ -52,7 +52,7 @@ public struct BrowseLandingView: View {
                     Button("Try Again") {
                         Task { await viewModel.refresh() }
                     }
-                    .buttonStyle(.glassProminent)
+                    .shoutKitGlassProminentButtonStyle()
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 260)
@@ -102,7 +102,7 @@ public struct BrowseLandingView: View {
                 Button("Try Again") {
                     Task { await viewModel.refresh() }
                 }
-                .buttonStyle(.glassProminent)
+                .shoutKitGlassProminentButtonStyle()
             }
         }
     }
@@ -119,7 +119,7 @@ public struct BrowseLandingView: View {
                             Text(genre.name)
                                 .font(.subheadline.weight(.medium))
                         }
-                        .buttonStyle(.glass)
+                        .shoutKitGlassButtonStyle()
                         .tint(viewModel.selectedGenre == genre.name ? .shoutKitAccent : .primary)
                     }
                 }

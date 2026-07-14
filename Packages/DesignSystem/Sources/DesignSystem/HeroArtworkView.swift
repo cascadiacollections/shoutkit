@@ -98,14 +98,16 @@ public struct HeroArtworkView: View {
     @ViewBuilder
     private var glassPlate: some View {
         if !reduceTransparency {
-            Color.clear
-                .glassEffect(
-                    .clear,
-                    in: RoundedRectangle(
-                        cornerRadius: ShoutKitRadius.large + ShoutKitSpacing.small,
-                        style: .continuous
-                    )
-                )
+            let shape = RoundedRectangle(
+                cornerRadius: ShoutKitRadius.large + ShoutKitSpacing.small,
+                style: .continuous
+            )
+            if #available(iOS 26.0, *) {
+                Color.clear
+                    .glassEffect(.clear, in: shape)
+            } else {
+                shape.fill(.regularMaterial)
+            }
         }
     }
 

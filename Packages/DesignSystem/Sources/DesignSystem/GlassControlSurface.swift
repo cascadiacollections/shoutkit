@@ -24,9 +24,18 @@ public struct GlassControlSurface<ShapeStyle: Shape, Content: View>: View {
                     shape.stroke(.primary.opacity(0.18), lineWidth: 1)
                 }
         } else {
-            content
-                .padding(ShoutKitSpacing.small)
-                .glassEffect(.regular, in: shape)
+            if #available(iOS 26.0, *) {
+                content
+                    .padding(ShoutKitSpacing.small)
+                    .glassEffect(.regular, in: shape)
+            } else {
+                content
+                    .padding(ShoutKitSpacing.small)
+                    .background(.regularMaterial, in: shape)
+                    .overlay {
+                        shape.stroke(.primary.opacity(0.18), lineWidth: 1)
+                    }
+            }
         }
     }
 }
@@ -38,9 +47,34 @@ public struct GlassActionCluster<Content: View>: View {
         self.content = content()
     }
 
+    @ViewBuilder
     public var body: some View {
-        GlassEffectContainer(spacing: ShoutKitSpacing.small) {
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: ShoutKitSpacing.small) {
+                content
+            }
+        } else {
             content
+        }
+    }
+}
+
+public extension View {
+    @ViewBuilder
+    func shoutKitGlassButtonStyle() -> some View {
+        if #available(iOS 26.0, *) {
+            buttonStyle(.glass)
+        } else {
+            buttonStyle(.bordered)
+        }
+    }
+
+    @ViewBuilder
+    func shoutKitGlassProminentButtonStyle() -> some View {
+        if #available(iOS 26.0, *) {
+            buttonStyle(.glassProminent)
+        } else {
+            buttonStyle(.borderedProminent)
         }
     }
 }
@@ -64,20 +98,12 @@ public struct GlassActionCluster<Content: View>: View {
 
 private struct PreviewGlassProminentStyle: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.buttonStyle(.glassProminent)
-        } else {
-            content.buttonStyle(.borderedProminent)
-        }
+        content.shoutKitGlassProminentButtonStyle()
     }
 }
 
 private struct PreviewGlassStyle: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.buttonStyle(.glass)
-        } else {
-            content.buttonStyle(.bordered)
-        }
+        content.shoutKitGlassButtonStyle()
     }
 }
