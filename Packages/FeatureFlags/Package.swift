@@ -6,6 +6,8 @@ let package = Package(
     name: "FeatureFlags",
     platforms: [
         .iOS(.v26),
+        // Declared so the test suite can run on the mac host (`swift test`,
+        // exercised by CI's host-tests job); the app product remains iOS-only.
         .macOS(.v15)
     ],
     products: [

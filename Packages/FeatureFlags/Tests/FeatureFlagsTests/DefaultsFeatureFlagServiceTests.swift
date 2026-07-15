@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import Testing
 
 @testable import FeatureFlags
@@ -49,6 +50,41 @@ struct DefaultsFeatureFlagServiceTests {
         let reloaded = makeService(defaults: defaults)
         #expect(reloaded.override(for: diagnostics) == .enabled)
         #expect(reloaded.isEnabled(diagnostics) == true)
+    }
+
+    @Test func settingUseDefaultRemovesPersistedOverride() throws {
+        let defaults = try makeDefaults()
+        let service = makeService(defaults: defaults)
+        let diagnostics = try #require(FeatureCatalog.all.first(where: { $0.key == "diagnostics" }))
+
+        service.setOverride(.enabled, for: diagnostics)
+        service.setOverride(.useDefault, for: diagnostics)
+
+        #expect(service.override(for: diagnostics) == .useDefault)
+        #expect(service.isEnabled(diagnostics) == false)
+        #expect(defaults.object(forKey: "featureFlags.diagnostics.override") == nil)
+    }
+
+    @Test func mutationsNotifyObservers() throws {
+        let defaults = try makeDefaults()
+        let service = makeService(defaults: defaults)
+        let diagnostics = try #require(FeatureCatalog.all.first(where: { $0.key == "diagnostics" }))
+
+        // onChange fires synchronously (willSet) on this actor, so a plain
+        // flag box is race-free despite the @Sendable closure requirement.
+        final class Flag: @unchecked Sendable {
+            var wasInvalidated = false
+        }
+        let flag = Flag()
+        withObservationTracking {
+            _ = service.isEnabled(diagnostics)
+        } onChange: {
+            flag.wasInvalidated = true
+        }
+
+        service.setOverride(.enabled, for: diagnostics)
+
+        #expect(flag.wasInvalidated)
     }
 
     @Test func resetAllClearsAllOverrides() throws {
