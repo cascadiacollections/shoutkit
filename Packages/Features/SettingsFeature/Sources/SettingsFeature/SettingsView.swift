@@ -1,4 +1,5 @@
 import DesignSystem
+import FeatureFlags
 import Persistence
 import SwiftUI
 
@@ -6,13 +7,23 @@ import SwiftUI
 public struct SettingsView: View {
     @Environment(\.settingsStore) private var settings
     @Environment(\.dismiss) private var dismiss
+    private let featureFlags: any FeatureFlagProviding
 
-    public init() {}
+    public init(featureFlags: (any FeatureFlagProviding)? = nil) {
+        // Default to the Factory singleton so this view and every other
+        // consumer observe the same instance (invalidation is per-instance).
+        self.featureFlags = featureFlags ?? sharedFeatureFlags()
+    }
 
     public var body: some View {
         NavigationStack {
             Form {
                 privacySection
+                // Debug builds only: the catalog is all internal placeholder
+                // flags, so end users have nothing actionable here.
+                #if DEBUG
+                featureFlagsSection
+                #endif
                 supportSection
                 aboutSection
             }
@@ -77,6 +88,22 @@ public struct SettingsView: View {
             """)
         }
     }
+
+    #if DEBUG
+    private var featureFlagsSection: some View {
+        Section {
+            NavigationLink {
+                FeatureFlagsView(featureFlags: featureFlags)
+            } label: {
+                Label("Feature Flags", systemImage: "switch.2")
+            }
+        } header: {
+            Text("Developer")
+        } footer: {
+            Text("Feature flags are stored locally on this device and apply immediately.")
+        }
+    }
+    #endif
 
     private var aboutSection: some View {
         Section {

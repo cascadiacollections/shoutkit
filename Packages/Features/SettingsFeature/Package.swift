@@ -13,14 +13,16 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../../DesignSystem"),
-        .package(path: "../../Persistence")
+        .package(path: "../../Persistence"),
+        .package(path: "../../FeatureFlags")
     ],
     targets: [
         .target(
             name: "SettingsFeature",
             dependencies: [
                 "DesignSystem",
-                "Persistence"
+                "Persistence",
+                "FeatureFlags"
             ],
             resources: [
                 .copy("Resources/apache-2.0.txt"),

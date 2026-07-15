@@ -50,6 +50,10 @@ jobs:
         working-directory: Packages/ImageIODownsample
         run: swift test
 
+      - name: FeatureFlags tests
+        working-directory: Packages/FeatureFlags
+        run: swift test
+
   build:
     name: Build app + compile Playback tests (iOS Simulator)
     runs-on: macos-26
