@@ -2,9 +2,9 @@ import FeatureFlags
 import SwiftUI
 
 struct FeatureFlagsView: View {
-    private let featureFlags: DefaultsFeatureFlagService
+    private let featureFlags: any FeatureFlagProviding
 
-    init(featureFlags: DefaultsFeatureFlagService) {
+    init(featureFlags: any FeatureFlagProviding) {
         self.featureFlags = featureFlags
     }
 
