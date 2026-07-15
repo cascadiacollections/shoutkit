@@ -16,6 +16,7 @@ public final class DefaultsFeatureFlagService: FeatureFlagProviding {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let features: [Feature]
     @ObservationIgnored private let knownFeatureKeys: Set<String>
+    private var revision = 0
 
     public init(
         defaults: UserDefaults = .standard,
@@ -38,6 +39,7 @@ public final class DefaultsFeatureFlagService: FeatureFlagProviding {
     }
 
     public func override(for feature: Feature) -> FeatureOverride {
+        _ = revision
         guard knownFeatureKeys.contains(feature.key) else { return .useDefault }
         return defaults.value(for: overrideKey(for: feature))
     }
@@ -45,12 +47,14 @@ public final class DefaultsFeatureFlagService: FeatureFlagProviding {
     public func setOverride(_ override: FeatureOverride, for feature: Feature) {
         guard knownFeatureKeys.contains(feature.key) else { return }
         defaults.set(override, for: overrideKey(for: feature))
+        revision &+= 1
     }
 
     public func resetAll() {
         for feature in features {
             defaults.removeObject(forKey: overrideKeyName(for: feature.key))
         }
+        revision &+= 1
     }
 
     private func overrideKey(for feature: Feature) -> DefaultsKey<FeatureOverride> {

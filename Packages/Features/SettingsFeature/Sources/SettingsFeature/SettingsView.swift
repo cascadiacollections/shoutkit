@@ -1,4 +1,5 @@
 import DesignSystem
+import FeatureFlags
 import Persistence
 import SwiftUI
 
@@ -6,13 +7,17 @@ import SwiftUI
 public struct SettingsView: View {
     @Environment(\.settingsStore) private var settings
     @Environment(\.dismiss) private var dismiss
+    private let featureFlags: DefaultsFeatureFlagService
 
-    public init() {}
+    public init(featureFlags: DefaultsFeatureFlagService = DefaultsFeatureFlagService()) {
+        self.featureFlags = featureFlags
+    }
 
     public var body: some View {
         NavigationStack {
             Form {
                 privacySection
+                featureFlagsSection
                 supportSection
                 aboutSection
             }
@@ -75,6 +80,20 @@ public struct SettingsView: View {
             ShoutKit is free software — everything works whether or not you donate. \
             On beta builds you can also send feedback by taking a screenshot in TestFlight.
             """)
+        }
+    }
+
+    private var featureFlagsSection: some View {
+        Section {
+            NavigationLink {
+                FeatureFlagsView(featureFlags: featureFlags)
+            } label: {
+                Label("Feature Flags", systemImage: "switch.2")
+            }
+        } header: {
+            Text("Developer")
+        } footer: {
+            Text("Feature flags are stored locally on this device and apply immediately.")
         }
     }
 

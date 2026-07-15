@@ -1,8 +1,8 @@
 import Foundation
 
-public struct DefaultsKey<Value>: Sendable where Value: Sendable {
-    public let name: String
-    public let defaultValue: Value
+struct DefaultsKey<Value>: Sendable where Value: Sendable {
+    let name: String
+    let defaultValue: Value
 
     private let read: @Sendable (UserDefaults) -> Value
     private let write: @Sendable (UserDefaults, Value) -> Void
@@ -23,7 +23,7 @@ public struct DefaultsKey<Value>: Sendable where Value: Sendable {
     func writeValue(_ value: Value, to defaults: UserDefaults) { write(defaults, value) }
 }
 
-public extension DefaultsKey where Value: Codable {
+extension DefaultsKey where Value: Codable {
     static func codable(_ name: String, default defaultValue: Value) -> DefaultsKey<Value> {
         DefaultsKey(
             name: name,
@@ -42,7 +42,7 @@ public extension DefaultsKey where Value: Codable {
     }
 }
 
-public extension UserDefaults {
+extension UserDefaults {
     func value<Value>(for key: DefaultsKey<Value>) -> Value { key.readValue(from: self) }
     func set<Value>(_ value: Value, for key: DefaultsKey<Value>) { key.writeValue(value, to: self) }
 }
