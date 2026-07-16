@@ -229,8 +229,9 @@ struct WarmupRadioAudioQueueIntent {
             let endpoint = try await services.directory.streamEndpoint(for: station.station)
             await services.stationConnectionPrewarmer.prewarm(streamURLs: [endpoint.url])
         } catch {
+            let errorDescription = String(describing: error)
             shortcutsLogger.error(
-                "Failed to resolve Siri warmup endpoint for \(station.name, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                "Failed to resolve Siri warmup endpoint for \(station.name, privacy: .public): \(errorDescription, privacy: .public)"
             )
         }
         return .result(value: WarmupAudioQueueResult())
