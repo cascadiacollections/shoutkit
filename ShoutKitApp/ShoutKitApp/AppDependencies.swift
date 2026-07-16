@@ -60,9 +60,14 @@ enum AppDependencies {
         let store = LibraryStore(context: container.mainContext)
         let settings = SettingsStore()
         let featureFlags = sharedFeatureFlags()
-        let diagnosticsPayloadStore = (
-            try? DiagnosticsPayloadStore()
-        ) as (any DiagnosticsPayloadPersisting)? ?? InMemoryDiagnosticsPayloadStore()
+        let diagnosticsPayloadStore: any DiagnosticsPayloadPersisting
+        do {
+            diagnosticsPayloadStore = try DiagnosticsPayloadStore()
+        } catch {
+            assertionFailure("Failed to initialize diagnostics payload store: \(error)")
+            print("Diagnostics payload store init error: \(error)")
+            diagnosticsPayloadStore = InMemoryDiagnosticsPayloadStore()
+        }
         let diagnosticsService = DiagnosticsService(
             featureFlags: featureFlags,
             settings: settings,

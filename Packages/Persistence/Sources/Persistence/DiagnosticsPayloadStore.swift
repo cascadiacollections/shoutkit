@@ -1,11 +1,18 @@
 import Foundation
 import GRDB
+#if canImport(OSLog)
+import OSLog
+#endif
 
 public protocol DiagnosticsPayloadPersisting: AnyObject {
     func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date)
 }
 
 public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
+    #if canImport(OSLog)
+    private static let logger = Logger(subsystem: "com.cascadiacollections.shoutkit", category: "diagnostics")
+    #endif
+
     private struct Record: Codable, FetchableRecord, PersistableRecord {
         static let databaseTableName = "diagnostic_payloads"
 
@@ -44,7 +51,11 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
             }
         } catch {
             assertionFailure("Failed to persist diagnostics payloads: \(error)")
-            fputs("DiagnosticsPayloadStore persist error: \(error)\n", stderr)
+            #if canImport(OSLog)
+            Self.logger.error("Failed to persist diagnostics payloads: \(String(describing: error), privacy: .public)")
+            #else
+            print("DiagnosticsPayloadStore persist error: \(error)")
+            #endif
         }
     }
 

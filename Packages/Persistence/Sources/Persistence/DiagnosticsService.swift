@@ -14,12 +14,7 @@ public protocol DiagnosticsServicing: AnyObject {
 public final class DiagnosticsService: NSObject, DiagnosticsServicing {
     public typealias SubscriptionHandler = @MainActor (DiagnosticsService) -> Void
 
-    private static let diagnosticsFeature: Feature = {
-        guard let feature = FeatureCatalog.all.first(where: { $0.key == "diagnostics" }) else {
-            preconditionFailure("Missing diagnostics feature in FeatureCatalog")
-        }
-        return feature
-    }()
+    private static let diagnosticsFeature = FeatureCatalog.diagnostics
 
     private let featureFlags: any FeatureFlagProviding
     private let settings: SettingsStore

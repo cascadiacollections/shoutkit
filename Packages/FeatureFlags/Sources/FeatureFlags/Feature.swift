@@ -58,4 +58,11 @@ public enum FeatureCatalog {
             defaultEnabled: false
         )
     ]
+
+    public static var diagnostics: Feature {
+        guard let feature = all.first(where: { $0.key == "diagnostics" }) else {
+            preconditionFailure("Missing diagnostics feature in FeatureCatalog")
+        }
+        return feature
+    }
 }
