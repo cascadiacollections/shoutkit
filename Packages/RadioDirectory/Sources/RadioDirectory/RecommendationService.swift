@@ -47,7 +47,7 @@ public struct RecommendationService: RecommendationServicing, Sendable {
         candidates: [Station],
         limit: Int
     ) -> [StationRecommendation] {
-        guard limit > 0, history.isEmpty == false, candidates.isEmpty == false else { return [] }
+        guard limit > 0, !history.isEmpty, !candidates.isEmpty else { return [] }
 
         let historyIDs = Set(history.map(\.id))
         let scoredCandidates = candidates.filter { historyIDs.contains($0.id) == false }
@@ -150,8 +150,8 @@ public struct RecommendationService: RecommendationServicing, Sendable {
     /// Used so hashed-token vector slots are stable across runs/devices; Swift's
     /// standard `Hasher` intentionally randomizes seeds between processes.
     private func stableHash(_ value: String) -> UInt64 {
-        let offset: UInt64 = 14_695_981_039_346_656_037 // FNV-1a 64-bit offset basis.
-        let prime: UInt64 = 1_099_511_628_211 // FNV-1a 64-bit prime.
+        let offset: UInt64 = 14695981039346656037 // FNV-1a 64-bit offset basis.
+        let prime: UInt64 = 1099511628211 // FNV-1a 64-bit prime.
         return value.utf8.reduce(offset) { hash, byte in
             (hash ^ UInt64(byte)) &* prime
         }

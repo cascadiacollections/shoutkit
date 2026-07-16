@@ -136,10 +136,11 @@ public struct ListenNowView: View {
         return featureFlags.isEnabled(recommendationsFeature)
     }
 
-    private func recommendationCacheKey(_ loaded: BrowseContent) -> String {
-        let recentIDs = recents.map(\.stationID).joined(separator: "|")
-        let candidateIDs = loaded.stations.map(\.id).joined(separator: "|")
-        return "\(recentIDs)>\(candidateIDs)"
+    private func recommendationCacheKey(_ loaded: BrowseContent) -> Int {
+        var hasher = Hasher()
+        recents.forEach { hasher.combine($0.stationID) }
+        loaded.stations.forEach { hasher.combine($0.id) }
+        return hasher.finalize()
     }
 
     private func popularCarousel(_ loaded: BrowseContent) -> some View {
