@@ -8,10 +8,14 @@ import SwiftUI
 
 @main
 struct ShoutKitApp: App {
+    @Environment(\.scenePhase) private var scenePhase
+
+    private let backgroundRefresh = BackgroundRefreshController()
     private let services: AppServices
 
     init() {
         services = AppDependencies.bootstrap()
+        backgroundRefresh.register()
         // Kick App Shortcuts registration immediately; bootstrap() follows with
         // a second refresh after Spotlight indexing completes so Shortcuts
         // search and Siri both see the same station set.
@@ -32,6 +36,11 @@ struct ShoutKitApp: App {
                 }
                 .onOpenURL { url in
                     services.stationLaunchRouter.open(url: url)
+                }
+                .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .background {
+                        backgroundRefresh.schedule()
+                    }
                 }
         }
     }
