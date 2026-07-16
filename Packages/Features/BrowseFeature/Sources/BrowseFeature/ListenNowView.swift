@@ -18,7 +18,6 @@ public struct ListenNowView: View {
     @Environment(\.libraryStore) private var library
     private let recommendationService: any RecommendationServicing
     private let featureFlags: any FeatureFlagProviding
-    private let recommendationsFeature: Feature?
     @State private var cachedRecommendations: [Station] = []
 
     @Query(sort: \RecentStation.playedAt, order: .reverse)
@@ -32,7 +31,6 @@ public struct ListenNowView: View {
         _viewModel = State(wrappedValue: viewModel())
         self.recommendationService = recommendationService ?? sharedRecommendationService()
         self.featureFlags = featureFlags ?? sharedFeatureFlags()
-        recommendationsFeature = FeatureCatalog.all.first(where: { $0.key == "recommendations" })
     }
 
     public var body: some View {
@@ -111,33 +109,34 @@ public struct ListenNowView: View {
 
     @ViewBuilder
     private func recommendationsSection(_ loaded: BrowseContent) -> some View {
-        guard recommendationsEnabled else { return }
-        Group {
-            if !cachedRecommendations.isEmpty {
-                VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
-                    SectionHeaderView(String(localized: "More Like This", bundle: .module))
-                    StationCarousel(
-                        stations: cachedRecommendations,
-                        phase: { playback?.phase(for: $0) ?? .idle },
-                        onTap: { playback?.toggle($0) }
-                    )
+        // Result builders don't support `guard`, so gate with `if`. The
+        // `.task` sits on the (possibly empty) Group so recommendations still
+        // compute before the first carousel render.
+        if recommendationsEnabled {
+            Group {
+                if !cachedRecommendations.isEmpty {
+                    VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
+                        SectionHeaderView(String(localized: "More Like This", bundle: .module))
+                        StationCarousel(
+                            stations: cachedRecommendations,
+                            phase: { playback?.phase(for: $0) ?? .idle },
+                            onTap: { playback?.toggle($0) }
+                        )
+                    }
                 }
             }
-        }
-        .task(id: recommendationCacheKey(loaded)) {
-            cachedRecommendations = recommendationService.moreLikeThis(
-                from: recents.map(\.station),
-                candidates: loaded.stations,
-                limit: Configuration.recommendationLimit
-            ).map(\.station)
+            .task(id: recommendationCacheKey(loaded)) {
+                cachedRecommendations = recommendationService.moreLikeThis(
+                    from: recents.map(\.station),
+                    candidates: loaded.stations,
+                    limit: Configuration.recommendationLimit
+                ).map(\.station)
+            }
         }
     }
 
     private var recommendationsEnabled: Bool {
-        guard let recommendationsFeature else {
-            return false
-        }
-        return featureFlags.isEnabled(recommendationsFeature)
+        featureFlags.isEnabled(FeatureCatalog.recommendations)
     }
 
     private func recommendationCacheKey(_ loaded: BrowseContent) -> UInt64 {

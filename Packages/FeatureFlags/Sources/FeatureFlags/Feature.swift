@@ -35,6 +35,14 @@ public struct Feature: Hashable, Sendable {
 }
 
 public enum FeatureCatalog {
+    public static let recommendations = Feature(
+        key: "recommendations",
+        title: "Recommendations",
+        summary: "On-device \u{201C}More Like This\u{201D} station recommendations from play history.",
+        stage: .internalOnly,
+        defaultEnabled: false
+    )
+
     public static let all: [Feature] = [
         Feature(
             key: "diagnostics",
@@ -50,12 +58,6 @@ public enum FeatureCatalog {
             stage: .internalOnly,
             defaultEnabled: false
         ),
-        Feature(
-            key: "recommendations",
-            title: "Recommendations",
-            summary: "Placeholder flag for personalized station recommendations.",
-            stage: .internalOnly,
-            defaultEnabled: false
-        )
+        recommendations
     ]
 }
