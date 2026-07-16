@@ -32,7 +32,7 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
     }
 
     public func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date) {
-        guard metricPayloads.isEmpty == false || diagnosticPayloads.isEmpty == false else { return }
+        guard !metricPayloads.isEmpty || !diagnosticPayloads.isEmpty else { return }
         do {
             try dbQueue.write { db in
                 for payload in metricPayloads {

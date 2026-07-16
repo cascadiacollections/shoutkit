@@ -1,6 +1,5 @@
 import FeatureFlags
 import Foundation
-import Observation
 
 #if canImport(MetricKit)
 import MetricKit
@@ -42,7 +41,7 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
         self.subscribe = subscribe
         self.unsubscribe = unsubscribe
         super.init()
-        observeGateInputs()
+        refreshSubscription()
     }
 
     public func refreshSubscription() {
@@ -66,18 +65,6 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
     }
 
     var subscribedForCollection: Bool { isSubscribed }
-
-    private func observeGateInputs() {
-        withObservationTracking {
-            _ = settings.isDiagnosticsSharingEnabled
-            _ = featureFlags.isEnabled(Self.diagnosticsFeature)
-        } onChange: { [weak self] in
-            Task { @MainActor [weak self] in
-                self?.observeGateInputs()
-            }
-        }
-        refreshSubscription()
-    }
 
     private static func defaultSubscribe(_ service: DiagnosticsService) {
         #if canImport(MetricKit)

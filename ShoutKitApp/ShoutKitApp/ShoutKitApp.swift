@@ -26,6 +26,9 @@ struct ShoutKitApp: App {
                 .sleepTimer(services.sleepTimer)
                 .settingsStore(services.settingsStore)
                 .tint(.shoutKitAccent)
+                .onChange(of: services.settingsStore.isDiagnosticsSharingEnabled) { _, _ in
+                    services.diagnosticsService.refreshSubscription()
+                }
                 .onOpenURL { url in
                     services.stationLaunchRouter.open(url: url)
                 }
