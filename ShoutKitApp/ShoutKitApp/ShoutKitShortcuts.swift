@@ -147,7 +147,7 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
         do {
             try await CSSearchableIndex.default().indexAppEntities(entities)
         } catch {
-            Self.logger.error("Failed to index Siri stations in Spotlight: \(String(describing: error), privacy: .public)")
+            Self.logger.error("Failed to index Siri stations in Spotlight: \(error, privacy: .public)")
         }
         ShoutKitShortcuts.updateAppShortcutParameters()
     }
