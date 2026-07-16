@@ -8,6 +8,13 @@ public protocol DiagnosticsPayloadPersisting: AnyObject {
     func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date)
 }
 
+/// File-scope (not nested in `Record`) to satisfy SwiftLint's one-level
+/// type-nesting limit; the raw values are what lands in the `kind` column.
+private enum DiagnosticsPayloadKind: String, Codable {
+    case metric
+    case diagnostic
+}
+
 public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
     #if canImport(OSLog)
     private static let logger = Logger(subsystem: "com.cascadiacollections.shoutkit", category: "diagnostics")
@@ -16,13 +23,8 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
     private struct Record: Codable, FetchableRecord, PersistableRecord {
         static let databaseTableName = "diagnostic_payloads"
 
-        enum Kind: String, Codable {
-            case metric
-            case diagnostic
-        }
-
         var id: Int64?
-        var kind: Kind
+        var kind: DiagnosticsPayloadKind
         var payload: Data
         var receivedAt: Date
     }
@@ -41,12 +43,12 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
     public func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date) {
         guard !metricPayloads.isEmpty || !diagnosticPayloads.isEmpty else { return }
         do {
-            try dbQueue.write { db in
+            try dbQueue.write { database in
                 for payload in metricPayloads {
-                    try Record(id: nil, kind: .metric, payload: payload, receivedAt: receivedAt).insert(db)
+                    try Record(id: nil, kind: .metric, payload: payload, receivedAt: receivedAt).insert(database)
                 }
                 for payload in diagnosticPayloads {
-                    try Record(id: nil, kind: .diagnostic, payload: payload, receivedAt: receivedAt).insert(db)
+                    try Record(id: nil, kind: .diagnostic, payload: payload, receivedAt: receivedAt).insert(database)
                 }
             }
         } catch {
@@ -60,15 +62,15 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
     }
 
     func payloadCount() throws -> Int {
-        try dbQueue.read { db in
-            try Record.fetchCount(db)
+        try dbQueue.read { database in
+            try Record.fetchCount(database)
         }
     }
 
     private func migrate() throws {
         var migrator = DatabaseMigrator()
-        migrator.registerMigration("createDiagnosticsPayloads") { db in
-            try db.create(table: Record.databaseTableName) { table in
+        migrator.registerMigration("createDiagnosticsPayloads") { database in
+            try database.create(table: Record.databaseTableName) { table in
                 table.autoIncrementedPrimaryKey("id")
                 table.column("kind", .text).notNull()
                 table.column("payload", .blob).notNull()

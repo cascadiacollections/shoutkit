@@ -25,18 +25,22 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
     private let unsubscribe: SubscriptionHandler
     private var isSubscribed = false
 
+    /// Passing nil for `subscribe`/`unsubscribe` uses the real MXMetricManager
+    /// handlers; tests inject stubs. (nil-defaults rather than direct default
+    /// arguments because a public init can't reference the private static
+    /// handlers, nor `Self`, in a default argument expression.)
     public init(
         featureFlags: any FeatureFlagProviding,
         settings: SettingsStore,
         payloadStore: any DiagnosticsPayloadPersisting,
-        subscribe: @escaping SubscriptionHandler = Self.defaultSubscribe,
-        unsubscribe: @escaping SubscriptionHandler = Self.defaultUnsubscribe
+        subscribe: SubscriptionHandler? = nil,
+        unsubscribe: SubscriptionHandler? = nil
     ) {
         self.featureFlags = featureFlags
         self.settings = settings
         self.payloadStore = payloadStore
-        self.subscribe = subscribe
-        self.unsubscribe = unsubscribe
+        self.subscribe = subscribe ?? DiagnosticsService.defaultSubscribe
+        self.unsubscribe = unsubscribe ?? DiagnosticsService.defaultUnsubscribe
         super.init()
         refreshSubscription()
     }

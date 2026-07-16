@@ -60,24 +60,10 @@ enum AppDependencies {
         let store = LibraryStore(context: container.mainContext)
         let settings = SettingsStore()
         let featureFlags = sharedFeatureFlags()
-        let diagnosticsPayloadStore: any DiagnosticsPayloadPersisting
-        do {
-            diagnosticsPayloadStore = try DiagnosticsPayloadStore()
-        } catch {
-            assertionFailure("""
-            Failed to initialize diagnostics payload store. Falling back to in-memory diagnostics storage, \
-            which will be lost on app restart: \(error)
-            """)
-            print("""
-            Diagnostics payload store init error. Falling back to in-memory \
-            diagnostics storage (lost on app restart): \(error)
-            """)
-            diagnosticsPayloadStore = InMemoryDiagnosticsPayloadStore()
-        }
         let diagnosticsService = DiagnosticsService(
             featureFlags: featureFlags,
             settings: settings,
-            payloadStore: diagnosticsPayloadStore
+            payloadStore: makeDiagnosticsPayloadStore()
         )
         registerProductionDiagnosticsService(diagnosticsService)
         let (directory, playReporter) = makeDirectory()
@@ -171,6 +157,25 @@ enum AppDependencies {
             guard settings.isAlbumArtEnabled else { return .none }
             let match = await AlbumArtLookup.lookup(artist: track.artist, title: track.title)
             return TrackResources(artworkURL: match.artworkURL, appleMusicURL: match.appleMusicURL)
+        }
+    }
+
+    /// GRDB-backed on-disk store, falling back to an in-memory store (payloads
+    /// lost on relaunch) if the database can't be opened. Extracted from
+    /// `bootstrap()` to keep that method within the lint body-length budget.
+    private static func makeDiagnosticsPayloadStore() -> any DiagnosticsPayloadPersisting {
+        do {
+            return try DiagnosticsPayloadStore()
+        } catch {
+            assertionFailure("""
+            Failed to initialize diagnostics payload store. Falling back to in-memory diagnostics storage, \
+            which will be lost on app restart: \(error)
+            """)
+            print("""
+            Diagnostics payload store init error. Falling back to in-memory \
+            diagnostics storage (lost on app restart): \(error)
+            """)
+            return InMemoryDiagnosticsPayloadStore()
         }
     }
 
