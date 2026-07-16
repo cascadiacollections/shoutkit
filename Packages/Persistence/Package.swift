@@ -16,8 +16,8 @@ let package = Package(
     dependencies: [
         .package(path: "../RadioDirectory"),
         .package(path: "../FeatureFlags"),
-        .package(url: "https://github.com/groue/GRDB.swift.git", exact: "7.11.1"),
-        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.1")
+        .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.11.1"),
+        .package(url: "https://github.com/hmlongco/Factory.git", from: "3.3.1")
     ],
     targets: [
         .target(

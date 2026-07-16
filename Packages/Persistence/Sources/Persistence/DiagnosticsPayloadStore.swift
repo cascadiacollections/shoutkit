@@ -61,7 +61,7 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
 
     func payloadCount() throws -> Int {
         try dbQueue.read { db in
-            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM \(Record.databaseTableName)") ?? 0
+            try Record.fetchCount(db)
         }
     }
 
