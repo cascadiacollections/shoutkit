@@ -88,6 +88,7 @@ enum AppDependencies {
             for: controller,
             store: store,
             settings: settings,
+            featureFlags: featureFlags,
             playReporter: directoryServices.playReporter
         )
 
@@ -152,6 +153,7 @@ enum AppDependencies {
         for controller: PlaybackController,
         store: LibraryStore,
         settings: SettingsStore,
+        featureFlags: any FeatureFlagProviding,
         playReporter: (any StationPlayReporting)?
     ) {
         controller.onStationPlayed = { station in
@@ -174,6 +176,10 @@ enum AppDependencies {
                 heardAt: heard.track.receivedAt,
                 appleMusicURL: heard.appleMusicURL
             )
+        }
+
+        controller.tapToAudioPrewarmEnabledProvider = {
+            featureFlags.isEnabled(FeatureCatalog.prewarmStations)
         }
 
         // Best-effort album art + Apple Music link from a single iTunes Search
