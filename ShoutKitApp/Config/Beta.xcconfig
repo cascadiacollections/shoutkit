@@ -1,0 +1,13 @@
+#include "Release.xcconfig"
+
+// Beta / TestFlight builds extend the Release configuration and add the
+// TESTFLIGHT compiler flag so debug-inspector screens (e.g., the feature-flag
+// inspector) compile and remain reachable for internal testers while being
+// absent from App Store releases.
+//
+// To create a TestFlight scheme in Xcode:
+//   1. Duplicate the Release configuration and name it "Beta".
+//   2. Point its .xcconfig to this file.
+//   3. Create a "ShoutKit (Beta)" scheme that uses the Beta configuration for
+//      the Run/Archive actions.
+OTHER_SWIFT_FLAGS = $(inherited) -DTESTFLIGHT
