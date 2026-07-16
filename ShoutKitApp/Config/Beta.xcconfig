@@ -1,9 +1,17 @@
 #include "Release.xcconfig"
 
 // Beta / TestFlight builds extend the Release configuration and add the
-// TESTFLIGHT compiler flag so debug-inspector screens (e.g., the feature-flag
-// inspector) compile and remain reachable for internal testers while being
-// absent from App Store releases.
+// TESTFLIGHT compiler flag so debug-inspector code in the app target compiles
+// and remains reachable for internal testers while being absent from App
+// Store releases.
+//
+// Known limitation: OTHER_SWIFT_FLAGS applies to the app target only. Swift
+// package targets (e.g. SettingsFeature, where FeatureFlagsView lives) build
+// with their own settings and never see -DTESTFLIGHT, so their
+// `#if DEBUG || TESTFLIGHT` blocks still compile out of a Beta build; the
+// TESTFLIGHT branch there documents intent until package-level flag
+// propagation is wired up (SPM has no supported way to inherit this from an
+// app xcconfig).
 //
 // To create a TestFlight scheme in Xcode:
 //   1. Duplicate the Release configuration and name it "Beta".
