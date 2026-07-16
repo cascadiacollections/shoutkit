@@ -21,6 +21,8 @@ struct AppServices {
     let playbackController: PlaybackController
     let sleepTimer: SleepTimer
     let settingsStore: SettingsStore
+    /// Retained for app lifetime so MetricKit subscription state remains active.
+    let diagnosticsService: any DiagnosticsServicing
     let directory: any RadioDirectoryProviding
     /// Retained here so the Observation and Core Location tasks stay alive for
     /// the app's lifetime; it keeps the geo-station filter synchronized with the
@@ -65,6 +67,7 @@ enum AppDependencies {
         let store = LibraryStore(context: container.mainContext)
         let settings = SettingsStore()
         let featureFlags = sharedFeatureFlags()
+        let diagnosticsService = makeDiagnosticsService(settings: settings, featureFlags: featureFlags)
         let directoryServices = makeDirectory(settings: settings, featureFlags: featureFlags)
         let directory = directoryServices.directory
         // Route the decorated (preferred + caching) instance through Factory so
@@ -98,6 +101,7 @@ enum AppDependencies {
             playbackController: controller,
             sleepTimer: sleepTimer,
             settingsStore: settings,
+            diagnosticsService: diagnosticsService,
             directory: directory,
             geoStationLocationCoordinator: directoryServices.geoStationLocationCoordinator,
             activityCoordinator: activityCoordinator,
@@ -162,6 +166,40 @@ enum AppDependencies {
             guard settings.isAlbumArtEnabled else { return .none }
             let match = await AlbumArtLookup.lookup(artist: track.artist, title: track.title)
             return TrackResources(artworkURL: match.artworkURL, appleMusicURL: match.appleMusicURL)
+        }
+    }
+
+    /// Constructs the diagnostics service and registers it with Factory.
+    /// Extracted from `bootstrap()` to keep that method within the lint
+    /// body-length budget.
+    private static func makeDiagnosticsService(
+        settings: SettingsStore,
+        featureFlags: any FeatureFlagProviding
+    ) -> DiagnosticsService {
+        let diagnosticsService = DiagnosticsService(
+            featureFlags: featureFlags,
+            settings: settings,
+            payloadStore: makeDiagnosticsPayloadStore()
+        )
+        registerProductionDiagnosticsService(diagnosticsService)
+        return diagnosticsService
+    }
+
+    /// GRDB-backed on-disk store, falling back to an in-memory store (payloads
+    /// lost on relaunch) if the database can't be opened.
+    private static func makeDiagnosticsPayloadStore() -> any DiagnosticsPayloadPersisting {
+        do {
+            return try DiagnosticsPayloadStore()
+        } catch {
+            assertionFailure("""
+            Failed to initialize diagnostics payload store. Falling back to in-memory diagnostics storage, \
+            which will be lost on app restart: \(error)
+            """)
+            print("""
+            Diagnostics payload store init error. Falling back to in-memory \
+            diagnostics storage (lost on app restart): \(error)
+            """)
+            return InMemoryDiagnosticsPayloadStore()
         }
     }
 

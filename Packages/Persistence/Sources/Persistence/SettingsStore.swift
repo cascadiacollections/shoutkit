@@ -10,6 +10,7 @@ public final class SettingsStore {
     private enum Keys {
         static let playReporting = DefaultsKey<Bool>.plist("settings.playReportingEnabled", default: true)
         static let albumArt = DefaultsKey<Bool>.plist("settings.albumArtEnabled", default: true)
+        static let diagnosticsSharing = DefaultsKey<Bool>.plist("settings.diagnosticsSharingEnabled", default: false)
         static let preciseGeoStationLocation = DefaultsKey<Bool>.plist(
             "settings.preciseGeoStationLocationEnabled",
             default: false
@@ -32,6 +33,12 @@ public final class SettingsStore {
         didSet { defaults.set(isAlbumArtEnabled, for: Keys.albumArt) }
     }
 
+    /// Whether anonymous diagnostics payloads from Apple's MetricKit may be
+    /// collected locally on-device for later export/debugging. Defaults to off.
+    public var isDiagnosticsSharingEnabled: Bool {
+        didSet { defaults.set(isDiagnosticsSharingEnabled, for: Keys.diagnosticsSharing) }
+    }
+
     /// Whether ShoutKit may request Core Location permission to reverse-geocode
     /// the current country for geo-station filtering. Defaults to off so the
     /// locale-based country filter stays permissionless unless the user opts in.
@@ -46,6 +53,7 @@ public final class SettingsStore {
         self.defaults = defaults
         isPlayReportingEnabled = defaults.value(for: Keys.playReporting)
         isAlbumArtEnabled = defaults.value(for: Keys.albumArt)
+        isDiagnosticsSharingEnabled = defaults.value(for: Keys.diagnosticsSharing)
         isPreciseGeoStationLocationEnabled = defaults.value(for: Keys.preciseGeoStationLocation)
     }
 }

@@ -1,69 +1,27 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "About" : {
-
-    },
-    "Done" : {
-
-    },
-    "Feedback & Support" : {
-
-    },
-    "Fetch Album Artwork" : {
-
-    },
-    "License text unavailable — see the project repository." : {
-
-    },
-    "Licenses" : {
-
-    },
-    "Privacy" : {
-
-    },
-    "Radio-Browser" : {
-
-    },
-    "Report an Issue" : {
-
-    },
-    "Report Plays to Radio-Browser" : {
-
-    },
-    "Reusable Packages — MIT" : {
-
-    },
-    "Settings" : {
-
-    },
-    "ShoutKit App — GPL-3.0" : {
-
-    },
-    "ShoutKit is free software — everything works whether or not you donate. On beta builds you can also send feedback by taking a screenshot in TestFlight." : {
-
-    },
-    "Source Code" : {
-
-    },
-    "Station discovery is powered by Radio-Browser, a free, community-run directory." : {
-
-    },
-    "Support ShoutKit" : {
-
-    },
-    "The app and its feature packages are GPL-3.0; the reusable RadioDirectory, Playback, Persistence, and DesignSystem packages are MIT. The ShoutKit name and icon are trademarks and not covered by these licenses." : {
-
-    },
-    "Use Precise Location for Geo Stations" : {
-
-    },
-    "Version" : {
-
-    },
-    "When on, playing a Radio-Browser station sends its public station ID (nothing about you or your device) so the community directory can rank popularity. Album artwork lookups send the current track's artist and title to Apple's iTunes Search API; turn this off to always show station artwork instead. The geo-stations feature defaults to your device locale region with no permission prompt; the optional precise-location toggle asks Apple for location permission only after you turn it on, and falls back to that locale region if permission is denied. ShoutKit has no analytics, no ads, and no accounts." : {
-
-    }
+  "sourceLanguage": "en",
+  "strings": {
+    "About": {},
+    "Done": {},
+    "Feedback & Support": {},
+    "Fetch Album Artwork": {},
+    "License text unavailable — see the project repository.": {},
+    "Licenses": {},
+    "Privacy": {},
+    "Radio-Browser": {},
+    "Report an Issue": {},
+    "Report Plays to Radio-Browser": {},
+    "Reusable Packages — MIT": {},
+    "Settings": {},
+    "ShoutKit App — GPL-3.0": {},
+    "ShoutKit is free software — everything works whether or not you donate. On beta builds you can also send feedback by taking a screenshot in TestFlight.": {},
+    "Source Code": {},
+    "Station discovery is powered by Radio-Browser, a free, community-run directory.": {},
+    "Support ShoutKit": {},
+    "The app and its feature packages are GPL-3.0; the reusable RadioDirectory, Playback, Persistence, and DesignSystem packages are MIT. The ShoutKit name and icon are trademarks and not covered by these licenses.": {},
+    "Use Precise Location for Geo Stations": {},
+    "Version": {},
+    "When on, playing a Radio-Browser station sends its public station ID (nothing about you or your device) so the community directory can rank popularity. Album artwork lookups send the current track's artist and title to Apple's iTunes Search API; turn this off to always show station artwork instead. Share diagnostics keeps Apple MetricKit crash/hang/energy/disk payloads local on-device for troubleshooting. They are never sent automatically; export/share would only happen if you explicitly choose to do that for debugging later. The geo-stations feature defaults to your device locale region with no permission prompt; the optional precise-location toggle asks Apple for location permission only after you turn it on, and falls back to that locale region if permission is denied. ShoutKit has no analytics, no ads, and no accounts.": {}
   },
-  "version" : "1.1"
+  "version": "1.1"
 }
