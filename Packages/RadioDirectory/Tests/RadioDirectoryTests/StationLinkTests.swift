@@ -77,4 +77,44 @@ struct StationLinkTests {
         #expect(parsed?.station.preferredStreamURL == nil)
         #expect(parsed?.station.artworkURL == nil)
     }
+
+    @Test
+    func roundTripsHandoffUserInfo() {
+        let station = Station(
+            id: "kexp",
+            name: "KEXP",
+            genre: "Indie",
+            tags: ["Seattle", "Alternative"],
+            country: "US",
+            codec: "mp3",
+            language: "en",
+            listenerCount: 1_234,
+            bitrate: 128,
+            clickTrend: 9,
+            votes: 88,
+            artworkURL: URL(string: "https://example.com/artwork.png"),
+            preferredStreamURL: URL(string: "https://example.com/live.mp3")
+        )
+        let link = StationLink(station: station, autoPlay: false, presentNowPlaying: true)
+
+        let parsed = StationLink(handoffUserInfo: link.handoffUserInfo)
+
+        #expect(parsed == link)
+    }
+
+    @Test
+    func rejectsHandoffUserInfoWithMismatchedStationID() throws {
+        let station = Station(
+            id: "kexp",
+            name: "KEXP",
+            genre: "Indie",
+            listenerCount: 1,
+            preferredStreamURL: URL(string: "https://example.com/live.mp3")
+        )
+        let link = StationLink(station: station)
+        var userInfo = link.handoffUserInfo
+        userInfo["stationID"] = "kcrw"
+
+        #expect(StationLink(handoffUserInfo: userInfo) == nil)
+    }
 }

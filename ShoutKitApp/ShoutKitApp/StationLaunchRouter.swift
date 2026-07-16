@@ -31,6 +31,19 @@ final class StationLaunchRouter {
         return true
     }
 
+    /// Returns false when the activity is not a recognized station handoff payload.
+    @discardableResult
+    func open(userActivity: NSUserActivity) -> Bool {
+        guard userActivity.activityType == StationLink.handoffActivityType,
+              let userInfo = userActivity.userInfo,
+              let link = StationLink(handoffUserInfo: userInfo) else {
+            return false
+        }
+
+        open(link)
+        return true
+    }
+
     /// The consumer calls this after acting on `pending` so an identical link
     /// arriving later still registers as a change.
     func clearPending() {

@@ -1,3 +1,4 @@
+import Foundation
 import BrowseFeature
 import DesignSystem
 import LibraryFeature
@@ -58,6 +59,21 @@ struct RootView: View {
                 guard let link else { return }
                 launchRouter.clearPending()
                 handle(link)
+            }
+            .onContinueUserActivity(StationLink.handoffActivityType) { activity in
+                launchRouter.open(userActivity: activity)
+            }
+            .userActivity(
+                StationLink.handoffActivityType,
+                isActive: currentHandoffLink != nil
+            ) { activity in
+                guard let link = currentHandoffLink else { return }
+                let userInfo = link.handoffUserInfo
+                activity.title = "Resume \(link.station.name)"
+                activity.isEligibleForHandoff = true
+                activity.targetContentIdentifier = link.station.id
+                activity.requiredUserInfoKeys = Set(userInfo.keys)
+                activity.userInfo = userInfo
             }
             .simultaneousGesture(
                 DragGesture()
@@ -130,6 +146,11 @@ struct RootView: View {
         case .idle:
             playback.play(link.station)
         }
+    }
+
+    private var currentHandoffLink: StationLink? {
+        guard let station = playback?.state.handoffStation else { return nil }
+        return StationLink(station: station)
     }
 
     private func handleTabSwipe(_ value: DragGesture.Value) {

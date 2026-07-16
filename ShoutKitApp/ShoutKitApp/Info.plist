@@ -44,6 +44,10 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>ShoutKit uses your location only after you opt in to refine geo-relevant station filtering.</string>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>com.cascadiacollections.shoutkit.station</string>
+	</array>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>SHOUTCAST_DEV_KEY</key>
