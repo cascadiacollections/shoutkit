@@ -94,7 +94,7 @@ enum AppDependencies {
             activityCoordinator: activityCoordinator,
             stationLaunchRouter: StationLaunchRouter()
         )
-        scheduleLaunchWarmups(store: store, featureFlags: featureFlags)
+        scheduleLaunchWarmups(store: store, featureFlags: featureFlags, prewarmer: stationConnectionPrewarmer)
 
         Self.services = services
         return services
@@ -128,7 +128,11 @@ enum AppDependencies {
     /// Launch-time, fire-and-forget warmups: Spotlight indexing of known
     /// stations (so Siri can resolve "play ⟨station⟩" from a previous session)
     /// and the flag-gated network-path prewarm for the user's top stations.
-    private static func scheduleLaunchWarmups(store: LibraryStore, featureFlags: any FeatureFlagProviding) {
+    private static func scheduleLaunchWarmups(
+        store: LibraryStore,
+        featureFlags: any FeatureFlagProviding,
+        prewarmer: StationConnectionPrewarmer
+    ) {
         Task {
             await StationEntityQuery().indexKnownStationsForSpotlight()
         }
@@ -138,7 +142,6 @@ enum AppDependencies {
         if featureFlags.isEnabled(FeatureCatalog.prewarmStations) {
             let prewarmURLs = store.prewarmStreamURLs(limit: 5)
             if prewarmURLs.isEmpty == false {
-                let prewarmer = stationConnectionPrewarmer
                 Task.detached(priority: .utility) {
                     await prewarmer.prewarm(streamURLs: prewarmURLs)
                 }

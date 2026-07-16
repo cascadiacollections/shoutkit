@@ -3,7 +3,6 @@ import CoreSpotlight
 import Foundation
 import OSLog
 import Persistence
-import Playback
 import RadioDirectory
 import SwiftData
 import UniformTypeIdentifiers
@@ -231,7 +230,7 @@ struct WarmupRadioAudioQueueIntent {
         } catch {
             let errorDescription = String(describing: error)
             shortcutsLogger.error(
-                "Failed to resolve Siri warmup endpoint for \(station.name, privacy: .public): \(errorDescription, privacy: .public)"
+                "Failed to resolve Siri warmup endpoint for \(station.name, privacy: .public): \(errorDescription, privacy: .private)"
             )
         }
         return .result(value: WarmupAudioQueueResult())
