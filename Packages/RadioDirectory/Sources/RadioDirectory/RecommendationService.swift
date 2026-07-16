@@ -46,6 +46,8 @@ public struct RecommendationService: RecommendationServicing, Sendable {
         static let hashedTokenSlots = 92
         /// Total vector width; slots 92-95 are numeric/codec indicator channels.
         static let totalDimensions = 96
+        /// Radio-Browser bitrates are typically <=320kbps; clamp at this ceiling.
+        static let bitrateNormalizationCeiling: Float = 320
     }
 
     public struct Configuration: Equatable, Sendable {
@@ -90,6 +92,7 @@ public struct RecommendationService: RecommendationServicing, Sendable {
 
         return Array(ranked.sorted {
             if $0.score == $1.score {
+                // Station UUID/name keys are stable and available in every result.
                 return $0.station.id < $1.station.id
             }
             return $0.score > $1.score
@@ -126,7 +129,7 @@ public struct RecommendationService: RecommendationServicing, Sendable {
         }
 
         if let bitrate = station.bitrate, bitrate > 0 {
-            vector[92] = min(Float(bitrate) / 320, 1)
+            vector[92] = min(Float(bitrate) / VectorLayout.bitrateNormalizationCeiling, 1)
         }
 
         vector[93] = codec?.contains("AAC") == true ? 1 : 0

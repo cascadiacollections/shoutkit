@@ -9,6 +9,10 @@ import SwiftUI
 /// A lighter, personalized landing: a featured spotlight, recently played, and a
 /// popular carousel. Reuses ``BrowseViewModel`` for directory content.
 public struct ListenNowView: View {
+    private enum Configuration {
+        static let recommendationLimit = 10
+    }
+
     @State private var viewModel: BrowseViewModel
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
@@ -124,7 +128,7 @@ public struct ListenNowView: View {
             cachedRecommendations = recommendationService.moreLikeThis(
                 from: recents.map(\.station),
                 candidates: loaded.stations,
-                limit: 10
+                limit: Configuration.recommendationLimit
             ).map(\.station)
         }
     }
