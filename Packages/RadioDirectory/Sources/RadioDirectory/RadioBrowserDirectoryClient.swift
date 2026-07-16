@@ -241,6 +241,9 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
             let data = try await request(path: path, queryItems: queryItems + geoFilterQueryItems)
             let filteredStations = try decode([RadioBrowserStation].self, from: data)
                 .compactMap(Self.station(from:))
+            // Geo filtering is a fallback chain, not a merge: prefer the country
+            // result set when it yields stations, otherwise replace it with the
+            // language-filtered retry.
             stations = filteredStations
 
             if filteredStations.isEmpty == false || geoFilterQueryItemSets.count == 1 {

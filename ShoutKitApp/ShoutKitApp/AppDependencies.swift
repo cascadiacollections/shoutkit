@@ -203,14 +203,7 @@ final class GeoStationLocationCoordinator: NSObject, CLLocationManagerDelegate {
     private let geoFilterProvider: MutableRadioBrowserGeoFilterProvider
     private let locationManager = CLLocationManager()
     private let geocoder = CLGeocoder()
-    private let geoStationsFeature = FeatureCatalog.all.first { $0.key == "geoStations" }
-        ?? Feature(
-            key: "geoStations",
-            title: "Geo Stations",
-            summary: "",
-            stage: .internalOnly,
-            defaultEnabled: false
-        )
+    private let geoStationsFeature = FeatureCatalog.geoStations
     private var observationTask: Task<Void, Never>?
     private var preciseCountryCode: String?
 

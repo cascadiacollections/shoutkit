@@ -35,6 +35,14 @@ public struct Feature: Hashable, Sendable {
 }
 
 public enum FeatureCatalog {
+    public static let geoStations = Feature(
+        key: "geoStations",
+        title: "Geo Stations",
+        summary: "Filter Radio-Browser discovery by region; optional precise location is separate and off by default.",
+        stage: .internalOnly,
+        defaultEnabled: false
+    )
+
     public static let all: [Feature] = [
         Feature(
             key: "diagnostics",
@@ -43,13 +51,7 @@ public enum FeatureCatalog {
             stage: .internalOnly,
             defaultEnabled: false
         ),
-        Feature(
-            key: "geoStations",
-            title: "Geo Stations",
-            summary: "Filter Radio-Browser discovery by region; optional precise location is separate and off by default.",
-            stage: .internalOnly,
-            defaultEnabled: false
-        ),
+        geoStations,
         Feature(
             key: "recommendations",
             title: "Recommendations",

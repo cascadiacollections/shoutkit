@@ -42,8 +42,7 @@ public struct SettingsView: View {
     @ViewBuilder
     private var privacySection: some View {
         if let settings {
-            let geoStationsFeature = FeatureCatalog.all.first { $0.key == "geoStations" }
-            let isGeoStationsEnabled = geoStationsFeature.map { featureFlags.isEnabled($0) } ?? false
+            let isGeoStationsEnabled = featureFlags.isEnabled(FeatureCatalog.geoStations)
 
             Section {
                 Toggle(
