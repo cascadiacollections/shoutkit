@@ -19,6 +19,7 @@ struct AppServices {
     let container: ModelContainer
     let libraryStore: LibraryStore
     let playbackController: PlaybackController
+    let stationConnectionPrewarmer: StationConnectionPrewarmer
     let sleepTimer: SleepTimer
     let settingsStore: SettingsStore
     /// Retained for app lifetime so MetricKit subscription state remains active.
@@ -83,6 +84,7 @@ enum AppDependencies {
         // manually through RootView.
         registerProductionRadioDirectory(directory)
         let controller = PlaybackController(directory: directory)
+        let stationConnectionPrewarmer = StationConnectionPrewarmer()
 
         configureCallbacks(
             for: controller,
@@ -107,6 +109,7 @@ enum AppDependencies {
             container: container,
             libraryStore: store,
             playbackController: controller,
+            stationConnectionPrewarmer: stationConnectionPrewarmer,
             sleepTimer: sleepTimer,
             settingsStore: settings,
             diagnosticsService: diagnosticsService,
@@ -128,8 +131,9 @@ enum AppDependencies {
         if featureFlags.isEnabled(FeatureCatalog.prewarmStations) {
             let prewarmURLs = store.prewarmStreamURLs(limit: 5)
             if prewarmURLs.isEmpty == false {
+                let prewarmer = stationConnectionPrewarmer
                 Task.detached(priority: .utility) {
-                    await StationConnectionPrewarmer().prewarm(streamURLs: prewarmURLs)
+                    await prewarmer.prewarm(streamURLs: prewarmURLs)
                 }
             }
         }

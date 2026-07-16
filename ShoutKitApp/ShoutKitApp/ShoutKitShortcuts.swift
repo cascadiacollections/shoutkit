@@ -1,11 +1,14 @@
 import AppIntents
 import CoreSpotlight
 import Foundation
+import OSLog
 import Persistence
 import Playback
 import RadioDirectory
 import SwiftData
 import UniformTypeIdentifiers
+
+private let shortcutsLogger = Logger(subsystem: "ShoutKit.App", category: "Shortcuts")
 
 // MARK: - Station entity
 
@@ -221,8 +224,14 @@ struct WarmupRadioAudioQueueIntent {
     @MainActor
     func perform() async throws -> some ReturnsValue<WarmupAudioQueueResult> {
         let services = AppDependencies.bootstrap()
-        if let endpoint = try? await services.directory.streamEndpoint(for: audioEntity.stationEntity.station) {
-            await StationConnectionPrewarmer().prewarm(streamURLs: [endpoint.url])
+        let station = audioEntity.stationEntity
+        do {
+            let endpoint = try await services.directory.streamEndpoint(for: station.station)
+            await services.stationConnectionPrewarmer.prewarm(streamURLs: [endpoint.url])
+        } catch {
+            shortcutsLogger.error(
+                "Failed to resolve Siri warmup endpoint for \(station.name, privacy: .public): \(error.localizedDescription, privacy: .public)"
+            )
         }
         return .result(value: WarmupAudioQueueResult())
     }
