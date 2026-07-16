@@ -32,6 +32,20 @@ public enum PlaybackState: Equatable, Sendable {
             return true
         }
     }
+
+    /// The station that should be advertised for Handoff, if any. A paused or
+    /// failed stream is intentionally excluded so only actively connecting or
+    /// playing audio offers a cross-device resume affordance.
+    public var handoffStation: Station? {
+        switch self {
+        case let .loading(station),
+             let .buffering(station),
+             let .playing(station):
+            return station
+        case .idle, .paused, .failed:
+            return nil
+        }
+    }
 }
 
 /// Per-station phase used by list rows to render the correct play/pause affordance.

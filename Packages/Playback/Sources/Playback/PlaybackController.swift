@@ -78,6 +78,7 @@ public final class PlaybackController {
     /// on failure or when the feature is disabled. Called once per unique track
     /// change.
     @ObservationIgnored public var trackResourcesProvider: (@MainActor (AudioTrackInfo) async -> TrackResources)?
+    @ObservationIgnored public var tapToAudioPrewarmEnabledProvider: (@MainActor () -> Bool) = { false }
 
     public var currentStation: Station? { activeStation }
 
@@ -116,6 +117,7 @@ public final class PlaybackController {
     @ObservationIgnored let reconnectBaseDelay: Duration
     @ObservationIgnored let reconnectTimer = OneShotTimer()
     @ObservationIgnored var reconnectAttempts = 0
+    @ObservationIgnored var tapToAudioTrace: TapToAudioLatencyTrace?
 
     /// Whether `output.start` has run for the active station. False while the
     /// stream endpoint is still resolving, or after a pause during loading —
@@ -155,6 +157,11 @@ public final class PlaybackController {
 
     public func play(_ station: Station) {
         reconnectAttempts = 0
+        tapToAudioTrace?.cancel()
+        tapToAudioTrace = TapToAudioLatencyTrace(
+            stationID: station.id,
+            prewarmEnabled: tapToAudioPrewarmEnabledProvider()
+        )
         // A fresh choice always re-resolves; the cache exists only to spare
         // reconnect attempts from repeating resolution for the same station.
         resolvedEndpoint = nil
@@ -173,6 +180,8 @@ public final class PlaybackController {
         // pending start, or audio would begin after the user asked it not to.
         if case let .loading(station) = state {
             resolveTask?.cancel()
+            tapToAudioTrace?.cancel()
+            tapToAudioTrace = nil
             state = .paused(station)
             nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
             schedulePausedRelease()
@@ -223,6 +232,8 @@ public final class PlaybackController {
     }
 
     public func stop() {
+        tapToAudioTrace?.cancel()
+        tapToAudioTrace = nil
         resolveTask?.cancel()
         albumArtTask?.cancel()
         albumArtTask = nil

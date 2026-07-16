@@ -12,6 +12,15 @@ public protocol HTTPTransporting: Sendable {
 }
 
 public actor URLSessionHTTPTransport: HTTPTransporting {
+    private static let logger = Logger(
+        subsystem: "ShoutKit.RadioDirectory",
+        category: "URLSessionHTTPTransport"
+    )
+    private static let signposter = OSSignposter(
+        subsystem: "ShoutKit.RadioDirectory",
+        category: "URLSessionHTTPTransport"
+    )
+
     /// The session `shared` is built with on first access, defaulting to
     /// `URLSession.shared`. The app installs its Debug-only Pulse logging proxy
     /// here (see the app-side DebugSupport package) so this package never
@@ -50,10 +59,109 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
     }
 
     public func send(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        let signpostID = Self.signposter.makeSignpostID()
+        let interval = Self.signposter.beginInterval("HTTP request", id: signpostID)
+        let metricsObserver = TaskMetricsObserver()
         do {
-            return try await session.data(for: request)
+            let response = try await session.data(for: request, delegate: metricsObserver)
+            Self.logTaskMetrics(
+                metricsObserver.metrics,
+                request: request,
+                response: response.1
+            )
+            Self.signposter.endInterval("HTTP request", interval)
+            return response
         } catch {
+            Self.signposter.endInterval("HTTP request", interval)
             throw HTTPTransportError.transport(error.localizedDescription)
+        }
+    }
+}
+
+private extension URLSessionHTTPTransport {
+    static func logTaskMetrics(
+        _ metrics: URLSessionTaskMetrics?,
+        request: URLRequest,
+        response: URLResponse
+    ) {
+        guard let metrics else { return }
+
+        let transaction = metrics.transactionMetrics.last
+        let host = request.url?.host ?? response.url?.host ?? "unknown"
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+        let summary = NetworkTimingSummary(transaction: transaction, taskInterval: metrics.taskInterval)
+
+        logger.notice(
+            """
+            URLSessionTaskMetrics host=\(host, privacy: .public) \
+            method=\(request.httpMethod ?? "GET", privacy: .public) \
+            status=\(statusCode) dnsMs=\(summary.describe(summary.dnsMilliseconds), privacy: .public) \
+            connectMs=\(summary.describe(summary.connectMilliseconds), privacy: .public) \
+            tlsMs=\(summary.describe(summary.tlsMilliseconds), privacy: .public) \
+            requestMs=\(summary.describe(summary.requestMilliseconds), privacy: .public) \
+            responseMs=\(summary.describe(summary.responseMilliseconds), privacy: .public) \
+            totalMs=\(summary.describe(summary.totalMilliseconds), privacy: .public) \
+            reusedConnection=\(transaction?.isReusedConnection ?? false)
+            """
+        )
+    }
+
+    final class TaskMetricsObserver: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+        private let lock = OSAllocatedUnfairLock<URLSessionTaskMetrics?>(initialState: nil)
+
+        var metrics: URLSessionTaskMetrics? {
+            lock.withLock { $0 }
+        }
+
+        func urlSession(
+            _: URLSession,
+            task _: URLSessionTask,
+            didFinishCollecting metrics: URLSessionTaskMetrics
+        ) {
+            lock.withLock { $0 = metrics }
+        }
+    }
+
+    struct NetworkTimingSummary {
+        let dnsMilliseconds: Double?
+        let connectMilliseconds: Double?
+        let tlsMilliseconds: Double?
+        let requestMilliseconds: Double?
+        let responseMilliseconds: Double?
+        let totalMilliseconds: Double?
+
+        init(transaction: URLSessionTaskTransactionMetrics?, taskInterval: DateInterval) {
+            dnsMilliseconds = Self.milliseconds(
+                from: transaction?.domainLookupStartDate,
+                to: transaction?.domainLookupEndDate
+            )
+            connectMilliseconds = Self.milliseconds(
+                from: transaction?.connectStartDate,
+                to: transaction?.connectEndDate
+            )
+            tlsMilliseconds = Self.milliseconds(
+                from: transaction?.secureConnectionStartDate,
+                to: transaction?.secureConnectionEndDate
+            )
+            requestMilliseconds = Self.milliseconds(
+                from: transaction?.requestStartDate,
+                to: transaction?.requestEndDate
+            )
+            responseMilliseconds = Self.milliseconds(
+                from: transaction?.responseStartDate,
+                to: transaction?.responseEndDate
+            )
+            totalMilliseconds = taskInterval.duration * 1_000
+        }
+
+        func describe(_ value: Double?) -> String {
+            guard let value else { return "n/a" }
+            return String(format: "%.2f", value)
+        }
+
+        private static func milliseconds(from start: Date?, to end: Date?) -> Double? {
+            guard let start, let end else { return nil }
+            return end.timeIntervalSince(start) * 1_000
         }
     }
 }

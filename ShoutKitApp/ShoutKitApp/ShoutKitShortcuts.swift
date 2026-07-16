@@ -1,10 +1,13 @@
 import AppIntents
 import CoreSpotlight
 import Foundation
+import OSLog
 import Persistence
 import RadioDirectory
 import SwiftData
 import UniformTypeIdentifiers
+
+private let shortcutsLogger = Logger(subsystem: "ShoutKit.App", category: "Shortcuts")
 
 // MARK: - Station entity
 
@@ -81,6 +84,8 @@ extension StationEntity: IndexedEntity {
 /// later — Shortcuts persists only the entity's id). Free-text matching goes to
 /// the live directory.
 struct StationEntityQuery: EntityQuery, EntityStringQuery {
+    private static let logger = Logger(subsystem: "ShoutKit.App", category: "StationEntityQuery")
+
     @MainActor
     func entities(for identifiers: [String]) async throws -> [StationEntity] {
         let known = knownStations()
@@ -131,12 +136,20 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
     /// session, not just ones searched or played this run. Called once at
     /// launch (`AppDependencies.bootstrap()`); a favorite toggled mid-session
     /// isn't re-indexed until the next launch — an accepted v1 gap, same
-    /// category as the album-art lookup's "best effort" framing.
+    /// category as the album-art lookup's "best effort" framing. Refresh the
+    /// App Shortcut parameter cache afterward so Shortcuts search and Siri see
+    /// the same station set the Spotlight index just received.
     @MainActor
     func indexKnownStationsForSpotlight() async {
         let entities = knownStations()
-        guard entities.isEmpty == false else { return }
-        try? await CSSearchableIndex.default().indexAppEntities(entities)
+        if entities.isEmpty == false {
+            do {
+                try await CSSearchableIndex.default().indexAppEntities(entities)
+            } catch {
+                Self.logger.error("Failed to index Siri stations in Spotlight: \(error, privacy: .public)")
+            }
+        }
+        ShoutKitShortcuts.updateAppShortcutParameters()
     }
 }
 
@@ -158,129 +171,6 @@ enum IntentStationCache {
         let capped = Array(merged.prefix(capacity))
 
         UserDefaults.standard.set(capped, for: key)
-    }
-}
-
-// MARK: - Intents
-
-/// The `.audio.playAudio` schema's `audioEntity` parameter accepts a fixed
-/// menu of content kinds shared across every app that adopts it (songs,
-/// albums, podcasts, live radio, …); a `@UnionValue` enum is how a single app
-/// opts into just the cases it actually plays. ShoutKit only ever plays a
-/// `StationEntity`.
-@UnionValue
-enum AudioItem {
-    case liveRadioStation(StationEntity)
-}
-
-/// AudioPlaybackIntent keeps this headless: Siri/Shortcuts start audio without
-/// foregrounding the app (or demanding unlock), which is the whole point of
-/// "Hey Siri, play KEXP on ShoutKit" while driving. Deep links use
-/// StationLaunchRouter instead because opening the app is inherent to a URL
-/// launch. This is the *explicit* path — the phrase always says "on
-/// ShoutKit" — because `AppShortcutPhrase` can only bind plain
-/// `AppEntity`/`AppEnum` parameters, and can't reference the schema's
-/// union-typed `audioEntity` (see `PlayRadioAudioIntent` below for the
-/// app-name-free path).
-struct PlayStationIntent: AudioPlaybackIntent {
-    static let title: LocalizedStringResource = "Play Station"
-    static let description = IntentDescription("Plays a radio station in ShoutKit.")
-
-    @Parameter(title: "Station")
-    var station: StationEntity
-
-    @MainActor
-    func perform() async throws -> some IntentResult & ProvidesDialog {
-        // Reaches the same PlaybackController the app UI drives; bootstrap() is
-        // idempotent, so this is safe even when the intent cold-launches the app.
-        let services = AppDependencies.bootstrap()
-        services.playbackController.play(station.station)
-        return .result(dialog: "Playing \(station.name)")
-    }
-}
-
-/// `@AppIntent(schema: .audio.playAudio)` registers ShoutKit as a system
-/// "play audio" handler for `StationEntity` content. Unlike `PlayStationIntent`
-/// above, this one is never referenced by an `AppShortcut` phrase — its whole
-/// purpose is passive registration, so the system's own "Play Audio" Siri
-/// domain can dispatch a bare "play ⟨station⟩ radio" utterance straight to
-/// `audioEntity`'s resolution (backed by `StationEntity`'s Spotlight index),
-/// without the app name being spoken and without ShoutKit training a custom
-/// phrase for it. `queueLocation`, `warmupAudioQueueResult`, and
-/// `playbackAttributes` are schema-required bookkeeping for apps with a real
-/// play queue; ShoutKit has none (station switches are immediate replacement,
-/// not enqueueing), so each just takes the schema's "nothing to report" value.
-@AppIntent(schema: .audio.playAudio)
-struct PlayRadioAudioIntent {
-    static let title: LocalizedStringResource = "Play Radio"
-    static let description = IntentDescription("Plays a radio station in ShoutKit.")
-
-    var audioEntity: AudioItem
-    var queueLocation: QueueInsertionLocation?
-    var warmupAudioQueueResult: WarmupAudioQueueResult?
-    var playbackAttributes: Set<PlaybackAttributes>
-
-    @MainActor
-    func perform() async throws -> some IntentResult & ProvidesDialog {
-        let station: StationEntity
-        switch audioEntity {
-        case let .liveRadioStation(entity):
-            station = entity
-        }
-        // Reaches the same PlaybackController the app UI drives; bootstrap() is
-        // idempotent, so this is safe even when the intent cold-launches the app.
-        let services = AppDependencies.bootstrap()
-        services.playbackController.play(station.station)
-        return .result(dialog: "Playing \(station.name)")
-    }
-}
-
-/// `.audio.playbackAttributes`: modifiers on how the audio plays (e.g. muted,
-/// looping). ShoutKit's immediate single-station playback has none of these,
-/// so the enum exists only to satisfy the schema — `perform()` always passes
-/// an empty set.
-@AppEnum(schema: .audio.playbackAttributes)
-enum PlaybackAttributes: String {
-    case none
-    case shuffle
-    case `repeat`
-
-    static let caseDisplayRepresentations: [Self: DisplayRepresentation] = [
-        .none: DisplayRepresentation(title: "None"),
-        .shuffle: DisplayRepresentation(title: "Shuffle"),
-        .repeat: DisplayRepresentation(title: "Repeat")
-    ]
-}
-
-/// `.audio.queueInsertionLocation`: where in a play queue new audio should
-/// land. ShoutKit has no queue — playing a station always replaces whatever
-/// was playing — so `now` (immediate playback) is the only case that applies.
-@AppEnum(schema: .audio.queueInsertionLocation)
-enum QueueInsertionLocation: String {
-    case now
-    case next
-    case tail
-
-    static let caseDisplayRepresentations: [Self: DisplayRepresentation] = [
-        .now: DisplayRepresentation(title: "Now"),
-        .next: DisplayRepresentation(title: "Next"),
-        .tail: DisplayRepresentation(title: "End of Queue")
-    ]
-}
-
-/// `.audio.warmupAudioQueueResult`: outcome of a queue pre-warm request.
-/// ShoutKit doesn't pre-warm a queue (there's nothing to warm — playback
-/// starts immediately), so this always reports nothing was queued.
-@AppEntity(schema: .audio.warmupAudioQueueResult)
-struct WarmupAudioQueueResult: TransientAppEntity, Sendable {
-    let title: String
-
-    init() {
-        title = "Not Supported"
-    }
-
-    var displayRepresentation: DisplayRepresentation {
-        DisplayRepresentation(title: "\(title)")
     }
 }
 

@@ -1,3 +1,4 @@
+import Foundation
 import BrowseFeature
 import DesignSystem
 import LibraryFeature
@@ -10,6 +11,8 @@ import SettingsFeature
 import SwiftUI
 
 struct RootView: View {
+    private let swipeTabThreshold: CGFloat = 70
+
     let launchRouter: StationLaunchRouter
 
     // Read only to verify injection below; feature views read these themselves.
@@ -57,6 +60,27 @@ struct RootView: View {
                 launchRouter.clearPending()
                 handle(link)
             }
+            .onContinueUserActivity(StationLink.handoffActivityType) { activity in
+                launchRouter.open(userActivity: activity)
+            }
+            .userActivity(
+                StationLink.handoffActivityType,
+                isActive: currentHandoffLink != nil
+            ) { activity in
+                guard let link = currentHandoffLink else { return }
+                let userInfo = link.handoffUserInfo
+                activity.title = "Resume \(link.station.name)"
+                activity.isEligibleForHandoff = true
+                activity.targetContentIdentifier = link.station.id
+                activity.requiredUserInfoKeys = Set(userInfo.keys)
+                activity.userInfo = userInfo
+            }
+            .simultaneousGesture(
+                DragGesture()
+                    .onEnded { value in
+                        handleTabSwipe(value)
+                    }
+            )
     }
 
     private var tabView: some View {
@@ -123,13 +147,40 @@ struct RootView: View {
             playback.play(link.station)
         }
     }
+
+    private var currentHandoffLink: StationLink? {
+        guard let station = playback?.state.handoffStation else { return nil }
+        return StationLink(station: station)
+    }
+
+    private func handleTabSwipe(_ value: DragGesture.Value) {
+        let horizontal = value.translation.width
+        let vertical = value.translation.height
+
+        guard abs(horizontal) > abs(vertical), abs(horizontal) >= swipeTabThreshold else { return }
+        if horizontal < 0 {
+            selectedTab = selectedTab.next ?? selectedTab
+        } else {
+            selectedTab = selectedTab.previous ?? selectedTab
+        }
+    }
 }
 
-private enum ShoutKitTab: Hashable {
+private enum ShoutKitTab: Hashable, CaseIterable {
     case listenNow
     case browse
     case search
     case favorites
+
+    var next: Self? {
+        guard let index = Self.allCases.firstIndex(of: self), index < Self.allCases.count - 1 else { return nil }
+        return Self.allCases[index + 1]
+    }
+
+    var previous: Self? {
+        guard let index = Self.allCases.firstIndex(of: self), index > 0 else { return nil }
+        return Self.allCases[index - 1]
+    }
 }
 
 #Preview {

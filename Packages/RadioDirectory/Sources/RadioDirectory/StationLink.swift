@@ -9,6 +9,7 @@ import Foundation
 /// directly and never round-trip through a URL.
 public struct StationLink: Equatable, Sendable {
     public static let appScheme = "shoutkit"
+    public static let handoffActivityType = "com.cascadiacollections.shoutkit.station"
 
     public let station: Station
     public let autoPlay: Bool
@@ -76,6 +77,43 @@ public struct StationLink: Equatable, Sendable {
         return url
     }
 
+    public var handoffUserInfo: [String: Any] {
+        var userInfo: [String: Any] = [
+            HandoffKey.stationID: station.id,
+            HandoffKey.autoPlay: autoPlay,
+            HandoffKey.presentNowPlaying: presentNowPlaying
+        ]
+
+        // Handoff is best-effort: if the snapshot can't be encoded, publish the
+        // payload without it — the receiving side treats a snapshot-less payload
+        // as non-resumable rather than crashing the publisher.
+        do {
+            userInfo[HandoffKey.stationSnapshot] = try JSONEncoder().encode(station)
+        } catch {
+            assertionFailure(
+                "Unable to encode station '\(station.id)' for handoff. " +
+                    "This indicates Station no longer round-trips through Codable: \(error)"
+            )
+        }
+
+        return userInfo
+    }
+
+    public init?(handoffUserInfo userInfo: [AnyHashable: Any]) {
+        guard let stationID = userInfo[HandoffKey.stationID] as? String,
+              let stationSnapshot = userInfo[HandoffKey.stationSnapshot] as? Data,
+              let station = try? JSONDecoder().decode(Station.self, from: stationSnapshot),
+              station.id == stationID else {
+            return nil
+        }
+
+        self.init(
+            station: station,
+            autoPlay: userInfo[HandoffKey.autoPlay] as? Bool ?? true,
+            presentNowPlaying: userInfo[HandoffKey.presentNowPlaying] as? Bool ?? true
+        )
+    }
+
     public var queryItems: [URLQueryItem] {
         var items = [
             URLQueryItem(name: "id", value: station.id),
@@ -131,6 +169,13 @@ public struct StationLink: Equatable, Sendable {
             return nil
         }
     }
+}
+
+private enum HandoffKey {
+    static let stationID = "stationID"
+    static let stationSnapshot = "stationSnapshot"
+    static let autoPlay = "autoPlay"
+    static let presentNowPlaying = "presentNowPlaying"
 }
 
 private extension String {

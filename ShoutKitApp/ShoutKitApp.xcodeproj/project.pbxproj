@@ -11,6 +11,7 @@
 		000000000000000000000021 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000011 /* RootView.swift */; };
 		000000000000000000000022 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000012 /* AppDependencies.swift */; };
 		0000000000000000000000B1 /* GeoStationLocationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000B0 /* GeoStationLocationCoordinator.swift */; };
+		0000000000000000000000B3 /* ShoutKitAudioIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000B2 /* ShoutKitAudioIntents.swift */; };
 		000000000000000000000023 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000014 /* Assets.xcassets */; };
 		000000000000000000000024 /* ShoutKitShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000018 /* ShoutKitShortcuts.swift */; };
 		000000000000000000000025 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000019 /* PrivacyInfo.xcprivacy */; };
@@ -47,6 +48,8 @@
 		9D52CF8A7CDD14BCBB9A413E /* RadioDirectory in Frameworks */ = {isa = PBXBuildFile; productRef = 4189EFE6C4EF862614B0FA3C /* RadioDirectory */; };
 		A4639EED234138D3C20E4C2D /* WatchNoopNowPlayingCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059363CD6EA08810681C100A /* WatchNoopNowPlayingCenter.swift */; };
 		D43AAC581B5812399D25D827 /* WatchRadioPlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C61FAF4CF10B67D240EFD1F /* WatchRadioPlaybackEngine.swift */; };
+		000000000000000000000095 /* ShoutKitCarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000094 /* ShoutKitCarPlaySceneDelegate.swift */; };
+		0000000000000000000000A1 /* BackgroundRefreshController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A2 /* BackgroundRefreshController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -97,6 +100,7 @@
 		000000000000000000000011 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		000000000000000000000012 /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
 		0000000000000000000000B0 /* GeoStationLocationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoStationLocationCoordinator.swift; sourceTree = "<group>"; };
+		0000000000000000000000B2 /* ShoutKitAudioIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoutKitAudioIntents.swift; sourceTree = "<group>"; };
 		000000000000000000000013 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		000000000000000000000014 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		000000000000000000000015 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
@@ -127,6 +131,8 @@
 		88B8C3C84CECA7AD66E9AADF /* PlayLastComplication.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlayLastComplication.swift; sourceTree = "<group>"; };
 		D56E30839D19FB3015F6195A /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		DA8362D31F84827046BAEF74 /* ShoutKitWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShoutKitWatchApp.swift; sourceTree = "<group>"; };
+		000000000000000000000094 /* ShoutKitCarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoutKitCarPlaySceneDelegate.swift; sourceTree = "<group>"; };
+		0000000000000000000000A2 /* BackgroundRefreshController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefreshController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -207,9 +213,12 @@
 				000000000000000000000010 /* ShoutKitApp.swift */,
 				000000000000000000000011 /* RootView.swift */,
 				000000000000000000000012 /* AppDependencies.swift */,
+				0000000000000000000000A2 /* BackgroundRefreshController.swift */,
 				0000000000000000000000B0 /* GeoStationLocationCoordinator.swift */,
+				0000000000000000000000B2 /* ShoutKitAudioIntents.swift */,
 				000000000000000000000018 /* ShoutKitShortcuts.swift */,
 				000000000000000000000090 /* StationLaunchRouter.swift */,
+				000000000000000000000094 /* ShoutKitCarPlaySceneDelegate.swift */,
 				000000000000000000000013 /* Info.plist */,
 				000000000000000000000014 /* Assets.xcassets */,
 				000000000000000000000019 /* PrivacyInfo.xcprivacy */,
@@ -486,9 +495,12 @@
 				000000000000000000000021 /* RootView.swift in Sources */,
 				000000000000000000000026 /* WelcomeOverlayView.swift in Sources */,
 				000000000000000000000022 /* AppDependencies.swift in Sources */,
+				0000000000000000000000A1 /* BackgroundRefreshController.swift in Sources */,
 				0000000000000000000000B1 /* GeoStationLocationCoordinator.swift in Sources */,
+				0000000000000000000000B3 /* ShoutKitAudioIntents.swift in Sources */,
 				000000000000000000000024 /* ShoutKitShortcuts.swift in Sources */,
 				000000000000000000000091 /* StationLaunchRouter.swift in Sources */,
+				000000000000000000000095 /* ShoutKitCarPlaySceneDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
