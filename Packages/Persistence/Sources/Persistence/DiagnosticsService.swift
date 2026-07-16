@@ -1,5 +1,8 @@
 import FeatureFlags
 import Foundation
+#if canImport(OSLog)
+import OSLog
+#endif
 
 // MetricKit's metric payloads (MXMetricPayload) are unavailable on macOS, so
 // gate on os(iOS) too — the package's tests build for the mac host.
@@ -17,6 +20,9 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
     public typealias SubscriptionHandler = @MainActor (DiagnosticsService) -> Void
 
     private static let diagnosticsFeature = FeatureCatalog.diagnostics
+    #if canImport(OSLog)
+    private static let logger = Logger(subsystem: "ShoutKit.Persistence", category: "DiagnosticsService")
+    #endif
 
     private let featureFlags: any FeatureFlagProviding
     private let settings: SettingsStore
@@ -58,7 +64,13 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
 
     func ingest(metricPayloads: [Data], diagnosticPayloads: [Data]) {
         guard shouldCollectDiagnostics else { return }
-        payloadStore.persist(metricPayloads: metricPayloads, diagnosticPayloads: diagnosticPayloads, receivedAt: Date())
+        let receivedAt = Date()
+        payloadStore.persist(
+            metricPayloads: metricPayloads,
+            diagnosticPayloads: diagnosticPayloads,
+            receivedAt: receivedAt
+        )
+        logMetricPayloadSummaries(limit: metricPayloads.count, receivedAt: receivedAt)
     }
 
     var shouldCollectDiagnostics: Bool {
@@ -66,6 +78,44 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
     }
 
     var subscribedForCollection: Bool { isSubscribed }
+
+    private func logMetricPayloadSummaries(limit: Int, receivedAt: Date) {
+        guard limit > 0 else { return }
+        do {
+            let summaries = try payloadStore.metricPayloadSummaries(limit: limit)
+            for summary in summaries {
+                if let launch = summary.launch {
+                    Self.log(
+                        """
+                        MetricKit launch receivedAt=\(receivedAt.formatted(.iso8601)) \
+                        timeToFirstDrawMeanMs=\(Self.describe(launch.meanTimeToFirstDrawMilliseconds)) \
+                        timeToFirstDrawSamples=\(launch.timeToFirstDrawSampleCount) \
+                        resumeMeanMs=\(Self.describe(launch.meanResumeTimeMilliseconds)) \
+                        resumeSamples=\(launch.resumeSampleCount)
+                        """
+                    )
+                }
+                for transaction in summary.networkTransactions {
+                    Self.log(transaction.logMessage)
+                }
+            }
+        } catch {
+            Self.log("Failed to summarize persisted MetricKit payloads: \(error)")
+        }
+    }
+
+    private static func describe(_ value: Double?) -> String {
+        guard let value else { return "n/a" }
+        return String(format: "%.2f", value)
+    }
+
+    private static func log(_ message: String) {
+        #if canImport(OSLog)
+        logger.notice("\(message, privacy: .public)")
+        #else
+        print(message)
+        #endif
+    }
 
     private static func defaultSubscribe(_ service: DiagnosticsService) {
         #if canImport(MetricKit) && os(iOS)

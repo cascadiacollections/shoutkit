@@ -326,6 +326,37 @@ struct LibraryStoreTests {
         #expect(store.prewarmStreamURLs(limit: 5).isEmpty)
     }
 
+    @Test func favoriteStationsRespectManualOrdering() throws {
+        let (store, context) = makeStoreAndContext()
+        for id in ["a", "b", "c"] { store.addFavorite(streamableStation(id)) }
+
+        store.moveFavorites(try favoritesBySortIndex(context), from: IndexSet(integer: 2), to: 0)
+
+        #expect(store.favoriteStations().map(\.id) == ["c", "a", "b"])
+    }
+
+    @Test func refreshingStreamURLSnapshotUpdatesFavoritesAndMatchingRecents() throws {
+        let (store, context) = makeStoreAndContext()
+        let stale = try #require(URL(string: "https://example.com/stale.aac"))
+        let fresh = try #require(URL(string: "https://example.com/fresh.aac"))
+        let station = Station(
+            id: "fav",
+            name: "Favorite",
+            genre: "Test",
+            listenerCount: 10,
+            preferredStreamURL: stale
+        )
+
+        store.addFavorite(station)
+        store.logRecent(station)
+        store.refreshStreamURLSnapshot(stationID: "fav", streamURL: fresh)
+
+        let favorites = try context.fetch(FetchDescriptor<FavoriteStation>())
+        let recents = try context.fetch(FetchDescriptor<RecentStation>())
+        #expect(favorites.first?.streamURLString == fresh.absoluteString)
+        #expect(recents.first?.streamURLString == fresh.absoluteString)
+    }
+
     @Test func recentsAreCappedAtLimit() throws {
         let (store, context) = makeStoreAndContext()
 
