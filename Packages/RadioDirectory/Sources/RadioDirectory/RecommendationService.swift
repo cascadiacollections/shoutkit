@@ -98,6 +98,7 @@ public struct RecommendationService: RecommendationServicing, Sendable {
 
     private func stationVector(from station: Station) -> [Float] {
         var vector = Array(repeating: Float(0), count: VectorLayout.totalDimensions)
+        let codec = station.codec?.uppercased()
 
         for token in stationTokens(from: station) {
             let index = Int(stableHash(token) % UInt64(VectorLayout.hashedTokenSlots))
@@ -108,9 +109,9 @@ public struct RecommendationService: RecommendationServicing, Sendable {
             vector[92] = min(Float(bitrate) / 320, 1)
         }
 
-        vector[93] = station.codec?.localizedCaseInsensitiveContains("aac") == true ? 1 : 0
-        vector[94] = station.codec?.localizedCaseInsensitiveContains("mp3") == true ? 1 : 0
-        vector[95] = station.codec?.localizedCaseInsensitiveContains("opus") == true ? 1 : 0
+        vector[93] = codec?.contains("AAC") == true ? 1 : 0
+        vector[94] = codec?.contains("MP3") == true ? 1 : 0
+        vector[95] = codec?.contains("OPUS") == true ? 1 : 0
         return vector
     }
 
@@ -149,8 +150,8 @@ public struct RecommendationService: RecommendationServicing, Sendable {
     /// Used so hashed-token vector slots are stable across runs/devices; Swift's
     /// standard `Hasher` intentionally randomizes seeds between processes.
     private func stableHash(_ value: String) -> UInt64 {
-        let offset: UInt64 = 14_695_981_039_346_656_037
-        let prime: UInt64 = 1_099_511_628_211
+        let offset: UInt64 = 14_695_981_039_346_656_037 // FNV-1a 64-bit offset basis.
+        let prime: UInt64 = 1_099_511_628_211 // FNV-1a 64-bit prime.
         return value.utf8.reduce(offset) { hash, byte in
             (hash ^ UInt64(byte)) &* prime
         }

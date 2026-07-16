@@ -15,6 +15,7 @@ public struct ListenNowView: View {
     private let recommendationService: any RecommendationServicing
     private let featureFlags: any FeatureFlagProviding
     private let recommendationsFeature: Feature?
+    @State private var cachedRecommendations: [Station] = []
 
     @Query(sort: \RecentStation.playedAt, order: .reverse)
     private var recents: [RecentStation]
@@ -107,22 +108,24 @@ public struct ListenNowView: View {
     @ViewBuilder
     private func recommendationsSection(_ loaded: BrowseContent) -> some View {
         guard recommendationsEnabled else { return }
-
-        let recommendations = recommendationService.moreLikeThis(
-            from: recents.map(\.station),
-            candidates: loaded.stations,
-            limit: 10
-        ).map(\.station)
-
-        if recommendations.isEmpty == false {
-            VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
-                SectionHeaderView(String(localized: "More Like This", bundle: .module))
-                StationCarousel(
-                    stations: recommendations,
-                    phase: { playback?.phase(for: $0) ?? .idle },
-                    onTap: { playback?.toggle($0) }
-                )
+        Group {
+            if cachedRecommendations.isEmpty == false {
+                VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
+                    SectionHeaderView(String(localized: "More Like This", bundle: .module))
+                    StationCarousel(
+                        stations: cachedRecommendations,
+                        phase: { playback?.phase(for: $0) ?? .idle },
+                        onTap: { playback?.toggle($0) }
+                    )
+                }
             }
+        }
+        .task(id: recommendationCacheKey(loaded)) {
+            cachedRecommendations = recommendationService.moreLikeThis(
+                from: recents.map(\.station),
+                candidates: loaded.stations,
+                limit: 10
+            ).map(\.station)
         }
     }
 
@@ -131,6 +134,12 @@ public struct ListenNowView: View {
             return false
         }
         return featureFlags.isEnabled(recommendationsFeature)
+    }
+
+    private func recommendationCacheKey(_ loaded: BrowseContent) -> String {
+        let recentIDs = recents.map(\.stationID).joined(separator: "|")
+        let candidateIDs = loaded.stations.map(\.id).joined(separator: "|")
+        return "\(recentIDs)>\(candidateIDs)"
     }
 
     private func popularCarousel(_ loaded: BrowseContent) -> some View {

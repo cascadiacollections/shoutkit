@@ -179,7 +179,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
             genre: genre(from: dto),
             tags: tags(from: dto),
             country: normalizedValue(dto.country),
-            codec: normalizedValue(dto.codec)?.uppercased(),
+            codec: normalizedValue(dto.codec),
             language: normalizedValue(dto.language),
             listenerCount: 0,
             bitrate: (dto.bitrate ?? 0) > 0 ? dto.bitrate : nil,
