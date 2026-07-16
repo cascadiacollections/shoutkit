@@ -21,6 +21,13 @@ public protocol RecommendationServicing: Sendable {
 }
 
 public struct RecommendationService: RecommendationServicing, Sendable {
+    private enum VectorLayout {
+        /// Hash-bucket dimensions for text tokens (genre/tags/country/language/codec).
+        static let hashedTokenSlots = 92
+        /// Total vector width; slots 92-95 are numeric/codec indicator channels.
+        static let totalDimensions = 96
+    }
+
     public struct Configuration: Equatable, Sendable {
         public let popularityWeight: Double
 
@@ -90,11 +97,10 @@ public struct RecommendationService: RecommendationServicing, Sendable {
     }
 
     private func stationVector(from station: Station) -> [Float] {
-        var vector = Array(repeating: Float(0), count: 96)
-        let slots = 92
+        var vector = Array(repeating: Float(0), count: VectorLayout.totalDimensions)
 
         for token in stationTokens(from: station) {
-            let index = Int(stableHash(token) % UInt64(slots))
+            let index = Int(stableHash(token) % UInt64(VectorLayout.hashedTokenSlots))
             vector[index] += 1
         }
 
@@ -140,6 +146,8 @@ public struct RecommendationService: RecommendationServicing, Sendable {
     }
 
     /// FNV-1a (64-bit), deterministic across launches/processes.
+    /// Used so hashed-token vector slots are stable across runs/devices; Swift's
+    /// standard `Hasher` intentionally randomizes seeds between processes.
     private func stableHash(_ value: String) -> UInt64 {
         let offset: UInt64 = 14_695_981_039_346_656_037
         let prime: UInt64 = 1_099_511_628_211

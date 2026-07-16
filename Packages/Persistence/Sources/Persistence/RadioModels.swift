@@ -96,7 +96,7 @@ public final class RecentStation {
             id: stationID,
             name: name,
             genre: genre,
-            tags: tagsCSV?.split(separator: ",").map(String.init),
+            tags: Station.tags(fromCSV: tagsCSV),
             country: country,
             codec: codec,
             language: language,

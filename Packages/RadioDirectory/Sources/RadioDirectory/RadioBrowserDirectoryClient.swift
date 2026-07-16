@@ -205,11 +205,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     }
 
     static func tags(from dto: RadioBrowserStation) -> [String]? {
-        let parsed = dto.tags?
-            .split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { $0.isEmpty == false }
-        return parsed?.isEmpty == false ? parsed : nil
+        Station.tags(fromCSV: dto.tags)
     }
 
     static func normalizedValue(_ value: String?) -> String? {

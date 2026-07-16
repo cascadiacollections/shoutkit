@@ -14,6 +14,7 @@ public struct ListenNowView: View {
     @Environment(\.libraryStore) private var library
     private let recommendationService: any RecommendationServicing
     private let featureFlags: any FeatureFlagProviding
+    private let recommendationsFeature: Feature?
 
     @Query(sort: \RecentStation.playedAt, order: .reverse)
     private var recents: [RecentStation]
@@ -26,6 +27,7 @@ public struct ListenNowView: View {
         _viewModel = State(wrappedValue: viewModel())
         self.recommendationService = recommendationService ?? sharedRecommendationService()
         self.featureFlags = featureFlags ?? sharedFeatureFlags()
+        recommendationsFeature = FeatureCatalog.all.first(where: { $0.key == "recommendations" })
     }
 
     public var body: some View {
@@ -125,10 +127,10 @@ public struct ListenNowView: View {
     }
 
     private var recommendationsEnabled: Bool {
-        guard let feature = FeatureCatalog.all.first(where: { $0.key == "recommendations" }) else {
+        guard let recommendationsFeature else {
             return false
         }
-        return featureFlags.isEnabled(feature)
+        return featureFlags.isEnabled(recommendationsFeature)
     }
 
     private func popularCarousel(_ loaded: BrowseContent) -> some View {

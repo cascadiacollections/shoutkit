@@ -130,7 +130,7 @@ public final class LibraryStore {
             existing.playedAt = .now
             existing.name = station.name
             existing.genre = station.genre
-            existing.tagsCSV = station.tags?.joined(separator: ",")
+            existing.tagsCSV = Station.tagsCSV(from: station.tags)
             existing.country = station.country
             existing.codec = station.codec
             existing.language = station.language
@@ -144,7 +144,7 @@ public final class LibraryStore {
                 stationID: station.id,
                 name: station.name,
                 genre: station.genre,
-                tagsCSV: station.tags?.joined(separator: ","),
+                tagsCSV: Station.tagsCSV(from: station.tags),
                 country: station.country,
                 codec: station.codec,
                 language: station.language,

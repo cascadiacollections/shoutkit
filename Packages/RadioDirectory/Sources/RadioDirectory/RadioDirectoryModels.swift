@@ -44,6 +44,25 @@ public struct Station: Codable, Equatable, Hashable, Identifiable, Sendable {
         self.artworkURL = artworkURL
         self.preferredStreamURL = preferredStreamURL
     }
+
+    /// Parses a comma-separated tag list from directory payloads/persistence.
+    public static func tags(fromCSV csv: String?) -> [String]? {
+        let parsed = csv?
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { $0.isEmpty == false }
+        return parsed?.isEmpty == false ? parsed : nil
+    }
+
+    /// Serializes tags into a stable comma-separated string for persistence.
+    public static func tagsCSV(from tags: [String]?) -> String? {
+        guard let tags else { return nil }
+        let normalized = tags
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { $0.isEmpty == false }
+        guard normalized.isEmpty == false else { return nil }
+        return normalized.joined(separator: ",")
+    }
 }
 
 public struct Genre: Codable, Equatable, Hashable, Identifiable, Sendable {
