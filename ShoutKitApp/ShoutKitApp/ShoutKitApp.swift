@@ -16,8 +16,9 @@ struct ShoutKitApp: App {
     init() {
         services = AppDependencies.bootstrap()
         backgroundRefresh.register()
-        // Let Siri pre-register station names for the parameterized
-        // "Play <station> on ShoutKit" phrase.
+        // Kick App Shortcuts registration immediately; bootstrap() follows with
+        // a second refresh after Spotlight indexing completes so Shortcuts
+        // search and Siri both see the same station set.
         ShoutKitShortcuts.updateAppShortcutParameters()
     }
 
