@@ -52,7 +52,7 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
         } catch {
             assertionFailure("Failed to persist diagnostics payloads: \(error)")
             #if canImport(OSLog)
-            Self.logger.error("Failed to persist diagnostics payloads: \(String(describing: error), privacy: .public)")
+            Self.logger.error("Failed to persist diagnostics payloads: \(String(describing: error), privacy: .private)")
             #else
             print("DiagnosticsPayloadStore persist error: \(error)")
             #endif
