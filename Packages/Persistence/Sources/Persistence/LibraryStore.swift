@@ -23,7 +23,10 @@ public final class LibraryStore {
     public private(set) var favoriteIDs: Set<String> = []
     public private(set) var lastErrorMessage: String?
 
-    @ObservationIgnored private let context: ModelContext
+    // `context` and the fetch/save/log helpers below are module-internal (not
+    // private) so the same-module extension files (LibraryStore+Prewarm,
+    // LibraryStore+RecentlyHeard) can share the persistence plumbing.
+    @ObservationIgnored let context: ModelContext
     @ObservationIgnored private let logger = Logger(subsystem: "ShoutKit.Persistence", category: "LibraryStore")
 
     public init(context: ModelContext) {
@@ -234,45 +237,6 @@ public final class LibraryStore {
         }
     }
 
-    /// Stream URLs for the stations the user is most likely to play next —
-    /// favorites (in their manual order) followed by the most-played recents —
-    /// deduplicated and capped at `limit`. Used to prewarm network connections
-    /// at launch so the first tap starts faster. Returns only stations that
-    /// carry a snapshotted stream URL (no directory round-trip needed to warm).
-    public func prewarmStreamURLs(limit: Int) -> [URL] {
-        guard limit > 0 else { return [] }
-
-        var urls: [URL] = []
-        var seen = Set<String>()
-        func appendURL(from string: String?) {
-            guard urls.count < limit,
-                  let string,
-                  seen.insert(string).inserted,
-                  let url = URL(string: string) else { return }
-            urls.append(url)
-        }
-
-        let favoritesDescriptor = FetchDescriptor<FavoriteStation>(
-            sortBy: [SortDescriptor(\.sortIndex, order: .forward)]
-        )
-        for favorite in fetch(favoritesDescriptor, operation: "prewarm favorites") ?? [] {
-            appendURL(from: favorite.streamURLString)
-        }
-
-        var recentsDescriptor = FetchDescriptor<RecentStation>(
-            sortBy: [
-                SortDescriptor(\.playCount, order: .reverse),
-                SortDescriptor(\.playedAt, order: .reverse)
-            ]
-        )
-        recentsDescriptor.fetchLimit = limit
-        for recent in fetch(recentsDescriptor, operation: "prewarm recents") ?? [] {
-            appendURL(from: recent.streamURLString)
-        }
-
-        return urls
-    }
-
     private func setHiddenFromListenNow(_ isHidden: Bool, stationID: String) {
         let predicate = #Predicate<RecentStation> { $0.stationID == stationID }
         let descriptor = FetchDescriptor<RecentStation>(predicate: predicate)
@@ -299,66 +263,6 @@ public final class LibraryStore {
         }
 
         for stale in recents[Self.recentsLimit...] {
-            context.delete(stale)
-        }
-    }
-
-    // MARK: - Recently heard tracks
-
-    /// Records parsed now-playing metadata as local track history, de-duplicating
-    /// only consecutive repeats and trimming to `recentlyHeardLimit`.
-    public func logRecentlyHeardTrack(
-        station: Station,
-        title: String?,
-        artist: String?,
-        heardAt: Date = .now,
-        appleMusicURL: URL? = nil
-    ) {
-        guard title != nil || artist != nil else { return }
-
-        var singleTrackDescriptor = FetchDescriptor<RecentlyHeardTrack>(
-            sortBy: [SortDescriptor(\.heardAt, order: .reverse)]
-        )
-        singleTrackDescriptor.fetchLimit = 1
-
-        if let latest = try? context.fetch(singleTrackDescriptor).first,
-           latest.stationID == station.id,
-           latest.title == title,
-           latest.artist == artist {
-            // Consecutive dedupe keeps one row but refreshes its timestamp so it
-            // reflects the most recent hearing of that still-current track.
-            latest.stationName = station.name
-            latest.heardAt = heardAt
-            if let appleMusicURL {
-                latest.appleMusicURLString = appleMusicURL.absoluteString
-            }
-        } else {
-            let track = RecentlyHeardTrack(
-                stationID: station.id,
-                stationName: station.name,
-                title: title,
-                artist: artist,
-                heardAt: heardAt,
-                appleMusicURLString: appleMusicURL?.absoluteString
-            )
-            context.insert(track)
-        }
-
-        trimRecentlyHeardTracks()
-        save(operation: "log recently heard track \(sanitizedForLogs(station.id))")
-    }
-
-    private func trimRecentlyHeardTracks() {
-        var trimDescriptor = FetchDescriptor<RecentlyHeardTrack>(
-            sortBy: [SortDescriptor(\.heardAt, order: .reverse)]
-        )
-        trimDescriptor.fetchLimit = Self.recentlyHeardLimit + Self.recentlyHeardTrimHeadroom
-
-        guard let tracks = try? context.fetch(trimDescriptor), tracks.count > Self.recentlyHeardLimit else {
-            return
-        }
-
-        for stale in tracks[Self.recentlyHeardLimit...] {
             context.delete(stale)
         }
     }
@@ -396,7 +300,7 @@ public final class LibraryStore {
         save(operation: "normalize sort indices")
     }
 
-    private func fetch<Model>(
+    func fetch<Model>(
         _ descriptor: FetchDescriptor<Model>,
         operation: String
     ) -> [Model]? where Model: PersistentModel {
@@ -411,7 +315,7 @@ public final class LibraryStore {
     }
 
     @discardableResult
-    private func save(operation: String) -> Bool {
+    func save(operation: String) -> Bool {
         do {
             try context.save()
             lastErrorMessage = nil
@@ -436,7 +340,7 @@ public final class LibraryStore {
         )
     }
 
-    private func sanitizedForLogs(_ value: String) -> String {
+    func sanitizedForLogs(_ value: String) -> String {
         value
             .replacingOccurrences(of: "\n", with: " ")
             .replacingOccurrences(of: "\r", with: " ")
