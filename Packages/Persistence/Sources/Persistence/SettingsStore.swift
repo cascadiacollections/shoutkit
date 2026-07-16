@@ -35,6 +35,7 @@ public final class SettingsStore {
     /// Whether ShoutKit may request Core Location permission to reverse-geocode
     /// the current country for geo-station filtering. Defaults to off so the
     /// locale-based country filter stays permissionless unless the user opts in.
+    /// This only has an effect while the geo-stations feature flag is enabled.
     public var isPreciseGeoStationLocationEnabled: Bool {
         didSet { defaults.set(isPreciseGeoStationLocationEnabled, for: Keys.preciseGeoStationLocation) }
     }
