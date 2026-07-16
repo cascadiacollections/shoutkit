@@ -297,7 +297,7 @@ final class GeoStationLocationCoordinator: NSObject, CLLocationManagerDelegate {
             guard let self else { return }
             Task { @MainActor in
                 if let error {
-                    logger.error("Reverse geocoding failed: \(error.localizedDescription, privacy: .public)")
+                    self.logger.error("Reverse geocoding failed: \(error.localizedDescription, privacy: .public)")
                 } else {
                     self.preciseCountryCode = placemarks?.first?.isoCountryCode
                 }
@@ -307,10 +307,10 @@ final class GeoStationLocationCoordinator: NSObject, CLLocationManagerDelegate {
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
-        logger.error("Location request failed: \(error.localizedDescription, privacy: .public)")
-        preciseCountryCode = nil
         Task { @MainActor in
-            await pushCurrentGeoFilter()
+            self.logger.error("Location request failed: \(error.localizedDescription, privacy: .public)")
+            self.preciseCountryCode = nil
+            await self.pushCurrentGeoFilter()
         }
     }
 }
