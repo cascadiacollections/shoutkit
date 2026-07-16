@@ -49,4 +49,23 @@ struct SettingsStoreTests {
         let reloadedAgain = SettingsStore(defaults: defaults)
         #expect(reloadedAgain.isAlbumArtEnabled == true)
     }
+
+    @Test func diagnosticsSharingDefaultsToDisabled() throws {
+        let store = SettingsStore(defaults: try makeDefaults())
+        #expect(store.isDiagnosticsSharingEnabled == false)
+    }
+
+    @Test func diagnosticsSharingTogglePersistsAcrossInstances() throws {
+        let defaults = try makeDefaults()
+
+        let store = SettingsStore(defaults: defaults)
+        store.isDiagnosticsSharingEnabled = true
+
+        let reloaded = SettingsStore(defaults: defaults)
+        #expect(reloaded.isDiagnosticsSharingEnabled == true)
+
+        reloaded.isDiagnosticsSharingEnabled = false
+        let reloadedAgain = SettingsStore(defaults: defaults)
+        #expect(reloadedAgain.isDiagnosticsSharingEnabled == false)
+    }
 }

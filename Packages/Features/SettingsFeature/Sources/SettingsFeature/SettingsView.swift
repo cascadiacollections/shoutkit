@@ -19,9 +19,9 @@ public struct SettingsView: View {
         NavigationStack {
             Form {
                 privacySection
-                // Debug builds only: the catalog is all internal placeholder
-                // flags, so end users have nothing actionable here.
-                #if DEBUG
+                // Debug and TestFlight builds only: the catalog is all internal
+                // placeholder flags, so App Store users have nothing actionable here.
+                #if DEBUG || TESTFLIGHT
                 featureFlagsSection
                 #endif
                 supportSection
@@ -57,6 +57,13 @@ public struct SettingsView: View {
                         set: { settings.isAlbumArtEnabled = $0 }
                     )
                 )
+                Toggle(
+                    "Share diagnostics",
+                    isOn: Binding(
+                        get: { settings.isDiagnosticsSharingEnabled },
+                        set: { settings.isDiagnosticsSharingEnabled = $0 }
+                    )
+                )
             } header: {
                 Text("Privacy")
             } footer: {
@@ -65,6 +72,9 @@ public struct SettingsView: View {
                 about you or your device) so the community directory can rank popularity. \
                 Album artwork lookups send the current track's artist and title to Apple's \
                 iTunes Search API; turn this off to always show station artwork instead. \
+                Share diagnostics keeps Apple MetricKit crash/hang/energy/disk payloads local \
+                on-device for troubleshooting. They are never sent automatically; export/share \
+                would only happen if you explicitly choose to do that for debugging later. \
                 ShoutKit has no analytics, no ads, and no accounts.
                 """)
             }
@@ -89,7 +99,7 @@ public struct SettingsView: View {
         }
     }
 
-    #if DEBUG
+    #if DEBUG || TESTFLIGHT
     private var featureFlagsSection: some View {
         Section {
             NavigationLink {

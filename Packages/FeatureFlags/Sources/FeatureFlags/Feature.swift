@@ -35,6 +35,14 @@ public struct Feature: Hashable, Sendable {
 }
 
 public enum FeatureCatalog {
+    private static let diagnosticsFeature = Feature(
+        key: "diagnostics",
+        title: "Diagnostics",
+        summary: "Enable optional local MetricKit diagnostics collection.",
+        stage: .internalOnly,
+        defaultEnabled: false
+    )
+
     public static let recommendations = Feature(
         key: "recommendations",
         title: "Recommendations",
@@ -44,13 +52,7 @@ public enum FeatureCatalog {
     )
 
     public static let all: [Feature] = [
-        Feature(
-            key: "diagnostics",
-            title: "Diagnostics",
-            summary: "Placeholder flag for diagnostics tooling.",
-            stage: .internalOnly,
-            defaultEnabled: false
-        ),
+        diagnosticsFeature,
         Feature(
             key: "geoStations",
             title: "Geo Stations",
@@ -60,4 +62,6 @@ public enum FeatureCatalog {
         ),
         recommendations
     ]
+
+    public static let diagnostics = diagnosticsFeature
 }

@@ -1,5 +1,6 @@
 import DebugSupport
 import DesignSystem
+import FeatureFlags
 import Foundation
 import NowPlayingActivityKit
 import Persistence
@@ -17,6 +18,8 @@ struct AppServices {
     let playbackController: PlaybackController
     let sleepTimer: SleepTimer
     let settingsStore: SettingsStore
+    /// Retained for app lifetime so MetricKit subscription state remains active.
+    let diagnosticsService: any DiagnosticsServicing
     let directory: any RadioDirectoryProviding
     /// Retained here: its observation tasks hold it weakly, so this reference
     /// is what keeps the Live Activity following playback for the app's lifetime.
@@ -56,6 +59,13 @@ enum AppDependencies {
         let container = ShoutKitModelContainer.makeContainer()
         let store = LibraryStore(context: container.mainContext)
         let settings = SettingsStore()
+        let featureFlags = sharedFeatureFlags()
+        let diagnosticsService = DiagnosticsService(
+            featureFlags: featureFlags,
+            settings: settings,
+            payloadStore: makeDiagnosticsPayloadStore()
+        )
+        registerProductionDiagnosticsService(diagnosticsService)
         let (directory, playReporter) = makeDirectory()
         // Route the decorated (preferred + caching) instance through Factory so
         // BrowseViewModel/SearchViewModel resolve it instead of it being threaded
@@ -83,6 +93,7 @@ enum AppDependencies {
             playbackController: controller,
             sleepTimer: sleepTimer,
             settingsStore: settings,
+            diagnosticsService: diagnosticsService,
             directory: directory,
             activityCoordinator: activityCoordinator,
             stationLaunchRouter: StationLaunchRouter()
@@ -146,6 +157,25 @@ enum AppDependencies {
             guard settings.isAlbumArtEnabled else { return .none }
             let match = await AlbumArtLookup.lookup(artist: track.artist, title: track.title)
             return TrackResources(artworkURL: match.artworkURL, appleMusicURL: match.appleMusicURL)
+        }
+    }
+
+    /// GRDB-backed on-disk store, falling back to an in-memory store (payloads
+    /// lost on relaunch) if the database can't be opened. Extracted from
+    /// `bootstrap()` to keep that method within the lint body-length budget.
+    private static func makeDiagnosticsPayloadStore() -> any DiagnosticsPayloadPersisting {
+        do {
+            return try DiagnosticsPayloadStore()
+        } catch {
+            assertionFailure("""
+            Failed to initialize diagnostics payload store. Falling back to in-memory diagnostics storage, \
+            which will be lost on app restart: \(error)
+            """)
+            print("""
+            Diagnostics payload store init error. Falling back to in-memory \
+            diagnostics storage (lost on app restart): \(error)
+            """)
+            return InMemoryDiagnosticsPayloadStore()
         }
     }
 
