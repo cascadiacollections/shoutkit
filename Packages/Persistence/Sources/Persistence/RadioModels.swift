@@ -66,6 +66,12 @@ public final class RecentStation {
     /// migration, matching `FavoriteStation.sortIndex`. Re-playing the station
     /// clears the flag (see `LibraryStore.logRecent`).
     public var isHiddenFromListenNow: Bool = false
+    /// How many times the user has played this station. Incremented on each
+    /// `LibraryStore.logRecent`; unlike `playedAt` (overwritten each play) this
+    /// accumulates, giving a real "well-trafficked" signal for prewarming and
+    /// recommendations rather than mere recency. A default value keeps this a
+    /// lightweight additive migration, matching `isHiddenFromListenNow`.
+    public var playCount: Int = 1
 
     public init(
         stationID: String,
@@ -81,7 +87,8 @@ public final class RecentStation {
         artworkURLString: String? = nil,
         streamURLString: String? = nil,
         playedAt: Date = .now,
-        isHiddenFromListenNow: Bool = false
+        isHiddenFromListenNow: Bool = false,
+        playCount: Int = 1
     ) {
         self.stationID = stationID
         self.name = name
@@ -97,6 +104,7 @@ public final class RecentStation {
         self.streamURLString = streamURLString
         self.playedAt = playedAt
         self.isHiddenFromListenNow = isHiddenFromListenNow
+        self.playCount = playCount
     }
 
     public var station: Station {

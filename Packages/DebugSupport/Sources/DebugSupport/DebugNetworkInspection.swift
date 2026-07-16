@@ -18,8 +18,11 @@ public enum DebugNetworkInspection {
     /// first thing. Compiles to a no-op in Release.
     public static func install() {
         #if DEBUG
+        // Build from the same latency-tuned configuration the Release session
+        // uses (see `AppDependencies.bootstrap`) so Debug network behaviour
+        // matches — this just layers Pulse's proxy delegate on top.
         URLSessionHTTPTransport.installSharedSession(URLSession(
-            configuration: .default,
+            configuration: URLSessionHTTPTransport.interactiveConfiguration(),
             delegate: URLSessionProxyDelegate(logger: .shared),
             delegateQueue: nil
         ))

@@ -91,6 +91,13 @@ public final class PlaybackController {
     @ObservationIgnored var resolveTask: Task<Void, Never>?
     @ObservationIgnored var albumArtTask: Task<Void, Never>?
 
+    /// The last endpoint resolved for `activeStation`, reused across reconnect
+    /// attempts so a flaky stream doesn't re-run resolution (a `.pls` fetch +
+    /// parse for SHOUTcast, a `byuuid` round-trip for a Radio-Browser station
+    /// that lost its snapshot URL) on every backoff. Cleared on a fresh
+    /// ``play(_:)`` so a genuinely new choice always re-resolves.
+    @ObservationIgnored var resolvedEndpoint: StreamEndpoint?
+
     /// Battery hygiene windows (see the schedule methods below). Both are
     /// injectable so tests can use short values; there is deliberately no
     /// user-facing setting — this is invisible housekeeping.
@@ -148,6 +155,9 @@ public final class PlaybackController {
 
     public func play(_ station: Station) {
         reconnectAttempts = 0
+        // A fresh choice always re-resolves; the cache exists only to spare
+        // reconnect attempts from repeating resolution for the same station.
+        resolvedEndpoint = nil
         startPlayback(of: station)
         onStationPlayed?(station)
     }

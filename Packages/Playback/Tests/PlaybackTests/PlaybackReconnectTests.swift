@@ -34,6 +34,32 @@ struct PlaybackReconnectTests {
         #expect(controller.state == .playing(station()))
     }
 
+    @Test func reconnectReusesResolvedEndpointInsteadOfReResolving() async {
+        let output = FakeAudioOutput()
+        let directory = CountingRadioDirectory(stations: [station()])
+        let controller = makeController(
+            directory: directory, output: output,
+            maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay
+        )
+
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        #expect(await directory.streamEndpointCallCount == 1)
+
+        // A mid-play failure reconnects — but must reuse the endpoint resolved
+        // for the first attempt rather than resolving again.
+        output.onStatusChange?(.failed(.streamFailed("drop")))
+        await waitUntil { output.startedURLs.count == 2 }
+        #expect(output.startedURLs.count == 2)
+        #expect(await directory.streamEndpointCallCount == 1, "reconnect must reuse the cached endpoint")
+
+        // A fresh play() re-resolves.
+        controller.play(station())
+        await waitUntil { output.startedURLs.count == 3 }
+        #expect(await directory.streamEndpointCallCount == 2)
+    }
+
     @Test func failureReconnectsUpToBudgetThenSurfacesFailure() async {
         let output = FakeAudioOutput()
         let controller = makeController(

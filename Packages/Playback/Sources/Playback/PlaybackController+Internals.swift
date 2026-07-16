@@ -40,8 +40,17 @@ extension PlaybackController {
         resolveTask = Task { [weak self] in
             guard let self else { return }
             do {
-                let endpoint = try await directory.streamEndpoint(for: station)
+                // Reconnects reuse the endpoint resolved for the first attempt
+                // rather than re-running resolution each backoff; a fresh
+                // `play(_:)` clears the cache so it can't go stale across choices.
+                let endpoint: StreamEndpoint
+                if isReconnect, let cached = self.resolvedEndpoint {
+                    endpoint = cached
+                } else {
+                    endpoint = try await directory.streamEndpoint(for: station)
+                }
                 guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
+                self.resolvedEndpoint = endpoint
                 self.output.start(url: endpoint.url)
                 self.outputStarted = true
                 // Pass the preserved track/art through: on a reconnect the

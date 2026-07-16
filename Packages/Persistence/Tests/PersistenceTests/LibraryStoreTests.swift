@@ -227,6 +227,77 @@ struct LibraryStoreTests {
         #expect(recents.first?.stationID == "a")
     }
 
+    // MARK: - Play count
+
+    @Test func firstPlayStartsCountAtOne() throws {
+        let (store, context) = makeStoreAndContext()
+
+        store.logRecent(station("a"))
+
+        let recents = try context.fetch(FetchDescriptor<RecentStation>())
+        #expect(recents.first?.playCount == 1)
+    }
+
+    @Test func replayingIncrementsPlayCount() throws {
+        let (store, context) = makeStoreAndContext()
+
+        store.logRecent(station("a"))
+        store.logRecent(station("a"))
+        store.logRecent(station("a"))
+
+        let recents = try context.fetch(FetchDescriptor<RecentStation>())
+        #expect(recents.count == 1)
+        #expect(recents.first?.playCount == 3)
+    }
+
+    // MARK: - Prewarm ranking
+
+    private func streamableStation(_ id: String) -> Station {
+        Station(
+            id: id,
+            name: "Station \(id)",
+            genre: "Test",
+            listenerCount: 10,
+            preferredStreamURL: URL(string: "https://example.com/\(id).aac")
+        )
+    }
+
+    @Test func prewarmURLsRankFavoritesFirstThenMostPlayedRecents() throws {
+        let (store, _) = makeStoreAndContext()
+
+        // "b" is played most; "a" played once; "fav" is a favorite (weaker
+        // recency but stronger intent → should come first).
+        store.logRecent(streamableStation("a"))
+        store.logRecent(streamableStation("b"))
+        store.logRecent(streamableStation("b"))
+        store.addFavorite(streamableStation("fav"))
+
+        let urls = store.prewarmStreamURLs(limit: 5).map(\.absoluteString)
+
+        #expect(urls.first == "https://example.com/fav.aac")
+        // Among recents, higher playCount ("b") outranks lower ("a").
+        let bIndex = try #require(urls.firstIndex(of: "https://example.com/b.aac"))
+        let aIndex = try #require(urls.firstIndex(of: "https://example.com/a.aac"))
+        #expect(bIndex < aIndex)
+    }
+
+    @Test func prewarmURLsAreCappedAtLimitAndDeduplicated() throws {
+        let (store, _) = makeStoreAndContext()
+        for index in 0..<10 { store.logRecent(streamableStation("s\(index)")) }
+
+        let urls = store.prewarmStreamURLs(limit: 3)
+
+        #expect(urls.count == 3)
+        #expect(Set(urls).count == 3)
+    }
+
+    @Test func prewarmURLsSkipStationsWithoutASnapshotURL() throws {
+        let (store, _) = makeStoreAndContext()
+        store.logRecent(station("no-url")) // helper leaves preferredStreamURL nil
+
+        #expect(store.prewarmStreamURLs(limit: 5).isEmpty)
+    }
+
     @Test func recentsAreCappedAtLimit() throws {
         let (store, context) = makeStoreAndContext()
 

@@ -34,7 +34,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     public init(
         hosts: [URL] = RadioBrowserDirectoryClient.defaultHosts,
         transport: any HTTPTransporting = URLSessionHTTPTransport.shared,
-        retryPolicy: RetryPolicy = .default,
+        retryPolicy: RetryPolicy = .interactive,
         geoFilterProvider: (any RadioBrowserGeoFilterProviding)? = nil
     ) {
         self.hosts = hosts.isEmpty ? RadioBrowserDirectoryClient.defaultHosts : hosts

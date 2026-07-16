@@ -188,6 +188,13 @@ public struct RetryPolicy: Sendable {
 
     public static let `default` = RetryPolicy(maximumRetries: 2, timeout: 12, baseDelay: 0.35)
 
+    /// For user-facing directory discovery (top stations, genres, search) where a
+    /// dead first mirror should fail over fast rather than stalling the screen.
+    /// The 5s timeout means a single unhealthy host costs ~5s (plus backoff)
+    /// before the next mirror is tried, not the 12s the batch/`default` policy
+    /// tolerates for background work.
+    public static let interactive = RetryPolicy(maximumRetries: 2, timeout: 5, baseDelay: 0.35)
+
     public func delay(forAttempt attempt: Int) -> TimeInterval {
         baseDelay * pow(2, Double(attempt))
     }

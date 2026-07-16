@@ -53,6 +53,14 @@ enum AppDependencies {
         // the first touch of `URLSessionHTTPTransport.shared` locks the session in.
         DebugNetworkInspection.install()
 
+        // Install the latency-tuned session as `shared` (fail-fast when offline,
+        // responsive-data service type). First-write-wins, so in Debug the Pulse
+        // session installed just above already holds the slot — it's built from
+        // the same tuned configuration, so behaviour matches Release either way.
+        URLSessionHTTPTransport.installSharedSession(
+            URLSession(configuration: URLSessionHTTPTransport.interactiveConfiguration())
+        )
+
         // Size the shared URL cache for RAM-constrained devices: raw bytes
         // (artwork, directory JSON) belong on disk — cheap, and they survive
         // relaunch — while the in-memory tier stays small; decoded bitmaps
@@ -112,6 +120,18 @@ enum AppDependencies {
         // for a station from a previous session.
         Task {
             await StationEntityQuery().indexKnownStationsForSpotlight()
+        }
+
+        // Prewarm the network path to the user's most-played/favorited stations
+        // so the first tap skips a cold DNS lookup + TLS handshake. Gated behind
+        // an internal flag; a no-op when the user has no snapshotted stations.
+        if featureFlags.isEnabled(FeatureCatalog.prewarmStations) {
+            let prewarmURLs = store.prewarmStreamURLs(limit: 5)
+            if prewarmURLs.isEmpty == false {
+                Task.detached(priority: .utility) {
+                    await StationConnectionPrewarmer().prewarm(streamURLs: prewarmURLs)
+                }
+            }
         }
 
         Self.services = services

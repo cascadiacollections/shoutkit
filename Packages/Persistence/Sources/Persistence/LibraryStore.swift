@@ -128,6 +128,7 @@ public final class LibraryStore {
 
         if let existing = matches.first {
             existing.playedAt = .now
+            existing.playCount += 1
             // A genuine new play un-hides it from Listen Now even if it was
             // previously dismissed there.
             existing.isHiddenFromListenNow = false
@@ -190,6 +191,45 @@ public final class LibraryStore {
     /// dismiss.
     public func unhideFromListenNow(stationID: String) {
         setHiddenFromListenNow(false, stationID: stationID)
+    }
+
+    /// Stream URLs for the stations the user is most likely to play next —
+    /// favorites (in their manual order) followed by the most-played recents —
+    /// deduplicated and capped at `limit`. Used to prewarm network connections
+    /// at launch so the first tap starts faster. Returns only stations that
+    /// carry a snapshotted stream URL (no directory round-trip needed to warm).
+    public func prewarmStreamURLs(limit: Int) -> [URL] {
+        guard limit > 0 else { return [] }
+
+        var urls: [URL] = []
+        var seen = Set<String>()
+        func appendURL(from string: String?) {
+            guard urls.count < limit,
+                  let string,
+                  seen.insert(string).inserted,
+                  let url = URL(string: string) else { return }
+            urls.append(url)
+        }
+
+        let favoritesDescriptor = FetchDescriptor<FavoriteStation>(
+            sortBy: [SortDescriptor(\.sortIndex, order: .forward)]
+        )
+        for favorite in fetch(favoritesDescriptor, operation: "prewarm favorites") ?? [] {
+            appendURL(from: favorite.streamURLString)
+        }
+
+        var recentsDescriptor = FetchDescriptor<RecentStation>(
+            sortBy: [
+                SortDescriptor(\.playCount, order: .reverse),
+                SortDescriptor(\.playedAt, order: .reverse)
+            ]
+        )
+        recentsDescriptor.fetchLimit = limit
+        for recent in fetch(recentsDescriptor, operation: "prewarm recents") ?? [] {
+            appendURL(from: recent.streamURLString)
+        }
+
+        return urls
     }
 
     private func setHiddenFromListenNow(_ isHidden: Bool, stationID: String) {

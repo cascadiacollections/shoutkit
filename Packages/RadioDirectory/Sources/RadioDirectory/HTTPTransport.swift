@@ -29,6 +29,20 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
         session: sharedSessionOverride.withLock { $0 } ?? .shared
     )
 
+    /// A configuration tuned for the app's interactive HTTP traffic (directory
+    /// JSON and artwork): `waitsForConnectivity = false` so an offline device
+    /// fails fast into the app's own retry/mirror logic instead of URLSession
+    /// silently parking the request, and `.responsiveData` to hint the system
+    /// scheduler that these are latency-sensitive foreground fetches. Callers
+    /// still set per-request timeouts (see `RetryPolicy`). The app installs a
+    /// session built from this as `shared` at bootstrap.
+    public static func interactiveConfiguration() -> URLSessionConfiguration {
+        let configuration = URLSessionConfiguration.default
+        configuration.waitsForConnectivity = false
+        configuration.networkServiceType = .responsiveData
+        return configuration
+    }
+
     private let session: URLSession
 
     public init(session: URLSession = .shared) {

@@ -1,5 +1,50 @@
 # Decisions
 
+## 2026-07-15 (network/playback latency pass)
+
+A latency audit of the directory HTTP stack and the tap-to-audio path drove a set
+of OS-level optimizations. Findings that shaped the work: favorites/recents
+already skip the directory round-trip via snapshotted `preferredStreamURL`; the
+biggest remaining costs were cold-start directory serialization + a 12s mirror
+timeout, endpoint re-resolution on every reconnect, and no connection prewarming
+of the user's own stations.
+
+- **Interactive `RetryPolicy` (5s timeout) for Radio-Browser discovery**, vs. the
+  12s `.default` kept for SHOUTcast/background. A dead first mirror now fails
+  over ~2.4× sooner. Timeout is per-request (`URLRequest.timeoutInterval`), so
+  this needed only a new policy constant, not session surgery.
+- **Latency-tuned shared `URLSession`** (`URLSessionHTTPTransport.interactiveConfiguration()`):
+  `waitsForConnectivity = false` (fail fast into our own mirror/retry logic
+  instead of URLSession silently parking a request) + `networkServiceType =
+  .responsiveData`. Installed as `shared` at bootstrap; Debug's Pulse session is
+  built from the same config so behaviour matches Release.
+- **Concurrent top-stations + genres** in `BrowseViewModel.refresh()` via
+  `async let` (were serial). Genres stays non-fatal (folded into a returned
+  optional error); top-stations stays fatal. Un-awaited genres auto-cancels on
+  the empty/failure paths.
+- **Reconnect reuses the resolved endpoint** (`PlaybackController.resolvedEndpoint`)
+  instead of re-running resolution each backoff attempt — matters for SHOUTcast
+  (`.pls` fetch+parse) and byuuid re-resolves. Cleared on a fresh `play(_:)` so a
+  new choice always re-resolves.
+- **`RecentStation.playCount`** (additive migration, like `isHiddenFromListenNow`)
+  incremented in `logRecent`'s existing-match branch. `playedAt` is overwritten
+  each play, so there was previously *no* frequency signal — only recency. This
+  gives a real "well-trafficked" ranking.
+- **Launch-time connection prewarming** (`StationConnectionPrewarmer`, in Playback):
+  opens and immediately tears down an `NWConnection` to the top few
+  most-played/favorited stations' hosts (`LibraryStore.prewarmStreamURLs`),
+  priming the process-wide DNS cache + TCP/TLS path state so the first tap skips
+  the cold handshake. Connection-level, not an HTTP GET — costs a handshake, not
+  a download; the OS DNS warmth is shared with AudioStreaming's own socket. Gated
+  behind a new internal `prewarmStations` flag, default off, fired as a detached
+  utility task alongside the existing Spotlight-index task.
+- **Deferred: the Siri `warmupAudioQueue` schema intent.** The platform-native
+  "prewarm before playAudio" hook exists in `AppSchema.audio`, but its required
+  shape is undocumented (would need the same build-error iteration playAudio
+  took), and Siri routing itself isn't yet confirmed working on-device. The
+  launch prewarmer delivers the same DNS/TLS warmth without that risk; revisit
+  the Siri intent once routing is verified.
+
 ## 2026-07-15 (iOS 27 floor raised; real `AppSchema.audio` Siri domain adopted)
 
 Reverses the 2026-07-06 entry below: the deployment floor is now **iOS 27**

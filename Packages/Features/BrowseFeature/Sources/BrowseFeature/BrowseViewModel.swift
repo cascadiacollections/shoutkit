@@ -50,24 +50,24 @@ public final class BrowseViewModel {
         }
         genresError = nil
 
+        // Issue both discovery calls concurrently — they're independent, and
+        // serializing them adds a full round-trip to first paint. Top stations
+        // is fatal to the screen; genres degrades softly to an empty strip. In
+        // the empty/failure paths the un-awaited genres `async let` is
+        // auto-cancelled at scope exit.
+        async let stationsResult = directory.topStations(limit: 24)
+        async let genresResult = Self.loadGenres(from: directory)
+
         do {
-            let stations = try await directory.topStations(limit: 24)
+            let stations = try await stationsResult
 
             guard stations.isEmpty == false else {
                 phase = .empty
                 return
             }
 
-            let genres: [Genre]
-            do {
-                genres = try await directory.genres()
-            } catch let error as RadioDirectoryError {
-                genresError = error
-                genres = []
-            } catch {
-                genresError = .transport(error.localizedDescription)
-                genres = []
-            }
+            let (genres, genresError) = await genresResult
+            self.genresError = genresError
 
             let content = BrowseContent(
                 spotlight: stations.first,
@@ -79,6 +79,21 @@ public final class BrowseViewModel {
             phase = .failed(error)
         } catch {
             phase = .failed(.transport(error.localizedDescription))
+        }
+    }
+
+    /// Fetches genres, folding any error into the return value instead of
+    /// throwing — genres are non-fatal to the browse screen, so `refresh()`
+    /// can run this concurrently with the fatal top-stations fetch.
+    private static func loadGenres(
+        from directory: any RadioDirectoryProviding
+    ) async -> ([Genre], RadioDirectoryError?) {
+        do {
+            return (try await directory.genres(), nil)
+        } catch let error as RadioDirectoryError {
+            return ([], error)
+        } catch {
+            return ([], .transport(error.localizedDescription))
         }
     }
 

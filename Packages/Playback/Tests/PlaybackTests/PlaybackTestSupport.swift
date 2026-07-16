@@ -70,6 +70,56 @@ func station(_ id: String = "kexp") -> Station {
     )
 }
 
+/// Directory that counts `streamEndpoint(for:)` calls, so tests can assert the
+/// controller reuses a resolved endpoint across reconnects instead of
+/// re-resolving each attempt.
+actor CountingRadioDirectory: RadioDirectoryProviding {
+    private(set) var streamEndpointCallCount = 0
+    private let base: BundledRadioDirectory
+
+    init(stations: [Station]) {
+        base = BundledRadioDirectory(stations: stations)
+    }
+
+    func topStations(limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        try await base.topStations(limit: limit)
+    }
+
+    func genres() async throws(RadioDirectoryError) -> [Genre] {
+        try await base.genres()
+    }
+
+    func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        try await base.stations(inGenre: genre, limit: limit)
+    }
+
+    func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        try await base.searchStations(matching: query, limit: limit)
+    }
+
+    func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
+        streamEndpointCallCount += 1
+        return try await base.streamEndpoint(for: station)
+    }
+}
+
+@MainActor
+func makeController(
+    directory: any RadioDirectoryProviding,
+    output: FakeAudioOutput,
+    presenter: NowPlayingPresenterSpy = NowPlayingPresenterSpy(),
+    maxReconnectAttempts: Int = 3,
+    reconnectBaseDelay: Duration = .seconds(2)
+) -> PlaybackController {
+    PlaybackController(
+        directory: directory,
+        output: output,
+        nowPlayingCenter: presenter,
+        maxReconnectAttempts: maxReconnectAttempts,
+        reconnectBaseDelay: reconnectBaseDelay
+    )
+}
+
 @MainActor
 func makeController(
     stations: [Station],
