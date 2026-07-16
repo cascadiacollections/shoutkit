@@ -51,7 +51,7 @@ public struct Station: Codable, Equatable, Hashable, Identifiable, Sendable {
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { $0.isEmpty == false }
-        return parsed?.isEmpty == false ? parsed : nil
+        return parsed?.isEmpty == true ? nil : parsed
     }
 
     /// Serializes tags into a stable comma-separated string for persistence.
@@ -60,7 +60,7 @@ public struct Station: Codable, Equatable, Hashable, Identifiable, Sendable {
         let normalized = tags
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { $0.isEmpty == false }
-        guard normalized.isEmpty == false else { return nil }
+        guard !normalized.isEmpty else { return nil }
         return normalized.joined(separator: ",")
     }
 }

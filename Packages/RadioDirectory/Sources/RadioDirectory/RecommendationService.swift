@@ -72,8 +72,8 @@ public struct RecommendationService: RecommendationServicing, Sendable {
         guard limit > 0, !history.isEmpty, !candidates.isEmpty else { return [] }
 
         let historyIDs = Set(history.map(\.id))
-        let scoredCandidates = candidates.filter { historyIDs.contains($0.id) == false }
-        guard scoredCandidates.isEmpty == false else { return [] }
+        let scoredCandidates = candidates.filter { !historyIDs.contains($0.id) }
+        guard !scoredCandidates.isEmpty else { return [] }
 
         let popularityScores = normalizedPopularityScores(for: scoredCandidates)
         let recencyWeights = recencyWeights(for: history.count)
@@ -113,7 +113,7 @@ public struct RecommendationService: RecommendationServicing, Sendable {
     }
 
     private func recencyWeights(for count: Int) -> [Double] {
-        let descending = Array((1...count).reversed()).map(Double.init)
+        let descending = (1...count).reversed().map(Double.init)
         let total = descending.reduce(0, +)
         guard total > 0 else { return Array(repeating: 0, count: count) }
         return descending.map { $0 / total }

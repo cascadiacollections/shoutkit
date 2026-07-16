@@ -113,7 +113,7 @@ public struct ListenNowView: View {
     private func recommendationsSection(_ loaded: BrowseContent) -> some View {
         guard recommendationsEnabled else { return }
         Group {
-            if cachedRecommendations.isEmpty == false {
+            if !cachedRecommendations.isEmpty {
                 VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
                     SectionHeaderView(String(localized: "More Like This", bundle: .module))
                     StationCarousel(
