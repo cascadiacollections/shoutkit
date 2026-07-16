@@ -53,6 +53,8 @@ public struct RecommendationService: RecommendationServicing, Sendable {
     public struct Configuration: Equatable, Sendable {
         public let popularityWeight: Double
 
+        /// `popularityWeight` is clamped to [0, 1], where 0 means pure content
+        /// similarity and 1 means pure popularity prior.
         public init(popularityWeight: Double = 0.2) {
             self.popularityWeight = min(max(popularityWeight, 0), 1)
         }
@@ -92,7 +94,7 @@ public struct RecommendationService: RecommendationServicing, Sendable {
 
         return Array(ranked.sorted {
             if $0.score == $1.score {
-                // Station UUID/name keys are stable and available in every result.
+                // Stable station IDs provide deterministic ordering for exact ties.
                 return $0.station.id < $1.station.id
             }
             return $0.score > $1.score
@@ -106,7 +108,7 @@ public struct RecommendationService: RecommendationServicing, Sendable {
             return log1p(clickTrend) + log1p(votes)
         }
         guard let min = rawScores.min(), let max = rawScores.max(), max > min else {
-            return Array(repeating: 0, count: rawScores.count)
+            return Array(repeating: 0.5, count: rawScores.count)
         }
 
         return rawScores.map { ($0 - min) / (max - min) }

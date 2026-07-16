@@ -141,6 +141,7 @@ public struct ListenNowView: View {
     }
 
     private func recommendationCacheKey(_ loaded: BrowseContent) -> UInt64 {
+        // Bounded inputs: recents cap at 25 and browse stations at 24.
         RecommendationHashing.stableHash(segments: recents.map(\.stationID) + loaded.stations.map(\.id))
     }
 

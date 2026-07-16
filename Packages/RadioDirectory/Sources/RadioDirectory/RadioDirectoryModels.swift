@@ -51,6 +51,7 @@ public struct Station: Codable, Equatable, Hashable, Identifiable, Sendable {
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { $0.isEmpty == false }
+        // Keep `nil` for empty/absent tags so optional fields stay omitted when encoded.
         return parsed?.isEmpty == true ? nil : parsed
     }
 
