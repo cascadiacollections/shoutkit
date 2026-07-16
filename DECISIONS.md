@@ -1,5 +1,26 @@
 # Decisions
 
+## 2026-07-16 (Siri warmupAudioQueue prewarm hook)
+
+The deferred `AppSchema.audio.warmupAudioQueue` hook from the 2026-07-15
+latency pass is now implemented. A public iOS 27 beta doc mirror confirmed the
+schema's shape: **`audioEntity` + `playbackAttributes` as inputs, returning
+`WarmupAudioQueueResult` as the value** — notably *without* the
+`queueLocation`/`warmupAudioQueueResult` parameters that belong to
+`.audio.playAudio`.
+
+- **`WarmupRadioAudioQueueIntent` resolves the target station through the
+  app's existing `RadioDirectoryProviding.streamEndpoint(for:)` path before
+  prewarming**, instead of trusting the snapshotted `preferredStreamURL`
+  blindly. That keeps Siri warmup aligned with the same stream-endpoint logic
+  playback already uses (preferred URL short-circuit where available, directory
+  resolution where not).
+- **The intent reuses `StationConnectionPrewarmer` directly** and returns a
+  payload-free `WarmupAudioQueueResult`. The prewarm effect is OS-level DNS/TCP/TLS
+  warmth, not queue state stored in-app, so `PlayRadioAudioIntent` still
+  doesn't need to inspect the optional `warmupAudioQueueResult` it receives
+  later.
+
 ## 2026-07-15 (network/playback latency pass)
 
 A latency audit of the directory HTTP stack and the tap-to-audio path drove a set

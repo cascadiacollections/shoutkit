@@ -6,6 +6,7 @@ import OSLog
 
 public protocol DiagnosticsPayloadPersisting: AnyObject {
     func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date)
+    func metricPayloadSummaries(limit: Int) throws -> [DiagnosticsMetricPayloadSummary]
 }
 
 /// File-scope (not nested in `Record`) to satisfy SwiftLint's one-level
@@ -61,6 +62,22 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
         }
     }
 
+    public func metricPayloadSummaries(limit: Int) throws -> [DiagnosticsMetricPayloadSummary] {
+        guard limit > 0 else { return [] }
+        return try dbQueue.read { database in
+            let records = try Record
+                .filter(Column("kind") == DiagnosticsPayloadKind.metric.rawValue)
+                .order(Column("receivedAt").desc)
+                .order(Column("id").desc)
+                .limit(limit)
+                .fetchAll(database)
+
+            return records.compactMap {
+                DiagnosticsMetricSummaryExtractor.summary(from: $0.payload, receivedAt: $0.receivedAt)
+            }
+        }
+    }
+
     func payloadCount() throws -> Int {
         try dbQueue.read { database in
             try Record.fetchCount(database)
@@ -96,11 +113,23 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
 public final class InMemoryDiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
     private(set) public var metricPayloads: [Data] = []
     private(set) public var diagnosticPayloads: [Data] = []
+    private var metricRecords: [(payload: Data, receivedAt: Date)] = []
 
     public init() {}
 
-    public func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt _: Date) {
+    public func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date) {
         self.metricPayloads.append(contentsOf: metricPayloads)
         self.diagnosticPayloads.append(contentsOf: diagnosticPayloads)
+        self.metricRecords.append(contentsOf: metricPayloads.map { ($0, receivedAt) })
+    }
+
+    public func metricPayloadSummaries(limit: Int) throws -> [DiagnosticsMetricPayloadSummary] {
+        guard limit > 0 else { return [] }
+        return metricRecords
+            .suffix(limit)
+            .reversed()
+            .compactMap { record in
+                DiagnosticsMetricSummaryExtractor.summary(from: record.payload, receivedAt: record.receivedAt)
+            }
     }
 }
