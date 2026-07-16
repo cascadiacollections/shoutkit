@@ -118,7 +118,6 @@ Everything gating a move from TestFlight to the public App Store listing.
 - Minimal CarPlay scene (favorites/recents station list + system now-playing template), once the
   entitlement is live and `PlaybackController`'s iOS 27 now-playing path graduates from parity
   prove-out to the production default
-- watchOS companion — no current demand signal; don't speculate a design
 
 ## How to use this doc
 

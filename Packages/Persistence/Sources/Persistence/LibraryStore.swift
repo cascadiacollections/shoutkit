@@ -232,6 +232,17 @@ public final class LibraryStore {
         return urls
     }
 
+    /// The newest played station snapshot, or `nil` when the user has no recent
+    /// history yet. Uses the persisted `RecentStation` row so callers get the
+    /// same stream/artwork snapshot playback and App Intents already rely on.
+    public func mostRecentStation() -> Station? {
+        var descriptor = FetchDescriptor<RecentStation>(
+            sortBy: [SortDescriptor(\.playedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+        return fetch(descriptor, operation: "fetch most recent station")?.first?.station
+    }
+
     private func setHiddenFromListenNow(_ isHidden: Bool, stationID: String) {
         let predicate = #Predicate<RecentStation> { $0.stationID == stationID }
         let descriptor = FetchDescriptor<RecentStation>(predicate: predicate)

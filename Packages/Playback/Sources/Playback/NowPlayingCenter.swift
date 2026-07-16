@@ -1,6 +1,8 @@
 import Foundation
 import ImageIODownsample
+#if canImport(MediaPlayer)
 import MediaPlayer
+#endif
 import os
 import RadioDirectory
 

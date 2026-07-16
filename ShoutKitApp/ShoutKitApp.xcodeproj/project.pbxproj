@@ -12,7 +12,6 @@
 		000000000000000000000022 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000012 /* AppDependencies.swift */; };
 		000000000000000000000023 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000014 /* Assets.xcassets */; };
 		000000000000000000000024 /* ShoutKitShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000018 /* ShoutKitShortcuts.swift */; };
-		000000000000000000000091 /* StationLaunchRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000090 /* StationLaunchRouter.swift */; };
 		000000000000000000000025 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000019 /* PrivacyInfo.xcprivacy */; };
 		000000000000000000000026 /* WelcomeOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000001A /* WelcomeOverlayView.swift */; };
 		000000000000000000000060 /* DesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000050 /* DesignSystem */; };
@@ -29,9 +28,24 @@
 		00000000000000000000007A /* NowPlayingLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000072 /* NowPlayingLiveActivity.swift */; };
 		00000000000000000000007F /* ShoutKitWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 000000000000000000000070 /* ShoutKitWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		000000000000000000000082 /* SettingsFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005A /* SettingsFeature */; };
-		0000000000000000000000A0 /* DebugSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005B /* DebugSupport */; };
 		000000000000000000000084 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000083 /* Localizable.xcstrings */; };
 		000000000000000000000086 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000085 /* Localizable.xcstrings */; };
+		000000000000000000000091 /* StationLaunchRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000090 /* StationLaunchRouter.swift */; };
+		0000000000000000000000A0 /* DebugSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005B /* DebugSupport */; };
+		075A8F60A66D5127E26C4DEB /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = 2D4800AE052B864E256ECF8D /* Persistence */; };
+		1DF3672E3142619ED2DEC250 /* Playback in Frameworks */ = {isa = PBXBuildFile; productRef = 8B073E7348A344E13C862E72 /* Playback */; };
+		2773E334725730DA1E536505 /* PlayLastComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88B8C3C84CECA7AD66E9AADF /* PlayLastComplication.swift */; };
+		2D6A2840BC577AE65242D67A /* ShoutKitWatchWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 527EB18BB224C165EBEC1F94 /* ShoutKitWatchWidgetsBundle.swift */; };
+		38613E1E1ECB6074AE2DC345 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4C18DB35ABB3A91A0D192E75 /* Assets.xcassets */; };
+		414EDC8DD0E322F7B7890A27 /* WatchAppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA49F89063497CAB19069B1 /* WatchAppDependencies.swift */; };
+		44AC2BEF222DBA0CBE89A887 /* WatchRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50B4E5649B9B1DA06B5FB1FC /* WatchRootView.swift */; };
+		5C8848F67AAA9BDD99B2E1BB /* ShoutKitWatchWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 2CF7489050D38CAD0C9BCAD5 /* ShoutKitWatchWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		61FB9A2F94033357F15F6F86 /* WatchLaunchRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1963A2095C47924C91C127EB /* WatchLaunchRoute.swift */; };
+		7AD926606E1286C3F3BD7E74 /* ShoutKitWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA8362D31F84827046BAEF74 /* ShoutKitWatchApp.swift */; };
+		80A56DAB6BC23378D22C1A6E /* WatchLaunchRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1963A2095C47924C91C127EB /* WatchLaunchRoute.swift */; };
+		9D52CF8A7CDD14BCBB9A413E /* RadioDirectory in Frameworks */ = {isa = PBXBuildFile; productRef = 4189EFE6C4EF862614B0FA3C /* RadioDirectory */; };
+		A4639EED234138D3C20E4C2D /* WatchNoopNowPlayingCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059363CD6EA08810681C100A /* WatchNoopNowPlayingCenter.swift */; };
+		D43AAC581B5812399D25D827 /* WatchRadioPlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C61FAF4CF10B67D240EFD1F /* WatchRadioPlaybackEngine.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -41,6 +55,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 000000000000000000000075;
 			remoteInfo = ShoutKitWidgets;
+		};
+		D07E3ADCCC456E2132BA60D8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DA0B84EF0EC6D1665CAD9441;
+			remoteInfo = ShoutKitWatchWidgets;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -54,6 +75,17 @@
 				00000000000000000000007F /* ShoutKitWidgets.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2C3B5D8EBDBA5EF6BB3B5BB7 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				5C8848F67AAA9BDD99B2E1BB /* ShoutKitWatchWidgets.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -71,15 +103,28 @@
 		000000000000000000000018 /* ShoutKitShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoutKitShortcuts.swift; sourceTree = "<group>"; };
 		000000000000000000000019 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		00000000000000000000001A /* WelcomeOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeOverlayView.swift; sourceTree = "<group>"; };
-		000000000000000000000090 /* StationLaunchRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationLaunchRouter.swift; sourceTree = "<group>"; };
 		000000000000000000000070 /* ShoutKitWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShoutKitWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		000000000000000000000071 /* ShoutKitWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoutKitWidgetsBundle.swift; sourceTree = "<group>"; };
 		000000000000000000000072 /* NowPlayingLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingLiveActivity.swift; sourceTree = "<group>"; };
 		000000000000000000000073 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		000000000000000000000083 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		000000000000000000000085 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		000000000000000000000090 /* StationLaunchRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationLaunchRouter.swift; sourceTree = "<group>"; };
 		000000000000000000000092 /* ShoutKitApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShoutKitApp.entitlements; sourceTree = "<group>"; };
 		000000000000000000000093 /* ShoutKitWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShoutKitWidgets.entitlements; sourceTree = "<group>"; };
+		059363CD6EA08810681C100A /* WatchNoopNowPlayingCenter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchNoopNowPlayingCenter.swift; sourceTree = "<group>"; };
+		0C61FAF4CF10B67D240EFD1F /* WatchRadioPlaybackEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchRadioPlaybackEngine.swift; sourceTree = "<group>"; };
+		1963A2095C47924C91C127EB /* WatchLaunchRoute.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLaunchRoute.swift; sourceTree = "<group>"; };
+		1F9BBE8DA0AFDC04C965EF42 /* ShoutKitWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShoutKitWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2CF7489050D38CAD0C9BCAD5 /* ShoutKitWatchWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShoutKitWatchWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		32EABE18A3349085EED4DCB3 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		4C18DB35ABB3A91A0D192E75 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		50B4E5649B9B1DA06B5FB1FC /* WatchRootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchRootView.swift; sourceTree = "<group>"; };
+		527EB18BB224C165EBEC1F94 /* ShoutKitWatchWidgetsBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShoutKitWatchWidgetsBundle.swift; sourceTree = "<group>"; };
+		5CA49F89063497CAB19069B1 /* WatchAppDependencies.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAppDependencies.swift; sourceTree = "<group>"; };
+		88B8C3C84CECA7AD66E9AADF /* PlayLastComplication.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlayLastComplication.swift; sourceTree = "<group>"; };
+		D56E30839D19FB3015F6195A /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		DA8362D31F84827046BAEF74 /* ShoutKitWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShoutKitWatchApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -109,6 +154,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F07FA2C384C984FBFF5F4D4A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9D52CF8A7CDD14BCBB9A413E /* RadioDirectory in Frameworks */,
+				1DF3672E3142619ED2DEC250 /* Playback in Frameworks */,
+				075A8F60A66D5127E26C4DEB /* Persistence in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FDA308BF9FEF7645519F8BCE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -120,6 +182,9 @@
 				000000000000000000000006 /* Config */,
 				000000000000000000000007 /* Packages */,
 				000000000000000000000004 /* Products */,
+				04CAAC3EA79D10542025D07C /* ShoutKitWatchShared */,
+				FDCA08F1A81EA89B4162FCA7 /* ShoutKitWatchApp */,
+				9C7B7DC836C5443BAF108187 /* ShoutKitWatchWidgets */,
 			);
 			sourceTree = "<group>";
 		};
@@ -128,6 +193,8 @@
 			children = (
 				000000000000000000000008 /* ShoutKit.app */,
 				000000000000000000000070 /* ShoutKitWidgets.appex */,
+				1F9BBE8DA0AFDC04C965EF42 /* ShoutKitWatchApp.app */,
+				2CF7489050D38CAD0C9BCAD5 /* ShoutKitWatchWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -178,6 +245,38 @@
 				000000000000000000000093 /* ShoutKitWidgets.entitlements */,
 			);
 			path = ShoutKitWidgets;
+			sourceTree = "<group>";
+		};
+		04CAAC3EA79D10542025D07C /* ShoutKitWatchShared */ = {
+			isa = PBXGroup;
+			children = (
+				1963A2095C47924C91C127EB /* WatchLaunchRoute.swift */,
+			);
+			name = ShoutKitWatchShared;
+			sourceTree = "<group>";
+		};
+		9C7B7DC836C5443BAF108187 /* ShoutKitWatchWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				527EB18BB224C165EBEC1F94 /* ShoutKitWatchWidgetsBundle.swift */,
+				88B8C3C84CECA7AD66E9AADF /* PlayLastComplication.swift */,
+				D56E30839D19FB3015F6195A /* Info.plist */,
+			);
+			name = ShoutKitWatchWidgets;
+			sourceTree = "<group>";
+		};
+		FDCA08F1A81EA89B4162FCA7 /* ShoutKitWatchApp */ = {
+			isa = PBXGroup;
+			children = (
+				DA8362D31F84827046BAEF74 /* ShoutKitWatchApp.swift */,
+				5CA49F89063497CAB19069B1 /* WatchAppDependencies.swift */,
+				059363CD6EA08810681C100A /* WatchNoopNowPlayingCenter.swift */,
+				0C61FAF4CF10B67D240EFD1F /* WatchRadioPlaybackEngine.swift */,
+				50B4E5649B9B1DA06B5FB1FC /* WatchRootView.swift */,
+				32EABE18A3349085EED4DCB3 /* Info.plist */,
+				4C18DB35ABB3A91A0D192E75 /* Assets.xcassets */,
+			);
+			name = ShoutKitWatchApp;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -235,6 +334,47 @@
 			productReference = 000000000000000000000070 /* ShoutKitWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		3A593819EC2EC0E4966C890C /* ShoutKitWatchApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EA61E6D65F8B98FD3E08D931 /* Build configuration list for PBXNativeTarget "ShoutKitWatchApp" */;
+			buildPhases = (
+				3F87AAFBA8D008814CD4AF8C /* Sources */,
+				F07FA2C384C984FBFF5F4D4A /* Frameworks */,
+				6A7AFAC2A946C3D4ADBC3777 /* Resources */,
+				2C3B5D8EBDBA5EF6BB3B5BB7 /* Embed App Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5392856C1011F90BFB51403B /* PBXTargetDependency */,
+			);
+			name = ShoutKitWatchApp;
+			packageProductDependencies = (
+				4189EFE6C4EF862614B0FA3C /* RadioDirectory */,
+				8B073E7348A344E13C862E72 /* Playback */,
+				2D4800AE052B864E256ECF8D /* Persistence */,
+			);
+			productName = ShoutKitWatchApp;
+			productReference = 1F9BBE8DA0AFDC04C965EF42 /* ShoutKitWatchApp.app */;
+			productType = "com.apple.product-type.application.watchapp2";
+		};
+		DA0B84EF0EC6D1665CAD9441 /* ShoutKitWatchWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 379AFE0CE62312E7926A96F6 /* Build configuration list for PBXNativeTarget "ShoutKitWatchWidgets" */;
+			buildPhases = (
+				3C3554BC61DCDBEA85B6ADDD /* Sources */,
+				FDA308BF9FEF7645519F8BCE /* Frameworks */,
+				9D02CBBEE047CF84ED24BB8F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ShoutKitWatchWidgets;
+			productName = ShoutKitWatchWidgets;
+			productReference = 2CF7489050D38CAD0C9BCAD5 /* ShoutKitWatchWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -253,6 +393,14 @@
 						CreatedOnToolsVersion = 26.0;
 						ProvisioningStyle = Automatic;
 					};
+					3A593819EC2EC0E4966C890C = {
+						CreatedOnToolsVersion = 26.0;
+						ProvisioningStyle = Automatic;
+					};
+					DA0B84EF0EC6D1665CAD9441 = {
+						CreatedOnToolsVersion = 26.0;
+						ProvisioningStyle = Automatic;
+					};
 				};
 			};
 			buildConfigurationList = 000000000000000000000030 /* Build configuration list for PBXProject "ShoutKitApp" */;
@@ -266,17 +414,17 @@
 			mainGroup = 000000000000000000000003;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				000000000000000000000040 /* XCLocalSwiftPackageReference "../Packages/DesignSystem" */,
-				000000000000000000000041 /* XCLocalSwiftPackageReference "../Packages/RadioDirectory" */,
-				000000000000000000000042 /* XCLocalSwiftPackageReference "../Packages/Playback" */,
-				000000000000000000000043 /* XCLocalSwiftPackageReference "../Packages/Persistence" */,
-				000000000000000000000044 /* XCLocalSwiftPackageReference "../Packages/Features/BrowseFeature" */,
-				000000000000000000000045 /* XCLocalSwiftPackageReference "../Packages/Features/PlayerFeature" */,
-				000000000000000000000046 /* XCLocalSwiftPackageReference "../Packages/Features/SearchFeature" */,
-				000000000000000000000047 /* XCLocalSwiftPackageReference "../Packages/Features/LibraryFeature" */,
-				000000000000000000000049 /* XCLocalSwiftPackageReference "../Packages/Features/SettingsFeature" */,
-				00000000000000000000004A /* XCLocalSwiftPackageReference "../Packages/DebugSupport" */,
-				000000000000000000000048 /* XCLocalSwiftPackageReference "../Packages/LiveActivity" */,
+				000000000000000000000040 /* XCLocalSwiftPackageReference "DesignSystem" */,
+				000000000000000000000041 /* XCLocalSwiftPackageReference "RadioDirectory" */,
+				000000000000000000000042 /* XCLocalSwiftPackageReference "Playback" */,
+				000000000000000000000043 /* XCLocalSwiftPackageReference "Persistence" */,
+				000000000000000000000044 /* XCLocalSwiftPackageReference "BrowseFeature" */,
+				000000000000000000000045 /* XCLocalSwiftPackageReference "PlayerFeature" */,
+				000000000000000000000046 /* XCLocalSwiftPackageReference "SearchFeature" */,
+				000000000000000000000047 /* XCLocalSwiftPackageReference "LibraryFeature" */,
+				000000000000000000000049 /* XCLocalSwiftPackageReference "SettingsFeature" */,
+				00000000000000000000004A /* XCLocalSwiftPackageReference "DebugSupport" */,
+				000000000000000000000048 /* XCLocalSwiftPackageReference "LiveActivity" */,
 			);
 			productRefGroup = 000000000000000000000004 /* Products */;
 			projectDirPath = "";
@@ -284,6 +432,8 @@
 			targets = (
 				000000000000000000000002 /* ShoutKit */,
 				000000000000000000000075 /* ShoutKitWidgets */,
+				3A593819EC2EC0E4966C890C /* ShoutKitWatchApp */,
+				DA0B84EF0EC6D1665CAD9441 /* ShoutKitWatchWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -304,6 +454,21 @@
 			buildActionMask = 2147483647;
 			files = (
 				000000000000000000000086 /* Localizable.xcstrings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6A7AFAC2A946C3D4ADBC3777 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				38613E1E1ECB6074AE2DC345 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9D02CBBEE047CF84ED24BB8F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -332,6 +497,29 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3C3554BC61DCDBEA85B6ADDD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				80A56DAB6BC23378D22C1A6E /* WatchLaunchRoute.swift in Sources */,
+				2D6A2840BC577AE65242D67A /* ShoutKitWatchWidgetsBundle.swift in Sources */,
+				2773E334725730DA1E536505 /* PlayLastComplication.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3F87AAFBA8D008814CD4AF8C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				61FB9A2F94033357F15F6F86 /* WatchLaunchRoute.swift in Sources */,
+				7AD926606E1286C3F3BD7E74 /* ShoutKitWatchApp.swift in Sources */,
+				414EDC8DD0E322F7B7890A27 /* WatchAppDependencies.swift in Sources */,
+				A4639EED234138D3C20E4C2D /* WatchNoopNowPlayingCenter.swift in Sources */,
+				D43AAC581B5812399D25D827 /* WatchRadioPlaybackEngine.swift in Sources */,
+				44AC2BEF222DBA0CBE89A887 /* WatchRootView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -339,6 +527,12 @@
 			isa = PBXTargetDependency;
 			target = 000000000000000000000075 /* ShoutKitWidgets */;
 			targetProxy = 000000000000000000000080 /* PBXContainerItemProxy */;
+		};
+		5392856C1011F90BFB51403B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = ShoutKitWatchWidgets;
+			target = DA0B84EF0EC6D1665CAD9441 /* ShoutKitWatchWidgets */;
+			targetProxy = D07E3ADCCC456E2132BA60D8 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -547,6 +741,88 @@
 			};
 			name = Release;
 		};
+		0E582ABFB5981CFE25328710 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9L45FNA7XM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShoutKitWatchWidgets/Info.plist;
+				MARKETING_VERSION = 0.3.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cascadiacollections.shoutkit.watch.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Debug;
+		};
+		780E9A9DDA2CFCAD30203AF9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9L45FNA7XM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShoutKitWatchApp/Info.plist;
+				MARKETING_VERSION = 0.3.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cascadiacollections.shoutkit.watch;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Debug;
+		};
+		C91488E64C6644C03E9EB10F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9L45FNA7XM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShoutKitWatchApp/Info.plist;
+				MARKETING_VERSION = 0.3.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cascadiacollections.shoutkit.watch;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Release;
+		};
+		EA81BA795C4EA01E3CEE7880 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9L45FNA7XM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShoutKitWatchWidgets/Info.plist;
+				MARKETING_VERSION = 0.3.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cascadiacollections.shoutkit.watch.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -577,50 +853,68 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		379AFE0CE62312E7926A96F6 /* Build configuration list for PBXNativeTarget "ShoutKitWatchWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EA81BA795C4EA01E3CEE7880 /* Release */,
+				0E582ABFB5981CFE25328710 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EA61E6D65F8B98FD3E08D931 /* Build configuration list for PBXNativeTarget "ShoutKitWatchApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C91488E64C6644C03E9EB10F /* Release */,
+				780E9A9DDA2CFCAD30203AF9 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		000000000000000000000040 /* XCLocalSwiftPackageReference "../Packages/DesignSystem" */ = {
+		000000000000000000000040 /* XCLocalSwiftPackageReference "DesignSystem" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/DesignSystem;
 		};
-		000000000000000000000041 /* XCLocalSwiftPackageReference "../Packages/RadioDirectory" */ = {
+		000000000000000000000041 /* XCLocalSwiftPackageReference "RadioDirectory" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/RadioDirectory;
 		};
-		000000000000000000000042 /* XCLocalSwiftPackageReference "../Packages/Playback" */ = {
+		000000000000000000000042 /* XCLocalSwiftPackageReference "Playback" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/Playback;
 		};
-		000000000000000000000043 /* XCLocalSwiftPackageReference "../Packages/Persistence" */ = {
+		000000000000000000000043 /* XCLocalSwiftPackageReference "Persistence" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/Persistence;
 		};
-		000000000000000000000044 /* XCLocalSwiftPackageReference "../Packages/Features/BrowseFeature" */ = {
+		000000000000000000000044 /* XCLocalSwiftPackageReference "BrowseFeature" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/Features/BrowseFeature;
 		};
-		000000000000000000000045 /* XCLocalSwiftPackageReference "../Packages/Features/PlayerFeature" */ = {
+		000000000000000000000045 /* XCLocalSwiftPackageReference "PlayerFeature" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/Features/PlayerFeature;
 		};
-		000000000000000000000046 /* XCLocalSwiftPackageReference "../Packages/Features/SearchFeature" */ = {
+		000000000000000000000046 /* XCLocalSwiftPackageReference "SearchFeature" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/Features/SearchFeature;
 		};
-		000000000000000000000047 /* XCLocalSwiftPackageReference "../Packages/Features/LibraryFeature" */ = {
+		000000000000000000000047 /* XCLocalSwiftPackageReference "LibraryFeature" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/Features/LibraryFeature;
 		};
-		000000000000000000000048 /* XCLocalSwiftPackageReference "../Packages/LiveActivity" */ = {
+		000000000000000000000048 /* XCLocalSwiftPackageReference "LiveActivity" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/LiveActivity;
 		};
-		000000000000000000000049 /* XCLocalSwiftPackageReference "../Packages/Features/SettingsFeature" */ = {
+		000000000000000000000049 /* XCLocalSwiftPackageReference "SettingsFeature" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/Features/SettingsFeature;
 		};
-		00000000000000000000004A /* XCLocalSwiftPackageReference "../Packages/DebugSupport" */ = {
+		00000000000000000000004A /* XCLocalSwiftPackageReference "DebugSupport" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/DebugSupport;
 		};
@@ -629,63 +923,78 @@
 /* Begin XCSwiftPackageProductDependency section */
 		000000000000000000000050 /* DesignSystem */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 000000000000000000000040 /* XCLocalSwiftPackageReference "../Packages/DesignSystem" */;
+			package = 000000000000000000000040 /* XCLocalSwiftPackageReference "DesignSystem" */;
 			productName = DesignSystem;
 		};
 		000000000000000000000051 /* RadioDirectory */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 000000000000000000000041 /* XCLocalSwiftPackageReference "../Packages/RadioDirectory" */;
+			package = 000000000000000000000041 /* XCLocalSwiftPackageReference "RadioDirectory" */;
 			productName = RadioDirectory;
 		};
 		000000000000000000000052 /* Playback */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 000000000000000000000042 /* XCLocalSwiftPackageReference "../Packages/Playback" */;
+			package = 000000000000000000000042 /* XCLocalSwiftPackageReference "Playback" */;
 			productName = Playback;
 		};
 		000000000000000000000053 /* Persistence */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 000000000000000000000043 /* XCLocalSwiftPackageReference "../Packages/Persistence" */;
+			package = 000000000000000000000043 /* XCLocalSwiftPackageReference "Persistence" */;
 			productName = Persistence;
 		};
 		000000000000000000000054 /* BrowseFeature */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 000000000000000000000044 /* XCLocalSwiftPackageReference "../Packages/Features/BrowseFeature" */;
+			package = 000000000000000000000044 /* XCLocalSwiftPackageReference "BrowseFeature" */;
 			productName = BrowseFeature;
 		};
 		000000000000000000000055 /* PlayerFeature */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 000000000000000000000045 /* XCLocalSwiftPackageReference "../Packages/Features/PlayerFeature" */;
+			package = 000000000000000000000045 /* XCLocalSwiftPackageReference "PlayerFeature" */;
 			productName = PlayerFeature;
 		};
 		000000000000000000000056 /* SearchFeature */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 000000000000000000000046 /* XCLocalSwiftPackageReference "../Packages/Features/SearchFeature" */;
+			package = 000000000000000000000046 /* XCLocalSwiftPackageReference "SearchFeature" */;
 			productName = SearchFeature;
 		};
 		000000000000000000000057 /* LibraryFeature */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 000000000000000000000047 /* XCLocalSwiftPackageReference "../Packages/Features/LibraryFeature" */;
+			package = 000000000000000000000047 /* XCLocalSwiftPackageReference "LibraryFeature" */;
 			productName = LibraryFeature;
 		};
 		000000000000000000000058 /* NowPlayingActivityKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 000000000000000000000048 /* XCLocalSwiftPackageReference "../Packages/LiveActivity" */;
+			package = 000000000000000000000048 /* XCLocalSwiftPackageReference "LiveActivity" */;
 			productName = NowPlayingActivityKit;
 		};
 		000000000000000000000059 /* NowPlayingActivityCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 000000000000000000000048 /* XCLocalSwiftPackageReference "../Packages/LiveActivity" */;
+			package = 000000000000000000000048 /* XCLocalSwiftPackageReference "LiveActivity" */;
 			productName = NowPlayingActivityCore;
 		};
 		00000000000000000000005A /* SettingsFeature */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 000000000000000000000049 /* XCLocalSwiftPackageReference "../Packages/Features/SettingsFeature" */;
+			package = 000000000000000000000049 /* XCLocalSwiftPackageReference "SettingsFeature" */;
 			productName = SettingsFeature;
 		};
 		00000000000000000000005B /* DebugSupport */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 00000000000000000000004A /* XCLocalSwiftPackageReference "../Packages/DebugSupport" */;
+			package = 00000000000000000000004A /* XCLocalSwiftPackageReference "DebugSupport" */;
 			productName = DebugSupport;
+		};
+		2D4800AE052B864E256ECF8D /* Persistence */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000043 /* XCLocalSwiftPackageReference "Persistence" */;
+			productName = Persistence;
+		};
+		4189EFE6C4EF862614B0FA3C /* RadioDirectory */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000041 /* XCLocalSwiftPackageReference "RadioDirectory" */;
+			productName = RadioDirectory;
+		};
+		8B073E7348A344E13C862E72 /* Playback */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000042 /* XCLocalSwiftPackageReference "Playback" */;
+			productName = Playback;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
