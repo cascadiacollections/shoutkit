@@ -137,24 +137,7 @@ public struct ListenNowView: View {
     }
 
     private func recommendationCacheKey(_ loaded: BrowseContent) -> UInt64 {
-        var hash: UInt64 = 14695981039346656037
-        let prime: UInt64 = 1099511628211
-
-        for stationID in recents.map(\.stationID) {
-            for byte in stationID.utf8 {
-                hash = (hash ^ UInt64(byte)) &* prime
-            }
-            hash = (hash ^ 124) &* prime
-        }
-
-        for stationID in loaded.stations.map(\.id) {
-            for byte in stationID.utf8 {
-                hash = (hash ^ UInt64(byte)) &* prime
-            }
-            hash = (hash ^ 124) &* prime
-        }
-
-        return hash
+        RecommendationHashing.stableHash(segments: recents.map(\.stationID) + loaded.stations.map(\.id))
     }
 
     private func popularCarousel(_ loaded: BrowseContent) -> some View {

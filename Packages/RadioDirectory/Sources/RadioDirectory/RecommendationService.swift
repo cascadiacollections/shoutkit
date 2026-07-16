@@ -20,6 +20,26 @@ public protocol RecommendationServicing: Sendable {
     ) -> [StationRecommendation]
 }
 
+public enum RecommendationHashing {
+    public static let fnvOffsetBase: UInt64 = 14695981039346656037
+    public static let fnvPrime: UInt64 = 1099511628211
+    /// ASCII `|`, used as a stable boundary marker between adjacent station IDs.
+    public static let segmentSeparator: UInt8 = 124
+
+    public static func stableHash(_ value: String, seed: UInt64 = fnvOffsetBase) -> UInt64 {
+        value.utf8.reduce(seed) { hash, byte in
+            (hash ^ UInt64(byte)) &* fnvPrime
+        }
+    }
+
+    public static func stableHash(segments: [String]) -> UInt64 {
+        segments.reduce(fnvOffsetBase) { hash, segment in
+            let next = stableHash(segment, seed: hash)
+            return (next ^ UInt64(segmentSeparator)) &* fnvPrime
+        }
+    }
+}
+
 public struct RecommendationService: RecommendationServicing, Sendable {
     private enum VectorLayout {
         /// Hash-bucket dimensions for text tokens (genre/tags/country/language/codec).
@@ -150,11 +170,7 @@ public struct RecommendationService: RecommendationServicing, Sendable {
     /// Used so hashed-token vector slots are stable across runs/devices; Swift's
     /// standard `Hasher` intentionally randomizes seeds between processes.
     private func stableHash(_ value: String) -> UInt64 {
-        let offset: UInt64 = 14695981039346656037 // FNV-1a 64-bit offset base.
-        let prime: UInt64 = 1099511628211 // FNV-1a 64-bit prime.
-        return value.utf8.reduce(offset) { hash, byte in
-            (hash ^ UInt64(byte)) &* prime
-        }
+        RecommendationHashing.stableHash(value)
     }
 }
 
