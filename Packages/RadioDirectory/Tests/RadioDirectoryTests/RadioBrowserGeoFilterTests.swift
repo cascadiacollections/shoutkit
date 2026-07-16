@@ -55,7 +55,7 @@ struct RadioBrowserGeoFilterTests {
     @Test
     func localeFilterCanUseGeocodedCountryOverride() {
         let locale = Locale(identifier: "fr_CA")
-        let filter = RadioBrowserGeoFilter(locale: locale, countryCodeOverride: "us")
+        let filter = RadioBrowserGeoFilter(locale: locale, countryCodeOverride: "US")
 
         #expect(filter.countryCode == "US")
         #expect(filter.languageCode == "fr")

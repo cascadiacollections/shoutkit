@@ -75,10 +75,11 @@ public struct SettingsView: View {
                 When on, playing a Radio-Browser station sends its public station ID (nothing \
                 about you or your device) so the community directory can rank popularity. \
                 Album artwork lookups send the current track's artist and title to Apple's \
-                iTunes Search API; turn this off to always show station artwork instead. Geo \
-                Stations defaults to your device locale region with no permission prompt; the \
-                optional precise-location toggle asks Apple for location permission only after \
-                you turn it on, and falls back to that locale region if permission is denied. \
+                iTunes Search API; turn this off to always show station artwork instead. The \
+                geo-stations feature defaults to your device locale region with no permission \
+                prompt; the optional precise-location toggle asks Apple for location permission \
+                only after you turn it on, and falls back to that locale region if permission \
+                is denied. \
                 ShoutKit has no analytics, no ads, and no accounts.
                 """)
             }
