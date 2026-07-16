@@ -54,19 +54,32 @@ struct DiagnosticsPayloadStoreTests {
         #expect(summaries.first?.launch?.meanTimeToFirstDrawMilliseconds == 150)
         #expect(summaries.first?.launch?.timeToFirstDrawSampleCount == 4)
         #expect(summaries.first?.launch?.meanResumeTimeMilliseconds == 100)
-        #expect(summaries.first?.networkTransactions == [
-            DiagnosticsNetworkTransactionSummary(
-                host: "api.example.com",
-                requestCount: 3,
-                networkProtocol: "https",
-                averageDNSMilliseconds: 12,
-                averageConnectMilliseconds: 34,
-                averageTLSMilliseconds: 56,
-                averageRequestMilliseconds: 7,
-                averageResponseMilliseconds: 89,
-                averageTotalMilliseconds: 120
-            )
-        ])
+        // The seconds→milliseconds conversion goes through Double arithmetic
+        // (0.034 * 1000 == 33.999…), so compare timings with a tolerance
+        // instead of exact struct equality.
+        let transaction = try #require(summaries.first?.networkTransactions.first)
+        #expect(summaries.first?.networkTransactions.count == 1)
+        #expect(transaction.host == "api.example.com")
+        #expect(transaction.requestCount == 3)
+        #expect(transaction.networkProtocol == "https")
+        expectApproximately(transaction.averageDNSMilliseconds, 12)
+        expectApproximately(transaction.averageConnectMilliseconds, 34)
+        expectApproximately(transaction.averageTLSMilliseconds, 56)
+        expectApproximately(transaction.averageRequestMilliseconds, 7)
+        expectApproximately(transaction.averageResponseMilliseconds, 89)
+        expectApproximately(transaction.averageTotalMilliseconds, 120)
+    }
+
+    private func expectApproximately(
+        _ value: Double?,
+        _ expected: Double,
+        sourceLocation: SourceLocation = #_sourceLocation
+    ) {
+        guard let value else {
+            Issue.record("expected \(expected), got nil", sourceLocation: sourceLocation)
+            return
+        }
+        #expect(abs(value - expected) < 0.001, sourceLocation: sourceLocation)
     }
 
     @Test func ignoresUnparseableMetricPayloadsWhenSummarizing() throws {
