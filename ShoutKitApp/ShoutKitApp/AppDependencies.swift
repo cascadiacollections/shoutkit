@@ -64,8 +64,13 @@ enum AppDependencies {
         do {
             diagnosticsPayloadStore = try DiagnosticsPayloadStore()
         } catch {
-            assertionFailure("Failed to initialize diagnostics payload store: \(error)")
-            print("Diagnostics payload store init error: \(error)")
+            assertionFailure("""
+            Failed to initialize diagnostics payload store. Falling back to in-memory diagnostics storage, \
+            which will be lost on app restart: \(error)
+            """)
+            print("""
+            Diagnostics payload store init error. Falling back to in-memory diagnostics storage (lost on app restart): \(error)
+            """)
             diagnosticsPayloadStore = InMemoryDiagnosticsPayloadStore()
         }
         let diagnosticsService = DiagnosticsService(
