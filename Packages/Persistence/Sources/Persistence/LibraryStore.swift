@@ -130,6 +130,13 @@ public final class LibraryStore {
             existing.playedAt = .now
             existing.name = station.name
             existing.genre = station.genre
+            existing.tagsCSV = Station.tagsCSV(from: station.tags)
+            existing.country = station.country
+            existing.codec = station.codec
+            existing.language = station.language
+            existing.clickTrend = station.clickTrend
+            existing.votes = station.votes
+            existing.bitrate = station.bitrate
             existing.artworkURLString = station.artworkURL?.absoluteString
             existing.streamURLString = station.preferredStreamURL?.absoluteString
         } else {
@@ -137,6 +144,13 @@ public final class LibraryStore {
                 stationID: station.id,
                 name: station.name,
                 genre: station.genre,
+                tagsCSV: Station.tagsCSV(from: station.tags),
+                country: station.country,
+                codec: station.codec,
+                language: station.language,
+                clickTrend: station.clickTrend,
+                votes: station.votes,
+                bitrate: station.bitrate,
                 artworkURLString: station.artworkURL?.absoluteString,
                 streamURLString: station.preferredStreamURL?.absoluteString
             )

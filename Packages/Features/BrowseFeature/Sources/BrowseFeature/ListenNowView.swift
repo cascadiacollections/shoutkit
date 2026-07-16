@@ -1,4 +1,5 @@
 import DesignSystem
+import FeatureFlags
 import Persistence
 import Playback
 import RadioDirectory
@@ -8,15 +9,28 @@ import SwiftUI
 /// A lighter, personalized landing: a featured spotlight, recently played, and a
 /// popular carousel. Reuses ``BrowseViewModel`` for directory content.
 public struct ListenNowView: View {
+    private enum Configuration {
+        static let recommendationLimit = 10
+    }
+
     @State private var viewModel: BrowseViewModel
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
+    private let recommendationService: any RecommendationServicing
+    private let featureFlags: any FeatureFlagProviding
+    @State private var cachedRecommendations: [Station] = []
 
     @Query(sort: \RecentStation.playedAt, order: .reverse)
     private var recents: [RecentStation]
 
-    public init(viewModel: @autoclosure @escaping () -> BrowseViewModel = BrowseViewModel()) {
+    public init(
+        viewModel: @autoclosure @escaping () -> BrowseViewModel = BrowseViewModel(),
+        recommendationService: (any RecommendationServicing)? = nil,
+        featureFlags: (any FeatureFlagProviding)? = nil
+    ) {
         _viewModel = State(wrappedValue: viewModel())
+        self.recommendationService = recommendationService ?? sharedRecommendationService()
+        self.featureFlags = featureFlags ?? sharedFeatureFlags()
     }
 
     public var body: some View {
@@ -66,6 +80,8 @@ public struct ListenNowView: View {
 
             recentlyPlayed
 
+            recommendationsSection(loaded)
+
             popularCarousel(loaded)
         }
     }
@@ -89,6 +105,43 @@ public struct ListenNowView: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func recommendationsSection(_ loaded: BrowseContent) -> some View {
+        // Result builders don't support `guard`, so gate with `if`. The
+        // `.task` sits on the (possibly empty) Group so recommendations still
+        // compute before the first carousel render.
+        if recommendationsEnabled {
+            Group {
+                if !cachedRecommendations.isEmpty {
+                    VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
+                        SectionHeaderView(String(localized: "More Like This", bundle: .module))
+                        StationCarousel(
+                            stations: cachedRecommendations,
+                            phase: { playback?.phase(for: $0) ?? .idle },
+                            onTap: { playback?.toggle($0) }
+                        )
+                    }
+                }
+            }
+            .task(id: recommendationCacheKey(loaded)) {
+                cachedRecommendations = recommendationService.moreLikeThis(
+                    from: recents.map(\.station),
+                    candidates: loaded.stations,
+                    limit: Configuration.recommendationLimit
+                ).map(\.station)
+            }
+        }
+    }
+
+    private var recommendationsEnabled: Bool {
+        featureFlags.isEnabled(FeatureCatalog.recommendations)
+    }
+
+    private func recommendationCacheKey(_ loaded: BrowseContent) -> UInt64 {
+        // Bounded inputs: recents cap at 25 and browse stations at 24.
+        RecommendationHashing.stableHash(segments: recents.map(\.stationID) + loaded.stations.map(\.id))
     }
 
     private func popularCarousel(_ loaded: BrowseContent) -> some View {

@@ -13,6 +13,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../../DesignSystem"),
+        .package(path: "../../FeatureFlags"),
         .package(path: "../../Playback"),
         .package(path: "../../Persistence"),
         .package(path: "../../RadioDirectory"),
@@ -23,6 +24,7 @@ let package = Package(
             name: "BrowseFeature",
             dependencies: [
                 "DesignSystem",
+                "FeatureFlags",
                 "Playback",
                 "Persistence",
                 "RadioDirectory",

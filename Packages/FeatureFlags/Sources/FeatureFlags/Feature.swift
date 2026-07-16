@@ -51,16 +51,18 @@ public enum FeatureCatalog {
         defaultEnabled: false
     )
 
+    public static let recommendations = Feature(
+        key: "recommendations",
+        title: "Recommendations",
+        summary: "On-device \u{201C}More Like This\u{201D} station recommendations from play history.",
+        stage: .internalOnly,
+        defaultEnabled: false
+    )
+
     public static let all: [Feature] = [
         diagnosticsFeature,
         geoStations,
-        Feature(
-            key: "recommendations",
-            title: "Recommendations",
-            summary: "Placeholder flag for personalized station recommendations.",
-            stage: .internalOnly,
-            defaultEnabled: false
-        )
+        recommendations
     ]
 
     public static let diagnostics = diagnosticsFeature
