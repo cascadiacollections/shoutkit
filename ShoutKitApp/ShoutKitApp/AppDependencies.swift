@@ -1,5 +1,6 @@
 import DebugSupport
 import DesignSystem
+import FeatureFlags
 import Foundation
 import NowPlayingActivityKit
 import Persistence
@@ -17,6 +18,8 @@ struct AppServices {
     let playbackController: PlaybackController
     let sleepTimer: SleepTimer
     let settingsStore: SettingsStore
+    /// Retained for app lifetime so MetricKit subscription state remains active.
+    let diagnosticsService: any DiagnosticsServicing
     let directory: any RadioDirectoryProviding
     /// Retained here: its observation tasks hold it weakly, so this reference
     /// is what keeps the Live Activity following playback for the app's lifetime.
@@ -56,6 +59,16 @@ enum AppDependencies {
         let container = ShoutKitModelContainer.makeContainer()
         let store = LibraryStore(context: container.mainContext)
         let settings = SettingsStore()
+        let featureFlags = sharedFeatureFlags()
+        let diagnosticsPayloadStore = (
+            try? DiagnosticsPayloadStore()
+        ) as (any DiagnosticsPayloadPersisting)? ?? InMemoryDiagnosticsPayloadStore()
+        let diagnosticsService = DiagnosticsService(
+            featureFlags: featureFlags,
+            settings: settings,
+            payloadStore: diagnosticsPayloadStore
+        )
+        registerProductionDiagnosticsService(diagnosticsService)
         let (directory, playReporter) = makeDirectory()
         // Route the decorated (preferred + caching) instance through Factory so
         // BrowseViewModel/SearchViewModel resolve it instead of it being threaded
@@ -83,6 +96,7 @@ enum AppDependencies {
             playbackController: controller,
             sleepTimer: sleepTimer,
             settingsStore: settings,
+            diagnosticsService: diagnosticsService,
             directory: directory,
             activityCoordinator: activityCoordinator,
             stationLaunchRouter: StationLaunchRouter()

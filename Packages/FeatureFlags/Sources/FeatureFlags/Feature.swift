@@ -39,7 +39,7 @@ public enum FeatureCatalog {
         Feature(
             key: "diagnostics",
             title: "Diagnostics",
-            summary: "Placeholder flag for diagnostics tooling.",
+            summary: "Enable optional local MetricKit diagnostics collection.",
             stage: .internalOnly,
             defaultEnabled: false
         ),

@@ -14,12 +14,20 @@ let package = Package(
         .library(name: "Persistence", targets: ["Persistence"])
     ],
     dependencies: [
-        .package(path: "../RadioDirectory")
+        .package(path: "../RadioDirectory"),
+        .package(path: "../FeatureFlags"),
+        .package(url: "https://github.com/groue/GRDB.swift.git", exact: "7.11.1"),
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.1")
     ],
     targets: [
         .target(
             name: "Persistence",
-            dependencies: ["RadioDirectory"]
+            dependencies: [
+                "RadioDirectory",
+                "FeatureFlags",
+                .product(name: "GRDB", package: "GRDB.swift"),
+                .product(name: "FactoryKit", package: "Factory")
+            ]
         ),
         .testTarget(
             name: "PersistenceTests",
