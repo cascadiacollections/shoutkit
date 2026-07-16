@@ -220,7 +220,7 @@ final class GeoStationLocationCoordinator: NSObject, CLLocationManagerDelegate {
         super.init()
         locationManager.delegate = self
         observeSettings()
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             await self?.refreshFilteringState()
         }
     }
@@ -298,8 +298,9 @@ final class GeoStationLocationCoordinator: NSObject, CLLocationManagerDelegate {
             Task { @MainActor in
                 if let error {
                     logger.error("Reverse geocoding failed: \(error.localizedDescription, privacy: .public)")
+                } else {
+                    self.preciseCountryCode = placemarks?.first?.isoCountryCode
                 }
-                self.preciseCountryCode = placemarks?.first?.isoCountryCode
                 await self.pushCurrentGeoFilter()
             }
         }

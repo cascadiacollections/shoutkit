@@ -236,7 +236,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
             [[]]
         }
 
-        var stations: [Station] = []
+        var resultStations: [Station] = []
         for geoFilterQueryItems in geoFilterQueryItemSets {
             let data = try await request(path: path, queryItems: queryItems + geoFilterQueryItems)
             let filteredStations = try decode([RadioBrowserStation].self, from: data)
@@ -244,14 +244,14 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
             // Geo filtering is a fallback chain, not a merge: prefer the country
             // result set when it yields stations, otherwise replace it with the
             // language-filtered retry.
-            stations = filteredStations
+            resultStations = filteredStations
 
             if filteredStations.isEmpty == false || geoFilterQueryItemSets.count == 1 {
                 break
             }
         }
 
-        return stations
+        return resultStations
     }
 
     /// Walks the mirror list in order with backoff between attempts, so one dead
