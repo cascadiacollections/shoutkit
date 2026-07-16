@@ -45,7 +45,10 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     }
 
     private func observe(player: AVPlayer, item: AVPlayerItem) {
-        timeControlObservation = player.observe(\.timeControlStatus, options: [.initial, .new]) { [weak self] player, _ in
+        timeControlObservation = player.observe(
+            \.timeControlStatus,
+            options: [.initial, .new]
+        ) { [weak self] player, _ in
             Task { @MainActor [weak self] in
                 self?.handleTimeControlStatus(player.timeControlStatus)
             }
