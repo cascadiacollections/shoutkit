@@ -130,10 +130,11 @@ extension PlaybackController {
             // A system-initiated pause (headphones unplugged, route change)
             // must win over a pending auto-reconnect just like a user pause.
             reconnectTimer.cancel()
-            if outputStarted == false {
-                tapToAudioTrace?.cancel()
-                tapToAudioTrace = nil
-            }
+            // Any pause before first `.playing` ends the trace: completing it
+            // later would fold the pause duration into `firstPlayingMs`. (Once
+            // `.playing` has happened the trace is already nil.)
+            tapToAudioTrace?.cancel()
+            tapToAudioTrace = nil
             state = .paused(station)
             nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
             schedulePausedRelease()

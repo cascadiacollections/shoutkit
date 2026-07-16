@@ -128,7 +128,9 @@ enum DiagnosticsMetricSummaryExtractor {
         )
     }
 
-    private static func networkTransactionSummaries(from object: [String: Any]) -> [DiagnosticsNetworkTransactionSummary] {
+    private static func networkTransactionSummaries(
+        from object: [String: Any]
+    ) -> [DiagnosticsNetworkTransactionSummary] {
         guard let entries = array(forKeys: ["networkTransactionMetrics"], in: object) else {
             return []
         }

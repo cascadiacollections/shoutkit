@@ -9,7 +9,7 @@ final class TapToAudioLatencyTrace {
     private let stationID: String
     private let prewarmEnabled: Bool
     private let startedAt = Date()
-    private let signpostToken = SignpostToken()
+    private let signpostID: OSSignpostID
     private let interval: OSSignpostIntervalState
 
     private var resolvedAt: Date?
@@ -19,22 +19,26 @@ final class TapToAudioLatencyTrace {
     init(stationID: String, prewarmEnabled: Bool) {
         self.stationID = stationID
         self.prewarmEnabled = prewarmEnabled
-        interval = Self.signposter.beginInterval("Tap to audio", object: signpostToken)
+        signpostID = Self.signposter.makeSignpostID()
+        interval = Self.signposter.beginInterval("Tap to audio", id: signpostID)
     }
 
     func markResolved(url: URL) {
         guard completed == false, resolvedAt == nil else { return }
         resolvedAt = Date()
-        Self.signposter.emitEvent("Resolve complete", object: signpostToken)
+        Self.signposter.emitEvent("Resolve complete", id: signpostID)
         Self.logger.notice(
-            "TapToAudio resolved station=\(stationID, privacy: .public) host=\(url.host ?? "unknown", privacy: .public) prewarmEnabled=\(prewarmEnabled)"
+            """
+            TapToAudio resolved station=\(self.stationID, privacy: .public) \
+            host=\(url.host ?? "unknown", privacy: .public) prewarmEnabled=\(self.prewarmEnabled)
+            """
         )
     }
 
     func markOutputStarted() {
         guard completed == false, outputStartedAt == nil else { return }
         outputStartedAt = Date()
-        Self.signposter.emitEvent("Output start", object: signpostToken)
+        Self.signposter.emitEvent("Output start", id: signpostID)
     }
 
     func completeIfNeeded() {
@@ -48,7 +52,7 @@ final class TapToAudioLatencyTrace {
 
         Self.logger.notice(
             """
-            TapToAudio complete station=\(stationID, privacy: .public) prewarmEnabled=\(prewarmEnabled) \
+            TapToAudio complete station=\(self.stationID, privacy: .public) prewarmEnabled=\(self.prewarmEnabled) \
             resolveMs=\(Self.describe(resolveMilliseconds), privacy: .public) \
             outputStartMs=\(Self.describe(outputStartMilliseconds), privacy: .public) \
             firstPlayingMs=\(Self.describe(firstPlayingMilliseconds), privacy: .public)
@@ -71,6 +75,4 @@ final class TapToAudioLatencyTrace {
         guard let value else { return "n/a" }
         return String(format: "%.2f", value)
     }
-
-    private final class SignpostToken: NSObject {}
 }

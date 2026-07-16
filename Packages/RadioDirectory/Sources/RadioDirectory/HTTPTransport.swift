@@ -12,8 +12,14 @@ public protocol HTTPTransporting: Sendable {
 }
 
 public actor URLSessionHTTPTransport: HTTPTransporting {
-    private static let logger = Logger(subsystem: "ShoutKit.RadioDirectory", category: "URLSessionHTTPTransport")
-    private static let signposter = OSSignposter(subsystem: "ShoutKit.RadioDirectory", category: "URLSessionHTTPTransport")
+    private static let logger = Logger(
+        subsystem: "ShoutKit.RadioDirectory",
+        category: "URLSessionHTTPTransport"
+    )
+    private static let signposter = OSSignposter(
+        subsystem: "ShoutKit.RadioDirectory",
+        category: "URLSessionHTTPTransport"
+    )
 
     /// The session `shared` is built with on first access, defaulting to
     /// `URLSession.shared`. The app installs its Debug-only Pulse logging proxy
@@ -53,8 +59,8 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
     }
 
     public func send(_ request: URLRequest) async throws -> (Data, URLResponse) {
-        let signpostToken = SignpostToken()
-        let interval = Self.signposter.beginInterval("HTTP request", object: signpostToken)
+        let signpostID = Self.signposter.makeSignpostID()
+        let interval = Self.signposter.beginInterval("HTTP request", id: signpostID)
         let metricsObserver = TaskMetricsObserver()
         do {
             let response = try await session.data(for: request, delegate: metricsObserver)
@@ -87,7 +93,8 @@ private extension URLSessionHTTPTransport {
 
         logger.notice(
             """
-            URLSessionTaskMetrics host=\(host, privacy: .public) method=\(request.httpMethod ?? "GET", privacy: .public) \
+            URLSessionTaskMetrics host=\(host, privacy: .public) \
+            method=\(request.httpMethod ?? "GET", privacy: .public) \
             status=\(statusCode) dnsMs=\(summary.describe(summary.dnsMilliseconds), privacy: .public) \
             connectMs=\(summary.describe(summary.connectMilliseconds), privacy: .public) \
             tlsMs=\(summary.describe(summary.tlsMilliseconds), privacy: .public) \
@@ -98,8 +105,6 @@ private extension URLSessionHTTPTransport {
             """
         )
     }
-
-    final class SignpostToken: NSObject {}
 
     final class TaskMetricsObserver: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
         private let lock = OSAllocatedUnfairLock<URLSessionTaskMetrics?>(initialState: nil)
@@ -126,11 +131,26 @@ private extension URLSessionHTTPTransport {
         let totalMilliseconds: Double?
 
         init(transaction: URLSessionTaskTransactionMetrics?, taskInterval: DateInterval) {
-            dnsMilliseconds = Self.milliseconds(from: transaction?.domainLookupStartDate, to: transaction?.domainLookupEndDate)
-            connectMilliseconds = Self.milliseconds(from: transaction?.connectStartDate, to: transaction?.connectEndDate)
-            tlsMilliseconds = Self.milliseconds(from: transaction?.secureConnectionStartDate, to: transaction?.secureConnectionEndDate)
-            requestMilliseconds = Self.milliseconds(from: transaction?.requestStartDate, to: transaction?.requestEndDate)
-            responseMilliseconds = Self.milliseconds(from: transaction?.responseStartDate, to: transaction?.responseEndDate)
+            dnsMilliseconds = Self.milliseconds(
+                from: transaction?.domainLookupStartDate,
+                to: transaction?.domainLookupEndDate
+            )
+            connectMilliseconds = Self.milliseconds(
+                from: transaction?.connectStartDate,
+                to: transaction?.connectEndDate
+            )
+            tlsMilliseconds = Self.milliseconds(
+                from: transaction?.secureConnectionStartDate,
+                to: transaction?.secureConnectionEndDate
+            )
+            requestMilliseconds = Self.milliseconds(
+                from: transaction?.requestStartDate,
+                to: transaction?.requestEndDate
+            )
+            responseMilliseconds = Self.milliseconds(
+                from: transaction?.responseStartDate,
+                to: transaction?.responseEndDate
+            )
             totalMilliseconds = taskInterval.duration * 1_000
         }
 

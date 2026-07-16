@@ -65,7 +65,11 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
     func ingest(metricPayloads: [Data], diagnosticPayloads: [Data]) {
         guard shouldCollectDiagnostics else { return }
         let receivedAt = Date()
-        payloadStore.persist(metricPayloads: metricPayloads, diagnosticPayloads: diagnosticPayloads, receivedAt: receivedAt)
+        payloadStore.persist(
+            metricPayloads: metricPayloads,
+            diagnosticPayloads: diagnosticPayloads,
+            receivedAt: receivedAt
+        )
         logMetricPayloadSummaries(limit: metricPayloads.count, receivedAt: receivedAt)
     }
 
@@ -81,7 +85,15 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
             let summaries = try payloadStore.metricPayloadSummaries(limit: limit)
             for summary in summaries {
                 if let launch = summary.launch {
-                    Self.log("MetricKit launch receivedAt=\(Self.iso8601.string(from: receivedAt)) timeToFirstDrawMeanMs=\(Self.describe(launch.meanTimeToFirstDrawMilliseconds)) timeToFirstDrawSamples=\(launch.timeToFirstDrawSampleCount) resumeMeanMs=\(Self.describe(launch.meanResumeTimeMilliseconds)) resumeSamples=\(launch.resumeSampleCount)")
+                    Self.log(
+                        """
+                        MetricKit launch receivedAt=\(receivedAt.formatted(.iso8601)) \
+                        timeToFirstDrawMeanMs=\(Self.describe(launch.meanTimeToFirstDrawMilliseconds)) \
+                        timeToFirstDrawSamples=\(launch.timeToFirstDrawSampleCount) \
+                        resumeMeanMs=\(Self.describe(launch.meanResumeTimeMilliseconds)) \
+                        resumeSamples=\(launch.resumeSampleCount)
+                        """
+                    )
                 }
                 for transaction in summary.networkTransactions {
                     Self.log(transaction.logMessage)
@@ -91,8 +103,6 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
             Self.log("Failed to summarize persisted MetricKit payloads: \(error)")
         }
     }
-
-    private static let iso8601 = ISO8601DateFormatter()
 
     private static func describe(_ value: Double?) -> String {
         guard let value else { return "n/a" }
