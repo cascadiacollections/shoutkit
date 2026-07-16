@@ -8,7 +8,9 @@ import RadioDirectory
 final class BackgroundRefreshController {
     private static let taskIdentifierSuffix = ".app-refresh"
     private static let topStationsLimit = 24
-    private static let refreshInterval: TimeInterval = 4 * 60 * 60
+    /// Refresh every few hours: often enough to keep directory snapshots warm,
+    /// infrequent enough to stay firmly in "best effort" territory.
+    private static let refreshInterval: TimeInterval = 4 * 3600
 
     static var taskIdentifier: String {
         let bundleIdentifier = Bundle.main.bundleIdentifier ?? "com.cascadiacollections.shoutkit"
@@ -140,6 +142,11 @@ final class BackgroundRefreshController {
     }
 
     private func stationNeedingFreshEndpoint(from station: Station) -> Station {
+        // Radio-Browser station IDs are UUIDs. Clearing the snapshotted URL for
+        // those IDs forces `streamEndpoint(for:)` down its by-UUID re-resolution
+        // path so a rotated upstream stream URL can be refreshed. Non-UUID IDs
+        // (curated stations, SHOUTcast) either aren't re-resolvable that way or
+        // already ignore the snapshot in their stream-endpoint implementation.
         guard station.preferredStreamURL != nil, UUID(uuidString: station.id) != nil else {
             return station
         }
