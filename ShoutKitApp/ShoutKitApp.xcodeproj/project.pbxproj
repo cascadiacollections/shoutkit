@@ -34,6 +34,7 @@
 		0000000000000000000000A0 /* DebugSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005B /* DebugSupport */; };
 		000000000000000000000084 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000083 /* Localizable.xcstrings */; };
 		000000000000000000000086 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000085 /* Localizable.xcstrings */; };
+		000000000000000000000095 /* ShoutKitCarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000094 /* ShoutKitCarPlaySceneDelegate.swift */; };
 		0000000000000000000000A1 /* BackgroundRefreshController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A2 /* BackgroundRefreshController.swift */; };
 /* End PBXBuildFile section */
 
@@ -85,6 +86,7 @@
 		000000000000000000000085 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		000000000000000000000092 /* ShoutKitApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShoutKitApp.entitlements; sourceTree = "<group>"; };
 		000000000000000000000093 /* ShoutKitWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShoutKitWidgets.entitlements; sourceTree = "<group>"; };
+		000000000000000000000094 /* ShoutKitCarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoutKitCarPlaySceneDelegate.swift; sourceTree = "<group>"; };
 		0000000000000000000000A2 /* BackgroundRefreshController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefreshController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -149,6 +151,7 @@
 				0000000000000000000000B2 /* ShoutKitAudioIntents.swift */,
 				000000000000000000000018 /* ShoutKitShortcuts.swift */,
 				000000000000000000000090 /* StationLaunchRouter.swift */,
+				000000000000000000000094 /* ShoutKitCarPlaySceneDelegate.swift */,
 				000000000000000000000013 /* Info.plist */,
 				000000000000000000000014 /* Assets.xcassets */,
 				000000000000000000000019 /* PrivacyInfo.xcprivacy */,
@@ -332,6 +335,7 @@
 				0000000000000000000000B3 /* ShoutKitAudioIntents.swift in Sources */,
 				000000000000000000000024 /* ShoutKitShortcuts.swift in Sources */,
 				000000000000000000000091 /* StationLaunchRouter.swift in Sources */,
+				000000000000000000000095 /* ShoutKitCarPlaySceneDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
