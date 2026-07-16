@@ -10,6 +10,8 @@ import SettingsFeature
 import SwiftUI
 
 struct RootView: View {
+    private let swipeTabThreshold: CGFloat = 70
+
     let launchRouter: StationLaunchRouter
 
     // Read only to verify injection below; feature views read these themselves.
@@ -57,6 +59,12 @@ struct RootView: View {
                 launchRouter.clearPending()
                 handle(link)
             }
+            .simultaneousGesture(
+                DragGesture()
+                    .onEnded { value in
+                        handleTabSwipe(value)
+                    }
+            )
     }
 
     private var tabView: some View {
@@ -123,13 +131,35 @@ struct RootView: View {
             playback.play(link.station)
         }
     }
+
+    private func handleTabSwipe(_ value: DragGesture.Value) {
+        let horizontal = value.translation.width
+        let vertical = value.translation.height
+
+        guard abs(horizontal) > abs(vertical), abs(horizontal) >= swipeTabThreshold else { return }
+        if horizontal < 0 {
+            selectedTab = selectedTab.next ?? selectedTab
+        } else {
+            selectedTab = selectedTab.previous ?? selectedTab
+        }
+    }
 }
 
-private enum ShoutKitTab: Hashable {
+private enum ShoutKitTab: Hashable, CaseIterable {
     case listenNow
     case browse
     case search
     case favorites
+
+    var next: Self? {
+        guard let index = Self.allCases.firstIndex(of: self), index < Self.allCases.count - 1 else { return nil }
+        return Self.allCases[index + 1]
+    }
+
+    var previous: Self? {
+        guard let index = Self.allCases.firstIndex(of: self), index > 0 else { return nil }
+        return Self.allCases[index - 1]
+    }
 }
 
 #Preview {
