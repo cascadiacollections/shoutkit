@@ -60,6 +60,12 @@ public final class RecentStation {
     public var artworkURLString: String?
     public var streamURLString: String?
     public var playedAt: Date
+    /// Hides this entry from the Listen Now "Recently Played" teaser without
+    /// deleting the underlying play record, so recommendation scoring still
+    /// sees it as history. A default value keeps this a lightweight, additive
+    /// migration, matching `FavoriteStation.sortIndex`. Re-playing the station
+    /// clears the flag (see `LibraryStore.logRecent`).
+    public var isHiddenFromListenNow: Bool = false
 
     public init(
         stationID: String,
@@ -74,7 +80,8 @@ public final class RecentStation {
         bitrate: Int? = nil,
         artworkURLString: String? = nil,
         streamURLString: String? = nil,
-        playedAt: Date = .now
+        playedAt: Date = .now,
+        isHiddenFromListenNow: Bool = false
     ) {
         self.stationID = stationID
         self.name = name
@@ -89,6 +96,7 @@ public final class RecentStation {
         self.artworkURLString = artworkURLString
         self.streamURLString = streamURLString
         self.playedAt = playedAt
+        self.isHiddenFromListenNow = isHiddenFromListenNow
     }
 
     public var station: Station {

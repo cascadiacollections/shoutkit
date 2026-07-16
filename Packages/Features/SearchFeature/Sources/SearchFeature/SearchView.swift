@@ -8,6 +8,10 @@ public struct SearchView: View {
     @State private var viewModel: SearchViewModel
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
+    // Switching into the Search tab should drop the keyboard straight into the
+    // search field, matching Apple Music/Podcasts — nobody switches to Search
+    // to look at it.
+    @FocusState private var isSearchFieldFocused: Bool
 
     public init(viewModel: @autoclosure @escaping () -> SearchViewModel) {
         _viewModel = State(wrappedValue: viewModel())
@@ -23,6 +27,10 @@ public struct SearchView: View {
         }
         .background(Color.shoutKitBackground)
         .searchable(text: $viewModel.query, prompt: "Stations, genres")
+        .searchFocused($isSearchFieldFocused)
+        .onAppear {
+            isSearchFieldFocused = true
+        }
         .task {
             await viewModel.loadGenres()
         }

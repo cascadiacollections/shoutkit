@@ -1,4 +1,4 @@
-// swift-tools-version: 6.2
+// swift-tools-version: 6.4
 
 import PackageDescription
 
@@ -6,7 +6,7 @@ let package = Package(
     name: "Playback",
     defaultLocalization: "en",
     platforms: [
-        .iOS(.v26),
+        .iOS(.v27),
         // Declared so the controller/state-machine test suite can run on the mac
         // host (`swift test`); the AVPlayer/UIKit-backed production types are
         // gated behind canImport(UIKit) and the app product remains iOS-only.

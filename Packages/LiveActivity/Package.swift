@@ -1,11 +1,11 @@
-// swift-tools-version: 6.2
+// swift-tools-version: 6.4
 
 import PackageDescription
 
 let package = Package(
     name: "LiveActivity",
     platforms: [
-        .iOS(.v26)
+        .iOS(.v27)
     ],
     products: [
         // Attributes only — linked by BOTH the app and the widget extension.

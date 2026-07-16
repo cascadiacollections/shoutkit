@@ -128,6 +128,9 @@ public final class LibraryStore {
 
         if let existing = matches.first {
             existing.playedAt = .now
+            // A genuine new play un-hides it from Listen Now even if it was
+            // previously dismissed there.
+            existing.isHiddenFromListenNow = false
             existing.name = station.name
             existing.genre = station.genre
             existing.tagsCSV = Station.tagsCSV(from: station.tags)
@@ -174,6 +177,23 @@ public final class LibraryStore {
             context.delete(match)
         }
         save(operation: "remove recent \(sanitizedForLogs(stationID))")
+    }
+
+    /// Dismisses a single entry from the Listen Now "Recently Played" teaser
+    /// without deleting its play record, so recommendation scoring (which
+    /// reads the full, unfiltered history) is unaffected.
+    public func hideFromListenNow(stationID: String) {
+        let predicate = #Predicate<RecentStation> { $0.stationID == stationID }
+        let descriptor = FetchDescriptor<RecentStation>(predicate: predicate)
+
+        guard let matches = fetch(descriptor, operation: "hide from listen now \(sanitizedForLogs(stationID))") else {
+            return
+        }
+
+        for match in matches {
+            match.isHiddenFromListenNow = true
+        }
+        save(operation: "hide from listen now \(sanitizedForLogs(stationID))")
     }
 
     private func trimRecents() {

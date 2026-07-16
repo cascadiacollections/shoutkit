@@ -1,4 +1,4 @@
-// swift-tools-version: 6.2
+// swift-tools-version: 6.4
 
 import PackageDescription
 
@@ -9,7 +9,7 @@ import PackageDescription
 let package = Package(
     name: "DebugSupport",
     platforms: [
-        .iOS(.v26),
+        .iOS(.v27),
         .macOS(.v13)
     ],
     products: [

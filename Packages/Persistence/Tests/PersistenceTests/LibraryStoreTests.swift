@@ -150,6 +150,39 @@ struct LibraryStoreTests {
         #expect(ids.contains("c"))
     }
 
+    @Test func hidingFromListenNowSetsFlagButKeepsTheRecord() throws {
+        let (store, context) = makeStoreAndContext()
+        store.logRecent(station("a"))
+
+        store.hideFromListenNow(stationID: "a")
+
+        let recents = try context.fetch(FetchDescriptor<RecentStation>())
+        #expect(recents.count == 1, "the play record must survive a Listen Now dismiss")
+        #expect(recents.first?.isHiddenFromListenNow == true)
+    }
+
+    @Test func rePlayingAHiddenRecentUnhidesIt() throws {
+        let (store, context) = makeStoreAndContext()
+        store.logRecent(station("a"))
+        store.hideFromListenNow(stationID: "a")
+
+        store.logRecent(station("a"))
+
+        let recents = try context.fetch(FetchDescriptor<RecentStation>())
+        #expect(recents.first?.isHiddenFromListenNow == false)
+    }
+
+    @Test func hidingNonExistentRecentIsNoOp() throws {
+        let (store, context) = makeStoreAndContext()
+        store.logRecent(station("a"))
+
+        store.hideFromListenNow(stationID: "does-not-exist")
+
+        let recents = try context.fetch(FetchDescriptor<RecentStation>())
+        #expect(recents.count == 1)
+        #expect(recents.first?.isHiddenFromListenNow == false)
+    }
+
     @Test func removingNonExistentRecentIsNoOp() throws {
         let (store, context) = makeStoreAndContext()
 

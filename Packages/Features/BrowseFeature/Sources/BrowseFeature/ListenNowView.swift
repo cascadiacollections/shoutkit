@@ -19,6 +19,8 @@ public struct ListenNowView: View {
     private let recommendationService: any RecommendationServicing
     private let featureFlags: any FeatureFlagProviding
     @State private var cachedRecommendations: [Station] = []
+    // See `RecentlyPlayedTeaserState` (Persistence) for the no-backfill dismiss logic.
+    @State private var recentlyPlayedTeaser = RecentlyPlayedTeaserState()
 
     @Query(sort: \RecentStation.playedAt, order: .reverse)
     private var recents: [RecentStation]
@@ -44,6 +46,20 @@ public struct ListenNowView: View {
         .background(Color.shoutKitBackground)
         .task { await viewModel.refresh() }
         .refreshable { await viewModel.refresh() }
+        .onChange(of: recents.map(\.stationID), initial: true) { _, _ in
+            recentlyPlayedTeaser.sync(withVisibleIDsNewestFirst: visibleRecents.map(\.stationID))
+        }
+    }
+
+    // Recents dismissed from the Listen Now teaser but still present in
+    // `recents` for recommendation scoring (see `LibraryStore.hideFromListenNow`).
+    private var visibleRecents: [RecentStation] {
+        recents.filter { $0.isHiddenFromListenNow == false }
+    }
+
+    private var displayedRecentStations: [RecentStation] {
+        let byID = Dictionary(uniqueKeysWithValues: recents.map { ($0.stationID, $0) })
+        return recentlyPlayedTeaser.displayedIDs.compactMap { byID[$0] }
     }
 
     @ViewBuilder
@@ -88,11 +104,15 @@ public struct ListenNowView: View {
 
     @ViewBuilder
     private var recentlyPlayed: some View {
-        if recents.isEmpty == false {
+        let displayed = displayedRecentStations
+        if displayed.isEmpty == false {
             VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
                 SectionHeaderView(String(localized: "Recently Played", bundle: .module))
-                LazyVGrid(columns: ShoutKitLayout.stationColumns, spacing: ShoutKitSpacing.small) {
-                    ForEach(recents.prefix(5)) { recent in
+                // A real List (rather than the LazyVGrid used elsewhere on this screen) is
+                // required for swipe-to-dismiss; it's nested inside the outer ScrollView
+                // with its own scrolling disabled and sized to its content.
+                List {
+                    ForEach(displayed) { recent in
                         let station = recent.station
                         StationRow(
                             station: station,
@@ -101,9 +121,40 @@ public struct ListenNowView: View {
                             onTap: { playback?.toggle(station) },
                             onToggleFavorite: library.map { store in { store.toggleFavorite(station) } }
                         )
+                        .listRowInsets(EdgeInsets())
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                     }
+                    .onDelete(perform: deleteRecents)
                 }
+                .listStyle(.plain)
+                .listRowSpacing(ShoutKitSpacing.small)
+                .scrollDisabled(true)
+                .scrollContentBackground(.hidden)
+                .frame(height: recentlyPlayedListHeight(count: displayed.count))
             }
+        }
+    }
+
+    private func recentlyPlayedListHeight(count: Int) -> CGFloat {
+        guard count > 0 else { return 0 }
+        let rowHeight: CGFloat = 76
+        return CGFloat(count) * rowHeight + CGFloat(count - 1) * ShoutKitSpacing.small
+    }
+
+    private func deleteRecents(at offsets: IndexSet) {
+        // Materialise the displayed slice before removal so offset resolution
+        // isn't affected by live-query updates mid-deletion (same approach as
+        // LibraryView's deleteRecents).
+        let displayed = displayedRecentStations
+        let stationIDs = offsets.map { displayed[$0].stationID }
+        for stationID in stationIDs {
+            // A soft hide, not `removeRecent` — the play record stays intact so
+            // recommendations still learn from it even once this teaser is empty.
+            library?.hideFromListenNow(stationID: stationID)
+            // Removed here too (not just left to the query refresh) so the slot
+            // doesn't backfill from `recents` — dismissing shrinks the list.
+            recentlyPlayedTeaser.remove(stationID)
         }
     }
 

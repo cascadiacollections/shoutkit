@@ -1,5 +1,61 @@
 # Decisions
 
+## 2026-07-15 (iOS 27 floor raised; real `AppSchema.audio` Siri domain adopted)
+
+Reverses the 2026-07-06 entry below: the deployment floor is now **iOS 27**
+(was 26) across every package (`Package.swift` platforms + `swift-tools-version:
+6.4`, since `.iOS(.v27)` requires it) and the app target
+(`IPHONEOS_DEPLOYMENT_TARGET`). Reason: a bare "Hey Siri, play ⟨station⟩
+radio" (no "on ShoutKit") wasn't resolving — `StationEntity: IndexedEntity`
+makes Siri able to look a station up once it knows to ask ShoutKit, but
+doesn't register ShoutKit as a *radio* content provider, so an app-name-free
+utterance had no reason to route here over Apple Music. That registration
+requires the real `AppSchema.audio` domain schema, which is iOS-27-only.
+
+Also worth noting: by the time of this change, `AssistantSchema`/`@AssistantEntity`/
+`@AssistantIntent` (what the 2026-07-06 entry deferred to) are themselves
+`@available(*, deprecated, renamed: "AppSchema")` in the iOS 27 SDK — superseded
+by `@AppEntity(schema:)`/`@AppIntent(schema:)` before this project ever adopted
+them. So this is a fresh implementation against the current API, not a
+revival of the deferred one.
+
+- **`StationEntity` adopts `@AppEntity(schema: .audio.liveRadioStation)`**,
+  replacing the plain `AppEntity` conformance. The schema requires two
+  additional properties beyond what `IndexedEntity` needed: `title: String`
+  (computed from the existing `name`) and `providerName: String?` (`nil` —
+  ShoutKit doesn't track a station's parent network separately from the
+  station itself).
+- **Two separate `PlayStationIntent`-shaped intents, not one**, because
+  `AppShortcutPhrase` can only bind plain `AppEntity`/`AppEnum` parameters —
+  confirmed by an explicit framework diagnostic ("'AppEntity' and 'AppEnum' are
+  the only allowed types for 'audioEntity'"), not just a Swift type-inference
+  gap. `PlayStationIntent` (unchanged in shape) keeps powering the existing
+  "Play ⟨station⟩ on ShoutKit" `AppShortcut` phrase. The new
+  `PlayRadioAudioIntent` adopts `@AppIntent(schema: .audio.playAudio)` and is
+  deliberately absent from every `AppShortcut` phrase — its only job is
+  passive registration, so the system's own "Play Audio" Siri domain can
+  dispatch a bare, app-name-free utterance straight to it via
+  `StationEntity`'s Spotlight index. Both intents call the same
+  `PlaybackController.play(_:)`.
+- **`audioEntity: AudioItem`, a `@UnionValue` enum with one case
+  (`.liveRadioStation(StationEntity)`)**, not `StationEntity` directly — the
+  schema's `audioEntity` parameter is a fixed union across every content kind
+  the `.audio` domain supports (songs, albums, podcasts, live radio, …); a
+  `@UnionValue` enum is how a single app opts into just the cases it plays.
+  Confirmed by compiler diagnostic listing the full `Schema<SongEntity> |
+  Schema<AlbumEntity> | … | Schema<LiveRadioStationEntity> | …` union — trying
+  to pass `StationEntity` there directly fails to typecheck.
+- **`queueLocation`, `warmupAudioQueueResult`, `playbackAttributes` all take
+  the schema's "nothing to report" value** — required parameters for apps
+  with a real play queue; ShoutKit has none (switching stations is immediate
+  replacement, not enqueueing). Their exact required shape (which fields must
+  be `Optional`, which must not; that `playbackAttributes` is `Set<Enum>` not
+  a bare enum; the extra enum cases each schema enum requires, e.g.
+  `PlaybackAttributes` needs `.shuffle`/`.repeat` even though ShoutKit only
+  ever uses `.none`) came from iterating on real `xcodebuild` macro-expansion
+  diagnostics against the on-disk iOS 27 SDK, not from documentation — this
+  schema surface has no public reference material yet.
+
 ## 2026-07-13 (dependency-review follow-ups)
 
 Follow-ups from an adversarial review of the three-dependency branch, applied
