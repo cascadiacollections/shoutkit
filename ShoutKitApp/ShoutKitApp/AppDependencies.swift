@@ -65,17 +65,20 @@ enum AppDependencies {
         let store = LibraryStore(context: container.mainContext)
         let settings = SettingsStore()
         let featureFlags = sharedFeatureFlags()
-        let (directory, playReporter, geoStationLocationCoordinator) = makeDirectory(
-            settings: settings,
-            featureFlags: featureFlags
-        )
+        let directoryServices = makeDirectory(settings: settings, featureFlags: featureFlags)
+        let directory = directoryServices.directory
         // Route the decorated (preferred + caching) instance through Factory so
         // BrowseViewModel/SearchViewModel resolve it instead of it being threaded
         // manually through RootView.
         registerProductionRadioDirectory(directory)
         let controller = PlaybackController(directory: directory)
 
-        configureCallbacks(for: controller, store: store, settings: settings, playReporter: playReporter)
+        configureCallbacks(
+            for: controller,
+            store: store,
+            settings: settings,
+            playReporter: directoryServices.playReporter
+        )
 
         // Lock screen / Dynamic Island Live Activity follows playback by
         // observing the controller's @Observable state directly.
@@ -96,7 +99,7 @@ enum AppDependencies {
             sleepTimer: sleepTimer,
             settingsStore: settings,
             directory: directory,
-            geoStationLocationCoordinator: geoStationLocationCoordinator,
+            geoStationLocationCoordinator: directoryServices.geoStationLocationCoordinator,
             activityCoordinator: activityCoordinator,
             stationLaunchRouter: StationLaunchRouter()
         )
@@ -162,10 +165,18 @@ enum AppDependencies {
         }
     }
 
+    /// The directory stack plus the geo coordinator that keeps its filter in
+    /// sync — grouped in a struct (not a tuple) so each member stays named.
+    private struct DirectoryServices {
+        let directory: any RadioDirectoryProviding
+        let playReporter: (any StationPlayReporting)?
+        let geoStationLocationCoordinator: GeoStationLocationCoordinator
+    }
+
     private static func makeDirectory(
         settings: SettingsStore,
         featureFlags: any FeatureFlagProviding
-    ) -> (any RadioDirectoryProviding, (any StationPlayReporting)?, GeoStationLocationCoordinator) {
+    ) -> DirectoryServices {
         let geoFilterProvider = MutableRadioBrowserGeoFilterProvider()
         let geoStationLocationCoordinator = GeoStationLocationCoordinator(
             settings: settings,
@@ -175,12 +186,20 @@ enum AppDependencies {
 
         if let apiKey = shoutcastAPIKey() {
             let directory = PreferredRadioDirectory(base: ShoutcastDirectoryClient(apiKey: apiKey))
-            return (CachingRadioDirectory(base: directory), nil, geoStationLocationCoordinator)
+            return DirectoryServices(
+                directory: CachingRadioDirectory(base: directory),
+                playReporter: nil,
+                geoStationLocationCoordinator: geoStationLocationCoordinator
+            )
         }
 
         let radioBrowser = RadioBrowserDirectoryClient(geoFilterProvider: geoFilterProvider)
         let directory = PreferredRadioDirectory(base: radioBrowser)
-        return (CachingRadioDirectory(base: directory), radioBrowser, geoStationLocationCoordinator)
+        return DirectoryServices(
+            directory: CachingRadioDirectory(base: directory),
+            playReporter: radioBrowser,
+            geoStationLocationCoordinator: geoStationLocationCoordinator
+        )
     }
 
     private static func shoutcastAPIKey() -> String? {
