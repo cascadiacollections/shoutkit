@@ -44,6 +44,7 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
             }
         } catch {
             assertionFailure("Failed to persist diagnostics payloads: \(error)")
+            fputs("DiagnosticsPayloadStore persist error: \(error)\n", stderr)
         }
     }
 

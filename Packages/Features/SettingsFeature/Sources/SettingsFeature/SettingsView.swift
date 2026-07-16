@@ -73,7 +73,7 @@ public struct SettingsView: View {
                 Album artwork lookups send the current track's artist and title to Apple's \
                 iTunes Search API; turn this off to always show station artwork instead. \
                 Share diagnostics keeps Apple MetricKit crash/hang/energy/disk payloads local \
-                on-device for troubleshooting. \
+                on-device for troubleshooting and potential future export while debugging. \
                 ShoutKit has no analytics, no ads, and no accounts.
                 """)
             }
