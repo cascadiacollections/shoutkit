@@ -35,14 +35,16 @@ public struct Feature: Hashable, Sendable {
 }
 
 public enum FeatureCatalog {
+    private static let diagnosticsFeature = Feature(
+        key: "diagnostics",
+        title: "Diagnostics",
+        summary: "Enable optional local MetricKit diagnostics collection.",
+        stage: .internalOnly,
+        defaultEnabled: false
+    )
+
     public static let all: [Feature] = [
-        Feature(
-            key: "diagnostics",
-            title: "Diagnostics",
-            summary: "Enable optional local MetricKit diagnostics collection.",
-            stage: .internalOnly,
-            defaultEnabled: false
-        ),
+        diagnosticsFeature,
         Feature(
             key: "geoStations",
             title: "Geo Stations",
@@ -59,10 +61,5 @@ public enum FeatureCatalog {
         )
     ]
 
-    public static let diagnostics: Feature = {
-        guard let feature = all.first(where: { $0.key == "diagnostics" }) else {
-            preconditionFailure("Missing diagnostics feature in FeatureCatalog")
-        }
-        return feature
-    }()
+    public static let diagnostics = diagnosticsFeature
 }
