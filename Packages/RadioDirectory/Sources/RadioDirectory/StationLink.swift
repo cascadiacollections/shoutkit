@@ -78,22 +78,25 @@ public struct StationLink: Equatable, Sendable {
     }
 
     public var handoffUserInfo: [String: Any] {
-        let stationSnapshot: Data
+        var userInfo: [String: Any] = [
+            HandoffKey.stationID: station.id,
+            HandoffKey.autoPlay: autoPlay,
+            HandoffKey.presentNowPlaying: presentNowPlaying
+        ]
+
+        // Handoff is best-effort: if the snapshot can't be encoded, publish the
+        // payload without it — the receiving side treats a snapshot-less payload
+        // as non-resumable rather than crashing the publisher.
         do {
-            stationSnapshot = try JSONEncoder().encode(station)
+            userInfo[HandoffKey.stationSnapshot] = try JSONEncoder().encode(station)
         } catch {
-            preconditionFailure(
-                "Fatal: Unable to encode station '\(station.id)' for handoff. " +
+            assertionFailure(
+                "Unable to encode station '\(station.id)' for handoff. " +
                     "This indicates Station no longer round-trips through Codable: \(error)"
             )
         }
 
-        return [
-            HandoffKey.stationID: station.id,
-            HandoffKey.stationSnapshot: stationSnapshot,
-            HandoffKey.autoPlay: autoPlay,
-            HandoffKey.presentNowPlaying: presentNowPlaying
-        ]
+        return userInfo
     }
 
     public init?(handoffUserInfo userInfo: [AnyHashable: Any]) {
