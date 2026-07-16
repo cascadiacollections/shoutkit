@@ -69,7 +69,8 @@ enum AppDependencies {
             which will be lost on app restart: \(error)
             """)
             print("""
-            Diagnostics payload store init error. Falling back to in-memory diagnostics storage (lost on app restart): \(error)
+            Diagnostics payload store init error. Falling back to in-memory \
+            diagnostics storage (lost on app restart): \(error)
             """)
             diagnosticsPayloadStore = InMemoryDiagnosticsPayloadStore()
         }

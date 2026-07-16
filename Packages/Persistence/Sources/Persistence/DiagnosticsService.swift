@@ -1,7 +1,9 @@
 import FeatureFlags
 import Foundation
 
-#if canImport(MetricKit)
+// MetricKit's metric payloads (MXMetricPayload) are unavailable on macOS, so
+// gate on os(iOS) too — the package's tests build for the mac host.
+#if canImport(MetricKit) && os(iOS)
 import MetricKit
 #endif
 
@@ -62,7 +64,7 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
     var subscribedForCollection: Bool { isSubscribed }
 
     private static func defaultSubscribe(_ service: DiagnosticsService) {
-        #if canImport(MetricKit)
+        #if canImport(MetricKit) && os(iOS)
         MXMetricManager.shared.add(service)
         #else
         _ = service
@@ -70,7 +72,7 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
     }
 
     private static func defaultUnsubscribe(_ service: DiagnosticsService) {
-        #if canImport(MetricKit)
+        #if canImport(MetricKit) && os(iOS)
         MXMetricManager.shared.remove(service)
         #else
         _ = service
@@ -78,18 +80,18 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
     }
 }
 
-#if canImport(MetricKit)
+#if canImport(MetricKit) && os(iOS)
 @MainActor
 extension DiagnosticsService: MXMetricManagerSubscriber {
     public nonisolated func didReceive(_ payloads: [MXMetricPayload]) {
-        let jsonPayloads = payloads.compactMap { $0.jsonRepresentation() }
+        let jsonPayloads = payloads.map { $0.jsonRepresentation() }
         Task { @MainActor in
             ingest(metricPayloads: jsonPayloads, diagnosticPayloads: [])
         }
     }
 
     public nonisolated func didReceive(_ payloads: [MXDiagnosticPayload]) {
-        let jsonPayloads = payloads.compactMap { $0.jsonRepresentation() }
+        let jsonPayloads = payloads.map { $0.jsonRepresentation() }
         Task { @MainActor in
             ingest(metricPayloads: [], diagnosticPayloads: jsonPayloads)
         }
