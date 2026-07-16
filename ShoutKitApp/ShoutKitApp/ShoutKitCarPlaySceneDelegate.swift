@@ -54,11 +54,11 @@ final class ShoutKitCarPlaySceneDelegate: UIResponder, CPTemplateApplicationScen
             do {
                 topStations = try await services.directory.topStations(limit: Limits.topStations)
             } catch {
-                guard Task.isCancelled == false else { return }
+                guard !Task.isCancelled else { return }
                 topStations = []
             }
 
-            guard Task.isCancelled == false else { return }
+            guard !Task.isCancelled else { return }
             self.listTemplate?.updateSections(self.sections(topStations: topStations, services: services))
         }
     }
