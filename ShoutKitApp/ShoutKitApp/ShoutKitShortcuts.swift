@@ -140,14 +140,12 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
     @MainActor
     func indexKnownStationsForSpotlight() async {
         let entities = knownStations()
-        guard entities.isEmpty == false else {
-            ShoutKitShortcuts.updateAppShortcutParameters()
-            return
-        }
-        do {
-            try await CSSearchableIndex.default().indexAppEntities(entities)
-        } catch {
-            Self.logger.error("Failed to index Siri stations in Spotlight: \(error, privacy: .public)")
+        if entities.isEmpty == false {
+            do {
+                try await CSSearchableIndex.default().indexAppEntities(entities)
+            } catch {
+                Self.logger.error("Failed to index Siri stations in Spotlight: \(error, privacy: .public)")
+            }
         }
         ShoutKitShortcuts.updateAppShortcutParameters()
     }
