@@ -1,3 +1,4 @@
+import Foundation
 import BrowseFeature
 import DesignSystem
 import LibraryFeature
@@ -56,6 +57,21 @@ struct RootView: View {
                 guard let link else { return }
                 launchRouter.clearPending()
                 handle(link)
+            }
+            .onContinueUserActivity(StationLink.handoffActivityType) { activity in
+                launchRouter.open(userActivity: activity)
+            }
+            .userActivity(
+                StationLink.handoffActivityType,
+                isActive: currentHandoffLink != nil
+            ) { activity in
+                guard let link = currentHandoffLink else { return }
+                let userInfo = link.handoffUserInfo
+                activity.title = "Resume \(link.station.name)"
+                activity.isEligibleForHandoff = true
+                activity.targetContentIdentifier = link.station.id
+                activity.requiredUserInfoKeys = Set(userInfo.keys)
+                activity.userInfo = userInfo
             }
     }
 
@@ -121,6 +137,19 @@ struct RootView: View {
             playback.resume()
         case .idle:
             playback.play(link.station)
+        }
+    }
+
+    private var currentHandoffLink: StationLink? {
+        guard let playback else { return nil }
+
+        switch playback.state {
+        case let .loading(station),
+             let .buffering(station),
+             let .playing(station):
+            return StationLink(station: station)
+        case .idle, .paused, .failed:
+            return nil
         }
     }
 }

@@ -98,7 +98,9 @@ state, with synced album/station artwork). App Intents power Siri/Shortcuts with
 background playback (no app foregrounding); `StationEntity` also conforms to `IndexedEntity` so
 favorited, curated, and recently-played stations land in Spotlight's semantic index, letting Siri
 resolve "play ⟨station⟩" for a station from a previous session. `shoutkit://station?...` deep
-links open the app to a station for promos, notifications, and other launch entry points, and
+links open the app to a station for promos, notifications, and other launch entry points; the app
+also publishes an `NSUserActivity` for the current station so Handoff can resume it on another
+signed-in device; and
 long-pressing Now Playing artwork surfaces a "View in Apple Music" link when a track match is
 found. Later milestones will add a Home Screen quick-play widget and CarPlay — the latter is
 architecturally scoped but deliberately deferred (see [`docs/ROADMAP.md`](docs/ROADMAP.md)).

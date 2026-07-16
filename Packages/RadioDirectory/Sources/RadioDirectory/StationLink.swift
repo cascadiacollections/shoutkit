@@ -9,6 +9,7 @@ import Foundation
 /// directly and never round-trip through a URL.
 public struct StationLink: Equatable, Sendable {
     public static let appScheme = "shoutkit"
+    public static let handoffActivityType = "com.cascadiacollections.shoutkit.station"
 
     public let station: Station
     public let autoPlay: Bool
@@ -76,6 +77,39 @@ public struct StationLink: Equatable, Sendable {
         return url
     }
 
+    public var handoffUserInfo: [String: Any] {
+        let stationSnapshot: Data
+        do {
+            stationSnapshot = try JSONEncoder().encode(station)
+        } catch {
+            preconditionFailure(
+                "StationLink failed to encode handoff snapshot for station '\(station.id)': \(error)"
+            )
+        }
+
+        return [
+            HandoffKey.stationID: station.id,
+            HandoffKey.stationSnapshot: stationSnapshot,
+            HandoffKey.autoPlay: autoPlay,
+            HandoffKey.presentNowPlaying: presentNowPlaying
+        ]
+    }
+
+    public init?(handoffUserInfo userInfo: [AnyHashable: Any]) {
+        guard let stationID = userInfo[HandoffKey.stationID] as? String,
+              let stationSnapshot = userInfo[HandoffKey.stationSnapshot] as? Data,
+              let station = try? JSONDecoder().decode(Station.self, from: stationSnapshot),
+              station.id == stationID else {
+            return nil
+        }
+
+        self.init(
+            station: station,
+            autoPlay: userInfo[HandoffKey.autoPlay] as? Bool ?? true,
+            presentNowPlaying: userInfo[HandoffKey.presentNowPlaying] as? Bool ?? true
+        )
+    }
+
     public var queryItems: [URLQueryItem] {
         var items = [
             URLQueryItem(name: "id", value: station.id),
@@ -131,6 +165,13 @@ public struct StationLink: Equatable, Sendable {
             return nil
         }
     }
+}
+
+private enum HandoffKey {
+    static let stationID = "stationID"
+    static let stationSnapshot = "stationSnapshot"
+    static let autoPlay = "autoPlay"
+    static let presentNowPlaying = "presentNowPlaying"
 }
 
 private extension String {
