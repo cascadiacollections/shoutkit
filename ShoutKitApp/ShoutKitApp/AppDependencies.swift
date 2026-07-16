@@ -285,7 +285,7 @@ final class GeoStationLocationCoordinator: NSObject, CLLocationManagerDelegate {
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         refreshPreciseLocationAuthorization()
-        Task { @MainActor in
+        Task {
             await pushCurrentGeoFilter()
         }
     }
@@ -307,7 +307,7 @@ final class GeoStationLocationCoordinator: NSObject, CLLocationManagerDelegate {
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
-        Task { @MainActor in
+        Task {
             self.logger.error("Location request failed: \(error.localizedDescription, privacy: .public)")
             self.preciseCountryCode = nil
             await self.pushCurrentGeoFilter()
