@@ -22,6 +22,21 @@ struct PlaybackControllerTests {
         #expect(controller.currentStation?.id == "kexp")
     }
 
+    @Test func tapToAudioTraceEndsOnFirstPlayingStatus() async {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station()], output: output)
+
+        controller.tapToAudioPrewarmEnabledProvider = { true }
+        controller.play(station())
+        #expect(controller.tapToAudioTrace != nil)
+
+        await waitForStart(output)
+        #expect(controller.tapToAudioTrace != nil)
+
+        output.onStatusChange?(.playing)
+        #expect(controller.tapToAudioTrace == nil)
+    }
+
     @Test func statusUpdatesDrivePlaybackState() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
