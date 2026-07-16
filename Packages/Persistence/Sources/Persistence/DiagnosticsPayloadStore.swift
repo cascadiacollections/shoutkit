@@ -31,7 +31,7 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
         try self.init(path: Self.defaultDatabasePath().path)
     }
 
-    public func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date = Date()) {
+    public func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date) {
         guard metricPayloads.isEmpty == false || diagnosticPayloads.isEmpty == false else { return }
         do {
             try dbQueue.write { db in
