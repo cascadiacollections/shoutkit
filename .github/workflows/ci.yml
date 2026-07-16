@@ -23,8 +23,11 @@ env:
 jobs:
   host-tests:
     name: Package tests (macOS host)
-    # Needs Xcode 26 / Swift 6.2. Pin a newer image if this one lags.
-    runs-on: macos-26
+    # Needs Xcode 27 / Swift 6.4 (the deployment floor is iOS 27 and the
+    # manifests are swift-tools-version 6.4 — see DECISIONS.md 2026-07-13).
+    # `xcode-27` is GitHub's dedicated Xcode 27 beta image (arm64, macOS 26
+    # base); switch back to plain `macos-26` once Xcode 27 GA lands there.
+    runs-on: xcode-27
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
@@ -34,29 +37,35 @@ jobs:
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
           swift --version
 
+      # --disable-xctest: every package test suite is Swift Testing (no
+      # `import XCTest` anywhere), but `swift test` still runs a legacy XCTest
+      # pass over each bundle — and Xcode 27 beta 3's xctest agent segfaults
+      # (SIGSEGV in type-metadata completion) doing that on the macOS 26
+      # runner. The Swift Testing pass runs all the real tests either way.
+      # Drop the flag once a stable Xcode 27 lands on the runner image.
       - name: RadioDirectory tests
         working-directory: Packages/RadioDirectory
-        run: swift test
+        run: swift test --disable-xctest
 
       - name: Playback tests
         working-directory: Packages/Playback
-        run: swift test
+        run: swift test --disable-xctest
 
       - name: Persistence tests
         working-directory: Packages/Persistence
-        run: swift test
+        run: swift test --disable-xctest
 
       - name: ImageIODownsample tests
         working-directory: Packages/ImageIODownsample
-        run: swift test
+        run: swift test --disable-xctest
 
       - name: FeatureFlags tests
         working-directory: Packages/FeatureFlags
-        run: swift test
+        run: swift test --disable-xctest
 
   build:
     name: Build app + compile Playback tests (iOS Simulator)
-    runs-on: macos-26
+    runs-on: xcode-27
     # Debug + Release builds share one DerivedData root (package resolution
     # and unchanged modules are reused across the pair), but building the app
     # twice still roughly doubles this job's time versus the single-config
@@ -143,7 +152,7 @@ jobs:
 
   lint:
     name: Lint & format
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
