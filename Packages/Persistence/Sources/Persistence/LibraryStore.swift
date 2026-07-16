@@ -193,6 +193,47 @@ public final class LibraryStore {
         setHiddenFromListenNow(false, stationID: stationID)
     }
 
+    /// Favorites in their persisted display order. Used by background refresh to
+    /// re-resolve snapshotted stream URLs without disturbing the user's manual
+    /// arrangement.
+    public func favoriteStations() -> [Station] {
+        let descriptor = FetchDescriptor<FavoriteStation>(
+            sortBy: [SortDescriptor(\.sortIndex, order: .forward)]
+        )
+        return (fetch(descriptor, operation: "fetch favorite stations") ?? []).map(\.station)
+    }
+
+    /// Refreshes the persisted stream-URL snapshot for a station everywhere it is
+    /// stored so playback/prewarm can use the newer endpoint on the next launch.
+    public func refreshStreamURLSnapshot(stationID: String, streamURL: URL) {
+        let streamURLString = streamURL.absoluteString
+        var didChange = false
+
+        let favoritePredicate = #Predicate<FavoriteStation> { $0.stationID == stationID }
+        let favoriteDescriptor = FetchDescriptor<FavoriteStation>(predicate: favoritePredicate)
+        for favorite in fetch(
+            favoriteDescriptor,
+            operation: "refresh favorite stream URL \(sanitizedForLogs(stationID))"
+        ) ?? [] where favorite.streamURLString != streamURLString {
+            favorite.streamURLString = streamURLString
+            didChange = true
+        }
+
+        let recentPredicate = #Predicate<RecentStation> { $0.stationID == stationID }
+        let recentDescriptor = FetchDescriptor<RecentStation>(predicate: recentPredicate)
+        for recent in fetch(
+            recentDescriptor,
+            operation: "refresh recent stream URL \(sanitizedForLogs(stationID))"
+        ) ?? [] where recent.streamURLString != streamURLString {
+            recent.streamURLString = streamURLString
+            didChange = true
+        }
+
+        if didChange {
+            save(operation: "refresh stream URL snapshot \(sanitizedForLogs(stationID))")
+        }
+    }
+
     /// Stream URLs for the stations the user is most likely to play next —
     /// favorites (in their manual order) followed by the most-played recents —
     /// deduplicated and capped at `limit`. Used to prewarm network connections
