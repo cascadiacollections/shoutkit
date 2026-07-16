@@ -141,16 +141,8 @@ struct RootView: View {
     }
 
     private var currentHandoffLink: StationLink? {
-        guard let playback else { return nil }
-
-        switch playback.state {
-        case let .loading(station),
-             let .buffering(station),
-             let .playing(station):
-            return StationLink(station: station)
-        case .idle, .paused, .failed:
-            return nil
-        }
+        guard let station = playback?.state.handoffStation else { return nil }
+        return StationLink(station: station)
     }
 }
 
