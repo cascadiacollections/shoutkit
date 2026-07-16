@@ -230,7 +230,8 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         path: String,
         queryItems: [URLQueryItem]
     ) async throws(RadioDirectoryError) -> [Station] {
-        let geoFilterQueryItemSets = (await geoFilterProvider?.currentGeoFilter()).map { $0.queryItemSets } ?? [[]]
+        let geoFilter = await geoFilterProvider?.currentGeoFilter()
+        let geoFilterQueryItemSets = geoFilter.map { $0.queryItemSets } ?? [[]]
 
         var resultStations: [Station] = []
         for geoFilterQueryItems in geoFilterQueryItemSets {
