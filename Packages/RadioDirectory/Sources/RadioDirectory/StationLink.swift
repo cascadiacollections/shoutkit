@@ -83,7 +83,8 @@ public struct StationLink: Equatable, Sendable {
             stationSnapshot = try JSONEncoder().encode(station)
         } catch {
             preconditionFailure(
-                "StationLink failed to encode handoff snapshot for station '\(station.id)': \(error)"
+                "Fatal: Unable to encode station '\(station.id)' for handoff. " +
+                    "This indicates Station no longer round-trips through Codable: \(error)"
             )
         }
 

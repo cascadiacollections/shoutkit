@@ -3,6 +3,8 @@ import Testing
 
 @testable import Playback
 
+// Shared builders such as station(_) live in PlaybackTestSupport.swift.
+
 struct PlaybackStateTests {
     @Test(arguments: [
         PlaybackState.loading(station()),
