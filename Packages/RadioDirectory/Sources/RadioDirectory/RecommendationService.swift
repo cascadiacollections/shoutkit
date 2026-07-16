@@ -150,7 +150,7 @@ public struct RecommendationService: RecommendationServicing, Sendable {
     /// Used so hashed-token vector slots are stable across runs/devices; Swift's
     /// standard `Hasher` intentionally randomizes seeds between processes.
     private func stableHash(_ value: String) -> UInt64 {
-        let offset: UInt64 = 14695981039346656037 // FNV-1a 64-bit offset basis.
+        let offset: UInt64 = 14695981039346656037 // FNV-1a 64-bit offset base.
         let prime: UInt64 = 1099511628211 // FNV-1a 64-bit prime.
         return value.utf8.reduce(offset) { hash, byte in
             (hash ^ UInt64(byte)) &* prime

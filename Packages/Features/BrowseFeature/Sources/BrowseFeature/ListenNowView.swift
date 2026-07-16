@@ -136,11 +136,25 @@ public struct ListenNowView: View {
         return featureFlags.isEnabled(recommendationsFeature)
     }
 
-    private func recommendationCacheKey(_ loaded: BrowseContent) -> Int {
-        var hasher = Hasher()
-        recents.forEach { hasher.combine($0.stationID) }
-        loaded.stations.forEach { hasher.combine($0.id) }
-        return hasher.finalize()
+    private func recommendationCacheKey(_ loaded: BrowseContent) -> UInt64 {
+        var hash: UInt64 = 14695981039346656037
+        let prime: UInt64 = 1099511628211
+
+        for stationID in recents.map(\.stationID) {
+            for byte in stationID.utf8 {
+                hash = (hash ^ UInt64(byte)) &* prime
+            }
+            hash = (hash ^ 124) &* prime
+        }
+
+        for stationID in loaded.stations.map(\.id) {
+            for byte in stationID.utf8 {
+                hash = (hash ^ UInt64(byte)) &* prime
+            }
+            hash = (hash ^ 124) &* prime
+        }
+
+        return hash
     }
 
     private func popularCarousel(_ loaded: BrowseContent) -> some View {
