@@ -51,8 +51,10 @@ extension PlaybackController {
                 }
                 guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
                 self.resolvedEndpoint = endpoint
+                self.tapToAudioTrace?.markResolved(url: endpoint.url)
                 self.output.start(url: endpoint.url)
                 self.outputStarted = true
+                self.tapToAudioTrace?.markOutputStarted()
                 // Pass the preserved track/art through: on a reconnect the
                 // last-known track must stay on the lock screen while the
                 // stream re-buffers (both are nil on a fresh start anyway).
@@ -80,6 +82,8 @@ extension PlaybackController {
     /// is kept either way so the failed state stays recoverable via
     /// `resume()`/`togglePlayPause()`.
     func handleResolutionFailure(_ error: RadioDirectoryError, for station: Station) {
+        tapToAudioTrace?.cancel()
+        tapToAudioTrace = nil
         let playbackError = PlaybackError.directory(error)
         let fallback = PlaybackState.failed(playbackError)
         if playbackError.isRetryable == false {
@@ -118,18 +122,27 @@ extension PlaybackController {
             // A successful (re)connect clears the budget for the next drop.
             reconnectAttempts = 0
             state = .playing(station)
+            tapToAudioTrace?.completeIfNeeded()
+            tapToAudioTrace = nil
             nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: true, artworkURL: albumArtURL)
         case .paused:
             stallCeilingTimer.cancel()
             // A system-initiated pause (headphones unplugged, route change)
             // must win over a pending auto-reconnect just like a user pause.
             reconnectTimer.cancel()
+            // Any pause before first `.playing` ends the trace: completing it
+            // later would fold the pause duration into `firstPlayingMs`. (Once
+            // `.playing` has happened the trace is already nil.)
+            tapToAudioTrace?.cancel()
+            tapToAudioTrace = nil
             state = .paused(station)
             nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
             schedulePausedRelease()
         case let .failed(playbackError):
             pausedReleaseTimer.cancel()
             stallCeilingTimer.cancel()
+            tapToAudioTrace?.cancel()
+            tapToAudioTrace = nil
             // Tear the dead player down before retrying: a failed AVPlayerItem
             // is unrecoverable, so `resume()` must never find `outputStarted`
             // still true and try to resume it — and on the give-up path the
@@ -239,6 +252,8 @@ extension PlaybackController {
             // Don't let a pending start fire mid-interruption.
             resumeAfterInterruption = true
             resolveTask?.cancel()
+            tapToAudioTrace?.cancel()
+            tapToAudioTrace = nil
             outputStarted = false
             state = .paused(station)
             schedulePausedRelease()
