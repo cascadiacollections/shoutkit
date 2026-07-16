@@ -42,6 +42,8 @@
 		<key>NSAllowsArbitraryLoadsInMedia</key>
 		<true/>
 	</dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>ShoutKit uses your location only after you opt in to refine geo-relevant station filtering.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>SHOUTCAST_DEV_KEY</key>

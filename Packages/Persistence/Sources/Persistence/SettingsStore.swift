@@ -11,6 +11,10 @@ public final class SettingsStore {
         static let playReporting = DefaultsKey<Bool>.plist("settings.playReportingEnabled", default: true)
         static let albumArt = DefaultsKey<Bool>.plist("settings.albumArtEnabled", default: true)
         static let diagnosticsSharing = DefaultsKey<Bool>.plist("settings.diagnosticsSharingEnabled", default: false)
+        static let preciseGeoStationLocation = DefaultsKey<Bool>.plist(
+            "settings.preciseGeoStationLocationEnabled",
+            default: false
+        )
     }
 
     /// Whether plays are reported to Radio-Browser (station UUID only, per that
@@ -35,6 +39,14 @@ public final class SettingsStore {
         didSet { defaults.set(isDiagnosticsSharingEnabled, for: Keys.diagnosticsSharing) }
     }
 
+    /// Whether ShoutKit may request Core Location permission to reverse-geocode
+    /// the current country for geo-station filtering. Defaults to off so the
+    /// locale-based country filter stays permissionless unless the user opts in.
+    /// This only has an effect while the geo-stations feature flag is enabled.
+    public var isPreciseGeoStationLocationEnabled: Bool {
+        didSet { defaults.set(isPreciseGeoStationLocationEnabled, for: Keys.preciseGeoStationLocation) }
+    }
+
     @ObservationIgnored private let defaults: UserDefaults
 
     public init(defaults: UserDefaults = .standard) {
@@ -42,5 +54,6 @@ public final class SettingsStore {
         isPlayReportingEnabled = defaults.value(for: Keys.playReporting)
         isAlbumArtEnabled = defaults.value(for: Keys.albumArt)
         isDiagnosticsSharingEnabled = defaults.value(for: Keys.diagnosticsSharing)
+        isPreciseGeoStationLocationEnabled = defaults.value(for: Keys.preciseGeoStationLocation)
     }
 }

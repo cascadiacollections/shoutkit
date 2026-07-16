@@ -42,6 +42,8 @@ public struct SettingsView: View {
     @ViewBuilder
     private var privacySection: some View {
         if let settings {
+            let isGeoStationsEnabled = featureFlags.isEnabled(FeatureCatalog.geoStations)
+
             Section {
                 Toggle(
                     "Report Plays to Radio-Browser",
@@ -64,6 +66,15 @@ public struct SettingsView: View {
                         set: { settings.isDiagnosticsSharingEnabled = $0 }
                     )
                 )
+                if isGeoStationsEnabled {
+                    Toggle(
+                        "Use Precise Location for Geo Stations",
+                        isOn: Binding(
+                            get: { settings.isPreciseGeoStationLocationEnabled },
+                            set: { settings.isPreciseGeoStationLocationEnabled = $0 }
+                        )
+                    )
+                }
             } header: {
                 Text("Privacy")
             } footer: {
@@ -74,7 +85,11 @@ public struct SettingsView: View {
                 iTunes Search API; turn this off to always show station artwork instead. \
                 Share diagnostics keeps Apple MetricKit crash/hang/energy/disk payloads local \
                 on-device for troubleshooting. They are never sent automatically; export/share \
-                would only happen if you explicitly choose to do that for debugging later. \
+                would only happen if you explicitly choose to do that for debugging later. The \
+                geo-stations feature defaults to your device locale region with no permission \
+                prompt; the optional precise-location toggle asks Apple for location permission \
+                only after you turn it on, and falls back to that locale region if permission \
+                is denied. \
                 ShoutKit has no analytics, no ads, and no accounts.
                 """)
             }

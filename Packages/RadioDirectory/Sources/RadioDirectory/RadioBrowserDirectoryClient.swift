@@ -28,16 +28,19 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     private let hosts: [URL]
     private let transport: any HTTPTransporting
     private let retryPolicy: RetryPolicy
+    private let geoFilterProvider: (any RadioBrowserGeoFilterProviding)?
     private let logger = Logger(subsystem: "ShoutKit.RadioDirectory", category: "RadioBrowserDirectoryClient")
 
     public init(
         hosts: [URL] = RadioBrowserDirectoryClient.defaultHosts,
         transport: any HTTPTransporting = URLSessionHTTPTransport.shared,
-        retryPolicy: RetryPolicy = .default
+        retryPolicy: RetryPolicy = .default,
+        geoFilterProvider: (any RadioBrowserGeoFilterProviding)? = nil
     ) {
         self.hosts = hosts.isEmpty ? RadioBrowserDirectoryClient.defaultHosts : hosts
         self.transport = transport
         self.retryPolicy = retryPolicy
+        self.geoFilterProvider = geoFilterProvider
     }
 
     // MARK: - RadioDirectoryProviding
@@ -62,16 +65,16 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     }
 
     public func topStations(limit: Int) async throws(RadioDirectoryError) -> [Station] {
-        let data = try await request(
-            path: "/json/stations/topclick",
-            queryItems: [
-                URLQueryItem(name: "limit", value: String(max(limit, 1))),
-                URLQueryItem(name: "hidebroken", value: "true")
-            ]
-        )
+        let baseQueryItems = [
+            URLQueryItem(name: "limit", value: String(max(limit, 1))),
+            URLQueryItem(name: "hidebroken", value: "true")
+        ]
 
-        let stations = try decode([RadioBrowserStation].self, from: data)
-        return Array(stations.compactMap(Self.station(from:)).prefix(limit))
+        let stations = try await requestStations(
+            path: "/json/stations/topclick",
+            queryItems: baseQueryItems
+        )
+        return Array(stations.prefix(limit))
     }
 
     public func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
@@ -80,7 +83,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
             return []
         }
 
-        let data = try await request(
+        let stations = try await requestStations(
             path: "/json/stations/search",
             queryItems: [
                 URLQueryItem(name: "name", value: trimmedQuery),
@@ -90,9 +93,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
                 URLQueryItem(name: "reverse", value: "true")
             ]
         )
-
-        let stations = try decode([RadioBrowserStation].self, from: data)
-        return Array(stations.compactMap(Self.station(from:)).prefix(limit))
+        return Array(stations.prefix(limit))
     }
 
     public func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
@@ -102,7 +103,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         }
 
         // Radio-Browser tags are stored lowercase; `genres()` capitalizes for display.
-        let data = try await request(
+        let stations = try await requestStations(
             path: "/json/stations/search",
             queryItems: [
                 URLQueryItem(name: "tag", value: trimmedGenre.lowercased()),
@@ -112,9 +113,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
                 URLQueryItem(name: "reverse", value: "true")
             ]
         )
-
-        let stations = try decode([RadioBrowserStation].self, from: data)
-        return Array(stations.compactMap(Self.station(from:)).prefix(limit))
+        return Array(stations.prefix(limit))
     }
 
     public func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
@@ -225,6 +224,31 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
                 String(localized: "The Radio-Browser response could not be parsed.", bundle: .module)
             )
         }
+    }
+
+    private func requestStations(
+        path: String,
+        queryItems: [URLQueryItem]
+    ) async throws(RadioDirectoryError) -> [Station] {
+        let geoFilter = await geoFilterProvider?.currentGeoFilter()
+        let geoFilterQueryItemSets = geoFilter.map { $0.queryItemSets } ?? [[]]
+
+        var resultStations: [Station] = []
+        for geoFilterQueryItems in geoFilterQueryItemSets {
+            let data = try await request(path: path, queryItems: queryItems + geoFilterQueryItems)
+            let filteredStations = try decode([RadioBrowserStation].self, from: data)
+                .compactMap(Self.station(from:))
+            // Geo filtering is a fallback chain, not a merge: prefer the country
+            // result set when it yields stations, otherwise replace it with the
+            // language-filtered retry.
+            resultStations = filteredStations
+
+            if filteredStations.isEmpty == false || geoFilterQueryItemSets.count == 1 {
+                break
+            }
+        }
+
+        return resultStations
     }
 
     /// Walks the mirror list in order with backoff between attempts, so one dead

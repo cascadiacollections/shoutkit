@@ -50,6 +50,25 @@ struct SettingsStoreTests {
         #expect(reloadedAgain.isAlbumArtEnabled == true)
     }
 
+    @Test func preciseGeoStationLocationDefaultsToDisabled() throws {
+        let store = SettingsStore(defaults: try makeDefaults())
+        #expect(store.isPreciseGeoStationLocationEnabled == false)
+    }
+
+    @Test func preciseGeoStationLocationTogglePersistsAcrossInstances() throws {
+        let defaults = try makeDefaults()
+
+        let store = SettingsStore(defaults: defaults)
+        store.isPreciseGeoStationLocationEnabled = true
+
+        let reloaded = SettingsStore(defaults: defaults)
+        #expect(reloaded.isPreciseGeoStationLocationEnabled == true)
+
+        reloaded.isPreciseGeoStationLocationEnabled = false
+        let reloadedAgain = SettingsStore(defaults: defaults)
+        #expect(reloadedAgain.isPreciseGeoStationLocationEnabled == false)
+    }
+
     @Test func diagnosticsSharingDefaultsToDisabled() throws {
         let store = SettingsStore(defaults: try makeDefaults())
         #expect(store.isDiagnosticsSharingEnabled == false)
