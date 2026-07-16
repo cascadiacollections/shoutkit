@@ -33,7 +33,7 @@ public protocol NowPlayingPresenting: AnyObject {
     func clear()
 }
 
-#if canImport(UIKit)
+#if canImport(UIKit) && !os(watchOS)
 
 /// Bridges playback to the system Now Playing info center and remote command center
 /// (lock screen + Control Center). Commands are forwarded to the supplied closures.

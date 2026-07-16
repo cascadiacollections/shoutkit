@@ -7,7 +7,7 @@ let package = Package(
     defaultLocalization: "en",
     platforms: [
         .iOS(.v27),
-        .watchOS(.v11),
+        .watchOS(.v27),
         // Declared so the controller/state-machine test suite can run on the mac
         // host (`swift test`); the AVPlayer/UIKit-backed production types are
         // gated behind canImport(UIKit) and the app product remains iOS-only.

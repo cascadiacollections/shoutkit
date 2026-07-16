@@ -1,4 +1,4 @@
-#if canImport(UIKit)
+#if canImport(UIKit) && !os(watchOS)
 import AudioStreaming
 import AVFoundation
 import Foundation

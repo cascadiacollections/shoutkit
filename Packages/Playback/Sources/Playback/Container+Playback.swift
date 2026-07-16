@@ -9,7 +9,7 @@ public extension Container {
     @MainActor
     var radioPlaybackEngine: Factory<any RadioPlaybackEngine> {
         self {
-            #if canImport(UIKit)
+            #if canImport(UIKit) && !os(watchOS)
             AudioStreamingPlaybackEngine()
             #else
             StubRadioPlaybackEngine()

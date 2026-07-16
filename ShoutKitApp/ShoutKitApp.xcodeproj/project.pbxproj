@@ -255,7 +255,7 @@
 			children = (
 				1963A2095C47924C91C127EB /* WatchLaunchRoute.swift */,
 			);
-			name = ShoutKitWatchShared;
+			path = ShoutKitWatchShared;
 			sourceTree = "<group>";
 		};
 		9C7B7DC836C5443BAF108187 /* ShoutKitWatchWidgets */ = {
@@ -265,7 +265,7 @@
 				88B8C3C84CECA7AD66E9AADF /* PlayLastComplication.swift */,
 				D56E30839D19FB3015F6195A /* Info.plist */,
 			);
-			name = ShoutKitWatchWidgets;
+			path = ShoutKitWatchWidgets;
 			sourceTree = "<group>";
 		};
 		FDCA08F1A81EA89B4162FCA7 /* ShoutKitWatchApp */ = {
@@ -279,7 +279,7 @@
 				32EABE18A3349085EED4DCB3 /* Info.plist */,
 				4C18DB35ABB3A91A0D192E75 /* Assets.xcassets */,
 			);
-			name = ShoutKitWatchApp;
+			path = ShoutKitWatchApp;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -359,7 +359,7 @@
 			);
 			productName = ShoutKitWatchApp;
 			productReference = 1F9BBE8DA0AFDC04C965EF42 /* ShoutKitWatchApp.app */;
-			productType = "com.apple.product-type.application.watchapp2";
+			productType = "com.apple.product-type.application";
 		};
 		DA0B84EF0EC6D1665CAD9441 /* ShoutKitWatchWidgets */ = {
 			isa = PBXNativeTarget;
@@ -761,7 +761,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+				WATCHOS_DEPLOYMENT_TARGET = 27.0;
 			};
 			name = Debug;
 		};
@@ -781,7 +781,7 @@
 				SKIP_INSTALL = NO;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+				WATCHOS_DEPLOYMENT_TARGET = 27.0;
 			};
 			name = Debug;
 		};
@@ -802,7 +802,7 @@
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				VALIDATE_PRODUCT = YES;
-				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+				WATCHOS_DEPLOYMENT_TARGET = 27.0;
 			};
 			name = Release;
 		};
@@ -823,7 +823,7 @@
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				VALIDATE_PRODUCT = YES;
-				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+				WATCHOS_DEPLOYMENT_TARGET = 27.0;
 			};
 			name = Release;
 		};
