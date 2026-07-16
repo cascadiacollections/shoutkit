@@ -27,7 +27,7 @@ final class ShoutKitCarPlaySceneDelegate: UIResponder, CPTemplateApplicationScen
         let services = AppDependencies.bootstrap()
         let template = CPListTemplate(
             title: "ShoutKit",
-            sections: sections(topStations: nil, services: services)
+            sections: sections(topStations: .loading, services: services)
         )
         listTemplate = template
         interfaceController.setRootTemplate(template, animated: false)
@@ -45,17 +45,26 @@ final class ShoutKitCarPlaySceneDelegate: UIResponder, CPTemplateApplicationScen
         self.interfaceController = nil
     }
 
+    /// Top-station discovery as CarPlay renders it: distinct placeholder rows
+    /// for in-flight and failed loads so a directory outage never masquerades
+    /// as the user having no stations at all.
+    private enum TopStationsState {
+        case loading
+        case loaded([Station])
+        case unavailable
+    }
+
     private func loadTopStations(using services: AppServices) {
         topStationsTask?.cancel()
         topStationsTask = Task { [weak self] in
             guard let self else { return }
 
-            let topStations: [Station]
+            let topStations: TopStationsState
             do {
-                topStations = try await services.directory.topStations(limit: Limits.topStations)
+                topStations = try await .loaded(services.directory.topStations(limit: Limits.topStations))
             } catch {
                 guard !Task.isCancelled else { return }
-                topStations = []
+                topStations = .unavailable
             }
 
             guard !Task.isCancelled else { return }
@@ -63,7 +72,7 @@ final class ShoutKitCarPlaySceneDelegate: UIResponder, CPTemplateApplicationScen
         }
     }
 
-    private func sections(topStations: [Station]?, services: AppServices) -> [CPListSection] {
+    private func sections(topStations: TopStationsState, services: AppServices) -> [CPListSection] {
         let libraryStations = services.libraryStore.rankedStations(limit: Limits.libraryStations)
         let libraryStationIDs = Set(libraryStations.map(\.id))
 
@@ -78,14 +87,11 @@ final class ShoutKitCarPlaySceneDelegate: UIResponder, CPTemplateApplicationScen
             )
         }
 
-        let topSectionItems: [CPListItem]
-        if let topStations {
-            topSectionItems = topStations
-                .filter { libraryStationIDs.contains($0.id) == false }
-                .map { stationItem(for: $0, services: services) }
-        } else {
-            topSectionItems = [CPListItem(text: "Loading Top Stations…", detailText: nil)]
-        }
+        let topSectionItems = topStationItems(
+            for: topStations,
+            excluding: libraryStationIDs,
+            services: services
+        )
 
         if topSectionItems.isEmpty == false {
             sections.append(
@@ -115,13 +121,31 @@ final class ShoutKitCarPlaySceneDelegate: UIResponder, CPTemplateApplicationScen
         return sections
     }
 
+    private func topStationItems(
+        for topStations: TopStationsState,
+        excluding libraryStationIDs: Set<String>,
+        services: AppServices
+    ) -> [CPListItem] {
+        switch topStations {
+        case let .loaded(stations):
+            return stations
+                .filter { libraryStationIDs.contains($0.id) == false }
+                .map { stationItem(for: $0, services: services) }
+        case .loading:
+            return [CPListItem(text: "Loading Top Stations…", detailText: nil)]
+        case .unavailable:
+            return [
+                CPListItem(
+                    text: "Top Stations Unavailable",
+                    detailText: "Couldn't reach the station directory. Check the connection and try again."
+                )
+            ]
+        }
+    }
+
     private func stationItem(for station: Station, services: AppServices) -> CPListItem {
-        CPListItem(
-            text: station.name,
-            detailText: station.genre,
-            image: nil,
-            showsDisclosureIndicator: false
-        ) { [weak self] _, completion in
+        let item = CPListItem(text: station.name, detailText: station.genre)
+        item.handler = { [weak self] _, completion in
             guard let self else {
                 completion()
                 return
@@ -132,7 +156,7 @@ final class ShoutKitCarPlaySceneDelegate: UIResponder, CPTemplateApplicationScen
                 switch playback.phase(for: station) {
                 case .paused, .failed:
                     playback.resume()
-                case .idle, .loading, .buffering, .playing:
+                case .idle, .loading, .playing:
                     break
                 }
             } else {
@@ -142,6 +166,7 @@ final class ShoutKitCarPlaySceneDelegate: UIResponder, CPTemplateApplicationScen
             self.interfaceController?.presentTemplate(self.nowPlayingTemplate, animated: true)
             completion()
         }
+        return item
     }
 }
 #endif
