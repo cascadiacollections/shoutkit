@@ -3,12 +3,9 @@ import DesignSystem
 import FeatureFlags
 import Foundation
 import NowPlayingActivityKit
-import Observation
-import OSLog
 import Persistence
 import Playback
 import RadioDirectory
-import CoreLocation
 import SwiftData
 
 /// Everything the app constructs exactly once and shares between the SwiftUI
@@ -49,28 +46,7 @@ enum AppDependencies {
             return services
         }
 
-        // Debug-only: route the shared HTTP transport through Pulse's logging
-        // proxy. Must run before anything below issues a network request, since
-        // the first touch of `URLSessionHTTPTransport.shared` locks the session in.
-        DebugNetworkInspection.install()
-
-        // Install the latency-tuned session as `shared` (fail-fast when offline,
-        // responsive-data service type). First-write-wins, so in Debug the Pulse
-        // session installed just above already holds the slot — it's built from
-        // the same tuned configuration, so behaviour matches Release either way.
-        URLSessionHTTPTransport.installSharedSession(
-            URLSession(configuration: URLSessionHTTPTransport.interactiveConfiguration())
-        )
-
-        // Size the shared URL cache for RAM-constrained devices: raw bytes
-        // (artwork, directory JSON) belong on disk — cheap, and they survive
-        // relaunch — while the in-memory tier stays small; decoded bitmaps
-        // have their own bounded caches in DesignSystem. Set here, before the
-        // first request, so every `URLSession.shared` consumer picks it up.
-        URLCache.shared = URLCache(
-            memoryCapacity: 2 * 1024 * 1024,
-            diskCapacity: 64 * 1024 * 1024
-        )
+        installSharedNetworking()
 
         let container = ShoutKitModelContainer.makeContainer()
         let store = LibraryStore(context: container.mainContext)
@@ -118,16 +94,47 @@ enum AppDependencies {
             activityCoordinator: activityCoordinator,
             stationLaunchRouter: StationLaunchRouter()
         )
-        // Push known stations (favorites, curated, recents) into Spotlight's
-        // semantic index once per launch so Siri can resolve "play ⟨station⟩"
-        // for a station from a previous session.
+        scheduleLaunchWarmups(store: store, featureFlags: featureFlags)
+
+        Self.services = services
+        return services
+    }
+
+    /// Debug-only Pulse proxying, the latency-tuned shared session, and the
+    /// shared URL cache sizing. Must run before anything issues a network
+    /// request, since the first touch of `URLSessionHTTPTransport.shared`
+    /// locks the session in (first-write-wins, so in Debug the Pulse session
+    /// installed first holds the slot — it's built from the same tuned
+    /// configuration, so behaviour matches Release either way).
+    private static func installSharedNetworking() {
+        DebugNetworkInspection.install()
+
+        // Fail-fast when offline, responsive-data service type.
+        URLSessionHTTPTransport.installSharedSession(
+            URLSession(configuration: URLSessionHTTPTransport.interactiveConfiguration())
+        )
+
+        // Size the shared URL cache for RAM-constrained devices: raw bytes
+        // (artwork, directory JSON) belong on disk — cheap, and they survive
+        // relaunch — while the in-memory tier stays small; decoded bitmaps
+        // have their own bounded caches in DesignSystem. Set before the first
+        // request, so every `URLSession.shared` consumer picks it up.
+        URLCache.shared = URLCache(
+            memoryCapacity: 2 * 1024 * 1024,
+            diskCapacity: 64 * 1024 * 1024
+        )
+    }
+
+    /// Launch-time, fire-and-forget warmups: Spotlight indexing of known
+    /// stations (so Siri can resolve "play ⟨station⟩" from a previous session)
+    /// and the flag-gated network-path prewarm for the user's top stations.
+    private static func scheduleLaunchWarmups(store: LibraryStore, featureFlags: any FeatureFlagProviding) {
         Task {
             await StationEntityQuery().indexKnownStationsForSpotlight()
         }
 
-        // Prewarm the network path to the user's most-played/favorited stations
-        // so the first tap skips a cold DNS lookup + TLS handshake. Gated behind
-        // an internal flag; a no-op when the user has no snapshotted stations.
+        // Prewarm skips a cold DNS lookup + TLS handshake on the first tap.
+        // A no-op when the user has no snapshotted stations.
         if featureFlags.isEnabled(FeatureCatalog.prewarmStations) {
             let prewarmURLs = store.prewarmStreamURLs(limit: 5)
             if prewarmURLs.isEmpty == false {
@@ -137,9 +144,6 @@ enum AppDependencies {
                 }
             }
         }
-
-        Self.services = services
-        return services
     }
 
     /// Radio-Browser (free, open source, keyless) is the default discovery
@@ -275,141 +279,5 @@ enum AppDependencies {
         }
 
         return trimmedAPIKey
-    }
-}
-
-// @preconcurrency: CLLocationManagerDelegate's requirements are nonisolated,
-// but the manager is created on the main actor, so Core Location delivers its
-// callbacks on the main run loop — the conformance's runtime isolation check
-// always holds.
-@MainActor
-final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationManagerDelegate {
-    private let settings: SettingsStore
-    private let featureFlags: any FeatureFlagProviding
-    private let geoFilterProvider: MutableRadioBrowserGeoFilterProvider
-    private let locationManager = CLLocationManager()
-    private let geocoder = CLGeocoder()
-    private let logger = Logger(subsystem: "ShoutKit.App", category: "GeoStationLocationCoordinator")
-    private let geoStationsFeature = FeatureCatalog.geoStations
-    private var observationTask: Task<Void, Never>?
-    private var preciseCountryCode: String?
-
-    init(
-        settings: SettingsStore,
-        featureFlags: any FeatureFlagProviding,
-        geoFilterProvider: MutableRadioBrowserGeoFilterProvider
-    ) {
-        self.settings = settings
-        self.featureFlags = featureFlags
-        self.geoFilterProvider = geoFilterProvider
-        super.init()
-        locationManager.delegate = self
-        observeSettings()
-        Task { @MainActor [weak self] in
-            await self?.refreshFilteringState()
-        }
-    }
-
-    deinit {
-        observationTask?.cancel()
-    }
-
-    private func observeSettings() {
-        observationTask = Task { [weak self] in
-            guard let self else { return }
-            let changes = Observations {
-                (
-                    self.settings.isPreciseGeoStationLocationEnabled,
-                    self.featureFlags.isEnabled(self.geoStationsFeature)
-                )
-            }
-
-            for await _ in changes {
-                await refreshFilteringState()
-            }
-        }
-    }
-
-    private func refreshFilteringState() async {
-        guard featureFlags.isEnabled(geoStationsFeature) else {
-            preciseCountryCode = nil
-            await geoFilterProvider.setCurrentGeoFilter(nil)
-            return
-        }
-
-        if settings.isPreciseGeoStationLocationEnabled {
-            refreshPreciseLocationAuthorization()
-        } else {
-            preciseCountryCode = nil
-        }
-
-        await pushCurrentGeoFilter()
-    }
-
-    private func refreshPreciseLocationAuthorization() {
-        switch locationManager.authorizationStatus {
-        case .notDetermined:
-            locationManager.requestWhenInUseAuthorization()
-        case .authorizedWhenInUse, .authorizedAlways:
-            locationManager.requestLocation()
-        case .denied, .restricted:
-            preciseCountryCode = nil
-        @unknown default:
-            preciseCountryCode = nil
-        }
-    }
-
-    private func pushCurrentGeoFilter() async {
-        // Re-check the flag: async delegate/geocoder callbacks can land after
-        // the feature was turned off, and must not re-install a filter.
-        guard featureFlags.isEnabled(geoStationsFeature) else {
-            await geoFilterProvider.setCurrentGeoFilter(nil)
-            return
-        }
-
-        let preciseCountryOverride = settings.isPreciseGeoStationLocationEnabled ? preciseCountryCode : nil
-        let geoFilter = RadioBrowserGeoFilter(
-            locale: .current,
-            countryCodeOverride: preciseCountryOverride
-        )
-        await geoFilterProvider.setCurrentGeoFilter(geoFilter)
-    }
-
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        // Core Location invokes this as soon as the delegate is assigned (i.e.
-        // at every launch). Without the opt-in gate, the `.notDetermined`
-        // branch below would prompt for location permission on first launch
-        // even though the user never enabled precise geo stations.
-        guard featureFlags.isEnabled(geoStationsFeature),
-              settings.isPreciseGeoStationLocationEnabled else { return }
-
-        refreshPreciseLocationAuthorization()
-        Task {
-            await pushCurrentGeoFilter()
-        }
-    }
-
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last else { return }
-
-        geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, error in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                if let error {
-                    self.logger.error("Reverse geocoding failed: \(error.localizedDescription, privacy: .public)")
-                } else {
-                    self.preciseCountryCode = placemarks?.first?.isoCountryCode
-                }
-                await self.pushCurrentGeoFilter()
-            }
-        }
-    }
-
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
-        Task { @MainActor in
-            self.logger.error("Location request failed: \(error.localizedDescription, privacy: .public)")
-            self.preciseCountryCode = nil
-            await self.pushCurrentGeoFilter()
-        }
     }
 }

@@ -23,8 +23,11 @@ env:
 jobs:
   host-tests:
     name: Package tests (macOS host)
-    # Needs Xcode 26 / Swift 6.2. Pin a newer image if this one lags.
-    runs-on: macos-26
+    # Needs Xcode 27 / Swift 6.4 (the deployment floor is iOS 27 and the
+    # manifests are swift-tools-version 6.4 — see DECISIONS.md 2026-07-13).
+    # `xcode-27` is GitHub's dedicated Xcode 27 beta image (arm64, macOS 26
+    # base); switch back to plain `macos-26` once Xcode 27 GA lands there.
+    runs-on: xcode-27
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
@@ -56,7 +59,7 @@ jobs:
 
   build:
     name: Build app + compile Playback tests (iOS Simulator)
-    runs-on: macos-26
+    runs-on: xcode-27
     # Debug + Release builds share one DerivedData root (package resolution
     # and unchanged modules are reused across the pair), but building the app
     # twice still roughly doubles this job's time versus the single-config
@@ -143,7 +146,7 @@ jobs:
 
   lint:
     name: Lint & format
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
