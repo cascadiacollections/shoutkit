@@ -6,15 +6,16 @@ import RadioDirectory
 
 @MainActor
 final class BackgroundRefreshController {
+    private static let defaultBundleIdentifier = "com.cascadiacollections.shoutkit"
     private static let secondsPerHour: TimeInterval = 3600
     private static let taskIdentifierSuffix = ".app-refresh"
     private static let topStationsLimit = 24
-    /// Refresh every few hours: often enough to keep directory snapshots warm,
+    /// Refresh every 4 hours: often enough to keep directory snapshots warm,
     /// infrequent enough to stay firmly in "best effort" territory.
     private static let refreshInterval: TimeInterval = 4 * secondsPerHour
 
     static var taskIdentifier: String {
-        let bundleIdentifier = Bundle.main.bundleIdentifier ?? "com.cascadiacollections.shoutkit"
+        let bundleIdentifier = Bundle.main.bundleIdentifier ?? Self.defaultBundleIdentifier
         return "\(bundleIdentifier)\(taskIdentifierSuffix)"
     }
 
