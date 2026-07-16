@@ -126,7 +126,9 @@ final class BackgroundRefreshController {
             _ = try await directory.topStations(limit: Self.topStationsLimit)
             return true
         } catch let error as RadioDirectoryError {
-            logger.debug("Background refresh failed to warm top stations: \(String(describing: error), privacy: .public)")
+            logger.debug(
+                "Background refresh failed to warm top stations: \(String(describing: error), privacy: .public)"
+            )
             return false
         } catch {
             logger.debug(
