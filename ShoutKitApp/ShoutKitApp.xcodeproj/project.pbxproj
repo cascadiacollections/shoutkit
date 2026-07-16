@@ -11,6 +11,7 @@
 		000000000000000000000021 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000011 /* RootView.swift */; };
 		000000000000000000000022 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000012 /* AppDependencies.swift */; };
 		0000000000000000000000B1 /* GeoStationLocationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000B0 /* GeoStationLocationCoordinator.swift */; };
+		0000000000000000000000B3 /* ShoutKitAudioIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000B2 /* ShoutKitAudioIntents.swift */; };
 		000000000000000000000023 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000014 /* Assets.xcassets */; };
 		000000000000000000000024 /* ShoutKitShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000018 /* ShoutKitShortcuts.swift */; };
 		000000000000000000000091 /* StationLaunchRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000090 /* StationLaunchRouter.swift */; };
@@ -65,6 +66,7 @@
 		000000000000000000000011 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		000000000000000000000012 /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
 		0000000000000000000000B0 /* GeoStationLocationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoStationLocationCoordinator.swift; sourceTree = "<group>"; };
+		0000000000000000000000B2 /* ShoutKitAudioIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoutKitAudioIntents.swift; sourceTree = "<group>"; };
 		000000000000000000000013 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		000000000000000000000014 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		000000000000000000000015 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
@@ -141,6 +143,7 @@
 				000000000000000000000011 /* RootView.swift */,
 				000000000000000000000012 /* AppDependencies.swift */,
 				0000000000000000000000B0 /* GeoStationLocationCoordinator.swift */,
+				0000000000000000000000B2 /* ShoutKitAudioIntents.swift */,
 				000000000000000000000018 /* ShoutKitShortcuts.swift */,
 				000000000000000000000090 /* StationLaunchRouter.swift */,
 				000000000000000000000013 /* Info.plist */,
@@ -322,6 +325,7 @@
 				000000000000000000000026 /* WelcomeOverlayView.swift in Sources */,
 				000000000000000000000022 /* AppDependencies.swift in Sources */,
 				0000000000000000000000B1 /* GeoStationLocationCoordinator.swift in Sources */,
+				0000000000000000000000B3 /* ShoutKitAudioIntents.swift in Sources */,
 				000000000000000000000024 /* ShoutKitShortcuts.swift in Sources */,
 				000000000000000000000091 /* StationLaunchRouter.swift in Sources */,
 			);
