@@ -257,8 +257,8 @@ final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationM
             guard let self else { return }
             let changes = Observations {
                 (
-                    settings.isPreciseGeoStationLocationEnabled,
-                    featureFlags.isEnabled(geoStationsFeature)
+                    self.settings.isPreciseGeoStationLocationEnabled,
+                    self.featureFlags.isEnabled(self.geoStationsFeature)
                 )
             }
 
