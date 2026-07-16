@@ -73,6 +73,9 @@ final class BackgroundRefreshController {
     private func runRefresh() async -> Bool {
         guard Task.isCancelled == false else { return false }
 
+        // `bootstrap()` is app-global and idempotent: foreground launches reuse
+        // the existing dependency graph, while a background-only launch rebuilds
+        // the same single set of services the app would normally construct.
         let services = AppDependencies.bootstrap()
         let favoriteStations = services.libraryStore.favoriteStations()
 
