@@ -44,6 +44,7 @@ private struct FeatureFlagRow: View {
     let featureFlags: any FeatureFlagProviding
 
     var body: some View {
+        let isEnabled = featureFlags.isEnabled(feature)
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -54,13 +55,9 @@ private struct FeatureFlagRow: View {
                         .monospaced()
                 }
                 Spacer()
-                Image(
-                    systemName: featureFlags.isEnabled(feature)
-                        ? "checkmark.circle.fill"
-                        : "xmark.circle"
-                )
-                .foregroundStyle(featureFlags.isEnabled(feature) ? Color.green : Color.secondary)
-                .accessibilityLabel(featureFlags.isEnabled(feature) ? "Resolved: enabled" : "Resolved: disabled")
+                Image(systemName: isEnabled ? "checkmark.circle.fill" : "xmark.circle")
+                    .foregroundStyle(isEnabled ? Color.green : Color.secondary)
+                    .accessibilityLabel(isEnabled ? "Resolved: enabled" : "Resolved: disabled")
             }
             Text(feature.summary)
                 .font(.footnote)
