@@ -6,6 +6,7 @@ let package = Package(
     name: "Persistence",
     platforms: [
         .iOS(.v27),
+        .watchOS(.v27),
         // Declared so the pure-SwiftData test suite can run on the mac host
         // (`swift test`); the app product itself remains iOS-only.
         .macOS(.v15)

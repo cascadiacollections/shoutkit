@@ -229,6 +229,21 @@ struct LibraryStoreTests {
         #expect(recents.first?.stationID == "a")
     }
 
+    @Test func mostRecentStationReturnsNewestPlay() {
+        let (store, _) = makeStoreAndContext()
+
+        store.logRecent(station("a"))
+        store.logRecent(station("b"))
+
+        #expect(store.mostRecentStation()?.id == "b")
+    }
+
+    @Test func mostRecentStationReturnsNilWithoutHistory() {
+        let (store, _) = makeStoreAndContext()
+
+        #expect(store.mostRecentStation() == nil)
+    }
+
     // MARK: - Play count
 
     @Test func firstPlayStartsCountAtOne() throws {

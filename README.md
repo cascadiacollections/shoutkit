@@ -52,11 +52,13 @@ SHOUTCAST_DEV_KEY = your_key_here
 
 ## Architecture
 
-- `ShoutKitApp`: thin SwiftUI app target — app-level wiring (`AppDependencies.bootstrap()`
-  constructs the shared service graph once, for both the scene and App Intents), the 4-tab root
-  shell (Listen Now · Browse · Search · Favorites) with the persistent mini-player, and
+- `ShoutKitApp`: thin SwiftUI app targets — the iPhone/iPad app keeps app-level wiring in
+  `AppDependencies.bootstrap()` (shared between the scene and App Intents), while the watch app
+  carries a separate minimal service graph for native watch playback. The phone app provides the
+  4-tab root shell (Listen Now · Browse · Search · Favorites) with the persistent mini-player and
   Siri/Shortcuts (`PlayStationIntent` with a station entity resolved from favorites, recents,
-  curated stations, and live search).
+  curated stations, and live search); the watch companion focuses on now playing, recent stations,
+  and a complication quick-start path.
 - `Packages/DesignSystem`: Liquid Glass-aware reusable SwiftUI surfaces (station rows/cards/
   carousel, artwork, playing indicator) and design tokens, with Reduce Transparency/Increase
   Contrast fallbacks.
@@ -91,19 +93,21 @@ implementation details stay behind protocol or actor boundaries.
 
 ## Capabilities
 
-The app `Info.plist` declares `UIBackgroundModes = audio` for streaming playback and
+The phone app `Info.plist` declares `UIBackgroundModes = audio` for streaming playback and
 `NSSupportsLiveActivities` for the lock screen / Dynamic Island now-playing Live Activity (the
 `ShoutKitWidgets` extension target, driven by `NowPlayingActivityCoordinator` from playback
-state, with synced album/station artwork). App Intents power Siri/Shortcuts with headless
-background playback (no app foregrounding); `StationEntity` also conforms to `IndexedEntity` so
-favorited, curated, and recently-played stations land in Spotlight's semantic index, letting Siri
-resolve "play ⟨station⟩" for a station from a previous session. `shoutkit://station?...` deep
-links open the app to a station for promos, notifications, and other launch entry points; the app
-also publishes an `NSUserActivity` for the current station so Handoff can resume it on another
-signed-in device; and
-long-pressing Now Playing artwork surfaces a "View in Apple Music" link when a track match is
-found. Later milestones will add a Home Screen quick-play widget and CarPlay — the latter is
-architecturally scoped but deliberately deferred (see [`docs/ROADMAP.md`](docs/ROADMAP.md)).
+state, with synced album/station artwork). The watch app adds a native watchOS now-playing +
+recents surface plus a one-tap "Play Last" complication that deep-links into watch playback.
+App Intents power Siri/Shortcuts with headless background playback (no app foregrounding);
+`StationEntity` also conforms to `IndexedEntity` so favorited, curated, and recently-played
+stations land in Spotlight's semantic index, letting Siri resolve "play ⟨station⟩" for a station
+from a previous session. `shoutkit://station?...` deep links open the phone app to a station for
+promos, notifications, and other launch entry points; the app also publishes an `NSUserActivity`
+for the current station so Handoff can resume it on another signed-in device; and long-pressing
+Now Playing artwork
+surfaces a "View in Apple Music" link when a track match is found. Later milestones will add a
+Home Screen quick-play widget and CarPlay — the latter is architecturally scoped but deliberately
+deferred (see [`docs/ROADMAP.md`](docs/ROADMAP.md)).
 
 ## Privacy
 

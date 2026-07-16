@@ -1,5 +1,10 @@
 # Decisions
 
+## 2026-07-16 (watchOS companion app)
+
+- Chose **watch-native streaming** for the first Apple Watch companion instead of relaying audio from the phone. `PlaybackController` already only depends on the `AudioOutput` and `NowPlayingPresenting` seams, so a tiny watch-local `AVPlayer` engine reuses the same controller and `RecentStation` snapshots without adding a WatchConnectivity relay protocol or a paired-device availability state machine.
+- Kept the watch surface intentionally narrow: a recent-stations list, a minimal now-playing controller, and a complication that deep-links straight into "play last station." That keeps the first implementation small while making the watch's audio-ownership model obvious in code.
+
 ## 2026-07-16 (Siri warmupAudioQueue prewarm hook)
 
 The deferred `AppSchema.audio.warmupAudioQueue` hook from the 2026-07-15
