@@ -50,6 +50,13 @@ public final class RecentStation {
     @Attribute(.unique) public var stationID: String
     public var name: String
     public var genre: String
+    public var tagsCSV: String?
+    public var country: String?
+    public var codec: String?
+    public var language: String?
+    public var clickTrend: Int?
+    public var votes: Int?
+    public var bitrate: Int?
     public var artworkURLString: String?
     public var streamURLString: String?
     public var playedAt: Date
@@ -58,6 +65,13 @@ public final class RecentStation {
         stationID: String,
         name: String,
         genre: String,
+        tagsCSV: String? = nil,
+        country: String? = nil,
+        codec: String? = nil,
+        language: String? = nil,
+        clickTrend: Int? = nil,
+        votes: Int? = nil,
+        bitrate: Int? = nil,
         artworkURLString: String? = nil,
         streamURLString: String? = nil,
         playedAt: Date = .now
@@ -65,6 +79,13 @@ public final class RecentStation {
         self.stationID = stationID
         self.name = name
         self.genre = genre
+        self.tagsCSV = tagsCSV
+        self.country = country
+        self.codec = codec
+        self.language = language
+        self.clickTrend = clickTrend
+        self.votes = votes
+        self.bitrate = bitrate
         self.artworkURLString = artworkURLString
         self.streamURLString = streamURLString
         self.playedAt = playedAt
@@ -75,7 +96,14 @@ public final class RecentStation {
             id: stationID,
             name: name,
             genre: genre,
+            tags: tagsCSV?.split(separator: ",").map(String.init),
+            country: country,
+            codec: codec,
+            language: language,
             listenerCount: 0,
+            bitrate: bitrate,
+            clickTrend: clickTrend,
+            votes: votes,
             artworkURL: artworkURLString.flatMap(URL.init(string:)),
             preferredStreamURL: streamURLString.flatMap(URL.init(string:))
         )

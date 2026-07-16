@@ -18,8 +18,11 @@ func decodesRadioBrowserStationJSON() throws {
         "tags": "alternative rock,indie,live",
         "country": "The United States Of America",
         "codec": "MP3",
+        "language": "english",
         "bitrate": 128,
-        "clickcount": 26
+        "clickcount": 26,
+        "clicktrend": 7,
+        "votes": 42
     }]
     """
 
@@ -30,7 +33,13 @@ func decodesRadioBrowserStationJSON() throws {
     #expect(station.id == "6a7508a9-27ab-11e8-91bf-52543be04c81")
     #expect(station.name == "KEXP 90.3 Seattle, WA")
     #expect(station.genre == "Alternative Rock")
+    #expect(station.tags == ["alternative rock", "indie", "live"])
+    #expect(station.country == "The United States Of America")
+    #expect(station.codec == "MP3")
+    #expect(station.language == "english")
     #expect(station.bitrate == 128)
+    #expect(station.clickTrend == 7)
+    #expect(station.votes == 42)
     #expect(station.preferredStreamURL?.absoluteString == "http://live-mp3-128.kexp.org/kexp128.mp3")
 }
 

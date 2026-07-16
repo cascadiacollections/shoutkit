@@ -177,8 +177,14 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
             id: dto.stationuuid,
             name: StationNameFormatter.normalize(name),
             genre: genre(from: dto),
+            tags: tags(from: dto),
+            country: normalizedValue(dto.country),
+            codec: normalizedValue(dto.codec)?.uppercased(),
+            language: normalizedValue(dto.language),
             listenerCount: 0,
             bitrate: (dto.bitrate ?? 0) > 0 ? dto.bitrate : nil,
+            clickTrend: dto.clicktrend,
+            votes: dto.votes,
             artworkURL: artworkURL(from: dto.favicon),
             preferredStreamURL: streamURL
         )
@@ -196,6 +202,19 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
 
         let country = dto.country?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return country.isEmpty ? "Radio" : country
+    }
+
+    static func tags(from dto: RadioBrowserStation) -> [String]? {
+        let parsed = dto.tags?
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { $0.isEmpty == false }
+        return parsed?.isEmpty == false ? parsed : nil
+    }
+
+    static func normalizedValue(_ value: String?) -> String? {
+        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     /// Favicons are frequently plain http://, which ATS blocks for image loads
@@ -309,8 +328,11 @@ struct RadioBrowserStation: Decodable {
     let tags: String?
     let country: String?
     let codec: String?
+    let language: String?
     let bitrate: Int?
     let clickcount: Int?
+    let clicktrend: Int?
+    let votes: Int?
 
     enum CodingKeys: String, CodingKey {
         case stationuuid
@@ -321,8 +343,11 @@ struct RadioBrowserStation: Decodable {
         case tags
         case country
         case codec
+        case language
         case bitrate
         case clickcount
+        case clicktrend
+        case votes
     }
 }
 

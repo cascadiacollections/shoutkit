@@ -1,0 +1,163 @@
+import Accelerate
+import FactoryKit
+import Foundation
+
+public struct StationRecommendation: Equatable, Sendable {
+    public let station: Station
+    public let score: Double
+
+    public init(station: Station, score: Double) {
+        self.station = station
+        self.score = score
+    }
+}
+
+public protocol RecommendationServicing: Sendable {
+    func moreLikeThis(
+        from history: [Station],
+        candidates: [Station],
+        limit: Int
+    ) -> [StationRecommendation]
+}
+
+public struct RecommendationService: RecommendationServicing, Sendable {
+    public struct Configuration: Equatable, Sendable {
+        public let popularityWeight: Double
+
+        public init(popularityWeight: Double = 0.2) {
+            self.popularityWeight = min(max(popularityWeight, 0), 1)
+        }
+    }
+
+    private let configuration: Configuration
+
+    public init(configuration: Configuration = Configuration()) {
+        self.configuration = configuration
+    }
+
+    public func moreLikeThis(
+        from history: [Station],
+        candidates: [Station],
+        limit: Int
+    ) -> [StationRecommendation] {
+        guard limit > 0, history.isEmpty == false, candidates.isEmpty == false else { return [] }
+
+        let historyIDs = Set(history.map(\.id))
+        let scoredCandidates = candidates.filter { historyIDs.contains($0.id) == false }
+        guard scoredCandidates.isEmpty == false else { return [] }
+
+        let popularityScores = normalizedPopularityScores(for: scoredCandidates)
+        let recencyWeights = recencyWeights(for: history.count)
+        let historyVectors = history.map(stationVector(from:))
+
+        let ranked = scoredCandidates.enumerated().map { index, station -> StationRecommendation in
+            let candidateVector = stationVector(from: station)
+            let similarity = zip(historyVectors, recencyWeights).reduce(0.0) { partial, pair in
+                partial + cosineSimilarity(candidateVector, pair.0) * pair.1
+            }
+            let popularity = popularityScores[index]
+            let blended = (1 - configuration.popularityWeight) * similarity
+                + configuration.popularityWeight * popularity
+            return StationRecommendation(station: station, score: blended)
+        }
+
+        return Array(ranked.sorted {
+            if $0.score == $1.score {
+                return $0.station.id < $1.station.id
+            }
+            return $0.score > $1.score
+        }.prefix(limit))
+    }
+
+    private func normalizedPopularityScores(for stations: [Station]) -> [Double] {
+        let rawScores = stations.map { station in
+            let clickTrend = Double(max(station.clickTrend ?? 0, 0))
+            let votes = Double(max(station.votes ?? 0, 0))
+            return log1p(clickTrend) + log1p(votes)
+        }
+        guard let min = rawScores.min(), let max = rawScores.max(), max > min else {
+            return Array(repeating: 0, count: rawScores.count)
+        }
+
+        return rawScores.map { ($0 - min) / (max - min) }
+    }
+
+    private func recencyWeights(for count: Int) -> [Double] {
+        let descending = Array((1...count).reversed()).map(Double.init)
+        let total = descending.reduce(0, +)
+        guard total > 0 else { return Array(repeating: 0, count: count) }
+        return descending.map { $0 / total }
+    }
+
+    private func stationVector(from station: Station) -> [Float] {
+        var vector = Array(repeating: Float(0), count: 96)
+        let slots = 92
+
+        for token in stationTokens(from: station) {
+            let index = Int(stableHash(token) % UInt64(slots))
+            vector[index] += 1
+        }
+
+        if let bitrate = station.bitrate, bitrate > 0 {
+            vector[92] = min(Float(bitrate) / 320, 1)
+        }
+
+        vector[93] = station.codec?.localizedCaseInsensitiveContains("aac") == true ? 1 : 0
+        vector[94] = station.codec?.localizedCaseInsensitiveContains("mp3") == true ? 1 : 0
+        vector[95] = station.codec?.localizedCaseInsensitiveContains("opus") == true ? 1 : 0
+        return vector
+    }
+
+    private func stationTokens(from station: Station) -> [String] {
+        var tokens: [String] = []
+        tokens.append("genre:\(normalizedToken(station.genre))")
+        tokens.append(contentsOf: (station.tags ?? []).map { "tag:\(normalizedToken($0))" })
+
+        if let country = station.country {
+            tokens.append("country:\(normalizedToken(country))")
+        }
+        if let language = station.language {
+            tokens.append("language:\(normalizedToken(language))")
+        }
+        if let codec = station.codec {
+            tokens.append("codec:\(normalizedToken(codec))")
+        }
+        return tokens
+    }
+
+    private func cosineSimilarity(_ lhs: [Float], _ rhs: [Float]) -> Double {
+        let dot = vDSP.dot(lhs, rhs)
+        let lhsMagnitude = sqrt(vDSP.dot(lhs, lhs))
+        let rhsMagnitude = sqrt(vDSP.dot(rhs, rhs))
+        guard lhsMagnitude > 0, rhsMagnitude > 0 else { return 0 }
+        return Double(dot / (lhsMagnitude * rhsMagnitude))
+    }
+
+    private func normalizedToken(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+    }
+
+    /// FNV-1a (64-bit), deterministic across launches/processes.
+    private func stableHash(_ value: String) -> UInt64 {
+        let offset: UInt64 = 14_695_981_039_346_656_037
+        let prime: UInt64 = 1_099_511_628_211
+        return value.utf8.reduce(offset) { hash, byte in
+            (hash ^ UInt64(byte)) &* prime
+        }
+    }
+}
+
+public extension Container {
+    var recommendationService: Factory<any RecommendationServicing> {
+        self { RecommendationService() }
+            .scope(.singleton)
+            .onPreview { RecommendationService() }
+            .onTest { RecommendationService() }
+    }
+}
+
+public func sharedRecommendationService() -> any RecommendationServicing {
+    Container.shared.recommendationService()
+}

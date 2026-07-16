@@ -1,4 +1,5 @@
 import DesignSystem
+import FeatureFlags
 import Persistence
 import Playback
 import RadioDirectory
@@ -11,12 +12,20 @@ public struct ListenNowView: View {
     @State private var viewModel: BrowseViewModel
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
+    private let recommendationService: any RecommendationServicing
+    private let featureFlags: any FeatureFlagProviding
 
     @Query(sort: \RecentStation.playedAt, order: .reverse)
     private var recents: [RecentStation]
 
-    public init(viewModel: @autoclosure @escaping () -> BrowseViewModel = BrowseViewModel()) {
+    public init(
+        viewModel: @autoclosure @escaping () -> BrowseViewModel = BrowseViewModel(),
+        recommendationService: (any RecommendationServicing)? = nil,
+        featureFlags: (any FeatureFlagProviding)? = nil
+    ) {
         _viewModel = State(wrappedValue: viewModel())
+        self.recommendationService = recommendationService ?? sharedRecommendationService()
+        self.featureFlags = featureFlags ?? sharedFeatureFlags()
     }
 
     public var body: some View {
@@ -66,6 +75,8 @@ public struct ListenNowView: View {
 
             recentlyPlayed
 
+            recommendationsSection(loaded)
+
             popularCarousel(loaded)
         }
     }
@@ -89,6 +100,35 @@ public struct ListenNowView: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func recommendationsSection(_ loaded: BrowseContent) -> some View {
+        guard recommendationsEnabled else { return }
+
+        let recommendations = recommendationService.moreLikeThis(
+            from: recents.map(\.station),
+            candidates: loaded.stations,
+            limit: 10
+        ).map(\.station)
+
+        if recommendations.isEmpty == false {
+            VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
+                SectionHeaderView(String(localized: "More Like This", bundle: .module))
+                StationCarousel(
+                    stations: recommendations,
+                    phase: { playback?.phase(for: $0) ?? .idle },
+                    onTap: { playback?.toggle($0) }
+                )
+            }
+        }
+    }
+
+    private var recommendationsEnabled: Bool {
+        guard let feature = FeatureCatalog.all.first(where: { $0.key == "recommendations" }) else {
+            return false
+        }
+        return featureFlags.isEnabled(feature)
     }
 
     private func popularCarousel(_ loaded: BrowseContent) -> some View {
