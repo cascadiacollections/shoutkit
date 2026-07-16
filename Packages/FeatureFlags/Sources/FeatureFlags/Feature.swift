@@ -46,7 +46,7 @@ public enum FeatureCatalog {
         Feature(
             key: "geoStations",
             title: "Geo Stations",
-            summary: "Placeholder flag for geography-aware station discovery.",
+            summary: "Filter Radio-Browser discovery by region; optional precise location is separate and off by default.",
             stage: .internalOnly,
             defaultEnabled: false
         ),

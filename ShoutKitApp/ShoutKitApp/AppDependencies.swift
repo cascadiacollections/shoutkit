@@ -1,10 +1,13 @@
 import DebugSupport
 import DesignSystem
+import FeatureFlags
 import Foundation
 import NowPlayingActivityKit
+import Observation
 import Persistence
 import Playback
 import RadioDirectory
+import CoreLocation
 import SwiftData
 
 /// Everything the app constructs exactly once and shares between the SwiftUI
@@ -18,6 +21,10 @@ struct AppServices {
     let sleepTimer: SleepTimer
     let settingsStore: SettingsStore
     let directory: any RadioDirectoryProviding
+    /// Retained here so the Observation and Core Location tasks stay alive for
+    /// the app's lifetime; it keeps the geo-station filter synchronized with the
+    /// feature flag, locale fallback, and optional precise-location override.
+    let geoStationLocationCoordinator: GeoStationLocationCoordinator
     /// Retained here: its observation tasks hold it weakly, so this reference
     /// is what keeps the Live Activity following playback for the app's lifetime.
     let activityCoordinator: NowPlayingActivityCoordinator
@@ -56,7 +63,11 @@ enum AppDependencies {
         let container = ShoutKitModelContainer.makeContainer()
         let store = LibraryStore(context: container.mainContext)
         let settings = SettingsStore()
-        let (directory, playReporter) = makeDirectory()
+        let featureFlags = sharedFeatureFlags()
+        let (directory, playReporter, geoStationLocationCoordinator) = makeDirectory(
+            settings: settings,
+            featureFlags: featureFlags
+        )
         // Route the decorated (preferred + caching) instance through Factory so
         // BrowseViewModel/SearchViewModel resolve it instead of it being threaded
         // manually through RootView.
@@ -84,6 +95,7 @@ enum AppDependencies {
             sleepTimer: sleepTimer,
             settingsStore: settings,
             directory: directory,
+            geoStationLocationCoordinator: geoStationLocationCoordinator,
             activityCoordinator: activityCoordinator,
             stationLaunchRouter: StationLaunchRouter()
         )
@@ -149,15 +161,25 @@ enum AppDependencies {
         }
     }
 
-    private static func makeDirectory() -> (any RadioDirectoryProviding, (any StationPlayReporting)?) {
+    private static func makeDirectory(
+        settings: SettingsStore,
+        featureFlags: any FeatureFlagProviding
+    ) -> (any RadioDirectoryProviding, (any StationPlayReporting)?, GeoStationLocationCoordinator) {
+        let geoFilterProvider = MutableRadioBrowserGeoFilterProvider()
+        let geoStationLocationCoordinator = GeoStationLocationCoordinator(
+            settings: settings,
+            featureFlags: featureFlags,
+            geoFilterProvider: geoFilterProvider
+        )
+
         if let apiKey = shoutcastAPIKey() {
             let directory = PreferredRadioDirectory(base: ShoutcastDirectoryClient(apiKey: apiKey))
-            return (CachingRadioDirectory(base: directory), nil)
+            return (CachingRadioDirectory(base: directory), nil, geoStationLocationCoordinator)
         }
 
-        let radioBrowser = RadioBrowserDirectoryClient()
+        let radioBrowser = RadioBrowserDirectoryClient(geoFilterProvider: geoFilterProvider)
         let directory = PreferredRadioDirectory(base: radioBrowser)
-        return (CachingRadioDirectory(base: directory), radioBrowser)
+        return (CachingRadioDirectory(base: directory), radioBrowser, geoStationLocationCoordinator)
     }
 
     private static func shoutcastAPIKey() -> String? {
@@ -171,5 +193,124 @@ enum AppDependencies {
         }
 
         return trimmedAPIKey
+    }
+}
+
+@MainActor
+final class GeoStationLocationCoordinator: NSObject, CLLocationManagerDelegate {
+    private let settings: SettingsStore
+    private let featureFlags: any FeatureFlagProviding
+    private let geoFilterProvider: MutableRadioBrowserGeoFilterProvider
+    private let locationManager = CLLocationManager()
+    private let geocoder = CLGeocoder()
+    private let geoStationsFeature = FeatureCatalog.all.first { $0.key == "geoStations" }
+        ?? Feature(
+            key: "geoStations",
+            title: "Geo Stations",
+            summary: "",
+            stage: .internalOnly,
+            defaultEnabled: false
+        )
+    private var observationTask: Task<Void, Never>?
+    private var preciseCountryCode: String?
+
+    init(
+        settings: SettingsStore,
+        featureFlags: any FeatureFlagProviding,
+        geoFilterProvider: MutableRadioBrowserGeoFilterProvider
+    ) {
+        self.settings = settings
+        self.featureFlags = featureFlags
+        self.geoFilterProvider = geoFilterProvider
+        super.init()
+        locationManager.delegate = self
+        observeSettings()
+        Task { [weak self] in
+            await self?.refreshFilteringState()
+        }
+    }
+
+    deinit {
+        observationTask?.cancel()
+    }
+
+    private func observeSettings() {
+        observationTask = Task { [weak self] in
+            guard let self else { return }
+            let changes = Observations {
+                (
+                    settings.isPreciseGeoStationLocationEnabled,
+                    featureFlags.isEnabled(geoStationsFeature)
+                )
+            }
+
+            for await _ in changes {
+                await refreshFilteringState()
+            }
+        }
+    }
+
+    private func refreshFilteringState() async {
+        guard featureFlags.isEnabled(geoStationsFeature) else {
+            preciseCountryCode = nil
+            await geoFilterProvider.setCurrentGeoFilter(nil)
+            return
+        }
+
+        if settings.isPreciseGeoStationLocationEnabled {
+            refreshPreciseLocationAuthorization()
+        } else {
+            preciseCountryCode = nil
+        }
+
+        await pushCurrentGeoFilter()
+    }
+
+    private func refreshPreciseLocationAuthorization() {
+        switch locationManager.authorizationStatus {
+        case .notDetermined:
+            locationManager.requestWhenInUseAuthorization()
+        case .authorizedWhenInUse, .authorizedAlways:
+            locationManager.requestLocation()
+        case .denied, .restricted:
+            preciseCountryCode = nil
+        @unknown default:
+            preciseCountryCode = nil
+        }
+    }
+
+    private func pushCurrentGeoFilter() async {
+        let preciseCountryOverride = settings.isPreciseGeoStationLocationEnabled ? preciseCountryCode : nil
+        let geoFilter = RadioBrowserGeoFilter(
+            locale: .current,
+            countryCodeOverride: preciseCountryOverride
+        )
+        await geoFilterProvider.setCurrentGeoFilter(geoFilter)
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        refreshPreciseLocationAuthorization()
+        Task { @MainActor in
+            await pushCurrentGeoFilter()
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else { return }
+
+        geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, _ in
+            guard let self else { return }
+            Task { @MainActor in
+                self.preciseCountryCode = placemarks?.first?.isoCountryCode
+                await self.pushCurrentGeoFilter()
+            }
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError _: any Error) {
+        preciseCountryCode = nil
+        Task { @MainActor in
+            await pushCurrentGeoFilter()
+        }
     }
 }

@@ -10,6 +10,10 @@ public final class SettingsStore {
     private enum Keys {
         static let playReporting = DefaultsKey<Bool>.plist("settings.playReportingEnabled", default: true)
         static let albumArt = DefaultsKey<Bool>.plist("settings.albumArtEnabled", default: true)
+        static let preciseGeoStationLocation = DefaultsKey<Bool>.plist(
+            "settings.preciseGeoStationLocationEnabled",
+            default: false
+        )
     }
 
     /// Whether plays are reported to Radio-Browser (station UUID only, per that
@@ -28,11 +32,19 @@ public final class SettingsStore {
         didSet { defaults.set(isAlbumArtEnabled, for: Keys.albumArt) }
     }
 
+    /// Whether ShoutKit may request Core Location permission to reverse-geocode
+    /// the current country for geo-station filtering. Defaults to off so the
+    /// locale-based country filter stays permissionless unless the user opts in.
+    public var isPreciseGeoStationLocationEnabled: Bool {
+        didSet { defaults.set(isPreciseGeoStationLocationEnabled, for: Keys.preciseGeoStationLocation) }
+    }
+
     @ObservationIgnored private let defaults: UserDefaults
 
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         isPlayReportingEnabled = defaults.value(for: Keys.playReporting)
         isAlbumArtEnabled = defaults.value(for: Keys.albumArt)
+        isPreciseGeoStationLocationEnabled = defaults.value(for: Keys.preciseGeoStationLocation)
     }
 }

@@ -42,6 +42,9 @@ public struct SettingsView: View {
     @ViewBuilder
     private var privacySection: some View {
         if let settings {
+            let geoStationsFeature = FeatureCatalog.all.first { $0.key == "geoStations" }
+            let isGeoStationsEnabled = geoStationsFeature.map { featureFlags.isEnabled($0) } ?? false
+
             Section {
                 Toggle(
                     "Report Plays to Radio-Browser",
@@ -57,6 +60,15 @@ public struct SettingsView: View {
                         set: { settings.isAlbumArtEnabled = $0 }
                     )
                 )
+                if isGeoStationsEnabled {
+                    Toggle(
+                        "Use Precise Location for Geo Stations",
+                        isOn: Binding(
+                            get: { settings.isPreciseGeoStationLocationEnabled },
+                            set: { settings.isPreciseGeoStationLocationEnabled = $0 }
+                        )
+                    )
+                }
             } header: {
                 Text("Privacy")
             } footer: {
@@ -65,6 +77,9 @@ public struct SettingsView: View {
                 about you or your device) so the community directory can rank popularity. \
                 Album artwork lookups send the current track's artist and title to Apple's \
                 iTunes Search API; turn this off to always show station artwork instead. \
+                Geo Stations defaults to your device region with no permission prompt; the \
+                optional precise-location toggle asks Apple for location permission only after \
+                you turn it on, and falls back to the device region if permission is denied. \
                 ShoutKit has no analytics, no ads, and no accounts.
                 """)
             }
