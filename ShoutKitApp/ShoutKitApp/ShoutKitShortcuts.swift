@@ -295,6 +295,54 @@ struct OpenShoutKitIntent: AppIntent {
     }
 }
 
+/// A read-only companion to `PlayStationIntent`/`PlayRadioAudioIntent`: reports
+/// what's currently playing rather than starting playback, so it stays
+/// headless like they do.
+struct GetCurrentPlaybackIntent: AppIntent {
+    static let title: LocalizedStringResource = "What's Playing"
+    static let description = IntentDescription("Reports which station is currently playing in ShoutKit.")
+    static let openAppWhenRun = false
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        let services = AppDependencies.bootstrap()
+        guard let station = services.playbackController.currentStation else {
+            return .result(dialog: "Nothing is playing right now.")
+        }
+        guard let track = services.playbackController.nowPlaying, let title = track.title else {
+            return .result(dialog: "Playing \(station.name).")
+        }
+        let trackDescription = track.artist.map { "\(title) by \($0)" } ?? title
+        return .result(dialog: "Playing \(trackDescription) on \(station.name).")
+    }
+}
+
+/// Toggles the currently playing station's favorite state — "this" in "add
+/// this to my favorites" is implicitly whatever ShoutKit is playing, mirroring
+/// the heart button on `StationRow`. There's no station parameter to resolve:
+/// unlike `PlayStationIntent`, there's nothing to name by voice here.
+struct ToggleFavoriteIntent: AppIntent {
+    static let title: LocalizedStringResource = "Toggle Favorite"
+    static let description = IntentDescription(
+        "Adds or removes the currently playing station from your ShoutKit favorites."
+    )
+    static let openAppWhenRun = false
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        let services = AppDependencies.bootstrap()
+        guard let station = services.playbackController.currentStation else {
+            return .result(dialog: "Nothing is playing right now.")
+        }
+        let isFavoriteNow = services.libraryStore.toggleFavorite(station)
+        return .result(
+            dialog: isFavoriteNow
+                ? "Added \(station.name) to your favorites."
+                : "Removed \(station.name) from your favorites."
+        )
+    }
+}
+
 // MARK: - App Shortcuts
 
 struct ShoutKitShortcuts: AppShortcutsProvider {
@@ -316,6 +364,26 @@ struct ShoutKitShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Open",
             systemImageName: "dot.radiowaves.left.and.right"
+        )
+
+        AppShortcut(
+            intent: GetCurrentPlaybackIntent(),
+            phrases: [
+                "What's playing on \(.applicationName)",
+                "What is playing on \(.applicationName)"
+            ],
+            shortTitle: "What's Playing",
+            systemImageName: "waveform"
+        )
+
+        AppShortcut(
+            intent: ToggleFavoriteIntent(),
+            phrases: [
+                "Add this station to my favorites in \(.applicationName)",
+                "Favorite this station in \(.applicationName)"
+            ],
+            shortTitle: "Toggle Favorite",
+            systemImageName: "heart"
         )
     }
 }

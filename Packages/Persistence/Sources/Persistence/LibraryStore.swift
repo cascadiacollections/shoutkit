@@ -183,17 +183,28 @@ public final class LibraryStore {
     /// without deleting its play record, so recommendation scoring (which
     /// reads the full, unfiltered history) is unaffected.
     public func hideFromListenNow(stationID: String) {
+        setHiddenFromListenNow(true, stationID: stationID)
+    }
+
+    /// Reverses `hideFromListenNow` — powers the "Undo" action on a Listen Now
+    /// dismiss.
+    public func unhideFromListenNow(stationID: String) {
+        setHiddenFromListenNow(false, stationID: stationID)
+    }
+
+    private func setHiddenFromListenNow(_ isHidden: Bool, stationID: String) {
         let predicate = #Predicate<RecentStation> { $0.stationID == stationID }
         let descriptor = FetchDescriptor<RecentStation>(predicate: predicate)
+        let operation = "\(isHidden ? "hide from" : "unhide from") listen now \(sanitizedForLogs(stationID))"
 
-        guard let matches = fetch(descriptor, operation: "hide from listen now \(sanitizedForLogs(stationID))") else {
+        guard let matches = fetch(descriptor, operation: operation) else {
             return
         }
 
         for match in matches {
-            match.isHiddenFromListenNow = true
+            match.isHiddenFromListenNow = isHidden
         }
-        save(operation: "hide from listen now \(sanitizedForLogs(stationID))")
+        save(operation: operation)
     }
 
     private func trimRecents() {

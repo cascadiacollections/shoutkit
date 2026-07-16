@@ -74,4 +74,50 @@ struct RecentlyPlayedTeaserStateTests {
 
         #expect(teaser.displayedIDs == before)
     }
+
+    // MARK: - restore (undo)
+
+    @Test func restoreReinsertsAtTheGivenIndex() {
+        var teaser = RecentlyPlayedTeaserState(capacity: 5)
+        teaser.sync(withVisibleIDsNewestFirst: ["a", "b", "c", "d"])
+        teaser.remove("b")
+
+        teaser.restore("b", at: 1)
+
+        #expect(teaser.displayedIDs == ["a", "b", "c", "d"])
+    }
+
+    @Test func restoreClampsAnOutOfRangeIndexToTheEnd() {
+        var teaser = RecentlyPlayedTeaserState(capacity: 5)
+        teaser.sync(withVisibleIDsNewestFirst: ["a", "b"])
+        teaser.remove("b")
+
+        teaser.restore("b", at: 99)
+
+        #expect(teaser.displayedIDs == ["a", "b"])
+    }
+
+    @Test func restoreIsANoOpWhenTheIDIsAlreadyDisplayed() {
+        var teaser = RecentlyPlayedTeaserState(capacity: 5)
+        teaser.sync(withVisibleIDsNewestFirst: ["a", "b"])
+
+        teaser.restore("a", at: 0)
+
+        #expect(teaser.displayedIDs == ["a", "b"])
+    }
+
+    @Test func restoreReTrimsToCapacityIfANewPlayFilledTheSlotMeanwhile() {
+        var teaser = RecentlyPlayedTeaserState(capacity: 3)
+        teaser.sync(withVisibleIDsNewestFirst: ["a", "b", "c"])
+        teaser.remove("b")
+        // A brand-new play lands at the top while "b" is dismissed.
+        teaser.sync(withVisibleIDsNewestFirst: ["z", "a", "c"])
+        #expect(teaser.displayedIDs == ["z", "a", "c"])
+
+        teaser.restore("b", at: 1)
+
+        // Restoring "b" would overflow capacity 3; the oldest entry ("c") is
+        // trimmed rather than "b" silently failing to reappear.
+        #expect(teaser.displayedIDs == ["z", "b", "a"])
+    }
 }

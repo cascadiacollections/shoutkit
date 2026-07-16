@@ -21,6 +21,14 @@ public struct ListenNowView: View {
     @State private var cachedRecommendations: [Station] = []
     // See `RecentlyPlayedTeaserState` (Persistence) for the no-backfill dismiss logic.
     @State private var recentlyPlayedTeaser = RecentlyPlayedTeaserState()
+    @State private var dismissUndo: DismissUndo?
+    @State private var dismissUndoExpiryTask: Task<Void, Never>?
+
+    private struct DismissUndo {
+        let stationID: String
+        let stationName: String
+        let restoreIndex: Int
+    }
 
     @Query(sort: \RecentStation.playedAt, order: .reverse)
     private var recents: [RecentStation]
@@ -48,6 +56,30 @@ public struct ListenNowView: View {
         .refreshable { await viewModel.refresh() }
         .onChange(of: recents.map(\.stationID), initial: true) { _, _ in
             recentlyPlayedTeaser.sync(withVisibleIDsNewestFirst: visibleRecents.map(\.stationID))
+        }
+        .overlay(alignment: .bottom) { dismissUndoBanner }
+        .animation(.default, value: dismissUndo?.stationID)
+    }
+
+    @ViewBuilder
+    private var dismissUndoBanner: some View {
+        if let dismissUndo {
+            HStack(spacing: ShoutKitSpacing.small) {
+                Text(String(localized: "\(dismissUndo.stationName) removed", bundle: .module))
+                    .font(.subheadline)
+                    .lineLimit(1)
+                Spacer(minLength: ShoutKitSpacing.small)
+                Button(String(localized: "Undo", bundle: .module)) {
+                    undoDismiss(dismissUndo)
+                }
+                .font(.subheadline.weight(.semibold))
+            }
+            .padding(.horizontal, ShoutKitSpacing.medium)
+            .padding(.vertical, ShoutKitSpacing.small)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: ShoutKitRadius.medium, style: .continuous))
+            .padding(.horizontal, ShoutKitSpacing.medium)
+            .padding(.bottom, ShoutKitSpacing.medium)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
 
@@ -145,17 +177,39 @@ public struct ListenNowView: View {
     private func deleteRecents(at offsets: IndexSet) {
         // Materialise the displayed slice before removal so offset resolution
         // isn't affected by live-query updates mid-deletion (same approach as
-        // LibraryView's deleteRecents).
+        // LibraryView's deleteRecents). Swiping only ever dismisses one row at
+        // a time here (there's no edit-mode multi-select), so the undo banner
+        // just tracks whichever one was dismissed most recently.
         let displayed = displayedRecentStations
-        let stationIDs = offsets.map { displayed[$0].stationID }
-        for stationID in stationIDs {
+        for offset in offsets {
+            let recent = displayed[offset]
             // A soft hide, not `removeRecent` — the play record stays intact so
             // recommendations still learn from it even once this teaser is empty.
-            library?.hideFromListenNow(stationID: stationID)
+            library?.hideFromListenNow(stationID: recent.stationID)
             // Removed here too (not just left to the query refresh) so the slot
             // doesn't backfill from `recents` — dismissing shrinks the list.
-            recentlyPlayedTeaser.remove(stationID)
+            recentlyPlayedTeaser.remove(recent.stationID)
+            presentDismissUndo(stationID: recent.stationID, stationName: recent.name, restoreIndex: offset)
         }
+    }
+
+    private func presentDismissUndo(stationID: String, stationName: String, restoreIndex: Int) {
+        dismissUndo = DismissUndo(stationID: stationID, stationName: stationName, restoreIndex: restoreIndex)
+        // Cancel-and-replace rather than matching on stationID at expiry: a
+        // dismiss → undo → re-dismiss of the *same* station within the window
+        // would otherwise let the stale timer clear the fresh banner early.
+        dismissUndoExpiryTask?.cancel()
+        dismissUndoExpiryTask = Task {
+            guard (try? await Task.sleep(for: .seconds(4))) != nil else { return }
+            dismissUndo = nil
+        }
+    }
+
+    private func undoDismiss(_ undo: DismissUndo) {
+        library?.unhideFromListenNow(stationID: undo.stationID)
+        recentlyPlayedTeaser.restore(undo.stationID, at: undo.restoreIndex)
+        dismissUndoExpiryTask?.cancel()
+        dismissUndo = nil
     }
 
     @ViewBuilder
@@ -173,6 +227,15 @@ public struct ListenNowView: View {
                             phase: { playback?.phase(for: $0) ?? .idle },
                             onTap: { playback?.toggle($0) }
                         )
+                    }
+                } else {
+                    // Otherwise the flag has no visible effect at all, and
+                    // looks like it silently did nothing after being enabled.
+                    VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
+                        SectionHeaderView(String(localized: "More Like This", bundle: .module))
+                        Text(String(localized: "Play a few stations to get recommendations here.", bundle: .module))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }

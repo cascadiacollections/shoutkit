@@ -35,13 +35,27 @@ public struct RecentlyPlayedTeaserState: Equatable, Sendable {
         guard displayedIDs.first != latestID else { return }
         displayedIDs.removeAll { $0 == latestID }
         displayedIDs.insert(latestID, at: 0)
-        if displayedIDs.count > capacity {
-            displayedIDs.removeLast(displayedIDs.count - capacity)
-        }
+        trimToCapacity()
     }
 
     /// Dismisses an entry from the teaser. Does not backfill.
     public mutating func remove(_ id: String) {
         displayedIDs.removeAll { $0 == id }
+    }
+
+    /// Reinserts a previously `remove`d entry at a given index — the "Undo"
+    /// half of a dismiss. Re-clips to `capacity` from the end afterward, in
+    /// case a new play was promoted to the front while the entry was gone.
+    public mutating func restore(_ id: String, at index: Int) {
+        guard displayedIDs.contains(id) == false else { return }
+        let clampedIndex = min(max(index, 0), displayedIDs.count)
+        displayedIDs.insert(id, at: clampedIndex)
+        trimToCapacity()
+    }
+
+    private mutating func trimToCapacity() {
+        if displayedIDs.count > capacity {
+            displayedIDs.removeLast(displayedIDs.count - capacity)
+        }
     }
 }
