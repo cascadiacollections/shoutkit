@@ -43,6 +43,14 @@ public enum FeatureCatalog {
         defaultEnabled: false
     )
 
+    public static let geoStations = Feature(
+        key: "geoStations",
+        title: "Geo Stations",
+        summary: "Filter Radio-Browser discovery by region; optional precise location is separate and off by default.",
+        stage: .internalOnly,
+        defaultEnabled: false
+    )
+
     public static let recommendations = Feature(
         key: "recommendations",
         title: "Recommendations",
@@ -53,13 +61,7 @@ public enum FeatureCatalog {
 
     public static let all: [Feature] = [
         diagnosticsFeature,
-        Feature(
-            key: "geoStations",
-            title: "Geo Stations",
-            summary: "Placeholder flag for geography-aware station discovery.",
-            stage: .internalOnly,
-            defaultEnabled: false
-        ),
+        geoStations,
         recommendations
     ]
 

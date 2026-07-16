@@ -3,9 +3,12 @@ import DesignSystem
 import FeatureFlags
 import Foundation
 import NowPlayingActivityKit
+import Observation
+import OSLog
 import Persistence
 import Playback
 import RadioDirectory
+import CoreLocation
 import SwiftData
 
 /// Everything the app constructs exactly once and shares between the SwiftUI
@@ -21,6 +24,10 @@ struct AppServices {
     /// Retained for app lifetime so MetricKit subscription state remains active.
     let diagnosticsService: any DiagnosticsServicing
     let directory: any RadioDirectoryProviding
+    /// Retained here so the Observation and Core Location tasks stay alive for
+    /// the app's lifetime; it keeps the geo-station filter synchronized with the
+    /// feature flag, locale fallback, and optional precise-location override.
+    let geoStationLocationCoordinator: GeoStationLocationCoordinator
     /// Retained here: its observation tasks hold it weakly, so this reference
     /// is what keeps the Live Activity following playback for the app's lifetime.
     let activityCoordinator: NowPlayingActivityCoordinator
@@ -60,20 +67,21 @@ enum AppDependencies {
         let store = LibraryStore(context: container.mainContext)
         let settings = SettingsStore()
         let featureFlags = sharedFeatureFlags()
-        let diagnosticsService = DiagnosticsService(
-            featureFlags: featureFlags,
-            settings: settings,
-            payloadStore: makeDiagnosticsPayloadStore()
-        )
-        registerProductionDiagnosticsService(diagnosticsService)
-        let (directory, playReporter) = makeDirectory()
+        let diagnosticsService = makeDiagnosticsService(settings: settings, featureFlags: featureFlags)
+        let directoryServices = makeDirectory(settings: settings, featureFlags: featureFlags)
+        let directory = directoryServices.directory
         // Route the decorated (preferred + caching) instance through Factory so
         // BrowseViewModel/SearchViewModel resolve it instead of it being threaded
         // manually through RootView.
         registerProductionRadioDirectory(directory)
         let controller = PlaybackController(directory: directory)
 
-        configureCallbacks(for: controller, store: store, settings: settings, playReporter: playReporter)
+        configureCallbacks(
+            for: controller,
+            store: store,
+            settings: settings,
+            playReporter: directoryServices.playReporter
+        )
 
         // Lock screen / Dynamic Island Live Activity follows playback by
         // observing the controller's @Observable state directly.
@@ -95,6 +103,7 @@ enum AppDependencies {
             settingsStore: settings,
             diagnosticsService: diagnosticsService,
             directory: directory,
+            geoStationLocationCoordinator: directoryServices.geoStationLocationCoordinator,
             activityCoordinator: activityCoordinator,
             stationLaunchRouter: StationLaunchRouter()
         )
@@ -160,9 +169,24 @@ enum AppDependencies {
         }
     }
 
+    /// Constructs the diagnostics service and registers it with Factory.
+    /// Extracted from `bootstrap()` to keep that method within the lint
+    /// body-length budget.
+    private static func makeDiagnosticsService(
+        settings: SettingsStore,
+        featureFlags: any FeatureFlagProviding
+    ) -> DiagnosticsService {
+        let diagnosticsService = DiagnosticsService(
+            featureFlags: featureFlags,
+            settings: settings,
+            payloadStore: makeDiagnosticsPayloadStore()
+        )
+        registerProductionDiagnosticsService(diagnosticsService)
+        return diagnosticsService
+    }
+
     /// GRDB-backed on-disk store, falling back to an in-memory store (payloads
-    /// lost on relaunch) if the database can't be opened. Extracted from
-    /// `bootstrap()` to keep that method within the lint body-length budget.
+    /// lost on relaunch) if the database can't be opened.
     private static func makeDiagnosticsPayloadStore() -> any DiagnosticsPayloadPersisting {
         do {
             return try DiagnosticsPayloadStore()
@@ -179,15 +203,41 @@ enum AppDependencies {
         }
     }
 
-    private static func makeDirectory() -> (any RadioDirectoryProviding, (any StationPlayReporting)?) {
+    /// The directory stack plus the geo coordinator that keeps its filter in
+    /// sync — grouped in a struct (not a tuple) so each member stays named.
+    private struct DirectoryServices {
+        let directory: any RadioDirectoryProviding
+        let playReporter: (any StationPlayReporting)?
+        let geoStationLocationCoordinator: GeoStationLocationCoordinator
+    }
+
+    private static func makeDirectory(
+        settings: SettingsStore,
+        featureFlags: any FeatureFlagProviding
+    ) -> DirectoryServices {
+        let geoFilterProvider = MutableRadioBrowserGeoFilterProvider()
+        let geoStationLocationCoordinator = GeoStationLocationCoordinator(
+            settings: settings,
+            featureFlags: featureFlags,
+            geoFilterProvider: geoFilterProvider
+        )
+
         if let apiKey = shoutcastAPIKey() {
             let directory = PreferredRadioDirectory(base: ShoutcastDirectoryClient(apiKey: apiKey))
-            return (CachingRadioDirectory(base: directory), nil)
+            return DirectoryServices(
+                directory: CachingRadioDirectory(base: directory),
+                playReporter: nil,
+                geoStationLocationCoordinator: geoStationLocationCoordinator
+            )
         }
 
-        let radioBrowser = RadioBrowserDirectoryClient()
+        let radioBrowser = RadioBrowserDirectoryClient(geoFilterProvider: geoFilterProvider)
         let directory = PreferredRadioDirectory(base: radioBrowser)
-        return (CachingRadioDirectory(base: directory), radioBrowser)
+        return DirectoryServices(
+            directory: CachingRadioDirectory(base: directory),
+            playReporter: radioBrowser,
+            geoStationLocationCoordinator: geoStationLocationCoordinator
+        )
     }
 
     private static func shoutcastAPIKey() -> String? {
@@ -201,5 +251,141 @@ enum AppDependencies {
         }
 
         return trimmedAPIKey
+    }
+}
+
+// @preconcurrency: CLLocationManagerDelegate's requirements are nonisolated,
+// but the manager is created on the main actor, so Core Location delivers its
+// callbacks on the main run loop — the conformance's runtime isolation check
+// always holds.
+@MainActor
+final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationManagerDelegate {
+    private let settings: SettingsStore
+    private let featureFlags: any FeatureFlagProviding
+    private let geoFilterProvider: MutableRadioBrowserGeoFilterProvider
+    private let locationManager = CLLocationManager()
+    private let geocoder = CLGeocoder()
+    private let logger = Logger(subsystem: "ShoutKit.App", category: "GeoStationLocationCoordinator")
+    private let geoStationsFeature = FeatureCatalog.geoStations
+    private var observationTask: Task<Void, Never>?
+    private var preciseCountryCode: String?
+
+    init(
+        settings: SettingsStore,
+        featureFlags: any FeatureFlagProviding,
+        geoFilterProvider: MutableRadioBrowserGeoFilterProvider
+    ) {
+        self.settings = settings
+        self.featureFlags = featureFlags
+        self.geoFilterProvider = geoFilterProvider
+        super.init()
+        locationManager.delegate = self
+        observeSettings()
+        Task { @MainActor [weak self] in
+            await self?.refreshFilteringState()
+        }
+    }
+
+    deinit {
+        observationTask?.cancel()
+    }
+
+    private func observeSettings() {
+        observationTask = Task { [weak self] in
+            guard let self else { return }
+            let changes = Observations {
+                (
+                    self.settings.isPreciseGeoStationLocationEnabled,
+                    self.featureFlags.isEnabled(self.geoStationsFeature)
+                )
+            }
+
+            for await _ in changes {
+                await refreshFilteringState()
+            }
+        }
+    }
+
+    private func refreshFilteringState() async {
+        guard featureFlags.isEnabled(geoStationsFeature) else {
+            preciseCountryCode = nil
+            await geoFilterProvider.setCurrentGeoFilter(nil)
+            return
+        }
+
+        if settings.isPreciseGeoStationLocationEnabled {
+            refreshPreciseLocationAuthorization()
+        } else {
+            preciseCountryCode = nil
+        }
+
+        await pushCurrentGeoFilter()
+    }
+
+    private func refreshPreciseLocationAuthorization() {
+        switch locationManager.authorizationStatus {
+        case .notDetermined:
+            locationManager.requestWhenInUseAuthorization()
+        case .authorizedWhenInUse, .authorizedAlways:
+            locationManager.requestLocation()
+        case .denied, .restricted:
+            preciseCountryCode = nil
+        @unknown default:
+            preciseCountryCode = nil
+        }
+    }
+
+    private func pushCurrentGeoFilter() async {
+        // Re-check the flag: async delegate/geocoder callbacks can land after
+        // the feature was turned off, and must not re-install a filter.
+        guard featureFlags.isEnabled(geoStationsFeature) else {
+            await geoFilterProvider.setCurrentGeoFilter(nil)
+            return
+        }
+
+        let preciseCountryOverride = settings.isPreciseGeoStationLocationEnabled ? preciseCountryCode : nil
+        let geoFilter = RadioBrowserGeoFilter(
+            locale: .current,
+            countryCodeOverride: preciseCountryOverride
+        )
+        await geoFilterProvider.setCurrentGeoFilter(geoFilter)
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        // Core Location invokes this as soon as the delegate is assigned (i.e.
+        // at every launch). Without the opt-in gate, the `.notDetermined`
+        // branch below would prompt for location permission on first launch
+        // even though the user never enabled precise geo stations.
+        guard featureFlags.isEnabled(geoStationsFeature),
+              settings.isPreciseGeoStationLocationEnabled else { return }
+
+        refreshPreciseLocationAuthorization()
+        Task {
+            await pushCurrentGeoFilter()
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else { return }
+
+        geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, error in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if let error {
+                    self.logger.error("Reverse geocoding failed: \(error.localizedDescription, privacy: .public)")
+                } else {
+                    self.preciseCountryCode = placemarks?.first?.isoCountryCode
+                }
+                await self.pushCurrentGeoFilter()
+            }
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
+        Task { @MainActor in
+            self.logger.error("Location request failed: \(error.localizedDescription, privacy: .public)")
+            self.preciseCountryCode = nil
+            await self.pushCurrentGeoFilter()
+        }
     }
 }
