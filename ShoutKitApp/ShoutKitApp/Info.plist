@@ -46,10 +46,34 @@
 	<string>ShoutKit uses your location only after you opt in to refine geo-relevant station filtering.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>CPTemplateApplicationSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneClassName</key>
+					<string>CPTemplateApplicationScene</string>
+					<key>UISceneConfigurationName</key>
+					<string>CarPlay</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).ShoutKitCarPlaySceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+	<key>UISupportsCarPlay</key>
+	<true/>
 	<key>SHOUTCAST_DEV_KEY</key>
 	<string>$(SHOUTCAST_DEV_KEY)</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UISupportedInterfaceOrientations~carplay</key>
+	<array>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

@@ -281,6 +281,32 @@ struct LibraryStoreTests {
         #expect(bIndex < aIndex)
     }
 
+    @Test func rankedStationsFollowFavoriteThenMostPlayedRecentOrdering() throws {
+        let (store, _) = makeStoreAndContext()
+
+        store.logRecent(streamableStation("a"))
+        store.logRecent(streamableStation("b"))
+        store.logRecent(streamableStation("b"))
+        store.addFavorite(streamableStation("fav"))
+
+        let rankedIDs = store.rankedStations(limit: 5).map(\.id)
+
+        #expect(rankedIDs == ["fav", "b", "a"])
+    }
+
+    @Test func rankedStationsDeduplicateFavoritesAndRecents() throws {
+        let (store, _) = makeStoreAndContext()
+        let station = streamableStation("dup")
+
+        store.addFavorite(station)
+        store.logRecent(station)
+        store.logRecent(streamableStation("other"))
+
+        let rankedIDs = store.rankedStations(limit: 5).map(\.id)
+
+        #expect(rankedIDs == ["dup", "other"])
+    }
+
     @Test func prewarmURLsAreCappedAtLimitAndDeduplicated() throws {
         let (store, _) = makeStoreAndContext()
         for index in 0..<10 { store.logRecent(streamableStation("s\(index)")) }
