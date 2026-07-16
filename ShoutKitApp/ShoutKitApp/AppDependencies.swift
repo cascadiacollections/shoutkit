@@ -216,8 +216,12 @@ enum AppDependencies {
     }
 }
 
+// @preconcurrency: CLLocationManagerDelegate's requirements are nonisolated,
+// but the manager is created on the main actor, so Core Location delivers its
+// callbacks on the main run loop — the conformance's runtime isolation check
+// always holds.
 @MainActor
-final class GeoStationLocationCoordinator: NSObject, CLLocationManagerDelegate {
+final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationManagerDelegate {
     private let settings: SettingsStore
     private let featureFlags: any FeatureFlagProviding
     private let geoFilterProvider: MutableRadioBrowserGeoFilterProvider
