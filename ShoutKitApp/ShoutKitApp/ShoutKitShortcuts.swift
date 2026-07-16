@@ -1,6 +1,7 @@
 import AppIntents
 import CoreSpotlight
 import Foundation
+import OSLog
 import Persistence
 import RadioDirectory
 import SwiftData
@@ -81,6 +82,8 @@ extension StationEntity: IndexedEntity {
 /// later — Shortcuts persists only the entity's id). Free-text matching goes to
 /// the live directory.
 struct StationEntityQuery: EntityQuery, EntityStringQuery {
+    private static let logger = Logger(subsystem: "ShoutKit.App", category: "StationEntityQuery")
+
     @MainActor
     func entities(for identifiers: [String]) async throws -> [StationEntity] {
         let known = knownStations()
@@ -131,12 +134,22 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
     /// session, not just ones searched or played this run. Called once at
     /// launch (`AppDependencies.bootstrap()`); a favorite toggled mid-session
     /// isn't re-indexed until the next launch — an accepted v1 gap, same
-    /// category as the album-art lookup's "best effort" framing.
+    /// category as the album-art lookup's "best effort" framing. Refresh the
+    /// App Shortcut parameter cache afterward so Shortcuts search and Siri see
+    /// the same station set the Spotlight index just received.
     @MainActor
     func indexKnownStationsForSpotlight() async {
         let entities = knownStations()
-        guard entities.isEmpty == false else { return }
-        try? await CSSearchableIndex.default().indexAppEntities(entities)
+        guard entities.isEmpty == false else {
+            ShoutKitShortcuts.updateAppShortcutParameters()
+            return
+        }
+        do {
+            try await CSSearchableIndex.default().indexAppEntities(entities)
+        } catch {
+            Self.logger.error("Failed to index Siri stations in Spotlight: \(String(describing: error), privacy: .public)")
+        }
+        ShoutKitShortcuts.updateAppShortcutParameters()
     }
 }
 
