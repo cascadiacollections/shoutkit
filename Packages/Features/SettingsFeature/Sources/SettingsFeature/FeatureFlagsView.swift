@@ -1,3 +1,4 @@
+#if DEBUG || TESTFLIGHT
 import FeatureFlags
 import SwiftUI
 
@@ -10,25 +11,11 @@ struct FeatureFlagsView: View {
 
     var body: some View {
         Form {
-            Section {
-                ForEach(FeatureCatalog.all, id: \.key) { feature in
-                    Toggle(isOn: isEnabledBinding(for: feature)) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(feature.title)
-                            Text(feature.summary)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            } header: {
-                Text("Flags")
-            } footer: {
-                Text("Turn a feature on or off. Use Reset to return all flags to their defaults.")
+            ForEach(FeatureStage.allCases, id: \.self) { stage in
+                featureSection(for: stage)
             }
-
             Section {
-                Button("Reset All to Defaults") {
+                Button("Reset All to Defaults", role: .destructive) {
                     featureFlags.resetAll()
                 }
             }
@@ -37,12 +24,69 @@ struct FeatureFlagsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func isEnabledBinding(for feature: Feature) -> Binding<Bool> {
-        Binding(
-            get: { featureFlags.isEnabled(feature) },
-            set: { isEnabled in
-                featureFlags.setOverride(isEnabled ? .enabled : .disabled, for: feature)
+    @ViewBuilder
+    private func featureSection(for stage: FeatureStage) -> some View {
+        let features = FeatureCatalog.all.filter { $0.stage == stage }
+        if !features.isEmpty {
+            Section {
+                ForEach(features, id: \.key) { feature in
+                    FeatureFlagRow(feature: feature, featureFlags: featureFlags)
+                }
+            } header: {
+                Text(stage.displayTitle)
             }
+        }
+    }
+}
+
+private struct FeatureFlagRow: View {
+    let feature: Feature
+    let featureFlags: any FeatureFlagProviding
+
+    var body: some View {
+        let isEnabled = featureFlags.isEnabled(feature)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(feature.title)
+                    Text(feature.key)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .monospaced()
+                }
+                Spacer()
+                Image(systemName: isEnabled ? "checkmark.circle.fill" : "xmark.circle")
+                    .foregroundStyle(isEnabled ? Color.green : Color.secondary)
+                    .accessibilityLabel(isEnabled ? "Resolved: enabled" : "Resolved: disabled")
+            }
+            Text(feature.summary)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            Picker("Override", selection: overrideBinding(for: feature)) {
+                Text("Default").tag(FeatureOverride.useDefault)
+                Text("Enabled").tag(FeatureOverride.enabled)
+                Text("Disabled").tag(FeatureOverride.disabled)
+            }
+            .pickerStyle(.segmented)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func overrideBinding(for feature: Feature) -> Binding<FeatureOverride> {
+        Binding(
+            get: { featureFlags.override(for: feature) },
+            set: { featureFlags.setOverride($0, for: feature) }
         )
     }
 }
+
+private extension FeatureStage {
+    var displayTitle: String {
+        switch self {
+        case .internalOnly: "Internal"
+        case .beta: "Beta"
+        case .released: "Released"
+        }
+    }
+}
+#endif

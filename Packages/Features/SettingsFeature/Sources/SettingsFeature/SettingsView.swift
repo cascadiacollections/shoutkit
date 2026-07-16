@@ -19,9 +19,9 @@ public struct SettingsView: View {
         NavigationStack {
             Form {
                 privacySection
-                // Debug builds only: the catalog is all internal placeholder
-                // flags, so end users have nothing actionable here.
-                #if DEBUG
+                // Debug and TestFlight builds only: the catalog is all internal
+                // placeholder flags, so App Store users have nothing actionable here.
+                #if DEBUG || TESTFLIGHT
                 featureFlagsSection
                 #endif
                 supportSection
@@ -89,7 +89,7 @@ public struct SettingsView: View {
         }
     }
 
-    #if DEBUG
+    #if DEBUG || TESTFLIGHT
     private var featureFlagsSection: some View {
         Section {
             NavigationLink {
