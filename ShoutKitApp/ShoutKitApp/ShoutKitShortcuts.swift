@@ -2,6 +2,7 @@ import AppIntents
 import CoreSpotlight
 import Foundation
 import Persistence
+import Playback
 import RadioDirectory
 import SwiftData
 import UniformTypeIdentifiers
@@ -173,6 +174,15 @@ enum AudioItem {
     case liveRadioStation(StationEntity)
 }
 
+private extension AudioItem {
+    var stationEntity: StationEntity {
+        switch self {
+        case let .liveRadioStation(entity):
+            entity
+        }
+    }
+}
+
 /// AudioPlaybackIntent keeps this headless: Siri/Shortcuts start audio without
 /// foregrounding the app (or demanding unlock), which is the whole point of
 /// "Hey Siri, play KEXP on ShoutKit" while driving. Deep links use
@@ -199,6 +209,25 @@ struct PlayStationIntent: AudioPlaybackIntent {
     }
 }
 
+/// `@AppIntent(schema: .audio.warmupAudioQueue)` is Siri's pre-playback hook:
+/// it resolves the target station's concrete stream endpoint, then asks
+/// `StationConnectionPrewarmer` to warm that host's DNS/TCP/TLS path before the
+/// later `playAudio` dispatch opens the real socket.
+@AppIntent(schema: .audio.warmupAudioQueue)
+struct WarmupRadioAudioQueueIntent {
+    var audioEntity: AudioItem
+    var playbackAttributes: Set<PlaybackAttributes>
+
+    @MainActor
+    func perform() async throws -> some ReturnsValue<WarmupAudioQueueResult> {
+        let services = AppDependencies.bootstrap()
+        if let endpoint = try? await services.directory.streamEndpoint(for: audioEntity.stationEntity.station) {
+            await StationConnectionPrewarmer().prewarm(streamURLs: [endpoint.url])
+        }
+        return .result(value: WarmupAudioQueueResult())
+    }
+}
+
 /// `@AppIntent(schema: .audio.playAudio)` registers ShoutKit as a system
 /// "play audio" handler for `StationEntity` content. Unlike `PlayStationIntent`
 /// above, this one is never referenced by an `AppShortcut` phrase — its whole
@@ -209,7 +238,8 @@ struct PlayStationIntent: AudioPlaybackIntent {
 /// phrase for it. `queueLocation`, `warmupAudioQueueResult`, and
 /// `playbackAttributes` are schema-required bookkeeping for apps with a real
 /// play queue; ShoutKit has none (station switches are immediate replacement,
-/// not enqueueing), so each just takes the schema's "nothing to report" value.
+/// not enqueueing), and the warmup hook prewarms the socket without needing any
+/// payload from its result.
 @AppIntent(schema: .audio.playAudio)
 struct PlayRadioAudioIntent {
     static let title: LocalizedStringResource = "Play Radio"
@@ -222,11 +252,7 @@ struct PlayRadioAudioIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let station: StationEntity
-        switch audioEntity {
-        case let .liveRadioStation(entity):
-            station = entity
-        }
+        let station = audioEntity.stationEntity
         // Reaches the same PlaybackController the app UI drives; bootstrap() is
         // idempotent, so this is safe even when the intent cold-launches the app.
         let services = AppDependencies.bootstrap()
@@ -268,19 +294,15 @@ enum QueueInsertionLocation: String {
     ]
 }
 
-/// `.audio.warmupAudioQueueResult`: outcome of a queue pre-warm request.
-/// ShoutKit doesn't pre-warm a queue (there's nothing to warm — playback
-/// starts immediately), so this always reports nothing was queued.
+/// `.audio.warmupAudioQueueResult`: marker value returned from
+/// `WarmupRadioAudioQueueIntent`, which resolves and prewarms the target
+/// station's stream host before Siri dispatches `PlayRadioAudioIntent`.
 @AppEntity(schema: .audio.warmupAudioQueueResult)
 struct WarmupAudioQueueResult: TransientAppEntity, Sendable {
-    let title: String
-
-    init() {
-        title = "Not Supported"
-    }
+    init() {}
 
     var displayRepresentation: DisplayRepresentation {
-        DisplayRepresentation(title: "\(title)")
+        DisplayRepresentation(title: "Ready")
     }
 }
 
