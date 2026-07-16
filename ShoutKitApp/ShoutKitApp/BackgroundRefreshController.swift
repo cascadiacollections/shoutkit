@@ -6,11 +6,12 @@ import RadioDirectory
 
 @MainActor
 final class BackgroundRefreshController {
+    private static let secondsPerHour: TimeInterval = 3600
     private static let taskIdentifierSuffix = ".app-refresh"
     private static let topStationsLimit = 24
     /// Refresh every few hours: often enough to keep directory snapshots warm,
     /// infrequent enough to stay firmly in "best effort" territory.
-    private static let refreshInterval: TimeInterval = 4 * 3600
+    private static let refreshInterval: TimeInterval = 4 * secondsPerHour
 
     static var taskIdentifier: String {
         let bundleIdentifier = Bundle.main.bundleIdentifier ?? "com.cascadiacollections.shoutkit"
@@ -55,7 +56,7 @@ final class BackgroundRefreshController {
     private func handle(_ task: BGAppRefreshTask) {
         schedule()
 
-        let refreshTask = Task { @MainActor [weak self] in
+        let refreshTask = Task { [weak self] in
             guard let self else { return false }
             return await self.runRefresh()
         }
@@ -64,7 +65,7 @@ final class BackgroundRefreshController {
             refreshTask.cancel()
         }
 
-        Task { @MainActor in
+        Task {
             let success = await refreshTask.value
             task.setTaskCompleted(success: success)
         }
