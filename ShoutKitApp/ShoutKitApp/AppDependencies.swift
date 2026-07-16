@@ -16,6 +16,7 @@ struct AppServices {
     let container: ModelContainer
     let libraryStore: LibraryStore
     let playbackController: PlaybackController
+    let stationConnectionPrewarmer: StationConnectionPrewarmer
     let sleepTimer: SleepTimer
     let settingsStore: SettingsStore
     /// Retained for app lifetime so MetricKit subscription state remains active.
@@ -59,6 +60,7 @@ enum AppDependencies {
         // manually through RootView.
         registerProductionRadioDirectory(directory)
         let controller = PlaybackController(directory: directory)
+        let stationConnectionPrewarmer = StationConnectionPrewarmer()
 
         configureCallbacks(
             for: controller,
@@ -84,6 +86,7 @@ enum AppDependencies {
             container: container,
             libraryStore: store,
             playbackController: controller,
+            stationConnectionPrewarmer: stationConnectionPrewarmer,
             sleepTimer: sleepTimer,
             settingsStore: settings,
             diagnosticsService: diagnosticsService,
@@ -92,7 +95,7 @@ enum AppDependencies {
             activityCoordinator: activityCoordinator,
             stationLaunchRouter: StationLaunchRouter()
         )
-        scheduleLaunchWarmups(store: store, featureFlags: featureFlags)
+        scheduleLaunchWarmups(store: store, featureFlags: featureFlags, prewarmer: stationConnectionPrewarmer)
 
         Self.services = services
         return services
@@ -126,7 +129,11 @@ enum AppDependencies {
     /// Launch-time, fire-and-forget warmups: Spotlight indexing of known
     /// stations (so Siri can resolve "play ⟨station⟩" from a previous session)
     /// and the flag-gated network-path prewarm for the user's top stations.
-    private static func scheduleLaunchWarmups(store: LibraryStore, featureFlags: any FeatureFlagProviding) {
+    private static func scheduleLaunchWarmups(
+        store: LibraryStore,
+        featureFlags: any FeatureFlagProviding,
+        prewarmer: StationConnectionPrewarmer
+    ) {
         Task {
             await StationEntityQuery().indexKnownStationsForSpotlight()
         }
@@ -137,7 +144,7 @@ enum AppDependencies {
             let prewarmURLs = store.prewarmStreamURLs(limit: 5)
             if prewarmURLs.isEmpty == false {
                 Task.detached(priority: .utility) {
-                    await StationConnectionPrewarmer().prewarm(streamURLs: prewarmURLs)
+                    await prewarmer.prewarm(streamURLs: prewarmURLs)
                 }
             }
         }
