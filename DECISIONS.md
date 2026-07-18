@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-07-18 (0.3.0 QA-checklist outcomes: streaming intents, artwork caching)
+
+- **Streaming intent responses ("still working…") — not adopting.**
+  `PlaybackController.play(_:)` is fire-and-forget: it kicks off endpoint
+  resolution + buffering and returns synchronously, so `PlayStationIntent.perform()`
+  returns "Playing …" immediately and never blocks on a resolve-then-buffer
+  window. `WarmupRadioAudioQueueIntent` already prewarms the socket. A streaming
+  response would only add value if `perform()` awaited first-audio — which is
+  worse for headless Siri playback (Siri would wait on the buffer). Revisit only
+  if the play intent ever becomes await-until-playing.
+- **`AsyncImage` HTTP-caching free win — confirmed, no change.** Radio-Browser
+  favicons ship `cache-control: max-age=31536000` + `etag`, so the shared
+  `URLCache` caches them. Station artwork already routes through `URLCache`
+  (`.returnCacheDataElseLoad`) in `ArtworkThumbnailLoader`/`ArtworkLoader` — the
+  app uses those, not `AsyncImage`, for list rows. The `NSCache` tier holds
+  *decoded* thumbnails (not raw bytes), so it's complementary to `URLCache`, not
+  redundant caching to drop.
+
 ## 2026-07-18 (App Intents Testing + first app-hosted test target)
 
 Adopted the iOS 27 **App Intents Testing** framework for the Siri intents, which
