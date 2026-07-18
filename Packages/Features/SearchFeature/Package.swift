@@ -18,7 +18,7 @@ let package = Package(
         .package(path: "../../Persistence"),
         .package(path: "../../RadioDirectory"),
         .package(url: "https://github.com/apple/swift-async-algorithms.git", from: "1.1.5"),
-        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.1")
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2")
     ],
     targets: [
         .target(
