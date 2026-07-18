@@ -29,6 +29,8 @@
 		0000000000000000000000C0 /* NowPlayingActivityCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0000000000000000000000CA /* NowPlayingActivityCore */; };
 		0000000000000000000000C1 /* QuickPlayWidgetPublisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000D0 /* QuickPlayWidgetPublisher.swift */; };
 		0000000000000000000000C2 /* QuickPlayWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000D1 /* QuickPlayWidget.swift */; };
+		0000000000000000000000ED /* IntentSupportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000EB /* IntentSupportTests.swift */; };
+		0000000000000000000000EE /* AppIntentsPathwayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000EC /* AppIntentsPathwayTests.swift */; };
 		000000000000000000000079 /* ShoutKitWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000071 /* ShoutKitWidgetsBundle.swift */; };
 		00000000000000000000007A /* NowPlayingLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000072 /* NowPlayingLiveActivity.swift */; };
 		00000000000000000000007F /* ShoutKitWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 000000000000000000000070 /* ShoutKitWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -69,6 +71,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = DA0B84EF0EC6D1665CAD9441;
 			remoteInfo = ShoutKitWatchWidgets;
+		};
+		0000000000000000000000E9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 000000000000000000000002;
+			remoteInfo = ShoutKit;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -121,6 +130,9 @@
 		000000000000000000000090 /* StationLaunchRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationLaunchRouter.swift; sourceTree = "<group>"; };
 		0000000000000000000000D0 /* QuickPlayWidgetPublisher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPlayWidgetPublisher.swift; sourceTree = "<group>"; };
 		0000000000000000000000D1 /* QuickPlayWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPlayWidget.swift; sourceTree = "<group>"; };
+		0000000000000000000000E1 /* ShoutKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShoutKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0000000000000000000000EB /* IntentSupportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentSupportTests.swift; sourceTree = "<group>"; };
+		0000000000000000000000EC /* AppIntentsPathwayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntentsPathwayTests.swift; sourceTree = "<group>"; };
 		000000000000000000000092 /* ShoutKitApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShoutKitApp.entitlements; sourceTree = "<group>"; };
 		000000000000000000000093 /* ShoutKitWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShoutKitWidgets.entitlements; sourceTree = "<group>"; };
 		059363CD6EA08810681C100A /* WatchNoopNowPlayingCenter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchNoopNowPlayingCenter.swift; sourceTree = "<group>"; };
@@ -185,6 +197,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		0000000000000000000000E6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -192,6 +211,7 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000005 /* ShoutKitApp */,
+				0000000000000000000000EA /* ShoutKitTests */,
 				000000000000000000000074 /* ShoutKitWidgets */,
 				000000000000000000000006 /* Config */,
 				000000000000000000000007 /* Packages */,
@@ -206,6 +226,7 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000008 /* ShoutKit.app */,
+				0000000000000000000000E1 /* ShoutKitTests.xctest */,
 				000000000000000000000070 /* ShoutKitWidgets.appex */,
 				1F9BBE8DA0AFDC04C965EF42 /* ShoutKitWatchApp.app */,
 				2CF7489050D38CAD0C9BCAD5 /* ShoutKitWatchWidgets.appex */,
@@ -234,6 +255,15 @@
 				000000000000000000000092 /* ShoutKitApp.entitlements */,
 			);
 			path = ShoutKitApp;
+			sourceTree = "<group>";
+		};
+		0000000000000000000000EA /* ShoutKitTests */ = {
+			isa = PBXGroup;
+			children = (
+				0000000000000000000000EB /* IntentSupportTests.swift */,
+				0000000000000000000000EC /* AppIntentsPathwayTests.swift */,
+			);
+			path = ShoutKitTests;
 			sourceTree = "<group>";
 		};
 		000000000000000000000006 /* Config */ = {
@@ -396,6 +426,23 @@
 			productReference = 2CF7489050D38CAD0C9BCAD5 /* ShoutKitWatchWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		0000000000000000000000E0 /* ShoutKitTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0000000000000000000000E2 /* Build configuration list for PBXNativeTarget "ShoutKitTests" */;
+			buildPhases = (
+				0000000000000000000000E5 /* Sources */,
+				0000000000000000000000E6 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0000000000000000000000E8 /* PBXTargetDependency */,
+			);
+			name = ShoutKitTests;
+			productName = ShoutKitTests;
+			productReference = 0000000000000000000000E1 /* ShoutKitTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -452,6 +499,7 @@
 			projectRoot = "";
 			targets = (
 				000000000000000000000002 /* ShoutKit */,
+				0000000000000000000000E0 /* ShoutKitTests */,
 				000000000000000000000075 /* ShoutKitWidgets */,
 				3A593819EC2EC0E4966C890C /* ShoutKitWatchApp */,
 				DA0B84EF0EC6D1665CAD9441 /* ShoutKitWatchWidgets */,
@@ -547,6 +595,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		0000000000000000000000E5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0000000000000000000000ED /* IntentSupportTests.swift in Sources */,
+				0000000000000000000000EE /* AppIntentsPathwayTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -561,9 +618,54 @@
 			target = DA0B84EF0EC6D1665CAD9441 /* ShoutKitWatchWidgets */;
 			targetProxy = D07E3ADCCC456E2132BA60D8 /* PBXContainerItemProxy */;
 		};
+		0000000000000000000000E8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 000000000000000000000002 /* ShoutKit */;
+			targetProxy = 0000000000000000000000E9 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		0000000000000000000000E3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9L45FNA7XM;
+				ENABLE_TESTING_SEARCH_PATHS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 0.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cascadiacollections.shoutkit.ShoutKitTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ShoutKit.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ShoutKit";
+			};
+			name = Debug;
+		};
+		0000000000000000000000E4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9L45FNA7XM;
+				ENABLE_TESTING_SEARCH_PATHS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 0.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cascadiacollections.shoutkit.ShoutKitTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ShoutKit.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ShoutKit";
+			};
+			name = Release;
+		};
 		000000000000000000000032 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -894,6 +996,15 @@
 			buildConfigurations = (
 				C91488E64C6644C03E9EB10F /* Release */,
 				780E9A9DDA2CFCAD30203AF9 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0000000000000000000000E2 /* Build configuration list for PBXNativeTarget "ShoutKitTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0000000000000000000000E3 /* Debug */,
+				0000000000000000000000E4 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

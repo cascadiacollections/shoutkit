@@ -1,5 +1,34 @@
 # Decisions
 
+## 2026-07-18 (App Intents Testing + first app-hosted test target)
+
+Adopted the iOS 27 **App Intents Testing** framework for the Siri intents, which
+required standing up the project's **first app-hosted unit-test target**
+(`ShoutKitTests`) — the intents live in the app target and App Intents testing
+resolves the app's extracted metadata, so it can't be a SwiftPM package suite
+like the rest of the tree.
+
+- **Two files, two levels.** `IntentSupportTests` is fast, offline, unit-level
+  coverage of the pure logic (`StationEntity` ↔ `Station` round-trip, the schema
+  enums' `caseDisplayRepresentations`, `IntentStationCache` dedup/capacity) via
+  `@testable import ShoutKit`. `AppIntentsPathwayTests` uses `AppIntentsTesting`'s
+  `IntentDefinitions` to drive `StationEntityQuery.suggestedEntities()` through
+  the real system pathway (curated seed → suggestions), the way Siri/Spotlight
+  would.
+- **Deliberately no `perform()` test of `PlayStationIntent`.** Its `perform()`
+  starts real playback (audio session + network stream); asserting on the
+  entity-query pathway exercises the framework without those side effects. The
+  pathway test also avoids the live `entities(matching:)` directory search so it
+  stays deterministic/offline.
+- **Runs on a host, not `swift test`.** The target is added to
+  `ShoutKit.xctestplan` alongside the package suites. It builds green
+  (`xcodebuild build-for-testing`), but this sandbox and the current CI can't run
+  app-hosted xctest (the xctest agent SIGSEGVs; see [[shoutkit-ci-xcode27]]), so
+  the suite is validated by **Cmd+U in Xcode** for now — not wired into CI.
+- **Caveat:** `IntentDefinitions` looks types up by string identifier (defaults
+  to the Swift type name, e.g. `"StationEntity"`). Compiles regardless; if the
+  pathway test traps at runtime, the identifier string is the thing to adjust.
+
 ## 2026-07-18 (iOS 27 MediaSession now-playing selection)
 
 `PlaybackController`'s production convenience init now selects the system
