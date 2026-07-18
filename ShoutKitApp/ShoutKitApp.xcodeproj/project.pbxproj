@@ -26,6 +26,9 @@
 		000000000000000000000067 /* LibraryFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000057 /* LibraryFeature */; };
 		000000000000000000000068 /* NowPlayingActivityKit in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000058 /* NowPlayingActivityKit */; };
 		000000000000000000000069 /* NowPlayingActivityCore in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000059 /* NowPlayingActivityCore */; };
+		0000000000000000000000C0 /* NowPlayingActivityCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0000000000000000000000CA /* NowPlayingActivityCore */; };
+		0000000000000000000000C1 /* QuickPlayWidgetPublisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000D0 /* QuickPlayWidgetPublisher.swift */; };
+		0000000000000000000000C2 /* QuickPlayWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000D1 /* QuickPlayWidget.swift */; };
 		000000000000000000000079 /* ShoutKitWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000071 /* ShoutKitWidgetsBundle.swift */; };
 		00000000000000000000007A /* NowPlayingLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000072 /* NowPlayingLiveActivity.swift */; };
 		00000000000000000000007F /* ShoutKitWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 000000000000000000000070 /* ShoutKitWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -116,6 +119,8 @@
 		000000000000000000000083 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		000000000000000000000085 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		000000000000000000000090 /* StationLaunchRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationLaunchRouter.swift; sourceTree = "<group>"; };
+		0000000000000000000000D0 /* QuickPlayWidgetPublisher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPlayWidgetPublisher.swift; sourceTree = "<group>"; };
+		0000000000000000000000D1 /* QuickPlayWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPlayWidget.swift; sourceTree = "<group>"; };
 		000000000000000000000092 /* ShoutKitApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShoutKitApp.entitlements; sourceTree = "<group>"; };
 		000000000000000000000093 /* ShoutKitWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShoutKitWidgets.entitlements; sourceTree = "<group>"; };
 		059363CD6EA08810681C100A /* WatchNoopNowPlayingCenter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchNoopNowPlayingCenter.swift; sourceTree = "<group>"; };
@@ -151,6 +156,7 @@
 				000000000000000000000082 /* SettingsFeature in Frameworks */,
 				0000000000000000000000A0 /* DebugSupport in Frameworks */,
 				000000000000000000000068 /* NowPlayingActivityKit in Frameworks */,
+				0000000000000000000000C0 /* NowPlayingActivityCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -219,6 +225,7 @@
 				000000000000000000000018 /* ShoutKitShortcuts.swift */,
 				000000000000000000000090 /* StationLaunchRouter.swift */,
 				000000000000000000000094 /* ShoutKitCarPlaySceneDelegate.swift */,
+				0000000000000000000000D0 /* QuickPlayWidgetPublisher.swift */,
 				000000000000000000000013 /* Info.plist */,
 				000000000000000000000014 /* Assets.xcassets */,
 				000000000000000000000019 /* PrivacyInfo.xcprivacy */,
@@ -252,6 +259,7 @@
 			children = (
 				000000000000000000000071 /* ShoutKitWidgetsBundle.swift */,
 				000000000000000000000072 /* NowPlayingLiveActivity.swift */,
+				0000000000000000000000D1 /* QuickPlayWidget.swift */,
 				000000000000000000000073 /* Info.plist */,
 				000000000000000000000085 /* Localizable.xcstrings */,
 				000000000000000000000093 /* ShoutKitWidgets.entitlements */,
@@ -321,6 +329,7 @@
 				00000000000000000000005A /* SettingsFeature */,
 				00000000000000000000005B /* DebugSupport */,
 				000000000000000000000058 /* NowPlayingActivityKit */,
+				0000000000000000000000CA /* NowPlayingActivityCore */,
 			);
 			productName = ShoutKit;
 			productReference = 000000000000000000000008 /* ShoutKit.app */;
@@ -501,6 +510,7 @@
 				000000000000000000000024 /* ShoutKitShortcuts.swift in Sources */,
 				000000000000000000000091 /* StationLaunchRouter.swift in Sources */,
 				000000000000000000000095 /* ShoutKitCarPlaySceneDelegate.swift in Sources */,
+				0000000000000000000000C1 /* QuickPlayWidgetPublisher.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -510,6 +520,7 @@
 			files = (
 				000000000000000000000079 /* ShoutKitWidgetsBundle.swift in Sources */,
 				00000000000000000000007A /* NowPlayingLiveActivity.swift in Sources */,
+				0000000000000000000000C2 /* QuickPlayWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -983,6 +994,11 @@
 			productName = NowPlayingActivityKit;
 		};
 		000000000000000000000059 /* NowPlayingActivityCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000048 /* XCLocalSwiftPackageReference "LiveActivity" */;
+			productName = NowPlayingActivityCore;
+		};
+		0000000000000000000000CA /* NowPlayingActivityCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 000000000000000000000048 /* XCLocalSwiftPackageReference "LiveActivity" */;
 			productName = NowPlayingActivityCore;

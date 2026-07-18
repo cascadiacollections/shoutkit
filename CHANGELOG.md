@@ -7,6 +7,12 @@ All notable changes to ShoutKit are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Home Screen quick-play widget**: a small/medium Home Screen widget that plays a favorite
+  station in one tap. Long-press → **Edit Widget** to choose which favorite it plays (it falls back
+  to your first favorite until you pick one); tapping the tile opens ShoutKit straight onto that
+  station and starts playback via the same `shoutkit://station?…` deep link Shortcuts uses. The app
+  mirrors your favorites to the widget through the shared App Group and refreshes it whenever the
+  list changes or is reordered
 - **iPadOS support**: on iPad the root tab bar adopts the sidebar-adaptable style (an Apple
   Music-style sidebar with a built-in toggle back to a top tab bar; iPhone is unchanged), and the
   station lists in Listen Now, Browse, and Search flow into adaptive multi-column grids on wide

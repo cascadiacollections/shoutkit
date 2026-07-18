@@ -20,7 +20,7 @@ NowPlaying framework work *is* the engineering lift this release is about.
 - [ ] `MediaSessionNowPlayingCenter` (iOS 27 `NowPlaying`/`RadioContent`) verified on-device;
       legacy `MPNowPlayingInfoCenter` path kept as the iOS 26 fallback
 - [ ] App Intents entity schemas for favorited stations (Spotlight semantic search)
-- [ ] Home-screen quick-play widget (App-Intents-configured favorite station)
+- [x] Home-screen quick-play widget (App-Intents-configured favorite station)
 - [ ] Reorderable Favorites (iOS 27 list-reordering API)
 
 **Engineering**

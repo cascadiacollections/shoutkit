@@ -1,5 +1,6 @@
 import Foundation
 import BrowseFeature
+import BrowseFeatureCore
 import DesignSystem
 import LibraryFeature
 import Persistence
@@ -7,7 +8,9 @@ import PlayerFeature
 import Playback
 import RadioDirectory
 import SearchFeature
+import SearchFeatureCore
 import SettingsFeature
+import SwiftData
 import SwiftUI
 
 struct RootView: View {
@@ -18,6 +21,11 @@ struct RootView: View {
     // Read only to verify injection below; feature views read these themselves.
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
+
+    // Favorites, mirrored to the Home Screen quick-play widget on change. Sorted
+    // to match the Favorites tab so the widget's picker shows the same order.
+    @Query(sort: \FavoriteStation.sortIndex, order: .forward)
+    private var favorites: [FavoriteStation]
 
     @State private var selectedTab = ShoutKitTab.listenNow
     @State private var isShowingNowPlaying = false
@@ -59,6 +67,12 @@ struct RootView: View {
                 guard let link else { return }
                 launchRouter.clearPending()
                 handle(link)
+            }
+            // Keep the quick-play widget's favorite list in sync. `initial: true`
+            // covers cold launch; the signature captures membership *and* order,
+            // so a drag-reorder republishes too.
+            .onChange(of: favoritesSignature, initial: true) {
+                QuickPlayWidgetPublisher.publish(favorites)
             }
             .onContinueUserActivity(StationLink.handoffActivityType) { activity in
                 launchRouter.open(userActivity: activity)
@@ -146,6 +160,13 @@ struct RootView: View {
         case .idle:
             playback.play(link.station)
         }
+    }
+
+    /// An `Equatable` fingerprint of the favorites list — station ids in display
+    /// order — so `onChange` fires on add, remove, and reorder without depending
+    /// on `[FavoriteStation]` element equality.
+    private var favoritesSignature: [String] {
+        favorites.map(\.stationID)
     }
 
     private var currentHandoffLink: StationLink? {

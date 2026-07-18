@@ -1,5 +1,35 @@
 # Decisions
 
+## 2026-07-18 (Home Screen quick-play widget)
+
+A configurable Home Screen widget that plays a chosen favorite in one tap.
+
+- **The widget opens a `shoutkit://station?...&autoPlay=1` deep link via
+  `.widgetURL`, not a headless `AudioPlaybackIntent`.** The deep link already
+  carries the full station snapshot and is the same path Shortcuts/notifications
+  use, so playback needs no shared audio stack in the extension — it reuses
+  `StationLink` + `StationLaunchRouter` + `RootView.handle(_:)` unchanged. This
+  matches the watch complication's `widgetURL` pattern. A `Button(intent:)`
+  headless play was rejected for v1 because it would drag `AppDependencies` (the
+  whole app graph) into the widget process.
+- **Configuration is `AppIntentConfiguration` with a `WidgetConfigurationIntent`
+  (`SelectFavoriteStationIntent`) + a lightweight `FavoriteStationAppEntity`**,
+  per the roadmap's "favorite station as an intent-configured parameter." The
+  entity/query read *only* the App Group snapshot, so the picker resolves without
+  the app's dependency graph. Unset selection falls back to the first favorite.
+- **The app mirrors favorites to the widget through the existing App Group
+  (`group.com.cascadiacollections.shoutkit`)**, via a new dependency-free
+  `QuickPlayFavoritesStore` in `NowPlayingActivityCore` (already linked by both
+  the app and the widget), mirroring `LiveActivityArtworkStore`'s
+  container/override pattern. `RootView` republishes on any favorites change
+  (`onChange` over a station-id signature, so add/remove/**reorder** all trigger)
+  and reloads the timeline via `WidgetCenter`. The app target gained a direct
+  `NowPlayingActivityCore` product dependency (it previously linked only
+  `NowPlayingActivityKit`).
+- **v1 renders a glyph + name/genre, no artwork.** Home Screen widgets can't
+  fetch remote images, and staging per-favorite PNGs (as the Live Activity does
+  for the single current track) isn't worth it for a station picker yet.
+
 ## 2026-07-16 (watchOS companion app)
 
 - Chose **watch-native streaming** for the first Apple Watch companion instead of relaying audio from the phone. `PlaybackController` already only depends on the `AudioOutput` and `NowPlayingPresenting` seams, so a tiny watch-local `AVPlayer` engine reuses the same controller and `RecentStation` snapshots without adding a WatchConnectivity relay protocol or a paired-device availability state machine.
