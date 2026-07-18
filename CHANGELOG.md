@@ -6,6 +6,12 @@ All notable changes to ShoutKit are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- **Smoother list scrolling**: the Browse and Search station lists now prefetch artwork for
+  rows about to scroll into view, so thumbnails are decoded ahead of time instead of stalling as
+  each row appears. Repeated loads of the same artwork are also coalesced so a prefetch and a
+  visible row never fetch the same image twice
+
 ### Added
 - **Home Screen quick-play widget**: a small/medium Home Screen widget that plays a favorite
   station in one tap. Long-press → **Edit Widget** to choose which favorite it plays (it falls back

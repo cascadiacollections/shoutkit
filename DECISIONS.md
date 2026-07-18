@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-07-18 (list artwork prefetch)
+
+Browse/Search station lists now prefetch upcoming rows' artwork so scrolling
+doesn't stall on a cold decode as each row appears.
+
+- **Warmed the existing custom pipeline, not a formal list-prefetch API.**
+  Artwork loads through `ArtworkThumbnailLoader` (ImageIO downsample →
+  `NSCache`), not `AsyncImage`, so the stall to remove is the per-row
+  fetch+decode, and the fix is warming that cache ahead of time. A new
+  fire-and-forget `ArtworkThumbnailLoader.prefetch(_:maxPixelSize:)` does exactly
+  that; rows call `.prefetchStationArtwork(after:in:)` (DesignSystem) with a
+  6-row look-ahead from each row's `onAppear`.
+- **Added in-flight coalescing (a small actor) to the loader.** Without it, a
+  prefetch and the row's own `.task` for the same artwork would race into two
+  fetch+decodes. Callers now share one in-flight `Task` per cache key; the entry
+  is dropped on completion so a later miss re-fetches rather than pinning a stale
+  result (the decoded bitmap lives in the `NSCache`, not the coalescer).
+- **Shared the decode size so prefetch and row hit the same cache key.**
+  `StationArtworkView.listSize` (56 pt) is now the single source of truth for the
+  row artwork size and the prefetch's `maxPixelSize` (× display scale), so a
+  prefetch can't miss the row's later request over a size mismatch.
+
 ## 2026-07-18 (Home Screen quick-play widget)
 
 A configurable Home Screen widget that plays a chosen favorite in one tap.

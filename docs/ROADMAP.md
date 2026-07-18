@@ -24,7 +24,7 @@ NowPlaying framework work *is* the engineering lift this release is about.
 - [x] Reorderable Favorites (iOS 27 list-reordering API)
 
 **Engineering**
-- [ ] Lazy-subview prefetch on browse/search station lists
+- [x] Lazy-subview prefetch on browse/search station lists
 - [ ] Typed throws for playback failures (`AudioStatus.failed(String)` → typed error)
 - [ ] Audit `Task { try? … }` call sites once Swift 6.4's unhandled-error warning lands
 - [ ] iOS 27 QA checklist (Dynamic Island landscape, resizable-iPhone-app contexts,

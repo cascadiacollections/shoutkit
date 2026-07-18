@@ -9,6 +9,7 @@ public struct SearchView: View {
     @State private var viewModel: SearchViewModel
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
+    @Environment(\.displayScale) private var displayScale
     // Switching into the Search tab should drop the keyboard straight into the
     // search field, matching Apple Music/Podcasts — nobody switches to Search
     // to look at it.
@@ -94,7 +95,7 @@ public struct SearchView: View {
 
     private func resultsList(_ stations: [Station]) -> some View {
         LazyVGrid(columns: ShoutKitLayout.stationColumns, spacing: ShoutKitSpacing.small) {
-            ForEach(stations) { station in
+            ForEach(Array(stations.enumerated()), id: \.element.id) { index, station in
                 StationRow(
                     station: station,
                     phase: playback?.phase(for: station) ?? .idle,
@@ -102,6 +103,7 @@ public struct SearchView: View {
                     onTap: { playback?.toggle(station) },
                     onToggleFavorite: library.map { store in { store.toggleFavorite(station) } }
                 )
+                .prefetchStationArtwork(after: index, in: stations, displayScale: displayScale)
             }
         }
     }

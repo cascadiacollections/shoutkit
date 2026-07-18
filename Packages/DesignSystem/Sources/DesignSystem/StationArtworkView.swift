@@ -10,6 +10,17 @@ import UIKit
 /// instead of the source's native resolution, and repeated appearances in
 /// lazy lists hit a pressure-evicting `NSCache` instead of re-decoding.
 public struct StationArtworkView: View {
+    /// The point size used by station list rows (`StationRow`). Exposed so
+    /// artwork prefetching can request the exact same decoded size — and thus
+    /// the same cache key — the row will ask for.
+    public static let listSize: CGFloat = 56
+
+    /// The target decode size, in pixels, for list-row artwork at a given
+    /// display scale — the value to pass to `ArtworkThumbnailLoader.prefetch`.
+    public static func listPixelSize(displayScale: CGFloat) -> CGFloat {
+        listSize * displayScale
+    }
+
     private let artworkURL: URL?
     private let size: CGFloat
     private let cornerRadius: CGFloat
@@ -23,7 +34,7 @@ public struct StationArtworkView: View {
 
     public init(
         artworkURL: URL?,
-        size: CGFloat = 56,
+        size: CGFloat = StationArtworkView.listSize,
         cornerRadius: CGFloat = ShoutKitRadius.small,
         isPlaying: Bool = false
     ) {
