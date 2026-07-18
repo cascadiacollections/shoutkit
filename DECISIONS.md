@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-07-18 (iOS 27 MediaSession now-playing selection)
+
+`PlaybackController`'s production convenience init now selects the system
+now-playing surface by OS version instead of hardcoding the legacy path.
+
+- **`makeSystemNowPlayingCenter()` returns `MediaSessionNowPlayingCenter` on
+  iOS 27+ (typed `MediaSession` + `RadioContent`) and `NowPlayingCenter` on
+  iOS 26** (the `MPNowPlayingInfoCenter`/`MPRemoteCommandCenter` bridge). The
+  `MediaSessionNowPlayingCenter` implementation already existed; this wires it in.
+- **Availability-based, not a feature flag.** The 0.3.0 plan calls for exactly a
+  `#available(iOS 27, *)` switch with a "one-line revert" escape hatch, so the
+  fallback is deleting the `#available` branch — not a runtime toggle. Both
+  implementations sit behind `NowPlayingPresenting`, so the controller, its tests,
+  and the fakes are untouched.
+- **Guarded by `#if canImport(NowPlaying)`** so the package still builds on SDKs
+  without the framework (it collapses to legacy). Verified `NowPlaying.framework`
+  is present in the iphoneos 27 SDK, so the branch is live on device.
+- **On-device parity verification is still pending** (lock screen / Control
+  Center / Dynamic Island transport, artwork, station switch, ad-break
+  suppression) — that box in `docs/releases/0.3.0.md` stays unchecked until
+  confirmed on hardware.
+
 ## 2026-07-18 (list artwork prefetch)
 
 Browse/Search station lists now prefetch upcoming rows' artwork so scrolling

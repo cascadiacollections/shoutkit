@@ -5,19 +5,36 @@ import RadioDirectory
 
 public extension PlaybackController {
     /// Production wiring: the Factory-resolved playback engine (AudioStreaming-
-    /// backed by default; see ``Container/radioPlaybackEngine``) and the system
-    /// now-playing center. Keep the lock-screen / Control Center surface on the
-    /// MediaPlayer bridge for now: on-device iOS 27 builds have shown Live
-    /// Activity album art correctly while the system Now Playing surface can
-    /// stick to station artwork. Both implementations sit behind
-    /// ``NowPlayingPresenting``, so this is a safe runtime switch until the typed
-    /// MediaSession path is fully parity-tested.
+    /// backed by default; see ``Container/radioPlaybackEngine``) and the
+    /// OS-selected system now-playing center (see ``makeSystemNowPlayingCenter``).
     convenience init(directory: any RadioDirectoryProviding) {
         self.init(
             directory: directory,
             output: Container.shared.radioPlaybackEngine(),
-            nowPlayingCenter: NowPlayingCenter()
+            nowPlayingCenter: Self.makeSystemNowPlayingCenter()
         )
+    }
+
+    /// Selects the system now-playing surface (lock screen / Control Center /
+    /// Dynamic Island) by OS version:
+    ///
+    /// - **iOS 27+** → ``MediaSessionNowPlayingCenter``: the typed, observable
+    ///   `MediaSession` path with `RadioContent` and structured `MediaCommand`s.
+    /// - **iOS 26** → ``NowPlayingCenter``: the legacy `MPNowPlayingInfoCenter` /
+    ///   `MPRemoteCommandCenter` bridge.
+    ///
+    /// Both conform to ``NowPlayingPresenting`` (the seam added for testability in
+    /// 0.2.0), so the controller, its tests, and the fakes are untouched by the
+    /// switch. This is a first-beta framework: if the MediaSession path misbehaves
+    /// in TestFlight, deleting the `#available` branch collapses selection back to
+    /// the legacy path.
+    static func makeSystemNowPlayingCenter() -> any NowPlayingPresenting {
+        #if canImport(NowPlaying)
+        if #available(iOS 27, *) {
+            return MediaSessionNowPlayingCenter()
+        }
+        #endif
+        return NowPlayingCenter()
     }
 
     /// A controller wired to preview data for SwiftUI previews.

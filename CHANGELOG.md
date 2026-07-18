@@ -7,6 +7,10 @@ All notable changes to ShoutKit are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- **iOS 27 now-playing surface**: on iOS 27 the lock screen / Control Center / Dynamic Island
+  now-playing surface is driven by the new typed `MediaSession` / `RadioContent` framework instead
+  of the legacy `MPNowPlayingInfoCenter` bridge; iOS 26 is unchanged. Transport controls, artwork,
+  and live track metadata behave the same — the change is internal, selected by OS version
 - **Smoother list scrolling**: the Browse and Search station lists now prefetch artwork for
   rows about to scroll into view, so thumbnails are decoded ahead of time instead of stalling as
   each row appears. Repeated loads of the same artwork are also coalesced so a prefetch and a
