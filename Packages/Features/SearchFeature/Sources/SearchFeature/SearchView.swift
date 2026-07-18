@@ -2,6 +2,7 @@ import DesignSystem
 import Persistence
 import Playback
 import RadioDirectory
+import SearchFeatureCore
 import SwiftUI
 
 public struct SearchView: View {

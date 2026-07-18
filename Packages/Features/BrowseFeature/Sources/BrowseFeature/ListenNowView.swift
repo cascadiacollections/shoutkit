@@ -1,3 +1,4 @@
+import BrowseFeatureCore
 import DesignSystem
 import FeatureFlags
 import Persistence

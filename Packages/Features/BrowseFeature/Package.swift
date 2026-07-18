@@ -12,6 +12,7 @@ let package = Package(
         .library(name: "BrowseFeature", targets: ["BrowseFeature"])
     ],
     dependencies: [
+        .package(path: "../../BrowseFeatureCore"),
         .package(path: "../../DesignSystem"),
         .package(path: "../../FeatureFlags"),
         .package(path: "../../Playback"),
@@ -23,6 +24,7 @@ let package = Package(
         .target(
             name: "BrowseFeature",
             dependencies: [
+                "BrowseFeatureCore",
                 "DesignSystem",
                 "FeatureFlags",
                 "Playback",

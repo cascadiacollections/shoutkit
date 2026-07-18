@@ -63,6 +63,18 @@ jobs:
         working-directory: Packages/FeatureFlags
         run: swift test --disable-xctest
 
+      # BrowseFeatureCore/SearchFeatureCore hold the Browse/Search view-model
+      # logic split out of BrowseFeature/SearchFeature specifically so it can
+      # run here: those two feature packages depend on DesignSystem, whose
+      # UIKit-only sources don't build for the mac host at all.
+      - name: BrowseFeatureCore tests
+        working-directory: Packages/BrowseFeatureCore
+        run: swift test --disable-xctest
+
+      - name: SearchFeatureCore tests
+        working-directory: Packages/SearchFeatureCore
+        run: swift test --disable-xctest
+
   build:
     name: Build app + compile Playback tests (iOS Simulator)
     runs-on: xcode-27

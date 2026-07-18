@@ -3,37 +3,34 @@
 import PackageDescription
 
 let package = Package(
-    name: "SearchFeature",
-    defaultLocalization: "en",
+    name: "SearchFeatureCore",
     platforms: [
-        .iOS(.v27)
+        .iOS(.v27),
+        // Declared so the view-model test suite can run on the mac host
+        // (`swift test`), same pattern as RadioDirectory/Playback/Persistence.
+        .macOS(.v15)
     ],
     products: [
-        .library(name: "SearchFeature", targets: ["SearchFeature"])
+        .library(name: "SearchFeatureCore", targets: ["SearchFeatureCore"])
     ],
     dependencies: [
-        .package(path: "../../SearchFeatureCore"),
-        .package(path: "../../DesignSystem"),
-        .package(path: "../../Playback"),
-        .package(path: "../../Persistence"),
-        .package(path: "../../RadioDirectory"),
+        .package(path: "../RadioDirectory"),
         .package(url: "https://github.com/apple/swift-async-algorithms.git", from: "1.1.5"),
         .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.1")
     ],
     targets: [
         .target(
-            name: "SearchFeature",
+            name: "SearchFeatureCore",
             dependencies: [
-                "SearchFeatureCore",
-                "DesignSystem",
-                "Playback",
-                "Persistence",
                 "RadioDirectory",
                 .product(name: "AsyncAlgorithms", package: "swift-async-algorithms"),
                 .product(name: "FactoryKit", package: "Factory")
             ],
-            resources: [.process("Resources/Localizable.xcstrings")],
             swiftSettings: [.defaultIsolation(MainActor.self)]
+        ),
+        .testTarget(
+            name: "SearchFeatureCoreTests",
+            dependencies: ["SearchFeatureCore"]
         )
     ]
 )
