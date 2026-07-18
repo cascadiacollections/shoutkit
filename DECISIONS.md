@@ -25,6 +25,7 @@ like the rest of the tree.
   (`xcodebuild build-for-testing`), but this sandbox and the current CI can't run
   app-hosted xctest (the xctest agent SIGSEGVs; see [[shoutkit-ci-xcode27]]), so
   the suite is validated by **Cmd+U in Xcode** for now — not wired into CI.
+  Confirmed green via Cmd+U on 2026-07-18.
 - **Caveat:** `IntentDefinitions` looks types up by string identifier (defaults
   to the Swift type name, e.g. `"StationEntity"`). Compiles regardless; if the
   pathway test traps at runtime, the identifier string is the thing to adjust.
