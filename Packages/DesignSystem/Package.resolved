@@ -1,5 +1,5 @@
 {
-  "originHash" : "14873f3e00ea9b13435e1de1e30b39411cb03c39da369ab6b8bc1c2a5ff471a1",
+  "originHash" : "e9d568739323f70963f5ac88020adc40a3f48a8cba560852b7ba5f38eda2ef2c",
   "pins" : [
     {
       "identity" : "audiostreaming",
@@ -20,15 +20,6 @@
       }
     },
     {
-      "identity" : "grdb.swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/groue/GRDB.swift.git",
-      "state" : {
-        "revision" : "b83108d10f42680d78f23fe4d4d80fc88dab3212",
-        "version" : "7.11.1"
-      }
-    },
-    {
       "identity" : "ogg-binary-xcframework",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sbooth/ogg-binary-xcframework",
@@ -44,15 +35,6 @@
       "state" : {
         "revision" : "87e50f483c54e6efd60e885f7f5aa946cee68023",
         "version" : "1.2.1"
-      }
-    },
-    {
-      "identity" : "swift-async-algorithms",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-async-algorithms.git",
-      "state" : {
-        "revision" : "3da39bbc4e687d4192af7c9cf4eab805745a0b9c",
-        "version" : "1.1.5"
       }
     },
     {
