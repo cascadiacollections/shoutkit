@@ -17,7 +17,7 @@ Closing out `docs/releases/0.3.0.md`. Feature and engineering interleave here be
 NowPlaying framework work *is* the engineering lift this release is about.
 
 **Feature**
-- [ ] `MediaSessionNowPlayingCenter` (iOS 27 `NowPlaying`/`RadioContent`) verified on-device;
+- [x] `MediaSessionNowPlayingCenter` (iOS 27 `NowPlaying`/`RadioContent`) verified on-device;
       legacy `MPNowPlayingInfoCenter` path kept as the iOS 26 fallback
 - [x] App Intents entity schemas for favorited stations (Spotlight semantic search)
 - [x] Home-screen quick-play widget (App-Intents-configured favorite station)

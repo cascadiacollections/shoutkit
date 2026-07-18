@@ -17,10 +17,10 @@ now-playing surface by OS version instead of hardcoding the legacy path.
 - **Guarded by `#if canImport(NowPlaying)`** so the package still builds on SDKs
   without the framework (it collapses to legacy). Verified `NowPlaying.framework`
   is present in the iphoneos 27 SDK, so the branch is live on device.
-- **On-device parity verification is still pending** (lock screen / Control
-  Center / Dynamic Island transport, artwork, station switch, ad-break
-  suppression) — that box in `docs/releases/0.3.0.md` stays unchecked until
-  confirmed on hardware.
+- **On-device parity verified** on an iPhone 17 Pro (iOS 27), 2026-07-18: lock
+  screen, Control Center, Dynamic Island transport (incl. landscape), artwork,
+  station switch, and ad-break suppression all behaved with no regressions vs.
+  the legacy path. This completes the 0.3.0 MediaSession workstream.
 
 ## 2026-07-18 (list artwork prefetch)
 
