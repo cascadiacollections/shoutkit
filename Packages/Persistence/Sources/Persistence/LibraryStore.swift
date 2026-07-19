@@ -91,6 +91,17 @@ public final class LibraryStore {
         save(operation: "move favorites")
     }
 
+    /// Favorites in the user's display order (`sortIndex` ascending) — the same
+    /// order the Favorites tab's `@Query` and the quick-play widget snapshot
+    /// use. For callers that mutate favorites outside a SwiftUI scene (App
+    /// Intents, background work) and need the list to republish.
+    public func orderedFavorites() -> [FavoriteStation] {
+        let descriptor = FetchDescriptor<FavoriteStation>(
+            sortBy: [SortDescriptor(\.sortIndex, order: .forward)]
+        )
+        return fetch(descriptor, operation: "fetch ordered favorites") ?? []
+    }
+
     /// The next ordering slot, one past the current maximum, so new favorites append
     /// to the bottom of the user's arrangement.
     private func nextSortIndex() -> Int {

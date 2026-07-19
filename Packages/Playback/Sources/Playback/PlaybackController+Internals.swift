@@ -165,6 +165,16 @@ extension PlaybackController {
     func handleTrackInfo(_ info: AudioTrackInfo) {
         guard let station = activeStation else { return }
 
+        // Engine metadata callbacks are delivered asynchronously, so an event
+        // emitted for the *previous* station can land after a fast station
+        // switch has already set `activeStation` to the new one. Legitimate
+        // ICY metadata only flows once this station's stream has started;
+        // while the new endpoint is still resolving (`outputStarted == false`)
+        // any arriving track info can only be the old station's — attributing
+        // it here would show it on every surface and log it to history under
+        // the wrong station.
+        guard outputStarted else { return }
+
         // Conservative gate: junk (a URL, the station's own name, promo copy,
         // a bare ID token) never reaches now-playing or history. A track that
         // fails the check is dropped, not blanked — the previous good track

@@ -99,8 +99,14 @@ public enum ICYMetadataParser {
 
         // Last-resort guard for dialects the tokenizer can't decompose (bad
         // key characters, mismatched quotes): key="value" soup must never be
-        // displayed as a track title.
-        if title.contains("=\"") || title.contains("='") {
+        // displayed as a track title — checked in BOTH halves, since the
+        // " - " split can land the soup on the artist side. (A bare `=` stays
+        // allowed: legitimate titles like "E=MC²" contain one.)
+        let soupMarkers = ["=\"", "='"]
+        if soupMarkers.contains(where: title.contains) {
+            return suppressed
+        }
+        if let artist = info.artist, soupMarkers.contains(where: artist.contains) {
             return suppressed
         }
 
@@ -142,7 +148,18 @@ public enum ICYMetadataParser {
                     value = String(rest)
                     rest = rest[rest.endIndex...]
                 }
-            } else if let separator = rest.firstIndex(where: { $0 == ";" || $0 == "," }) {
+            } else if let separator = rest.indices.first(where: { index in
+                // An unquoted value may itself contain separator characters
+                // (`StreamTitle=Earth, Wind & Fire - September;`, `artist=Tyler,
+                // The Creator`). End it only at a separator actually followed by
+                // another `key=` pair or the end of the block — the same
+                // boundary rule quoted values use. Cutting at the first bare
+                // `,`/`;` would leave a remainder that can't tokenize, failing
+                // the whole block and leaking raw wire text to the display.
+                let character = rest[index]
+                guard character == ";" || character == "," else { return false }
+                return looksLikeFieldBoundary(after: rest.index(after: index), in: rest)
+            }) {
                 value = String(rest[..<separator])
                 rest = rest[separator...]
             } else {

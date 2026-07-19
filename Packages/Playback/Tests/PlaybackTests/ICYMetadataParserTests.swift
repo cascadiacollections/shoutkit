@@ -53,6 +53,30 @@ struct ICYMetadataParserTests {
         #expect(info.title == "Song")
     }
 
+    // An unquoted value containing a comma must not end at it: cutting there
+    // leaves a remainder that can't tokenize, which used to fail the whole
+    // block and leak the raw wire text ("StreamTitle=Earth, Wind & Fire" as
+    // the artist) to the display and listening history.
+    @Test func unquotedValueContainingCommaParsesWhole() {
+        let info = ICYMetadataParser.parseTrack(from: "StreamTitle=Earth, Wind & Fire - September;")
+        #expect(info.artist == "Earth, Wind & Fire")
+        #expect(info.title == "September")
+    }
+
+    @Test func unquotedArtistValueContainingCommaParsesWhole() {
+        let info = ICYMetadataParser.parseTrack(from: "title=Boom,artist=Tyler, The Creator")
+        #expect(info.title == "Boom")
+        #expect(info.artist == "Tyler, The Creator")
+    }
+
+    @Test func unquotedValueStillEndsAtSeparatorBeforeNextPair() {
+        let info = ICYMetadataParser.parseTrack(
+            from: "StreamTitle=Artist - Song;StreamUrl=https://example.com/a,b"
+        )
+        #expect(info.artist == "Artist")
+        #expect(info.title == "Song")
+    }
+
     // MARK: - Broadcaster HLS dialect (comma-separated, double-quoted; e.g. Z100/iHeartRadio)
 
     @Test func hlsDialectExtractsTitleAndEmptyArtist() {
