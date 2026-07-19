@@ -51,8 +51,9 @@ public enum LiveActivityArtworkStore {
     /// Deliberately does NOT purge older files: staging runs off the main
     /// actor and can complete late for a download that has already been
     /// superseded — purging here could delete the file the activity currently
-    /// points at. The coordinator purges after *adopting* a token, where
-    /// adoptions are serialized.
+    /// points at. The coordinator purges after an update carrying a token has
+    /// been *applied* to the activity, keeping every token that can still be
+    /// referenced (see ``purge(keeping:)``).
     ///
     /// `.noFileProtection`: the Live Activity renders on the lock screen while the
     /// device is locked, and the default protection class would make the file
@@ -74,13 +75,24 @@ public enum LiveActivityArtworkStore {
     /// Drops every staged file except `token`'s — the cache only ever needs the
     /// art currently on screen.
     public static func purge(except token: String? = nil) {
+        purge(keeping: token.map { [$0] } ?? [])
+    }
+
+    /// Drops every staged file whose token is not in `tokens`.
+    ///
+    /// The keep-set form exists because more than one file can still be live at
+    /// once: the token referenced by the activity state currently applied, the
+    /// token the coordinator has adopted but not yet pushed, and a download
+    /// staged but not yet adopted. Purging with only one survivor deletes a
+    /// file some surface can still re-render, which falls back to the glyph.
+    public static func purge(keeping tokens: Set<String>) {
         guard let directory = directoryURL else { return }
-        let keep = token.map { "\($0).png" }
+        let keep = Set(tokens.map { "\($0).png" })
         let contents = (try? FileManager.default.contentsOfDirectory(
             at: directory,
             includingPropertiesForKeys: nil
         )) ?? []
-        for file in contents where file.lastPathComponent != keep {
+        for file in contents where keep.contains(file.lastPathComponent) == false {
             try? FileManager.default.removeItem(at: file)
         }
     }
