@@ -14,6 +14,9 @@ import SwiftData
 @MainActor
 struct AppServices {
     let container: ModelContainer
+    /// False when SwiftData failed to open its on-disk store and the app is
+    /// running on a fallback in-memory store.
+    let isPersistentStoreAvailable: Bool
     let libraryStore: LibraryStore
     let playbackController: PlaybackController
     let stationConnectionPrewarmer: StationConnectionPrewarmer
@@ -49,6 +52,7 @@ enum AppDependencies {
         installSharedNetworking()
 
         let container = ShoutKitModelContainer.makeContainer()
+        let isPersistentStoreAvailable = ShoutKitModelContainer.isPersistentStoreAvailable
         let store = LibraryStore(context: container.mainContext)
         let settings = SettingsStore()
         let featureFlags = sharedFeatureFlags()
@@ -84,6 +88,7 @@ enum AppDependencies {
 
         let services = AppServices(
             container: container,
+            isPersistentStoreAvailable: isPersistentStoreAvailable,
             libraryStore: store,
             playbackController: controller,
             stationConnectionPrewarmer: stationConnectionPrewarmer,
