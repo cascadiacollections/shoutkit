@@ -17,6 +17,7 @@ struct RootView: View {
     private let swipeTabThreshold: CGFloat = 70
 
     let launchRouter: StationLaunchRouter
+    let isPersistentStoreAvailable: Bool
 
     // Read only to verify injection below; feature views read these themselves.
     @Environment(\.playbackController) private var playback
@@ -70,8 +71,11 @@ struct RootView: View {
             }
             // Keep the quick-play widget's favorite list in sync. `initial: true`
             // covers cold launch; the signature captures membership *and* order,
-            // so a drag-reorder republishes too.
+            // so a drag-reorder republishes too. Skip writes when SwiftData is
+            // running on an in-memory fallback to avoid clobbering a last-known-
+            // good widget snapshot with an empty list.
             .onChange(of: favoritesSignature, initial: true) {
+                guard isPersistentStoreAvailable else { return }
                 QuickPlayWidgetPublisher.publish(favorites)
             }
             .onContinueUserActivity(StationLink.handoffActivityType) { activity in
@@ -205,6 +209,9 @@ private enum ShoutKitTab: Hashable, CaseIterable {
 }
 
 #Preview {
-    RootView(launchRouter: StationLaunchRouter())
+    RootView(
+        launchRouter: StationLaunchRouter(),
+        isPersistentStoreAvailable: true
+    )
         .tint(.shoutKitAccent)
 }
