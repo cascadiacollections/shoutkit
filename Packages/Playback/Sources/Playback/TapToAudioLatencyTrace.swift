@@ -3,8 +3,8 @@ import os
 
 @MainActor
 final class TapToAudioLatencyTrace {
-    private static let logger = Logger(subsystem: "ShoutKit.Playback", category: "TapToAudio")
-    private static let signposter = OSSignposter(subsystem: "ShoutKit.Playback", category: "TapToAudio")
+    private nonisolated static let logger = Logger(subsystem: "ShoutKit.Playback", category: "TapToAudio")
+    private nonisolated static let signposter = OSSignposter(subsystem: "ShoutKit.Playback", category: "TapToAudio")
 
     private let stationID: String
     private let prewarmEnabled: Bool
@@ -24,7 +24,9 @@ final class TapToAudioLatencyTrace {
     }
 
     deinit {
-        cancel()
+        guard completed == false else { return }
+        completed = true
+        Self.signposter.endInterval("Tap to audio", interval)
     }
 
     func markResolved(url: URL) {

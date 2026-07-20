@@ -87,8 +87,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
 
     private static func shouldRetrySessionDeactivation(_ error: any Error) -> Bool {
         let nsError = error as NSError
-        guard nsError.domain == AVAudioSessionErrorDomain,
-              let code = AVAudioSession.ErrorCode(rawValue: nsError.code) else {
+        guard let code = AVAudioSession.ErrorCode(rawValue: nsError.code) else {
             return false
         }
         return code == .isBusy
