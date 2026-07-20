@@ -270,7 +270,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
             }
         }
 
-        preconditionFailure("Internal error: geo filter query-item set should never be empty.")
+        preconditionFailure("Unreachable: geo filter loop must return or throw before completion.")
     }
 
     /// Walks the mirror list in order with backoff between attempts, so one dead

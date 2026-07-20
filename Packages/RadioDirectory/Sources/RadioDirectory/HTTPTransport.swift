@@ -32,7 +32,8 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
     /// and it must happen before the first network call touches `shared` —
     /// call it at the top of the app's bootstrap, nowhere else.
     public static func installSharedSession(_ session: URLSession) {
-        if sharedSessionResolved.withLock({ $0 }) {
+        let sharedAlreadyResolved = sharedSessionResolved.withLock { resolved in resolved }
+        if sharedAlreadyResolved {
             logger.error(
                 "installSharedSession ignored because URLSessionHTTPTransport.shared was already resolved"
             )
