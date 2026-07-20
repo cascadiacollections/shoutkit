@@ -22,6 +22,7 @@ public struct StationArtworkView: View {
     }
 
     private let artworkURL: URL?
+    private let fallbackArtworkURL: URL?
     private let size: CGFloat
     private let cornerRadius: CGFloat
     private let isPlaying: Bool
@@ -34,11 +35,13 @@ public struct StationArtworkView: View {
 
     public init(
         artworkURL: URL?,
+        fallbackArtworkURL: URL? = nil,
         size: CGFloat = StationArtworkView.listSize,
         cornerRadius: CGFloat = ShoutKitRadius.small,
         isPlaying: Bool = false
     ) {
         self.artworkURL = artworkURL
+        self.fallbackArtworkURL = fallbackArtworkURL
         self.size = size
         self.cornerRadius = cornerRadius
         self.isPlaying = isPlaying
@@ -48,7 +51,7 @@ public struct StationArtworkView: View {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
             .fill(.tint.opacity(0.16))
             .overlay {
-                if let thumbnail {
+                if let thumbnail, thumbnailURL == artworkURL || thumbnailURL == fallbackArtworkURL {
                     Image(uiImage: thumbnail)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
@@ -71,23 +74,23 @@ public struct StationArtworkView: View {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .stroke(.white.opacity(0.12), lineWidth: 0.5)
             }
-            .task(id: artworkURL) {
-                // A reused row must not keep showing the previous station's
-                // artwork while the new one loads.
-                if thumbnailURL != artworkURL {
-                    thumbnail = nil
-                    thumbnailURL = nil
+            .onChange(of: artworkRequest) { _, _ in
+                thumbnail = nil
+                thumbnailURL = nil
+            }
+            .task(id: artworkRequest) {
+                let loaded = await ArtworkLoadPolicy.loadWithSource(artworkRequest) { url in
+                    await ArtworkThumbnailLoader.thumbnail(
+                        for: url,
+                        maxPixelSize: size * displayScale
+                    )
                 }
-                let loaded = await ArtworkThumbnailLoader.thumbnail(
-                    for: artworkURL,
-                    maxPixelSize: size * displayScale
-                )
                 // A task cancelled by a URL change can still resume here with
                 // a stale (or nil, from a cancelled fetch) result — don't let
                 // it clobber the replacement task's image.
                 guard Task.isCancelled == false else { return }
-                thumbnail = loaded
-                thumbnailURL = artworkURL
+                thumbnail = loaded?.artwork
+                thumbnailURL = loaded?.sourceURL
             }
     }
 
@@ -95,6 +98,10 @@ public struct StationArtworkView: View {
         Image(systemName: "dot.radiowaves.left.and.right")
             .font(.system(size: size * 0.34))
             .foregroundStyle(.tint)
+    }
+
+    private var artworkRequest: ArtworkLoadRequest {
+        ArtworkLoadRequest(primaryURL: artworkURL, fallbackURL: fallbackArtworkURL)
     }
 }
 
