@@ -21,14 +21,20 @@ public extension LibraryStore {
         )
         singleTrackDescriptor.fetchLimit = 1
 
-        if let latest = try? context.fetch(singleTrackDescriptor).first,
+        if let latest = fetch(
+            singleTrackDescriptor,
+            operation: "fetch latest recently heard track \(sanitizedForLogs(station.id))"
+        )?.first,
            latest.stationID == station.id,
            latest.title == title,
            latest.artist == artist {
             // Consecutive dedupe keeps one row but refreshes its timestamp so it
             // reflects the most recent hearing of that still-current track.
             latest.stationName = station.name
-            latest.heardAt = heardAt
+            // Some callbacks arrive out of order; never regress `heardAt`.
+            if heardAt > latest.heardAt {
+                latest.heardAt = heardAt
+            }
             if let appleMusicURL {
                 latest.appleMusicURLString = appleMusicURL.absoluteString
             }
@@ -51,17 +57,22 @@ public extension LibraryStore {
 
 extension LibraryStore {
     private func trimRecentlyHeardTracks() {
-        var trimDescriptor = FetchDescriptor<RecentlyHeardTrack>(
-            sortBy: [SortDescriptor(\.heardAt, order: .reverse)]
-        )
-        trimDescriptor.fetchLimit = Self.recentlyHeardLimit + Self.recentlyHeardTrimHeadroom
+        let fetchLimit = Self.recentlyHeardLimit + Self.recentlyHeardTrimHeadroom
+        var shouldContinue = true
+        while shouldContinue {
+            var trimDescriptor = FetchDescriptor<RecentlyHeardTrack>(
+                sortBy: [SortDescriptor(\.heardAt, order: .reverse)]
+            )
+            trimDescriptor.fetchLimit = fetchLimit
 
-        guard let tracks = try? context.fetch(trimDescriptor), tracks.count > Self.recentlyHeardLimit else {
-            return
-        }
+            guard let tracks = fetch(trimDescriptor, operation: "trim recently heard tracks"),
+                  tracks.count > Self.recentlyHeardLimit else { return }
 
-        for stale in tracks[Self.recentlyHeardLimit...] {
-            context.delete(stale)
+            for stale in tracks[Self.recentlyHeardLimit...] {
+                context.delete(stale)
+            }
+
+            shouldContinue = tracks.count == fetchLimit
         }
     }
 }

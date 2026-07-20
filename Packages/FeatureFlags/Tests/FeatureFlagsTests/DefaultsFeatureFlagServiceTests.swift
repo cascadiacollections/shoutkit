@@ -119,4 +119,23 @@ struct DefaultsFeatureFlagServiceTests {
         #expect(service.isEnabled(unknown) == true)
         #expect(defaults.object(forKey: "featureFlags.unknownFeature.override") == nil)
     }
+
+    @Test func cleanupHookRunsOnDeinit() throws {
+        let defaults = try makeDefaults()
+        final class Flag: @unchecked Sendable {
+            var didRun = false
+        }
+        let flag = Flag()
+
+        var service: DefaultsFeatureFlagService? = DefaultsFeatureFlagService(
+            defaults: defaults,
+            cleanupOnDeinit: {
+                flag.didRun = true
+            }
+        )
+        #expect(service != nil)
+        service = nil
+
+        #expect(flag.didRun)
+    }
 }

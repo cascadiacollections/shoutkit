@@ -91,6 +91,16 @@ struct LibraryStoreTests {
         #expect(try favoritesBySortIndex(context).map(\.stationID) == ["a", "b", "c"])
     }
 
+    @Test func moveFavoritesWithSubsetIsNoOp() throws {
+        let (store, context) = makeStoreAndContext()
+        for id in ["a", "b", "c", "d"] { store.addFavorite(station(id)) }
+
+        let subset = Array(try favoritesBySortIndex(context).dropFirst())
+        store.moveFavorites(subset, from: IndexSet(integer: 0), to: 2)
+
+        #expect(try favoritesBySortIndex(context).map(\.stationID) == ["a", "b", "c", "d"])
+    }
+
     @Test func backfillNormalizesLegacyRowsByCreatedAtDescending() throws {
         let (_, context) = makeStoreAndContext()
 
@@ -107,6 +117,40 @@ struct LibraryStoreTests {
         let favorites = try favoritesBySortIndex(context)
         #expect(favorites.map(\.stationID) == ["new", "mid", "old"])
         #expect(favorites.map(\.sortIndex) == [0, 1, 2])
+    }
+
+    @Test func backfillSkipsNonLegacyDuplicateIndices() throws {
+        let (_, context) = makeStoreAndContext()
+
+        let oldest = FavoriteStation(
+            stationID: "oldest",
+            name: "Oldest",
+            genre: "T",
+            createdAt: .now.addingTimeInterval(-180),
+            sortIndex: 5
+        )
+        let middle = FavoriteStation(
+            stationID: "middle",
+            name: "Middle",
+            genre: "T",
+            createdAt: .now.addingTimeInterval(-120),
+            sortIndex: 1
+        )
+        let newest = FavoriteStation(
+            stationID: "newest",
+            name: "Newest",
+            genre: "T",
+            createdAt: .now,
+            sortIndex: 1
+        )
+        for favorite in [oldest, middle, newest] { context.insert(favorite) }
+        try context.save()
+
+        _ = LibraryStore(context: context)
+
+        let favorites = try favoritesBySortIndex(context)
+        #expect(favorites.map(\.stationID) == ["middle", "newest", "oldest"])
+        #expect(favorites.map(\.sortIndex) == [1, 1, 5])
     }
 
     @Test func backfillIsNoOpWhenIndicesAlreadyDistinct() throws {
@@ -300,6 +344,28 @@ struct LibraryStoreTests {
         for index in 0..<overflow {
             #expect(keptIDs.contains("s\(index)") == false, "expected s\(index) to be evicted")
         }
+    }
+
+    @Test func recentsTrimClearsBacklogBeyondSingleBatch() throws {
+        let (store, context) = makeStoreAndContext()
+        let total = LibraryStore.recentsLimit + LibraryStore.recentsTrimHeadroom + 25
+
+        for index in 0..<total {
+            context.insert(
+                RecentStation(
+                    stationID: "seed\(index)",
+                    name: "Seed \(index)",
+                    genre: "Test",
+                    playedAt: .now.addingTimeInterval(TimeInterval(-index))
+                )
+            )
+        }
+        try context.save()
+
+        store.logRecent(station("fresh"))
+
+        let count = try context.fetch(FetchDescriptor<RecentStation>()).count
+        #expect(count <= LibraryStore.recentsLimit)
     }
 
 }

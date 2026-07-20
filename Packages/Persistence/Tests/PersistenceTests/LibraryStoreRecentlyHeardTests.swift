@@ -64,6 +64,20 @@ struct LibraryStoreRecentlyHeardTests {
         #expect(rows.first?.appleMusicURLString == link.absoluteString)
     }
 
+    @Test func outOfOrderConsecutiveDuplicateDoesNotRegressHeardAt() throws {
+        let (store, context) = makeStoreAndContext()
+        let station = station("kexp")
+        let latest = Date()
+        let older = latest.addingTimeInterval(-90)
+
+        store.logRecentlyHeardTrack(station: station, title: "Song", artist: "Band", heardAt: latest)
+        store.logRecentlyHeardTrack(station: station, title: "Song", artist: "Band", heardAt: older)
+
+        let rows = try recentlyHeard(context)
+        #expect(rows.count == 1)
+        #expect(rows.first?.heardAt == latest)
+    }
+
     @Test func recentlyHeardIsCappedAtLimit() throws {
         let (store, context) = makeStoreAndContext()
 
@@ -74,6 +88,29 @@ struct LibraryStoreRecentlyHeardTests {
                 artist: "Band"
             )
         }
+
+        let rows = try recentlyHeard(context)
+        #expect(rows.count <= LibraryStore.recentlyHeardLimit)
+    }
+
+    @Test func recentlyHeardTrimClearsBacklogBeyondSingleBatch() throws {
+        let (store, context) = makeStoreAndContext()
+        let total = LibraryStore.recentlyHeardLimit + LibraryStore.recentlyHeardTrimHeadroom + 25
+
+        for index in 0..<total {
+            context.insert(
+                RecentlyHeardTrack(
+                    stationID: "seed\(index)",
+                    stationName: "Seed \(index)",
+                    title: "Song \(index)",
+                    artist: "Band",
+                    heardAt: .now.addingTimeInterval(TimeInterval(-index))
+                )
+            )
+        }
+        try context.save()
+
+        store.logRecentlyHeardTrack(station: station("fresh"), title: "Fresh Song", artist: "Band")
 
         let rows = try recentlyHeard(context)
         #expect(rows.count <= LibraryStore.recentlyHeardLimit)
