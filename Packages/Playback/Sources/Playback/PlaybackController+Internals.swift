@@ -165,6 +165,16 @@ extension PlaybackController {
     func handleTrackInfo(_ info: AudioTrackInfo) {
         guard let station = activeStation else { return }
 
+        // Engine metadata callbacks are delivered asynchronously, so an event
+        // emitted for the *previous* station can land after a fast station
+        // switch has already set `activeStation` to the new one. Legitimate
+        // ICY metadata only flows once this station's stream has started;
+        // while the new endpoint is still resolving (`outputStarted == false`)
+        // any arriving track info can only be the old station's — attributing
+        // it here would show it on every surface and log it to history under
+        // the wrong station.
+        guard outputStarted else { return }
+
         // Conservative gate: junk (a URL, the station's own name, promo copy,
         // a bare ID token) never reaches now-playing or history. A track that
         // fails the check is dropped, not blanked — the previous good track
@@ -179,6 +189,18 @@ extension PlaybackController {
            current.stationID == station.id,
            current.title == info.title,
            current.artist == info.artist {
+            // A repeated push is also the only signal on which a transiently
+            // failed resource lookup can retry: AlbumArtLookup caches hits and
+            // definitive misses but deliberately not transient failures, yet
+            // nothing else re-invokes it for the same track — one network blip
+            // would otherwise suppress album art on every surface for the
+            // whole song. No-op while a resolution is in flight or once one
+            // has produced a result; a cached miss answers without leaving
+            // the process. (Re-firing onTrackHeard is safe: the history log
+            // dedupes consecutive identical tracks.)
+            if albumArtURL == nil, appleMusicURL == nil, albumArtTask == nil {
+                resolveTrackResources(for: info)
+            }
             return
         }
 
@@ -219,6 +241,11 @@ extension PlaybackController {
             // Only apply if the track hasn't changed while we awaited.
             guard self.nowPlaying?.title == info.title,
                   self.nowPlaying?.artist == info.artist else { return }
+            // Resolution for the current track is complete; clearing the
+            // handle is what re-arms the duplicate-push retry in
+            // handleTrackInfo. (A superseded task returns above and leaves
+            // the handle owned by its replacement.)
+            self.albumArtTask = nil
             self.albumArtURL = resources.artworkURL
             self.appleMusicURL = resources.appleMusicURL
             if let station = self.activeStation, let metadata = self.nowPlaying {

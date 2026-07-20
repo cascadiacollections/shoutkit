@@ -73,6 +73,14 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
             return response
         } catch {
             Self.signposter.endInterval("HTTP request", interval)
+            // Preserve cancellation identity. Rewrapping it as a transport
+            // error would make retry/mirror loops treat a deliberately
+            // cancelled call (a debounced search keystroke, a torn-down view)
+            // as a retryable network failure and spin through the remaining
+            // attempts with doomed requests.
+            if error is CancellationError || (error as? URLError)?.code == .cancelled {
+                throw CancellationError()
+            }
             throw HTTPTransportError.transport(error.localizedDescription)
         }
     }
@@ -201,7 +209,10 @@ public extension HTTPTransporting {
                 return try await data(for: nextRequest)
             } catch {
                 lastError = error
-                guard shouldRetry(error), attempt < maximumAttempts - 1 else {
+                // Cancellation is never retryable, whatever `shouldRetry`
+                // says: the caller has already abandoned the result.
+                guard error is CancellationError == false,
+                      shouldRetry(error), attempt < maximumAttempts - 1 else {
                     break
                 }
 

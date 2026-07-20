@@ -84,6 +84,52 @@ struct PlaybackControllerAlbumArtTests {
         #expect(controller.albumArtURL == art)
     }
 
+    // A resolution that produced nothing may have been a transient network
+    // failure (the lookup deliberately doesn't cache those), and the repeated
+    // ICY push is the only retry signal there is — so, unlike a resolved
+    // track, an unresolved one re-runs the lookup on a duplicate push.
+    @Test func duplicateTrackInfoRetriesLookupAfterEmptyResolution() async throws {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station()], output: output)
+        let art = try #require(URL(string: "https://example.com/art.jpg"))
+        var lookups = 0
+        controller.trackResourcesProvider = { _ in
+            lookups += 1
+            return lookups == 1 ? .none : TrackResources(artworkURL: art)
+        }
+
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        await drainMainQueue()
+        #expect(lookups == 1)
+        #expect(controller.albumArtURL == nil)
+
+        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        await drainMainQueue()
+
+        #expect(lookups == 2)
+        #expect(controller.albumArtURL == art)
+    }
+
+    // Engine metadata callbacks are asynchronous, so a previous station's
+    // track info can arrive while the new station's endpoint is still
+    // resolving; it must not be attributed to the new station.
+    @Test func trackInfoBeforeStreamStartIsIgnored() async {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station()], output: output)
+
+        controller.play(station())
+        output.onTrackInfo?(AudioTrackInfo(title: "Stale Song", artist: "Stale Band"))
+        #expect(controller.nowPlaying == nil)
+
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        #expect(controller.nowPlaying?.title == "Song")
+    }
+
     @Test func lateArtForPreviousTrackIsDiscarded() async throws {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)

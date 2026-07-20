@@ -225,6 +225,12 @@ struct ToggleFavoriteIntent: AppIntent {
             return .result(dialog: "Nothing is playing right now.")
         }
         let isFavoriteNow = services.libraryStore.toggleFavorite(station)
+        // Mirror the change into the quick-play widget snapshot. This intent
+        // runs headless (`openAppWhenRun == false`) — from Siri or a CarPlay
+        // session no RootView exists, so its favorites observer (the usual
+        // publisher) never fires and the widget would keep showing, and
+        // deep-linking to, the stale list until the next full UI launch.
+        QuickPlayWidgetPublisher.publish(services.libraryStore.orderedFavorites())
         return .result(
             dialog: isFavoriteNow
                 ? "Added \(station.name) to your favorites."
