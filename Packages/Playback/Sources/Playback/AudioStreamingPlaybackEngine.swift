@@ -11,6 +11,7 @@ import os
 @MainActor
 public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     private static let logger = Logger(subsystem: "ShoutKit.Playback", category: "AudioStreamingPlaybackEngine")
+    private static let sessionDeactivationRetryDelay: Duration = .milliseconds(150)
 
     public var onStatusChange: ((AudioStatus) -> Void)?
     public var onTrackInfo: ((AudioTrackInfo) -> Void)?
@@ -79,7 +80,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
                     Self.logger.error("Audio session deactivation failed after stop: \(String(describing: error), privacy: .public)")
                     return
                 }
-                try? await Task.sleep(for: .milliseconds(150))
+                try? await Task.sleep(for: Self.sessionDeactivationRetryDelay)
             }
         }
     }
@@ -93,7 +94,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         return code == .isBusy
     }
 
-    private nonisolated func dispatchDelegateToMain(_ body: @escaping @MainActor () -> Void) {
+    private nonisolated func executeOnMainActor(_ body: @escaping @MainActor () -> Void) {
         if Thread.isMainThread {
             MainActor.assumeIsolated {
                 body()
@@ -189,7 +190,7 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
         with newState: AudioPlayerState,
         previous: AudioPlayerState
     ) {
-        dispatchDelegateToMain {
+        executeOnMainActor {
             switch newState {
             case .playing:
                 self.onStatusChange?(.playing)
@@ -212,7 +213,7 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
     ) {}
 
     public nonisolated func audioPlayerUnexpectedError(player: AudioPlayer, error: AudioPlayerError) {
-        dispatchDelegateToMain {
+        executeOnMainActor {
             self.onStatusChange?(.failed(Self.classify(error)))
         }
     }
@@ -231,7 +232,7 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
             artist: parsed.artist,
             streamGeneration: generation
         )
-        dispatchDelegateToMain {
+        executeOnMainActor {
             self.onTrackInfo?(trackInfo)
         }
     }
