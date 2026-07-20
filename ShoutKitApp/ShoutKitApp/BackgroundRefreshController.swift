@@ -22,6 +22,33 @@ final class BackgroundRefreshController {
     private let logger = Logger(subsystem: "ShoutKit.App", category: "BackgroundRefresh")
     private var isRegistered = false
 
+    /// Cross-thread holder for the cooperative refresh task so the
+    /// `BGTask.expirationHandler` can cancel it immediately.
+    private final class RefreshTaskReference: @unchecked Sendable {
+        private let lock = NSLock()
+        private var task: Task<Bool, Never>?
+
+        func store(_ task: Task<Bool, Never>) {
+            lock.lock()
+            self.task = task
+            lock.unlock()
+        }
+
+        func cancel() {
+            lock.lock()
+            let task = self.task
+            lock.unlock()
+            task?.cancel()
+        }
+
+        func valueTask() -> Task<Bool, Never>? {
+            lock.lock()
+            let task = self.task
+            lock.unlock()
+            return task
+        }
+    }
+
     func register() {
         guard isRegistered == false else { return }
 
@@ -62,18 +89,31 @@ final class BackgroundRefreshController {
     private func handle(_ task: BGAppRefreshTask) {
         schedule()
 
+        let completionLock = NSLock()
+        var didComplete = false
+        func complete(_ success: Bool) {
+            completionLock.lock()
+            defer { completionLock.unlock() }
+            guard didComplete == false else { return }
+            didComplete = true
+            task.setTaskCompleted(success: success)
+        }
+
+        let refreshTaskReference = RefreshTaskReference()
+        task.expirationHandler = {
+            refreshTaskReference.cancel()
+            complete(false)
+        }
+
         let refreshTask = Task { [weak self] in
             guard let self else { return false }
             return await self.runRefresh()
         }
-
-        task.expirationHandler = {
-            refreshTask.cancel()
-        }
+        refreshTaskReference.store(refreshTask)
 
         Task {
-            let success = await refreshTask.value
-            task.setTaskCompleted(success: success)
+            let success = await refreshTaskReference.valueTask()?.value ?? false
+            complete(success)
         }
     }
 
@@ -86,11 +126,14 @@ final class BackgroundRefreshController {
         let services = AppDependencies.bootstrap()
         let favoriteStations = services.libraryStore.favoriteStations()
 
-        await refreshFavoriteStreamURLSnapshots(
+        let didRefreshFavoriteSnapshots = await refreshFavoriteStreamURLSnapshots(
             favoriteStations,
             store: services.libraryStore,
             directory: services.directory
         )
+        if didRefreshFavoriteSnapshots {
+            QuickPlayWidgetPublisher.publishStations(services.libraryStore.favoriteStations())
+        }
         let didWarmTopStations = await warmTopStationsCache(using: services.directory)
         await warmGenresCache(using: services.directory)
 
@@ -101,12 +144,16 @@ final class BackgroundRefreshController {
         _ favoriteStations: [Station],
         store: LibraryStore,
         directory: any RadioDirectoryProviding
-    ) async {
+    ) async -> Bool {
+        var didRefreshAnySnapshot = false
         for favorite in favoriteStations {
-            guard Task.isCancelled == false else { return }
+            guard Task.isCancelled == false else { return didRefreshAnySnapshot }
 
             do {
                 let endpoint = try await directory.streamEndpoint(for: stationNeedingFreshEndpoint(from: favorite))
+                if favorite.preferredStreamURL != endpoint.url {
+                    didRefreshAnySnapshot = true
+                }
                 store.refreshStreamURLSnapshot(stationID: favorite.id, streamURL: endpoint.url)
             } catch let error as RadioDirectoryError {
                 logger.debug(
@@ -124,6 +171,8 @@ final class BackgroundRefreshController {
                 )
             }
         }
+
+        return didRefreshAnySnapshot
     }
 
     private func warmTopStationsCache(using directory: any RadioDirectoryProviding) async -> Bool {

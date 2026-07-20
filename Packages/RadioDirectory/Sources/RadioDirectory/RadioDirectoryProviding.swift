@@ -8,6 +8,9 @@ public protocol RadioDirectoryProviding: Sendable {
     /// Stations belonging to a genre/tag, ordered by popularity where the
     /// directory supports it. Distinct from `searchStations`, which matches names.
     func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station]
+    /// Looks up a station by identifier for consumers (like App Intents) that
+    /// need to rehydrate a previously saved entity id.
+    func station(id: String) async throws(RadioDirectoryError) -> Station?
     func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint
 }
 
@@ -16,6 +19,10 @@ public extension RadioDirectoryProviding {
     /// which for the simple directories here also matches the genre field.
     func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
         try await searchStations(matching: genre, limit: limit)
+    }
+
+    func station(id: String) async throws(RadioDirectoryError) -> Station? {
+        nil
     }
 }
 
@@ -99,6 +106,13 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
         return Array((preferredMatches + stations).uniqued { $0.name.lowercased() }.prefix(limit))
     }
 
+    public func station(id: String) async throws(RadioDirectoryError) -> Station? {
+        if let preferredStation = preferredStations.first(where: { $0.id == id }) {
+            return preferredStation
+        }
+        return try await base.station(id: id)
+    }
+
     public func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
         if let preferredStreamURL = station.preferredStreamURL {
             return StreamEndpoint(
@@ -152,6 +166,10 @@ public struct BundledRadioDirectory: RadioDirectoryProviding {
             format: StreamFormat(url: streamURL)
         )
     }
+
+    public func station(id: String) async throws(RadioDirectoryError) -> Station? {
+        stations.first(where: { $0.id == id })
+    }
 }
 
 public struct PreviewRadioDirectory: RadioDirectoryProviding {
@@ -177,6 +195,10 @@ public struct PreviewRadioDirectory: RadioDirectoryProviding {
         return Array(Self.sampleStations.filter { station in
             station.name.localizedStandardContains(query) || station.genre.localizedStandardContains(query)
         }.prefix(limit))
+    }
+
+    public func station(id: String) async throws(RadioDirectoryError) -> Station? {
+        Self.sampleStations.first(where: { $0.id == id })
     }
 
     public func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {

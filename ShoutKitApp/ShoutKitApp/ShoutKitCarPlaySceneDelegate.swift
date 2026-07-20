@@ -1,5 +1,6 @@
 #if canImport(CarPlay)
 import CarPlay
+import Observation
 import Persistence
 import Playback
 import RadioDirectory
@@ -15,6 +16,8 @@ final class ShoutKitCarPlaySceneDelegate: UIResponder, CPTemplateApplicationScen
     private var interfaceController: CPInterfaceController?
     private var listTemplate: CPListTemplate?
     private var topStationsTask: Task<Void, Never>?
+    private var libraryObservationTask: Task<Void, Never>?
+    private var topStationsState: TopStationsState = .loading
     private let nowPlayingTemplate = CPNowPlayingTemplate.shared
 
     func templateApplicationScene(
@@ -29,8 +32,10 @@ final class ShoutKitCarPlaySceneDelegate: UIResponder, CPTemplateApplicationScen
             title: "ShoutKit",
             sections: sections(topStations: .loading, services: services)
         )
+        topStationsState = .loading
         listTemplate = template
         interfaceController.setRootTemplate(template, animated: false)
+        observeLibraryChanges(using: services)
         loadTopStations(using: services)
     }
 
@@ -40,7 +45,10 @@ final class ShoutKitCarPlaySceneDelegate: UIResponder, CPTemplateApplicationScen
         from window: CPWindow
     ) {
         topStationsTask?.cancel()
+        libraryObservationTask?.cancel()
         topStationsTask = nil
+        libraryObservationTask = nil
+        topStationsState = .loading
         listTemplate = nil
         self.interfaceController = nil
     }
@@ -68,8 +76,30 @@ final class ShoutKitCarPlaySceneDelegate: UIResponder, CPTemplateApplicationScen
             }
 
             guard !Task.isCancelled else { return }
-            self.listTemplate?.updateSections(self.sections(topStations: topStations, services: services))
+            self.topStationsState = topStations
+            self.refreshSections(using: services)
         }
+    }
+
+    private func observeLibraryChanges(using services: AppServices) {
+        libraryObservationTask?.cancel()
+        libraryObservationTask = Task { [weak self] in
+            let changes = Observations {
+                (
+                    services.libraryStore.favoriteIDs,
+                    services.playbackController.currentStation?.id
+                )
+            }
+
+            for await _ in changes {
+                guard let self, Task.isCancelled == false else { return }
+                self.refreshSections(using: services)
+            }
+        }
+    }
+
+    private func refreshSections(using services: AppServices) {
+        listTemplate?.updateSections(sections(topStations: topStationsState, services: services))
     }
 
     private func sections(topStations: TopStationsState, services: AppServices) -> [CPListSection] {

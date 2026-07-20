@@ -116,6 +116,16 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         return Array(stations.prefix(limit))
     }
 
+    public func station(id: String) async throws(RadioDirectoryError) -> Station? {
+        guard id.isEmpty == false else { return nil }
+        let data = try await request(
+            path: "/json/stations/byuuid",
+            queryItems: [URLQueryItem(name: "uuids", value: id)]
+        )
+        let stations = try decode([RadioBrowserStation].self, from: data)
+        return stations.compactMap(Self.station(from:)).first
+    }
+
     public func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
         if let preferredStreamURL = station.preferredStreamURL {
             return StreamEndpoint(

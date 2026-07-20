@@ -44,9 +44,12 @@ final class StationLaunchRouter {
         return true
     }
 
-    /// The consumer calls this after acting on `pending` so an identical link
-    /// arriving later still registers as a change.
-    func clearPending() {
+    /// Consumes `pending` only when it still matches `link`, so in multi-window
+    /// setups only one observer handles a given payload.
+    @discardableResult
+    func consumePending(_ link: StationLink) -> Bool {
+        guard pending == link else { return false }
         pending = nil
+        return true
     }
 }

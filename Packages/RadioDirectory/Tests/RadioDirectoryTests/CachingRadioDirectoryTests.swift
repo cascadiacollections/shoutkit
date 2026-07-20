@@ -9,6 +9,7 @@ import Testing
 actor CountingDirectory: RadioDirectoryProviding {
     private(set) var genresCalls = 0
     private(set) var topStationsCalls = 0
+    private(set) var stationLookupCalls = 0
 
     var responseDelay: Duration = .zero
     var failNextTopStations = false
@@ -38,6 +39,11 @@ actor CountingDirectory: RadioDirectoryProviding {
 
     func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
         []
+    }
+
+    func station(id: String) async throws(RadioDirectoryError) -> Station? {
+        stationLookupCalls += 1
+        return stations.first(where: { $0.id == id })
     }
 
     func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
@@ -128,5 +134,17 @@ struct CachingRadioDirectoryTests {
         let stations = try await cache.topStations(limit: 24)
         #expect(stations.count == 24)
         #expect(await counting.topStationsCalls == 2)
+    }
+
+    @Test func stationLookupPassesThroughToBase() async throws {
+        let counting = CountingDirectory()
+        let cache = CachingRadioDirectory(base: counting)
+
+        let found = try await cache.station(id: "s0")
+        let missing = try await cache.station(id: "missing")
+
+        #expect(found?.name == "Station 0")
+        #expect(missing == nil)
+        #expect(await counting.stationLookupCalls == 2)
     }
 }

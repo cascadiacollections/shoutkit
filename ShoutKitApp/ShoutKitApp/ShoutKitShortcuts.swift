@@ -88,8 +88,25 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
 
     @MainActor
     func entities(for identifiers: [String]) async throws -> [StationEntity] {
-        let known = knownStations()
-        return identifiers.compactMap { id in known.first { $0.id == id } }
+        let knownByID = Dictionary(uniqueKeysWithValues: knownStations().map { ($0.id, $0) })
+        let services = AppDependencies.bootstrap()
+
+        var resolved: [StationEntity] = []
+        resolved.reserveCapacity(identifiers.count)
+
+        for id in identifiers {
+            if let known = knownByID[id] {
+                resolved.append(known)
+                continue
+            }
+
+            guard let station = try? await services.directory.station(id: id) else { continue }
+            let fallback = StationEntity(station: station)
+            IntentStationCache.remember([fallback])
+            resolved.append(fallback)
+        }
+
+        return resolved
     }
 
     @MainActor

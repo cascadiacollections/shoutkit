@@ -19,8 +19,11 @@ enum QuickPlayWidgetPublisher {
     private static let capacity = 50
 
     static func publish(_ favorites: [FavoriteStation]) {
-        let snapshots = favorites.prefix(capacity).map { favorite -> QuickPlayStationSnapshot in
-            let station = favorite.station
+        publishStations(favorites.prefix(capacity).map(\.station))
+    }
+
+    static func publishStations(_ stations: [Station]) {
+        let snapshots = stations.prefix(capacity).map { station -> QuickPlayStationSnapshot in
             let link = StationLink(station: station, autoPlay: true, presentNowPlaying: true)
             return QuickPlayStationSnapshot(
                 id: station.id,
