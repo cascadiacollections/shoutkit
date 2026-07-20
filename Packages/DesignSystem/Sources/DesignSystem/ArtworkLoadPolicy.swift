@@ -24,7 +24,7 @@ public struct ArtworkLoadRequest: Equatable, Sendable {
 }
 
 public enum ArtworkLoadPolicy {
-    private static let defaultRetryDelays: [Duration] = [
+    public static let defaultRetryDelays: [Duration] = [
         .milliseconds(350),
         .seconds(1)
     ]

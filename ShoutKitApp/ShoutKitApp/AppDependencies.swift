@@ -132,10 +132,14 @@ enum AppDependencies {
 
         DebugNetworkInspection.install()
 
-        // Fail-fast when offline, responsive-data service type.
+        #if !DEBUG
+        // Fail-fast when offline, responsive-data service type. In Debug,
+        // DebugNetworkInspection.install() above already claimed the slot
+        // with the same tuned configuration plus Pulse's proxy delegate.
         URLSessionHTTPTransport.installSharedSession(
             URLSession(configuration: URLSessionHTTPTransport.interactiveConfiguration())
         )
+        #endif
     }
 
     /// Launch-time, fire-and-forget warmups: Spotlight indexing of known

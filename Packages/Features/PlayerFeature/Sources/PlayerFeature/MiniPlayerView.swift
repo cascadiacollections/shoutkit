@@ -44,6 +44,7 @@ public struct MiniPlayerView: View {
         .accessibilityLabel("Not playing")
     }
 
+    @ViewBuilder
     private func content(playback: PlaybackController, station: Station) -> some View {
         let artworkSelection = effectiveArtworkSelection(
             settings: settings,

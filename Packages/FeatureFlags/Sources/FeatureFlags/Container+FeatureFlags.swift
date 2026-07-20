@@ -37,7 +37,7 @@ private extension DefaultsFeatureFlagService {
         return DefaultsFeatureFlagService(
             defaults: defaults,
             cleanupOnDeinit: {
-                defaults.removePersistentDomain(forName: suiteName)
+                UserDefaults(suiteName: suiteName)?.removePersistentDomain(forName: suiteName)
             }
         )
     }

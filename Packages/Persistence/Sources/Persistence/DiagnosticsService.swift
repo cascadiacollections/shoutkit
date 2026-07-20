@@ -95,7 +95,7 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
             var previous: (Bool, Bool)?
             let changes = Observations { [weak self] in
                 guard let self else { return (false, false) }
-                (
+                return (
                     self.settings.isDiagnosticsSharingEnabled,
                     self.featureFlags.isEnabled(Self.diagnosticsFeature)
                 )
@@ -104,11 +104,11 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
             for await change in changes {
                 if Task.isCancelled { return }
                 guard let self else { return }
-                if previous == nil {
+                guard let previousValue = previous else {
                     previous = change
                     continue
                 }
-                guard change != previous else { continue }
+                guard change != previousValue else { continue }
                 previous = change
                 self.refreshSubscription()
             }

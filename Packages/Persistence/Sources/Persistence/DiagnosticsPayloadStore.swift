@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-public protocol DiagnosticsPayloadPersisting: AnyObject {
+public protocol DiagnosticsPayloadPersisting: AnyObject, Sendable {
     func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date) throws
     func metricPayloadSummaries(limit: Int) throws -> [DiagnosticsMetricPayloadSummary]
 }
@@ -106,7 +106,7 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
     }
 }
 
-public final class InMemoryDiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
+public final class InMemoryDiagnosticsPayloadStore: DiagnosticsPayloadPersisting, @unchecked Sendable {
     private(set) public var metricPayloads: [Data] = []
     private(set) public var diagnosticPayloads: [Data] = []
     private var metricRecords: [(payload: Data, receivedAt: Date)] = []

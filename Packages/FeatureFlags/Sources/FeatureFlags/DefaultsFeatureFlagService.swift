@@ -19,7 +19,7 @@ public final class DefaultsFeatureFlagService: FeatureFlagProviding {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let features: [Feature]
     @ObservationIgnored private let knownFeatureKeys: Set<String>
-    @ObservationIgnored private let cleanupOnDeinit: (() -> Void)?
+    @ObservationIgnored private let cleanupOnDeinit: (@Sendable () -> Void)?
     /// Bumped on every mutation; reads touch it so `@Observable` tracking
     /// invalidates observers even though the values live in UserDefaults.
     private var revision = 0
@@ -27,7 +27,7 @@ public final class DefaultsFeatureFlagService: FeatureFlagProviding {
     public init(
         defaults: UserDefaults = .standard,
         features: [Feature] = FeatureCatalog.all,
-        cleanupOnDeinit: (() -> Void)? = nil
+        cleanupOnDeinit: (@Sendable () -> Void)? = nil
     ) {
         self.defaults = defaults
         self.features = features
