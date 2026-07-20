@@ -10,8 +10,8 @@ public extension Container {
     var featureFlags: Factory<any FeatureFlagProviding> {
         self { DefaultsFeatureFlagService() }
             .scope(.singleton)
-            .onPreview { DefaultsFeatureFlagService(defaults: .ephemeralSuite()) }
-            .onTest { DefaultsFeatureFlagService(defaults: .ephemeralSuite()) }
+            .onPreview { DefaultsFeatureFlagService.ephemeral() }
+            .onTest { DefaultsFeatureFlagService.ephemeral() }
     }
 }
 
@@ -22,11 +22,23 @@ public func sharedFeatureFlags() -> any FeatureFlagProviding {
     Container.shared.featureFlags()
 }
 
-private extension UserDefaults {
-    static func ephemeralSuite() -> UserDefaults {
-        let name = "featureFlags.ephemeral.\(UUID().uuidString)"
-        guard let defaults = UserDefaults(suiteName: name) else { return .standard }
-        defaults.removePersistentDomain(forName: name)
-        return defaults
+private extension DefaultsFeatureFlagService {
+    static func ephemeral() -> DefaultsFeatureFlagService {
+        let suiteName = "featureFlags.ephemeral.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            preconditionFailure(
+                """
+                Could not create ephemeral UserDefaults suite '\(suiteName)'. \
+                This may indicate insufficient system resources.
+                """
+            )
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        return DefaultsFeatureFlagService(
+            defaults: defaults,
+            cleanupOnDeinit: {
+                UserDefaults(suiteName: suiteName)?.removePersistentDomain(forName: suiteName)
+            }
+        )
     }
 }

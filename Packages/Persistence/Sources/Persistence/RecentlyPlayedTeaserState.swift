@@ -9,33 +9,39 @@ import Foundation
 public struct RecentlyPlayedTeaserState: Equatable, Sendable {
     public private(set) var displayedIDs: [String]
     public let capacity: Int
+    private var lastSyncedTopID: String?
 
     public init(capacity: Int = 5) {
         precondition(capacity > 0, "capacity must be positive")
         self.displayedIDs = []
         self.capacity = capacity
+        self.lastSyncedTopID = nil
     }
 
     /// Reconciles the teaser against the current history, newest-first and
     /// already excluding anything the caller considers hidden/deleted.
     ///
-    /// - On first sync (empty state), seeds up to `capacity` entries.
+    /// - On first sync (fresh state: empty display + no prior synced top), seeds
+    ///   up to `capacity` entries.
     /// - Otherwise only reacts to a *new* top entry: promotes it to the front
     ///   and trims the oldest entry if that pushes the list over capacity.
     ///   Removing entries never triggers a backfill from `visibleIDsNewestFirst`.
     public mutating func sync(withVisibleIDsNewestFirst visibleIDsNewestFirst: [String]) {
         guard let latestID = visibleIDsNewestFirst.first else {
             displayedIDs = []
+            lastSyncedTopID = nil
             return
         }
-        if displayedIDs.isEmpty {
+        if displayedIDs.isEmpty, lastSyncedTopID == nil {
             displayedIDs = Array(visibleIDsNewestFirst.prefix(capacity))
+            lastSyncedTopID = latestID
             return
         }
-        guard displayedIDs.first != latestID else { return }
+        guard lastSyncedTopID != latestID else { return }
         displayedIDs.removeAll { $0 == latestID }
         displayedIDs.insert(latestID, at: 0)
         trimToCapacity()
+        lastSyncedTopID = latestID
     }
 
     /// Dismisses an entry from the teaser. Does not backfill.

@@ -58,6 +58,8 @@ public actor CachingRadioDirectory: RadioDirectoryProviding {
         }
 
         if let inFlight = genresInFlight {
+            // Coalescing intentionally awaits the shared unstructured task to
+            // completion; cancelling one caller does not cancel the base fetch.
             return try (await inFlight.value).get()
         }
 
@@ -89,6 +91,8 @@ public actor CachingRadioDirectory: RadioDirectoryProviding {
         }
 
         if let inFlight = topStationsInFlight, inFlight.limit >= limit {
+            // Coalescing intentionally awaits the shared unstructured task to
+            // completion; cancelling one caller does not cancel the base fetch.
             let stations = try (await inFlight.task.value).get()
             return Array(stations.prefix(limit))
         }
@@ -133,6 +137,10 @@ public actor CachingRadioDirectory: RadioDirectoryProviding {
 
     public func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
         try await base.stations(inGenre: genre, limit: limit)
+    }
+
+    public func station(id: String) async throws(RadioDirectoryError) -> Station? {
+        try await base.station(id: id)
     }
 
     public func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {

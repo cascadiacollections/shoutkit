@@ -89,7 +89,7 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
         let transport = self.transport
         return Artwork(id: url.absoluteString) { @Sendable _ in
             var request = URLRequest(url: url)
-            request.cachePolicy = .returnCacheDataElseLoad
+            request.cachePolicy = .reloadRevalidatingCacheData
             let data = try await transport.data(for: request)
             if let representation = try? ArtworkRepresentation(data: data) {
                 return representation

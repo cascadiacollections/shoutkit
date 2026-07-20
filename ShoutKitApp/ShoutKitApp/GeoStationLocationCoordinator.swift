@@ -21,6 +21,8 @@ final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationM
     private let geoStationsFeature = FeatureCatalog.geoStations
     private var observationTask: Task<Void, Never>?
     private var preciseCountryCode: String?
+    private var preciseLocationGeneration = 0
+    private var wasPreciseLocationEnabled = false
 
     init(
         settings: SettingsStore,
@@ -43,33 +45,45 @@ final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationM
     }
 
     private func observeSettings() {
+        let settings = self.settings
+        let featureFlags = self.featureFlags
+        let geoStationsFeature = self.geoStationsFeature
         observationTask = Task { [weak self] in
-            guard let self else { return }
             let changes = Observations {
                 (
-                    self.settings.isPreciseGeoStationLocationEnabled,
-                    self.featureFlags.isEnabled(self.geoStationsFeature)
+                    settings.isPreciseGeoStationLocationEnabled,
+                    featureFlags.isEnabled(geoStationsFeature)
                 )
             }
 
             for await _ in changes {
-                await refreshFilteringState()
+                guard let self else { return }
+                await self.refreshFilteringState()
             }
         }
     }
 
     private func refreshFilteringState() async {
         guard featureFlags.isEnabled(geoStationsFeature) else {
+            preciseLocationGeneration += 1
             preciseCountryCode = nil
+            wasPreciseLocationEnabled = false
             await geoFilterProvider.setCurrentGeoFilter(nil)
             return
         }
 
-        if settings.isPreciseGeoStationLocationEnabled {
+        let isPreciseLocationEnabled = settings.isPreciseGeoStationLocationEnabled
+        if isPreciseLocationEnabled {
+            if wasPreciseLocationEnabled == false {
+                preciseLocationGeneration += 1
+                preciseCountryCode = nil
+            }
             refreshPreciseLocationAuthorization()
         } else {
+            preciseLocationGeneration += 1
             preciseCountryCode = nil
         }
+        wasPreciseLocationEnabled = isPreciseLocationEnabled
 
         await pushCurrentGeoFilter()
     }
@@ -119,10 +133,16 @@ final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationM
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
+        let generation = preciseLocationGeneration
 
         geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, error in
             Task { @MainActor [weak self] in
                 guard let self else { return }
+                guard self.preciseLocationGeneration == generation,
+                      self.featureFlags.isEnabled(self.geoStationsFeature),
+                      self.settings.isPreciseGeoStationLocationEnabled else {
+                    return
+                }
                 if let error {
                     self.logger.error("Reverse geocoding failed: \(error.localizedDescription, privacy: .public)")
                 } else {
@@ -136,6 +156,10 @@ final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationM
     func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
         Task { @MainActor in
             self.logger.error("Location request failed: \(error.localizedDescription, privacy: .public)")
+            guard self.featureFlags.isEnabled(self.geoStationsFeature),
+                  self.settings.isPreciseGeoStationLocationEnabled else {
+                return
+            }
             self.preciseCountryCode = nil
             await self.pushCurrentGeoFilter()
         }

@@ -7,6 +7,9 @@ import Persistence
 import Playback
 import RadioDirectory
 import SwiftData
+#if canImport(WatchConnectivity)
+import WatchConnectivity
+#endif
 
 /// Everything the app constructs exactly once and shares between the SwiftUI
 /// scene and App Intents (which run in the same process but outside the view
@@ -14,6 +17,9 @@ import SwiftData
 @MainActor
 struct AppServices {
     let container: ModelContainer
+    /// False when SwiftData failed to open its on-disk store and the app is
+    /// running on a fallback in-memory store.
+    let isPersistentStoreAvailable: Bool
     let libraryStore: LibraryStore
     let playbackController: PlaybackController
     let stationConnectionPrewarmer: StationConnectionPrewarmer
@@ -35,6 +41,7 @@ struct AppServices {
 @MainActor
 enum AppDependencies {
     private(set) static var services: AppServices?
+    private static let watchLastStationSync = PhoneWatchLastStationSync()
 
     /// Idempotent: the app root calls this at launch, and App Intents call it in
     /// `perform()` — whichever runs first constructs the shared graph, so an
@@ -49,6 +56,7 @@ enum AppDependencies {
         installSharedNetworking()
 
         let container = ShoutKitModelContainer.makeContainer()
+        let isPersistentStoreAvailable = ShoutKitModelContainer.isPersistentStoreAvailable
         let store = LibraryStore(context: container.mainContext)
         let settings = SettingsStore()
         let featureFlags = sharedFeatureFlags()
@@ -84,6 +92,7 @@ enum AppDependencies {
 
         let services = AppServices(
             container: container,
+            isPersistentStoreAvailable: isPersistentStoreAvailable,
             libraryStore: store,
             playbackController: controller,
             stationConnectionPrewarmer: stationConnectionPrewarmer,
@@ -123,10 +132,14 @@ enum AppDependencies {
 
         DebugNetworkInspection.install()
 
-        // Fail-fast when offline, responsive-data service type.
+        #if !DEBUG
+        // Fail-fast when offline, responsive-data service type. In Debug,
+        // DebugNetworkInspection.install() above already claimed the slot
+        // with the same tuned configuration plus Pulse's proxy delegate.
         URLSessionHTTPTransport.installSharedSession(
             URLSession(configuration: URLSessionHTTPTransport.interactiveConfiguration())
         )
+        #endif
     }
 
     /// Launch-time, fire-and-forget warmups: Spotlight indexing of known
@@ -172,6 +185,7 @@ enum AppDependencies {
     ) {
         controller.onStationPlayed = { station in
             store.logRecent(station)
+            watchLastStationSync.publish(station: station)
             // Radio-Browser etiquette: report plays so the community directory
             // can rank popularity. Fire-and-forget; never affects playback.
             // User-toggleable in Settings (the README privacy story promises it).
@@ -293,3 +307,54 @@ enum AppDependencies {
         return trimmedAPIKey
     }
 }
+
+#if canImport(WatchConnectivity)
+
+private final class PhoneWatchLastStationSync: NSObject, WCSessionDelegate {
+    private enum Keys {
+        static let lastStation = "watchSync.lastStation"
+    }
+
+    private let session: WCSession?
+    private let encoder = JSONEncoder()
+
+    override init() {
+        if WCSession.isSupported() {
+            let session = WCSession.default
+            self.session = session
+        } else {
+            session = nil
+        }
+        super.init()
+        self.session?.delegate = self
+        self.session?.activate()
+    }
+
+    func publish(station: Station) {
+        guard let session,
+              session.activationState == .activated,
+              session.isWatchAppInstalled else { return }
+        guard let encoded = try? encoder.encode(station) else { return }
+        try? session.updateApplicationContext([Keys.lastStation: encoded])
+    }
+
+    func session(
+        _ session: WCSession,
+        activationDidCompleteWith activationState: WCSessionActivationState,
+        error: Error?
+    ) {}
+
+    func sessionDidBecomeInactive(_ session: WCSession) {}
+
+    func sessionDidDeactivate(_ session: WCSession) {
+        session.activate()
+    }
+}
+
+#else
+
+private final class PhoneWatchLastStationSync {
+    func publish(station: Station) {}
+}
+
+#endif

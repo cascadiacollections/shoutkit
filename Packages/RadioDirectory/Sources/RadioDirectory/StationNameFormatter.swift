@@ -7,7 +7,7 @@ import Foundation
 /// (`[HD]`, `(128k)`) that describe the feed rather than the station.
 public enum StationNameFormatter {
     /// Matches a bracketed or parenthesized clutter tag, e.g. `[HD]` or `(128k)`.
-    private static let clutterTagPattern = #"[\[(][^\])]{0,24}[\])]"#
+    private static let clutterTagPattern = #"\[[^\]]{0,24}\]|\([^\)]{0,24}\)"#
 
     public static func normalize(_ rawName: String) -> String {
         let name = rawName

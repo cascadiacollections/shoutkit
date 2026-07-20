@@ -45,6 +45,19 @@ func preferredGenreQueryForwardsToBaseAndLayersMatches() async throws {
 }
 
 @Test
+func stationLookupByIDFindsPreferredThenFallsBackToBase() async throws {
+    let directory = PreferredRadioDirectory(base: PreviewRadioDirectory())
+
+    let preferred = try await directory.station(id: "preferred-kexp-160-aac")
+    let base = try await directory.station(id: "ambient-current")
+    let missing = try await directory.station(id: "missing")
+
+    #expect(preferred?.name == "KEXP 90.3 FM")
+    #expect(base?.name == "Ambient Current")
+    #expect(missing == nil)
+}
+
+@Test
 func bundledDirectoryContainsOnlyCuratedLiveStations() async throws {
     let directory = BundledRadioDirectory()
 

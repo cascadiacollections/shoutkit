@@ -34,6 +34,22 @@ struct RecentlyPlayedTeaserStateTests {
         #expect(teaser.displayedIDs == ["a", "b", "d", "e"])
     }
 
+    @Test func removingAllEntriesDoesNotTriggerMassBackfill() {
+        var teaser = RecentlyPlayedTeaserState(capacity: 5)
+        teaser.sync(withVisibleIDsNewestFirst: ["a", "b", "c", "d", "e", "f"])
+
+        for id in ["a", "b", "c", "d", "e"] {
+            teaser.remove(id)
+        }
+        #expect(teaser.displayedIDs.isEmpty)
+
+        teaser.sync(withVisibleIDsNewestFirst: ["a", "b", "c", "d", "e", "f"])
+        #expect(teaser.displayedIDs.isEmpty)
+
+        teaser.sync(withVisibleIDsNewestFirst: ["z", "a", "b", "c", "d", "e", "f"])
+        #expect(teaser.displayedIDs == ["z"])
+    }
+
     @Test func newTopPlayPromotesAndTrimsOldestOverCapacity() {
         var teaser = RecentlyPlayedTeaserState(capacity: 5)
         teaser.sync(withVisibleIDsNewestFirst: ["a", "b", "c", "d", "e"])

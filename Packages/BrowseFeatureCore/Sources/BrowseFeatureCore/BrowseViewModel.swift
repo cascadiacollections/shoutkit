@@ -39,12 +39,16 @@ public final class BrowseViewModel {
 
     @ObservationIgnored private let directory: any RadioDirectoryProviding
     @ObservationIgnored private var genreTask: Task<Void, Never>?
+    @ObservationIgnored private var refreshGeneration = 0
 
     public init(directory: any RadioDirectoryProviding = Container.shared.radioDirectory()) {
         self.directory = directory
     }
 
     public func refresh() async {
+        refreshGeneration += 1
+        let generation = refreshGeneration
+
         if case .loaded = phase {} else {
             phase = .loading
         }
@@ -60,6 +64,7 @@ public final class BrowseViewModel {
 
         do {
             let stations = try await stationsResult
+            guard refreshGeneration == generation else { return }
 
             guard stations.isEmpty == false else {
                 phase = .empty
@@ -67,6 +72,7 @@ public final class BrowseViewModel {
             }
 
             let (genres, genresError) = await genresResult
+            guard refreshGeneration == generation else { return }
             self.genresError = genresError
 
             let content = BrowseContent(
@@ -76,8 +82,10 @@ public final class BrowseViewModel {
             )
             phase = .loaded(content)
         } catch let error as RadioDirectoryError {
+            guard refreshGeneration == generation else { return }
             phase = .failed(error)
         } catch {
+            guard refreshGeneration == generation else { return }
             phase = .failed(.transport(error.localizedDescription))
         }
     }

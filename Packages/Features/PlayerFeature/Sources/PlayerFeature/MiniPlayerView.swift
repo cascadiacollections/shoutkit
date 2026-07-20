@@ -44,10 +44,17 @@ public struct MiniPlayerView: View {
         .accessibilityLabel("Not playing")
     }
 
+    @ViewBuilder
     private func content(playback: PlaybackController, station: Station) -> some View {
+        let artworkSelection = effectiveArtworkSelection(
+            settings: settings,
+            playback: playback,
+            station: station
+        )
         HStack(spacing: ShoutKitSpacing.small) {
             StationArtworkView(
-                artworkURL: effectiveArtworkURL(settings: settings, playback: playback, station: station),
+                artworkURL: artworkSelection.primaryURL,
+                fallbackArtworkURL: artworkSelection.fallbackURL,
                 size: 40,
                 cornerRadius: ShoutKitRadius.small,
                 isPlaying: isPlaying(playback)

@@ -11,9 +11,21 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     private var timeControlObservation: NSKeyValueObservation?
     private var itemStatusObservation: NSKeyValueObservation?
     private var failedToEndObserver: NSObjectProtocol?
+    private var interruptionObserver: NSObjectProtocol?
+
+    override init() {
+        super.init()
+        observeAudioSessionNotifications()
+    }
+
+    isolated deinit {
+        tearDownPlayer()
+        if let interruptionObserver {
+            NotificationCenter.default.removeObserver(interruptionObserver)
+        }
+    }
 
     func start(url: URL) {
-        configureAudioSession()
         tearDownPlayer()
 
         let item = AVPlayerItem(url: url)
@@ -24,7 +36,10 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
 
         self.player = player
         onStatusChange?(.buffering)
-        player.play()
+        activateAudioSession { [weak self] in
+            guard let self, self.player === player else { return }
+            player.play()
+        }
     }
 
     func pause() {
@@ -34,8 +49,10 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
 
     func resume() {
         guard let player else { return }
-        configureAudioSession()
-        player.play()
+        activateAudioSession { [weak self] in
+            guard let self, self.player === player else { return }
+            player.play()
+        }
     }
 
     func stop() {
@@ -50,23 +67,30 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
             options: [.initial, .new]
         ) { [weak self] player, _ in
             Task { @MainActor [weak self] in
-                self?.handleTimeControlStatus(player.timeControlStatus)
+                guard let self, self.player === player else { return }
+                self.handleTimeControlStatus(player.timeControlStatus)
             }
         }
         itemStatusObservation = item.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
             Task { @MainActor [weak self] in
-                self?.handleItemStatus(item.status, item: item)
+                guard let self, self.player?.currentItem === item else { return }
+                self.handleItemStatus(item.status, item: item)
             }
         }
         failedToEndObserver = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemFailedToPlayToEndTime,
             object: item,
-            queue: .main
+            queue: nil
         ) { [weak self] notification in
-            let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
-            self?.onStatusChange?(.failed(.streamFailed(
-                error?.localizedDescription ?? item.error?.localizedDescription ?? "The stream stopped unexpectedly."
-            )))
+            Task { @MainActor [weak self] in
+                guard let self,
+                      let failedItem = notification.object as? AVPlayerItem,
+                      self.player?.currentItem === failedItem else { return }
+                let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
+                self.onStatusChange?(.failed(.streamFailed(
+                    error?.localizedDescription ?? failedItem.error?.localizedDescription ?? "The stream stopped unexpectedly."
+                )))
+            }
         }
     }
 
@@ -105,10 +129,42 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         player = nil
     }
 
-    private func configureAudioSession() {
+    private func activateAudioSession(completion: @escaping @MainActor () -> Void) {
         let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.playback)
-        try? session.setActive(true)
+        try? session.setCategory(.playback, mode: .default, policy: .longFormAudio)
+        session.activate(options: []) { _, _ in
+            Task { @MainActor in completion() }
+        }
+    }
+
+    private func observeAudioSessionNotifications() {
+        let center = NotificationCenter.default
+        let session = AVAudioSession.sharedInstance()
+        interruptionObserver = center.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: session,
+            queue: nil
+        ) { [weak self] notification in
+            guard let rawType = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                  let type = AVAudioSession.InterruptionType(rawValue: rawType) else {
+                return
+            }
+
+            let rawOptions = notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+            let shouldResume = AVAudioSession.InterruptionOptions(rawValue: rawOptions).contains(.shouldResume)
+
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                switch type {
+                case .began:
+                    self.onStatusChange?(.interruptionBegan)
+                case .ended:
+                    self.onStatusChange?(.interruptionEnded(shouldResume: shouldResume))
+                @unknown default:
+                    break
+                }
+            }
+        }
     }
 
     private func deactivateAudioSession() {

@@ -47,6 +47,21 @@ func extractsFirstPLSStreamURL() throws {
 }
 
 @Test
+func resolvesRelativePLSStreamURLAgainstPlaylistURL() throws {
+    let playlist = """
+    [playlist]
+    NumberOfEntries=2
+    File1=/live
+    File2=https://fallback.example.com/live
+    """
+    let playlistURL = try #require(URL(string: "https://directory.example.com/tunein-station.pls?id=1234"))
+
+    let url = try PlaylistParser.firstStreamURL(in: playlist, playlistURL: playlistURL)
+
+    #expect(url.absoluteString == "https://directory.example.com/live")
+}
+
+@Test
 func extractsFirstM3UStreamURL() throws {
     let playlist = """
     #EXTM3U
@@ -57,4 +72,16 @@ func extractsFirstM3UStreamURL() throws {
     let url = try PlaylistParser.firstStreamURL(in: playlist)
 
     #expect(url.absoluteString == "https://stream.example.com/live.m3u8")
+}
+
+@Test
+func extractsUppercaseSchemeFromRawM3UFallback() throws {
+    let playlist = """
+    #EXTM3U
+    HTTP://stream.example.com/live.mp3
+    """
+
+    let url = try PlaylistParser.firstStreamURL(in: playlist)
+
+    #expect(url.absoluteString.lowercased() == "http://stream.example.com/live.mp3")
 }

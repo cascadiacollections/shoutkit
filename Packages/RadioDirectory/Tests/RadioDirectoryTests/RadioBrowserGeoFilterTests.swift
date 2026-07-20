@@ -124,4 +124,44 @@ struct RadioBrowserGeoFilterTests {
         #expect(queryItems[0].contains(URLQueryItem(name: "countrycode", value: "US")))
         #expect(queryItems[1].contains(URLQueryItem(name: "language", value: "en")))
     }
+
+    @Test
+    func directoryFallsBackToLanguageWhenCountryQueryErrors() async throws {
+        let endpointURL = try #require(URL(string: "https://all.api.radio-browser.info/json/stations/topclick"))
+        let response = try #require(HTTPURLResponse(
+            url: endpointURL,
+            statusCode: 200,
+            httpVersion: nil,
+            headerFields: nil
+        ))
+        let stationJSON = """
+        [{
+            "stationuuid": "6a7508a9-27ab-11e8-91bf-52543be04c81",
+            "name": "KEXP 90.3 Seattle, WA",
+            "url": "http://live-mp3-128.kexp.org/kexp128.mp3",
+            "url_resolved": "http://live-mp3-128.kexp.org/kexp128.mp3",
+            "bitrate": 128
+        }]
+        """
+        let transport = RequestRecordingTransport([
+            .failure(HTTPTransportError.transport("timeout")),
+            .success((Data(stationJSON.utf8), response))
+        ])
+        let provider = StaticGeoFilterProvider(
+            geoFilter: RadioBrowserGeoFilter(countryCode: "US", languageCode: "en")
+        )
+        let directory = RadioBrowserDirectoryClient(
+            transport: transport,
+            retryPolicy: RetryPolicy(maximumRetries: 0, timeout: 1, baseDelay: 0),
+            geoFilterProvider: provider
+        )
+
+        let stations = try await directory.topStations(limit: 5)
+
+        #expect(stations.map(\.name) == ["KEXP 90.3 Seattle, WA"])
+        let queryItems = await transport.requestedQueryItems()
+        #expect(queryItems.count == 2)
+        #expect(queryItems[0].contains(URLQueryItem(name: "countrycode", value: "US")))
+        #expect(queryItems[1].contains(URLQueryItem(name: "language", value: "en")))
+    }
 }
