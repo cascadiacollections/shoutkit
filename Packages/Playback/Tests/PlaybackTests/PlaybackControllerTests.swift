@@ -135,10 +135,26 @@ struct PlaybackControllerTests {
         controller.play(station())
         await waitForStart(output)
         output.onStatusChange?(.playing)
-        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        output.emitTrackInfo("Song", "Band")
 
         #expect(controller.nowPlaying?.title == "Song")
         #expect(controller.nowPlaying?.artist == "Band")
+    }
+
+    @Test func staleTrackInfoFromPreviousStreamGenerationIsDropped() async {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station()], output: output)
+
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+
+        output.onTrackInfo?(AudioTrackInfo(title: "Old Song", artist: "Old Band", streamGeneration: 0))
+        #expect(controller.nowPlaying == nil)
+
+        output.emitTrackInfo("New Song", "New Band")
+        #expect(controller.nowPlaying?.title == "New Song")
+        #expect(controller.nowPlaying?.artist == "New Band")
     }
 
     @Test func stopResetsToIdle() async {
@@ -206,7 +222,7 @@ struct PlaybackControllerTests {
         controller.play(station())
         await waitForStart(output)
         output.onStatusChange?(.playing)
-        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        output.emitTrackInfo("Song", "Band")
 
         #expect(presenter.lastUpdate == .update(
             stationID: "kexp", trackTitle: "Song", isPlaying: true, artworkURL: nil

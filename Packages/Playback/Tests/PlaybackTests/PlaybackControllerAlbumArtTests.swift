@@ -18,7 +18,7 @@ struct PlaybackControllerAlbumArtTests {
         controller.play(station())
         await waitForStart(output)
         output.onStatusChange?(.playing)
-        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        output.emitTrackInfo("Song", "Band")
         await drainMainQueue()
 
         #expect(controller.albumArtURL == art)
@@ -39,7 +39,7 @@ struct PlaybackControllerAlbumArtTests {
         controller.play(station())
         await waitForStart(output)
         output.onStatusChange?(.playing)
-        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        output.emitTrackInfo("Song", "Band")
         await drainMainQueue()
 
         #expect(controller.appleMusicURL == link)
@@ -54,7 +54,7 @@ struct PlaybackControllerAlbumArtTests {
         controller.play(station())
         await waitForStart(output)
         output.onStatusChange?(.playing)
-        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        output.emitTrackInfo("Song", "Band")
         await drainMainQueue()
 
         #expect(controller.albumArtURL == nil)
@@ -74,10 +74,10 @@ struct PlaybackControllerAlbumArtTests {
         controller.play(station())
         await waitForStart(output)
         output.onStatusChange?(.playing)
-        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        output.emitTrackInfo("Song", "Band")
         await drainMainQueue()
         // ICY streams re-deliver identical metadata; it must not churn.
-        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        output.emitTrackInfo("Song", "Band")
         await drainMainQueue()
 
         #expect(lookups == 1)
@@ -102,8 +102,8 @@ struct PlaybackControllerAlbumArtTests {
         controller.play(station())
         await waitForStart(output)
         output.onStatusChange?(.playing)
-        output.onTrackInfo?(AudioTrackInfo(title: "Old", artist: "Band"))
-        output.onTrackInfo?(AudioTrackInfo(title: "New", artist: "Band"))
+        output.emitTrackInfo("Old", "Band")
+        output.emitTrackInfo("New", "Band")
         for _ in 0..<600 { await Task.yield() }
 
         #expect(controller.albumArtURL == newArt)
@@ -121,7 +121,7 @@ struct PlaybackControllerAlbumArtTests {
         controller.play(station())
         await waitForStart(output)
         output.onStatusChange?(.playing)
-        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        output.emitTrackInfo("Song", "Band")
         await drainMainQueue()
         #expect(controller.albumArtURL == art)
         #expect(controller.appleMusicURL == link)
@@ -143,7 +143,7 @@ struct PlaybackControllerAlbumArtTests {
         controller.play(station())
         await waitForStart(output)
         output.onStatusChange?(.playing)
-        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        output.emitTrackInfo("Song", "Band")
         await drainMainQueue()
 
         #expect(events.count == 2)
@@ -169,7 +169,7 @@ struct PlaybackControllerAlbumArtTests {
         controller.play(station())
         await waitForStart(output)
         output.onStatusChange?(.playing)
-        output.onTrackInfo?(AudioTrackInfo(title: "Old", artist: "Band"))
+        output.emitTrackInfo("Old", "Band")
         await drainMainQueue()
         #expect(controller.albumArtURL == oldArt)
 
@@ -187,7 +187,7 @@ struct PlaybackControllerAlbumArtTests {
             metadataObservation.cancel()
         }
 
-        output.onTrackInfo?(AudioTrackInfo(title: "New", artist: "Band"))
+        output.emitTrackInfo("New", "Band")
         await waitUntil({ events.count >= 2 })
 
         #expect(Array(events.prefix(2)) == [

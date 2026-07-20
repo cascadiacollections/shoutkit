@@ -23,6 +23,10 @@ final class TapToAudioLatencyTrace {
         interval = Self.signposter.beginInterval("Tap to audio", id: signpostID)
     }
 
+    deinit {
+        cancel()
+    }
+
     func markResolved(url: URL) {
         guard completed == false, resolvedAt == nil else { return }
         resolvedAt = Date()

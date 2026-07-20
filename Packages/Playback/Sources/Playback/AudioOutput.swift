@@ -16,10 +16,12 @@ public enum AudioStatus: Equatable, Sendable {
 public struct AudioTrackInfo: Equatable, Sendable {
     public let title: String?
     public let artist: String?
+    public let streamGeneration: UInt64
 
-    public init(title: String?, artist: String?) {
+    public init(title: String?, artist: String?, streamGeneration: UInt64 = 0) {
         self.title = title
         self.artist = artist
+        self.streamGeneration = streamGeneration
     }
 }
 
@@ -30,7 +32,7 @@ public protocol AudioOutput: AnyObject {
     var onStatusChange: ((AudioStatus) -> Void)? { get set }
     var onTrackInfo: ((AudioTrackInfo) -> Void)? { get set }
 
-    func start(url: URL)
+    func start(url: URL, streamGeneration: UInt64)
     func pause()
     func resume()
     func stop()

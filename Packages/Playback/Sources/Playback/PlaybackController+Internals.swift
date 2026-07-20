@@ -26,6 +26,8 @@ extension PlaybackController {
         activeStation = station
         state = .loading(station)
         outputStarted = false
+        let streamGeneration = activeStreamGeneration &+ 1
+        activeStreamGeneration = streamGeneration
         resumeAfterInterruption = false
         // A reconnect keeps the last-known track on screen while it re-buffers
         // (ICY repopulates it on success) and must NOT reset the attempt
@@ -52,7 +54,7 @@ extension PlaybackController {
                 guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
                 self.resolvedEndpoint = endpoint
                 self.tapToAudioTrace?.markResolved(url: endpoint.url)
-                self.output.start(url: endpoint.url)
+                self.output.start(url: endpoint.url, streamGeneration: streamGeneration)
                 self.outputStarted = true
                 self.tapToAudioTrace?.markOutputStarted()
                 // Pass the preserved track/art through: on a reconnect the
@@ -164,6 +166,8 @@ extension PlaybackController {
 
     func handleTrackInfo(_ info: AudioTrackInfo) {
         guard let station = activeStation else { return }
+        guard outputStarted else { return }
+        guard info.streamGeneration == activeStreamGeneration else { return }
 
         // Conservative gate: junk (a URL, the station's own name, promo copy,
         // a bare ID token) never reaches now-playing or history. A track that

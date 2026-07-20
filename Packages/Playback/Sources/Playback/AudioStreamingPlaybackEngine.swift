@@ -2,6 +2,7 @@
 import AudioStreaming
 import AVFoundation
 import Foundation
+import os
 
 /// ``RadioPlaybackEngine`` backed by AudioStreaming's `AudioPlayer`
 /// (`AVAudioEngine`), registered as the production ``Container/radioPlaybackEngine``
@@ -9,10 +10,14 @@ import Foundation
 /// activation/teardown and interruption/route-change handling live here.
 @MainActor
 public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
+    private static let logger = Logger(subsystem: "ShoutKit.Playback", category: "AudioStreamingPlaybackEngine")
+
     public var onStatusChange: ((AudioStatus) -> Void)?
     public var onTrackInfo: ((AudioTrackInfo) -> Void)?
 
     private let player = AudioPlayer()
+    private let streamGeneration = OSAllocatedUnfairLock(initialState: UInt64.zero)
+    private var sessionDeactivationTask: Task<Void, Never>?
 
     // Block-based notification observers are not auto-removed on dealloc, so
     // deinit is isolated to read this on the main actor without an escape hatch.
@@ -24,12 +29,14 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     }
 
     isolated deinit {
+        sessionDeactivationTask?.cancel()
         for token in notificationTokens {
             NotificationCenter.default.removeObserver(token)
         }
     }
 
-    public func start(url: URL) {
+    public func start(url: URL, streamGeneration: UInt64) {
+        self.streamGeneration.withLock { $0 = streamGeneration }
         activateSession()
         player.play(url: url)
     }
@@ -45,14 +52,60 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     }
 
     public func stop() {
+        sessionDeactivationTask?.cancel()
         player.stop()
-        try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+        sessionDeactivationTask = Task { @MainActor in
+            await self.deactivateSessionAfterStop()
+        }
     }
 
     private func activateSession() {
+        sessionDeactivationTask?.cancel()
         let session = AVAudioSession.sharedInstance()
         try? session.setCategory(.playback, mode: .default)
         try? session.setActive(true)
+    }
+
+    private func deactivateSessionAfterStop() async {
+        let session = AVAudioSession.sharedInstance()
+
+        for attempt in 0..<5 {
+            guard Task.isCancelled == false else { return }
+            do {
+                try session.setActive(false, options: [.notifyOthersOnDeactivation])
+                return
+            } catch {
+                guard Self.shouldRetrySessionDeactivation(error), attempt < 4 else {
+                    Self.logger.error("Audio session deactivation failed after stop: \(String(describing: error), privacy: .public)")
+                    return
+                }
+                try? await Task.sleep(for: .milliseconds(150))
+            }
+        }
+    }
+
+    private static func shouldRetrySessionDeactivation(_ error: any Error) -> Bool {
+        let nsError = error as NSError
+        guard nsError.domain == AVAudioSessionErrorDomain,
+              let code = AVAudioSession.ErrorCode(rawValue: nsError.code) else {
+            return false
+        }
+        return code == .isBusy
+    }
+
+    private nonisolated func dispatchDelegateToMain(_ body: @escaping @MainActor () -> Void) {
+        if Thread.isMainThread {
+            MainActor.assumeIsolated {
+                body()
+            }
+            return
+        }
+
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated {
+                body()
+            }
+        }
     }
 
     private func observeAudioSessionNotifications() {
@@ -136,9 +189,7 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
         with newState: AudioPlayerState,
         previous: AudioPlayerState
     ) {
-        // Delivered via the library's own main-queue dispatch (asyncOnMain), so
-        // this is always actually running on the main actor already.
-        MainActor.assumeIsolated {
+        dispatchDelegateToMain {
             switch newState {
             case .playing:
                 self.onStatusChange?(.playing)
@@ -161,7 +212,7 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
     ) {}
 
     public nonisolated func audioPlayerUnexpectedError(player: AudioPlayer, error: AudioPlayerError) {
-        MainActor.assumeIsolated {
+        dispatchDelegateToMain {
             self.onStatusChange?(.failed(Self.classify(error)))
         }
     }
@@ -173,8 +224,14 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
     /// same shape its tests exercise.
     public nonisolated func audioPlayerDidReadMetadata(player: AudioPlayer, metadata: [String: String]) {
         guard let streamTitle = metadata["StreamTitle"] ?? metadata["streamtitle"] else { return }
-        let trackInfo = ICYMetadataParser.parseTrack(from: streamTitle)
-        MainActor.assumeIsolated {
+        let generation = streamGeneration.withLock { $0 }
+        let parsed = ICYMetadataParser.parseTrack(from: streamTitle)
+        let trackInfo = AudioTrackInfo(
+            title: parsed.title,
+            artist: parsed.artist,
+            streamGeneration: generation
+        )
+        dispatchDelegateToMain {
             self.onTrackInfo?(trackInfo)
         }
     }

@@ -12,19 +12,28 @@ final class FakeAudioOutput: AudioOutput {
     var onTrackInfo: ((AudioTrackInfo) -> Void)?
 
     private(set) var startedURLs: [URL] = []
+    private(set) var startedStreamGenerations: [UInt64] = []
     private(set) var stopCount = 0
     private(set) var resumeCount = 0
 
     var startedURL: URL? { startedURLs.last }
     var stopCalled: Bool { stopCount > 0 }
 
-    func start(url: URL) { startedURLs.append(url) }
+    func start(url: URL, streamGeneration: UInt64) {
+        startedURLs.append(url)
+        startedStreamGenerations.append(streamGeneration)
+    }
     func pause() { onStatusChange?(.paused) }
     func resume() {
         resumeCount += 1
         onStatusChange?(.playing)
     }
     func stop() { stopCount += 1 }
+
+    func emitTrackInfo(_ title: String?, _ artist: String?) {
+        let generation = startedStreamGenerations.last ?? 0
+        onTrackInfo?(AudioTrackInfo(title: title, artist: artist, streamGeneration: generation))
+    }
 }
 
 /// Spy standing in for the system now-playing surface, so tests never touch

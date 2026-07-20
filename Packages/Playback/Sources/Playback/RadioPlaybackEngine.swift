@@ -17,7 +17,7 @@ public final class StubRadioPlaybackEngine: RadioPlaybackEngine {
 
     public init() {}
 
-    public func start(url: URL) {}
+    public func start(url: URL, streamGeneration: UInt64) {}
     public func pause() {}
     public func resume() {}
     public func stop() {}

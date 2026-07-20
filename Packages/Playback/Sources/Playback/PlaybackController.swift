@@ -123,6 +123,7 @@ public final class PlaybackController {
     /// stream endpoint is still resolving, or after a pause during loading —
     /// in that case `resume()` must re-play rather than resume a nonexistent player.
     @ObservationIgnored var outputStarted = false
+    @ObservationIgnored var activeStreamGeneration: UInt64 = 0
 
     /// Set when the system interrupts playback that was active, so playback can
     /// resume automatically when the interruption ends with a resume hint.
