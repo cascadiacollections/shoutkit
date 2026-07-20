@@ -108,21 +108,24 @@ enum AppDependencies {
     /// installed first holds the slot — it's built from the same tuned
     /// configuration, so behaviour matches Release either way).
     private static func installSharedNetworking() {
+        // Size the shared URL cache for RAM-constrained devices: raw bytes
+        // (artwork, directory JSON) belong on disk — cheap, and they survive
+        // relaunch — while the in-memory tier stays small; decoded bitmaps
+        // have their own bounded caches in DesignSystem. Must be set before
+        // any URLSessionConfiguration below is *created*: a configuration
+        // captures the URLCache.shared reference at creation time, so setting
+        // the tuned cache afterwards would leave the shared transport (which
+        // carries all directory and artwork traffic) on the old default cache.
+        URLCache.shared = URLCache(
+            memoryCapacity: 2 * 1024 * 1024,
+            diskCapacity: 64 * 1024 * 1024
+        )
+
         DebugNetworkInspection.install()
 
         // Fail-fast when offline, responsive-data service type.
         URLSessionHTTPTransport.installSharedSession(
             URLSession(configuration: URLSessionHTTPTransport.interactiveConfiguration())
-        )
-
-        // Size the shared URL cache for RAM-constrained devices: raw bytes
-        // (artwork, directory JSON) belong on disk — cheap, and they survive
-        // relaunch — while the in-memory tier stays small; decoded bitmaps
-        // have their own bounded caches in DesignSystem. Set before the first
-        // request, so every `URLSession.shared` consumer picks it up.
-        URLCache.shared = URLCache(
-            memoryCapacity: 2 * 1024 * 1024,
-            diskCapacity: 64 * 1024 * 1024
         )
     }
 

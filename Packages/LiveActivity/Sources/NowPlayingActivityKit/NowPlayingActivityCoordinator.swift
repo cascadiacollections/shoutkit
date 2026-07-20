@@ -42,6 +42,18 @@ public final class NowPlayingActivityCoordinator {
     private var latestArtworkURL: URL?
     private var latestArtworkToken: String?
 
+    /// The token whose download/staging is still in flight. Spared from purges
+    /// so a purge running between the file write and the adoption on the main
+    /// actor can't delete the PNG the adoption is about to point the activity at.
+    private var pendingArtworkToken: String?
+
+    /// The album-art URL last observed from the controller, remembered so
+    /// playback/track events can re-run ``refreshArtwork()`` — that re-run is
+    /// what retries a download that failed transiently (see the failure path
+    /// in `refreshArtwork()`), mirroring how the lock-screen center retries on
+    /// its next `update`.
+    private var latestAlbumArtURL: URL?
+
     private var observationTasks: [Task<Void, Never>] = []
     private var artworkTask: Task<Void, Never>?
     private let transport: any HTTPTransporting
@@ -90,7 +102,7 @@ public final class NowPlayingActivityCoordinator {
         observationTasks.append(Task { [weak self] in
             for await url in albumArt.removeDuplicates() {
                 guard let self else { return }
-                self.refreshArtwork(albumArtURL: url)
+                self.albumArtChanged(url)
             }
         })
     }
@@ -111,6 +123,14 @@ public final class NowPlayingActivityCoordinator {
         guard let activity else { return }
 
         update(activity, isPlaying: latestIsPlaying)
+        // Give a transiently failed artwork download another chance on the
+        // next track event; a no-op whenever the current art is already staged.
+        refreshArtwork()
+    }
+
+    private func albumArtChanged(_ url: URL?) {
+        latestAlbumArtURL = url
+        refreshArtwork()
     }
 
     // MARK: - Lifecycle
@@ -119,6 +139,9 @@ public final class NowPlayingActivityCoordinator {
         latestIsPlaying = isPlaying
         if let activity, currentStation?.id == station.id {
             update(activity, isPlaying: isPlaying)
+            // Retry hook for a transiently failed artwork download; a no-op
+            // whenever the current art is already staged.
+            refreshArtwork()
             return
         }
 
@@ -141,8 +164,11 @@ public final class NowPlayingActivityCoordinator {
 
         activity = try? Activity.request(attributes: attributes, content: content)
 
-        // Show the station's own art immediately; an album-art hit later swaps it.
-        refreshArtwork(albumArtURL: nil)
+        // Show the station's own art immediately; an album-art hit later swaps
+        // it. (`latestAlbumArtURL` was cleared by `endActivity()` above — a
+        // station switch invalidates the previous track's art, same as the
+        // controller clearing `albumArtURL` on a fresh start.)
+        refreshArtwork()
     }
 
     private func update(_ activity: Activity<NowPlayingActivityAttributes>, isPlaying: Bool) {
@@ -151,33 +177,45 @@ public final class NowPlayingActivityCoordinator {
         // and update/end are async so the call must leave the main actor.
         nonisolated(unsafe) let activity = activity
         let previous = updateTask
-        updateTask = Task {
+        updateTask = Task { [weak self] in
             // Chain onto the previous request so updates apply in the order
             // they were made — two unstructured tasks have no ordering of
             // their own, and a reordered pair could leave a stale state (an
             // old "playing") as the last one applied.
             await previous?.value
             await activity.update(ActivityContent(state: state, staleDate: nil))
+            // Purge only now, after the state referencing the current token has
+            // been applied. Purging at adoption time deletes the PNG the
+            // still-applied previous state points at, and any surface that
+            // re-renders in that window (the widget reads the file lazily at
+            // render time) falls back to the glyph — visibly out of step with
+            // the other now-playing surfaces.
+            self?.purgeStagedArtwork(keepingApplied: state.artworkToken)
         }
     }
 
     private func endActivity() {
         latestMetadata = nil
         currentStation = nil
+        latestAlbumArtURL = nil
         latestArtworkURL = nil
         latestArtworkToken = nil
+        pendingArtworkToken = nil
         artworkTask?.cancel()
         artworkTask = nil
-        LiveActivityArtworkStore.purge()
 
-        guard let activity else { return }
+        guard let activity else {
+            // Nothing on screen can reference a staged file; safe to sweep now.
+            purgeStagedArtwork(keepingApplied: nil)
+            return
+        }
         self.activity = nil
 
         let finalState = contentState(isPlaying: false)
         // See note in update(_:isPlaying:) about the unsafe binding.
         nonisolated(unsafe) let endingActivity = activity
         let previous = updateTask
-        updateTask = Task {
+        updateTask = Task { [weak self] in
             // Keep the end ordered after any in-flight updates for the same
             // activity; a replacement activity's updates simply chain after
             // it, which is harmless.
@@ -186,7 +224,21 @@ public final class NowPlayingActivityCoordinator {
                 ActivityContent(state: finalState, staleDate: nil),
                 dismissalPolicy: .immediate
             )
+            // Sweep only after the activity is actually gone — it can still
+            // re-render its last state until the end applies. Anything a
+            // replacement activity staged meanwhile is kept.
+            self?.purgeStagedArtwork(keepingApplied: nil)
         }
+    }
+
+    /// Drops staged artwork files that nothing can reference anymore, keeping
+    /// the token in the activity state that was just applied, the token
+    /// currently adopted, and any download still in flight. Runs on the main
+    /// actor, where adoptions are serialized, so the keep-set can't go stale
+    /// mid-purge.
+    private func purgeStagedArtwork(keepingApplied appliedToken: String?) {
+        let keep = [appliedToken, latestArtworkToken, pendingArtworkToken].compactMap(\.self)
+        LiveActivityArtworkStore.purge(keeping: Set(keep))
     }
 
     private func contentState(isPlaying: Bool) -> NowPlayingActivityAttributes.ContentState {
@@ -200,15 +252,20 @@ public final class NowPlayingActivityCoordinator {
 
     // MARK: - Artwork hand-off
 
-    /// Resolves the artwork the widget should show — the resolved album art when
-    /// present, otherwise the station's own art — and, if it changed, stages the
-    /// bitmap in the shared container and re-pushes the activity with its token.
-    private func refreshArtwork(albumArtURL: URL?) {
+    /// Resolves the artwork the widget should show — the last observed album
+    /// art when present, otherwise the station's own art — and, if it changed,
+    /// stages the bitmap in the shared container and re-pushes the activity
+    /// with its token. Stale files are NOT purged here; that happens in the
+    /// chained update task after the new state has actually been applied (see
+    /// `update(_:isPlaying:)`), so a surface re-rendering the previous state
+    /// never finds its file already deleted.
+    private func refreshArtwork() {
         guard activity != nil else { return }
-        let targetURL = albumArtURL ?? currentStation?.artworkURL
+        let targetURL = latestAlbumArtURL ?? currentStation?.artworkURL
         guard targetURL != latestArtworkURL else { return }
         latestArtworkURL = targetURL
         artworkTask?.cancel()
+        pendingArtworkToken = nil
 
         guard let targetURL else {
             // No art at all: clear the token so the widget shows its glyph.
@@ -223,7 +280,6 @@ public final class NowPlayingActivityCoordinator {
         // adopt it without a refetch.
         if LiveActivityArtworkStore.fileURL(forToken: token) != nil {
             latestArtworkToken = token
-            LiveActivityArtworkStore.purge(except: token)
             pushArtworkUpdate()
             return
         }
@@ -233,15 +289,22 @@ public final class NowPlayingActivityCoordinator {
         latestArtworkToken = nil
         pushArtworkUpdate()
 
+        pendingArtworkToken = token
         artworkTask = Task { [weak self] in
             guard let self else { return }
-            guard await self.stageArtwork(from: targetURL, token: token) else { return }
+            let staged = await self.stageArtwork(from: targetURL, token: token)
             guard Task.isCancelled == false, self.latestArtworkURL == targetURL else { return }
+            self.pendingArtworkToken = nil
+            guard staged else {
+                // Forget the failed URL so the next playback/track event's
+                // `refreshArtwork()` retries it — a transient network error
+                // must not leave the activity artless for the whole track
+                // while the lock screen (which retries on its next update)
+                // recovers, drifting the two surfaces apart.
+                self.latestArtworkURL = nil
+                return
+            }
             self.latestArtworkToken = token
-            // Purge here — serialized on the main actor with other adoptions —
-            // rather than inside `stage`, where a superseded download's late
-            // write could delete the PNG the activity currently points at.
-            LiveActivityArtworkStore.purge(except: token)
             self.pushArtworkUpdate()
         }
     }

@@ -47,4 +47,31 @@ struct LiveActivityArtworkStoreTests {
         #expect(LiveActivityArtworkStore.fileURL(forToken: "old") == nil)
         #expect(LiveActivityArtworkStore.fileURL(forToken: "current") != nil)
     }
+
+    @Test
+    func purgeKeepingRetainsEveryListedTokenAndDropsTheRest() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        LiveActivityArtworkStore.directoryURLOverride = directory
+        defer {
+            LiveActivityArtworkStore.purge()
+            try? FileManager.default.removeItem(at: directory)
+            LiveActivityArtworkStore.directoryURLOverride = nil
+        }
+
+        #expect(LiveActivityArtworkStore.stage(Data([1]), forToken: "applied") == "applied")
+        #expect(LiveActivityArtworkStore.stage(Data([2]), forToken: "pending") == "pending")
+        #expect(LiveActivityArtworkStore.stage(Data([3]), forToken: "stale") == "stale")
+
+        LiveActivityArtworkStore.purge(keeping: ["applied", "pending"])
+
+        #expect(LiveActivityArtworkStore.fileURL(forToken: "applied") != nil)
+        #expect(LiveActivityArtworkStore.fileURL(forToken: "pending") != nil)
+        #expect(LiveActivityArtworkStore.fileURL(forToken: "stale") == nil)
+
+        LiveActivityArtworkStore.purge(keeping: [])
+
+        #expect(LiveActivityArtworkStore.fileURL(forToken: "applied") == nil)
+        #expect(LiveActivityArtworkStore.fileURL(forToken: "pending") == nil)
+    }
 }

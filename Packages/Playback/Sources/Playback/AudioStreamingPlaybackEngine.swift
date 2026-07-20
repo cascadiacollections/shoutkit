@@ -224,14 +224,17 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
     /// `ICYMetadataParser`, so `PlaybackController` receives track info in the
     /// same shape its tests exercise.
     public nonisolated func audioPlayerDidReadMetadata(player: AudioPlayer, metadata: [String: String]) {
-        guard let streamTitle = metadata["StreamTitle"] ?? metadata["streamtitle"] else { return }
+        // ICY key casing varies by server ("StreamTitle", "streamtitle",
+        // "Streamtitle", …); try the common spellings directly, then fall back
+        // to a case-insensitive scan so a noncanonical server doesn't leave
+        // the previous track's title on screen indefinitely.
+        let streamTitle = metadata["StreamTitle"]
+            ?? metadata["streamtitle"]
+            ?? metadata.first(where: { $0.key.lowercased() == "streamtitle" })?.value
+        guard let streamTitle else { return }
         let generation = streamGeneration.withLock { $0 }
         let parsed = ICYMetadataParser.parseTrack(from: streamTitle)
-        let trackInfo = AudioTrackInfo(
-            title: parsed.title,
-            artist: parsed.artist,
-            streamGeneration: generation
-        )
+        let trackInfo = AudioTrackInfo(title: parsed.title, artist: parsed.artist, streamGeneration: generation)
         executeOnMainActor {
             self.onTrackInfo?(trackInfo)
         }

@@ -171,6 +171,11 @@ public final class NowPlayingCenter: NowPlayingPresenting {
             guard let image = await Task.detached(priority: .utility, operation: {
                 NowPlayingCenter.decodedArtwork(from: data)
             }).value else {
+                // A decode failure must reset the cache marker just like a
+                // transport failure, or every later update for this URL
+                // early-returns on the `url != artworkCacheURL` guard and the
+                // lock screen stays artless for the whole session.
+                self?.resetArtworkCache(ifStill: url)
                 return
             }
 

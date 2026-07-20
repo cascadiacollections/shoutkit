@@ -25,9 +25,14 @@ final class BackgroundRefreshController {
     func register() {
         guard isRegistered == false else { return }
 
+        // `using: .main`, not nil: the launch handler closure is inferred
+        // @MainActor from this context, but with `using: nil` BGTaskScheduler
+        // would invoke it on a private background queue — MainActor-isolated
+        // code running off-main (latent data race; traps under runtime
+        // isolation checking). The main queue matches the closure's isolation.
         isRegistered = BGTaskScheduler.shared.register(
             forTaskWithIdentifier: Self.taskIdentifier,
-            using: nil
+            using: .main
         ) { [weak self] task in
             guard let refreshTask = task as? BGAppRefreshTask else {
                 task.setTaskCompleted(success: false)
