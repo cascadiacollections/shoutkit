@@ -41,6 +41,7 @@ public enum ArtworkLoader {
     /// `nonisolated`: read from the nonisolated decode pipeline, and the
     /// package's main-actor default would otherwise isolate it.
     private nonisolated static let maxDecodePixelSize: CGFloat = 840
+    private nonisolated static let requestCachePolicy: URLRequest.CachePolicy = .reloadRevalidatingCacheData
 
     /// Loads and decodes artwork, coalescing concurrent and repeated requests
     /// for the same URL. The Now Playing surface asks for the same artwork
@@ -62,7 +63,7 @@ public enum ArtworkLoader {
         transport: any HTTPTransporting
     ) async -> LoadedArtwork? {
         var request = URLRequest(url: url)
-        request.cachePolicy = .returnCacheDataElseLoad
+        request.cachePolicy = requestCachePolicy
 
         guard let data = try? await transport.data(for: request),
               let image = ImageDownsampler.decode(data, maxPixelSize: maxDecodePixelSize),
@@ -85,7 +86,12 @@ public enum ArtworkLoader {
     private actor ArtworkStore {
         static let shared = ArtworkStore()
 
-        private var entries: OrderedDictionary<URL, Task<LoadedArtwork?, Never>> = [:]
+        private struct Entry {
+            let token = UUID()
+            let task: Task<LoadedArtwork?, Never>
+        }
+
+        private var entries: OrderedDictionary<URL, Entry> = [:]
         private let capacity = 6
 
         /// Purges the store when the system reports memory pressure, so the
@@ -100,17 +106,17 @@ public enum ArtworkLoader {
             installMemoryPressureSourceIfNeeded()
 
             if let existing = entries[url] {
-                return await existing.value
+                return await existing.task.value
             }
 
-            let task = Task { await ArtworkLoader.fetchAndDecode(url, transport: transport) }
-            entries[url] = task
+            let entry = Entry(task: Task { await ArtworkLoader.fetchAndDecode(url, transport: transport) })
+            entries[url] = entry
             if entries.count > capacity {
                 entries.remove(at: 0)
             }
 
-            let artwork = await task.value
-            if artwork == nil {
+            let artwork = await entry.task.value
+            if artwork == nil, entries[url]?.token == entry.token {
                 // A transient failure must not pin a miss until eviction.
                 entries.removeValue(forKey: url)
             }

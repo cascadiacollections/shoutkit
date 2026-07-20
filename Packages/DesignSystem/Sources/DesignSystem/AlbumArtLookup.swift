@@ -43,10 +43,10 @@ public nonisolated enum AlbumArtLookup {
         return URLSessionHTTPTransport(session: URLSession(configuration: config))
     }()
 
-    /// In-process lookup cache, keyed on "artist|title" (lowercased). Caches
-    /// both hits and definitive misses — a track the catalog simply doesn't
-    /// have would otherwise re-query iTunes on every ICY repeat, which over a
-    /// long background listening session is pure network/battery waste.
+    /// In-process lookup cache, keyed on normalized "artist|title|storefront".
+    /// Caches both hits and definitive misses — a track the catalog simply
+    /// doesn't have would otherwise re-query iTunes on every ICY repeat, which
+    /// over a long background listening session is pure network/battery waste.
     /// Transient failures (transport error, non-200, malformed payload) are
     /// still NOT cached, so a network blip doesn't permanently suppress art.
     private enum CachedLookup {
@@ -60,6 +60,14 @@ public nonisolated enum AlbumArtLookup {
     private static let maxCacheEntries = 256
 
     private static let cache = OSAllocatedUnfairLock<[String: CachedLookup]>(initialState: [:])
+    private struct InFlightLookup {
+        let token = UUID()
+        let task: Task<Match, Never>
+    }
+
+    /// Prevents duplicate network hits when the same track/storefront lookup
+    /// is requested concurrently.
+    private static let inFlight = OSAllocatedUnfairLock<[String: InFlightLookup]>(initialState: [:])
 
     /// Resolves artwork and an Apple Music link for the given artist and title.
     ///
@@ -74,6 +82,20 @@ public nonisolated enum AlbumArtLookup {
         title: String?,
         transport: (any HTTPTransporting)? = nil
     ) async -> Match {
+        await lookup(
+            artist: artist,
+            title: title,
+            regionIdentifier: Locale.current.region?.identifier,
+            transport: transport
+        )
+    }
+
+    static func lookup(
+        artist: String?,
+        title: String?,
+        regionIdentifier: String?,
+        transport: (any HTTPTransporting)? = nil
+    ) async -> Match {
         // Resolved here, not as a default argument: `defaultTransport` is
         // private, and a public function's default argument can't reference a
         // less-accessible declaration.
@@ -83,7 +105,7 @@ public nonisolated enum AlbumArtLookup {
               artist.isEmpty == false, title.isEmpty == false
         else { return .empty }
 
-        let cacheKey = "\(artist.lowercased())|\(title.lowercased())"
+        let cacheKey = cacheKey(artist: artist, title: title, regionIdentifier: regionIdentifier)
         if let cached = cache.withLock({ $0[cacheKey] }) {
             switch cached {
             case let .match(match): return match
@@ -91,7 +113,41 @@ public nonisolated enum AlbumArtLookup {
             }
         }
 
-        guard let searchURL = buildSearchURL(artist: artist, title: title) else { return .empty }
+        if let existing = inFlight.withLock({ $0[cacheKey] }) {
+            return await existing.task.value
+        }
+
+        let inFlightLookup = InFlightLookup(task: Task {
+            await uncachedLookup(
+                artist: artist,
+                title: title,
+                regionIdentifier: regionIdentifier,
+                cacheKey: cacheKey,
+                transport: transport
+            )
+        })
+        inFlight.withLock { $0[cacheKey] = inFlightLookup }
+        let match = await inFlightLookup.task.value
+        inFlight.withLock {
+            if $0[cacheKey]?.token == inFlightLookup.token {
+                $0.removeValue(forKey: cacheKey)
+            }
+        }
+        return match
+    }
+
+    private static func uncachedLookup(
+        artist: String,
+        title: String,
+        regionIdentifier: String?,
+        cacheKey: String,
+        transport: any HTTPTransporting
+    ) async -> Match {
+        guard let searchURL = buildSearchURL(
+            artist: artist,
+            title: title,
+            regionIdentifier: regionIdentifier
+        ) else { return .empty }
 
         var request = URLRequest(url: searchURL)
         request.timeoutInterval = requestTimeout
@@ -139,8 +195,9 @@ public nonisolated enum AlbumArtLookup {
         return components?.url
     }
 
-    private static func buildSearchURL(artist: String, title: String) -> URL? {
-        buildSearchURL(artist: artist, title: title, regionIdentifier: Locale.current.region?.identifier)
+    private static func cacheKey(artist: String, title: String, regionIdentifier: String?) -> String {
+        let storefront = regionIdentifier?.lowercased() ?? ""
+        return "\(artist.lowercased())|\(title.lowercased())|\(storefront)"
     }
 
     private static func store(_ value: CachedLookup, forKey key: String) {
