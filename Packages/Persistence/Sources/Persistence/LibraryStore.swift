@@ -14,8 +14,10 @@ import SwiftData
 public final class LibraryStore {
     public static let recentsLimit = 25
     public static let recentlyHeardLimit = 250
-    /// Fetch/deletion headroom for bounded-history trimming; deleting in batches
-    /// avoids churn from trimming on every insert near the cap.
+    static let recentsTrimHeadroom = 50
+    /// Fetch/deletion headroom for bounded-history trimming batches. Repeated
+    /// passes ensure deep backlogs are fully drained while keeping each fetch
+    /// bounded.
     public static let recentlyHeardTrimHeadroom = 100
 
     /// Station IDs the user has favorited. Kept in sync with the persistent store so
@@ -82,7 +84,24 @@ public final class LibraryStore {
         let count = favorites.count
         guard let maxSource = source.max(), maxSource < count, (0...count).contains(destination) else { return }
 
-        var reordered = favorites
+        let orderedDescriptor = FetchDescriptor<FavoriteStation>(
+            sortBy: [SortDescriptor(\.sortIndex, order: .forward)]
+        )
+        guard let persistedFavorites = fetch(orderedDescriptor, operation: "load favorites for move") else {
+            return
+        }
+        guard persistedFavorites.count == favorites.count,
+              zip(persistedFavorites, favorites).allSatisfy({ $0.stationID == $1.stationID }) else {
+            logger.warning(
+                """
+                move favorites skipped due to source mismatch \
+                [persistedCount: \(persistedFavorites.count), passedCount: \(favorites.count)]
+                """
+            )
+            return
+        }
+
+        var reordered = persistedFavorites
         reordered.move(fromOffsets: source, toOffset: destination)
 
         for (index, favorite) in reordered.enumerated() where favorite.sortIndex != index {
@@ -212,17 +231,23 @@ public final class LibraryStore {
     }
 
     private func trimRecents() {
-        var descriptor = FetchDescriptor<RecentStation>(
-            sortBy: [SortDescriptor(\.playedAt, order: .reverse)]
-        )
-        descriptor.fetchLimit = Self.recentsLimit + 50
+        let fetchLimit = Self.recentsLimit + Self.recentsTrimHeadroom
+        var shouldContinue = true
+        while shouldContinue {
+            var descriptor = FetchDescriptor<RecentStation>(
+                sortBy: [SortDescriptor(\.playedAt, order: .reverse)]
+            )
+            descriptor.fetchLimit = fetchLimit
 
-        guard let recents = fetch(descriptor, operation: "trim recents"), recents.count > Self.recentsLimit else {
-            return
-        }
+            guard let recents = fetch(descriptor, operation: "trim recents"), recents.count > Self.recentsLimit else {
+                return
+            }
 
-        for stale in recents[Self.recentsLimit...] {
-            context.delete(stale)
+            for stale in recents[Self.recentsLimit...] {
+                context.delete(stale)
+            }
+
+            shouldContinue = recents.count == fetchLimit
         }
     }
 
@@ -252,6 +277,8 @@ public final class LibraryStore {
 
         let indices = favorites.map(\.sortIndex)
         guard Set(indices).count != indices.count else { return }
+        let hasAllZeroIndices = indices.allSatisfy({ $0 == 0 })
+        guard hasAllZeroIndices else { return }
 
         for (index, favorite) in favorites.enumerated() {
             favorite.sortIndex = index
