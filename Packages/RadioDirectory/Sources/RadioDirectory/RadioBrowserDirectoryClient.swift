@@ -253,7 +253,6 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         let geoFilterQueryItemSets = geoFilter.map { $0.queryItemSets } ?? [[]]
         let lastGeoFilterIndex = geoFilterQueryItemSets.count - 1
 
-        var lastError: RadioDirectoryError?
         for (index, geoFilterQueryItems) in geoFilterQueryItemSets.enumerated() {
             do {
                 let data = try await request(path: path, queryItems: queryItems + geoFilterQueryItems)
@@ -265,18 +264,13 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
                     return filteredStations
                 }
             } catch let error as RadioDirectoryError {
-                lastError = error
                 if index == lastGeoFilterIndex {
                     throw error
                 }
             }
         }
 
-        if let lastError {
-            throw lastError
-        }
-
-        return []
+        preconditionFailure("RadioBrowserGeoFilter.queryItemSets always contains at least one entry.")
     }
 
     /// Walks the mirror list in order with backoff between attempts, so one dead
