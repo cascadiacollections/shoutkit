@@ -67,7 +67,10 @@ public actor ShoutcastDirectoryClient: RadioDirectoryProviding {
         // valid stream URL regardless.
         // swiftlint:disable:next optional_data_string_conversion
         let playlist = String(decoding: data, as: UTF8.self)
-        let streamURL = try PlaylistParser.firstStreamURL(in: playlist)
+        let streamURL = try PlaylistParser.firstStreamURL(
+            in: playlist,
+            playlistURL: endpoints.tuneInURL(stationID: station.id)
+        )
 
         return StreamEndpoint(
             stationID: station.id,
@@ -274,7 +277,10 @@ public enum RadioDirectoryError: Error, Equatable, LocalizedError, Sendable {
 }
 
 enum PlaylistParser {
-    static func firstStreamURL(in playlist: String) throws(RadioDirectoryError) -> URL {
+    static func firstStreamURL(
+        in playlist: String,
+        playlistURL: URL? = nil
+    ) throws(RadioDirectoryError) -> URL {
         let lines = playlist
             .split(whereSeparator: \.isNewline)
             .map { line in line.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -288,17 +294,36 @@ enum PlaylistParser {
         for line in lines where line.lowercased().hasPrefix("file") {
             guard let equals = line.firstIndex(of: "=") else { continue }
             let value = line[line.index(after: equals)...].trimmingCharacters(in: .whitespaces)
-            guard value.isEmpty == false, let url = URL(string: value) else { continue }
+            guard
+                value.isEmpty == false,
+                let url = streamURL(from: String(value), playlistURL: playlistURL)
+            else {
+                continue
+            }
             return url
         }
 
-        for line in lines where line.hasPrefix("http://") || line.hasPrefix("https://") {
+        for line in lines {
+            let lowercased = line.lowercased()
+            guard lowercased.hasPrefix("http://") || lowercased.hasPrefix("https://") else {
+                continue
+            }
             if let url = URL(string: line) {
                 return url
             }
         }
 
         throw RadioDirectoryError.emptyPlaylist
+    }
+
+    private static func streamURL(from value: String, playlistURL: URL?) -> URL? {
+        let parsed = URL(string: value, relativeTo: playlistURL)?.absoluteURL
+        guard let parsed,
+              let scheme = parsed.scheme?.lowercased(),
+              scheme == "http" || scheme == "https" else {
+            return nil
+        }
+        return parsed
     }
 }
 

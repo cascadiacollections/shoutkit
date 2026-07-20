@@ -3,6 +3,35 @@ import Testing
 
 @testable import BrowseFeatureCore
 
+private actor SequencedTopStationsDirectory: RadioDirectoryProviding {
+    private var topStationsCalls = 0
+
+    func genres() async throws(RadioDirectoryError) -> [Genre] {
+        [Genre(name: "Jazz")]
+    }
+
+    func topStations(limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        topStationsCalls += 1
+        if topStationsCalls == 1 {
+            try? await Task.sleep(for: .milliseconds(200))
+            throw .transport("offline")
+        }
+        return [.fixture(id: "b", name: "Station B")]
+    }
+
+    func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        []
+    }
+
+    func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        []
+    }
+
+    func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
+        throw .invalidResponse
+    }
+}
+
 @MainActor
 struct BrowseViewModelTests {
     @Test func refreshLoadsSpotlightStationsAndGenres() async {
@@ -109,5 +138,21 @@ struct BrowseViewModelTests {
 
         #expect(viewModel.selectedGenre == "Rock")
         #expect(viewModel.genrePhase == .loaded([.fixture(id: "r1", name: "Rock One")]))
+    }
+
+    @Test func olderRefreshFailureDoesNotOverrideNewerLoadedResult() async {
+        let directory = SequencedTopStationsDirectory()
+        let viewModel = BrowseViewModel(directory: directory)
+
+        let first = Task { await viewModel.refresh() }
+        try? await Task.sleep(for: .milliseconds(20))
+        await viewModel.refresh()
+        await first.value
+
+        guard case let .loaded(content) = viewModel.phase else {
+            Issue.record("Expected .loaded after newer refresh, got \(viewModel.phase)")
+            return
+        }
+        #expect(content.stations.map(\.id) == ["b"])
     }
 }

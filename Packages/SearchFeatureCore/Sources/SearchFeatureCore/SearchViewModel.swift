@@ -30,6 +30,8 @@ public final class SearchViewModel {
                 // it supersedes any keystroke waiting in the debounce window.
                 phase = .idle
             }
+            guard trimmed != lastTrimmedQuery else { return }
+            lastTrimmedQuery = trimmed
             queries.yield(trimmed)
         }
     }
@@ -42,6 +44,7 @@ public final class SearchViewModel {
     @ObservationIgnored private var searchTask: Task<Void, Never>?
     @ObservationIgnored private var debounceTask: Task<Void, Never>?
     @ObservationIgnored private let queries: AsyncStream<String>.Continuation
+    @ObservationIgnored private var lastTrimmedQuery = ""
 
     public init(directory: any RadioDirectoryProviding = Container.shared.radioDirectory()) {
         self.directory = directory

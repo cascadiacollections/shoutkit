@@ -9,8 +9,14 @@ struct StationLinkTests {
             id: "npr-newscast",
             name: "NPR News Now",
             genre: "News",
+            tags: ["Headlines", "Public Radio"],
+            country: "US",
+            codec: "mp3",
+            language: "en",
             listenerCount: 42,
             bitrate: 128,
+            clickTrend: 3,
+            votes: 12,
             artworkURL: URL(string: "https://example.com/artwork.png"),
             preferredStreamURL: URL(string: "https://example.com/live.mp3")
         )
@@ -19,6 +25,25 @@ struct StationLinkTests {
         let parsed = StationLink(url: link.url())
 
         #expect(parsed == link)
+    }
+
+    @Test
+    func omitsCleartextRemoteURLsWhenBuildingLinkURL() {
+        let station = Station(
+            id: "kexp",
+            name: "KEXP",
+            genre: "Indie",
+            listenerCount: 0,
+            artworkURL: URL(string: "http://example.com/artwork.png"),
+            preferredStreamURL: URL(string: "http://example.com/live.mp3")
+        )
+        let link = StationLink(station: station)
+        let url = link.url()
+
+        let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+
+        #expect(queryItems.contains(where: { $0.name == "streamURL" }) == false)
+        #expect(queryItems.contains(where: { $0.name == "artworkURL" }) == false)
     }
 
     @Test

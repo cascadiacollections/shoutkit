@@ -68,6 +68,7 @@ func dropsStationsWithoutNameOrStreamURL() throws {
     let json = """
     [
         {"stationuuid": "a", "name": "  ", "url": "https://stream.example.com/a"},
+        {"stationuuid": "d", "name": "[HD]", "url": "https://stream.example.com/d"},
         {"stationuuid": "b", "name": "No Stream", "url": "", "url_resolved": ""},
         {"stationuuid": "c", "name": "Keeper", "url": "https://stream.example.com/c"}
     ]
@@ -97,6 +98,10 @@ func genreFallsBackToCountryThenPlaceholder() throws {
 func upgradesInsecureFaviconsAndDropsEmptyOnes() {
     #expect(
         RadioBrowserDirectoryClient.artworkURL(from: "http://example.com/icon.png")?.absoluteString
+            == "https://example.com/icon.png"
+    )
+    #expect(
+        RadioBrowserDirectoryClient.artworkURL(from: "HTTP://example.com:8080/icon.png")?.absoluteString
             == "https://example.com/icon.png"
     )
     #expect(

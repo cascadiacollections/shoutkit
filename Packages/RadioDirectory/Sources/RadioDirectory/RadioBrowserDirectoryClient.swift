@@ -160,7 +160,8 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
 
     static func station(from dto: RadioBrowserStation) -> Station? {
         let name = dto.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard name.isEmpty == false, dto.stationuuid.isEmpty == false else {
+        let normalizedName = StationNameFormatter.normalize(name)
+        guard normalizedName.isEmpty == false, dto.stationuuid.isEmpty == false else {
             return nil
         }
 
@@ -174,7 +175,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
 
         return Station(
             id: dto.stationuuid,
-            name: StationNameFormatter.normalize(name),
+            name: normalizedName,
             genre: genre(from: dto),
             tags: tags(from: dto),
             country: normalizedValue(dto.country),
@@ -222,8 +223,11 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
             return nil
         }
 
-        if components.scheme == "http" {
+        if components.scheme?.caseInsensitiveCompare("http") == .orderedSame {
             components.scheme = "https"
+            // `http://host:8080` → `https://host` rather than preserving an
+            // arbitrary cleartext port that is unlikely to serve TLS.
+            components.port = nil
         }
 
         return components.url
@@ -247,23 +251,26 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     ) async throws(RadioDirectoryError) -> [Station] {
         let geoFilter = await geoFilterProvider?.currentGeoFilter()
         let geoFilterQueryItemSets = geoFilter.map { $0.queryItemSets } ?? [[]]
+        let lastGeoFilterIndex = geoFilterQueryItemSets.count - 1
 
-        var resultStations: [Station] = []
-        for geoFilterQueryItems in geoFilterQueryItemSets {
-            let data = try await request(path: path, queryItems: queryItems + geoFilterQueryItems)
-            let filteredStations = try decode([RadioBrowserStation].self, from: data)
-                .compactMap(Self.station(from:))
-            // Geo filtering is a fallback chain, not a merge: prefer the country
-            // result set when it yields stations, otherwise replace it with the
-            // language-filtered retry.
-            resultStations = filteredStations
-
-            if filteredStations.isEmpty == false || geoFilterQueryItemSets.count == 1 {
-                break
+        for (index, geoFilterQueryItems) in geoFilterQueryItemSets.enumerated() {
+            do {
+                let data = try await request(path: path, queryItems: queryItems + geoFilterQueryItems)
+                let filteredStations = try decode([RadioBrowserStation].self, from: data)
+                    .compactMap(Self.station(from:))
+                // Geo filtering is a fallback chain, not a merge: prefer the
+                // first non-empty result set.
+                if filteredStations.isEmpty == false || index == lastGeoFilterIndex {
+                    return filteredStations
+                }
+            } catch let error as RadioDirectoryError {
+                if index == lastGeoFilterIndex {
+                    throw error
+                }
             }
         }
 
-        return resultStations
+        preconditionFailure("Unreachable: geo filter loop must return or throw before completion.")
     }
 
     /// Walks the mirror list in order with backoff between attempts, so one dead
