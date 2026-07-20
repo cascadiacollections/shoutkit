@@ -28,6 +28,7 @@ public nonisolated enum ArtworkThumbnailLoader {
     /// Coalesces concurrent loads of the same key so a row's own `.task` and a
     /// prefetch for the same artwork share one fetch/decode instead of racing.
     private static let inFlight = InFlightThumbnails()
+    private static let requestCachePolicy: URLRequest.CachePolicy = .reloadRevalidatingCacheData
 
     /// Fetches (through the shared `URLCache`) and decodes artwork at
     /// `maxPixelSize`, returning a cached thumbnail when one exists.
@@ -41,7 +42,7 @@ public nonisolated enum ArtworkThumbnailLoader {
         guard let url, maxPixelSize > 0 else { return nil }
 
         let key = cacheKey(url: url, maxPixelSize: maxPixelSize)
-        if let cached = cache.object(forKey: key as NSString) {
+        if let cached = cachedThumbnail(forKey: key) {
             return cached
         }
 
@@ -69,7 +70,7 @@ public nonisolated enum ArtworkThumbnailLoader {
 
         for case let url? in urls {
             let key = cacheKey(url: url, maxPixelSize: maxPixelSize)
-            guard cache.object(forKey: key as NSString) == nil else { continue }
+            guard cachedThumbnail(forKey: key) == nil else { continue }
             Task(priority: .utility) {
                 _ = await inFlight.thumbnail(
                     forKey: key,
@@ -85,6 +86,10 @@ public nonisolated enum ArtworkThumbnailLoader {
         "\(Int(maxPixelSize.rounded(.up)))|\(url.absoluteString)"
     }
 
+    fileprivate static func cachedThumbnail(forKey key: String) -> UIImage? {
+        cache.object(forKey: key as NSString)
+    }
+
     /// The uncached fetch/decode/store path. `key` is passed through so the
     /// coalescing actor and this helper agree on the cache identity without
     /// recomputing it.
@@ -95,7 +100,7 @@ public nonisolated enum ArtworkThumbnailLoader {
         transport: any HTTPTransporting
     ) async -> UIImage? {
         var request = URLRequest(url: url)
-        request.cachePolicy = .returnCacheDataElseLoad
+        request.cachePolicy = requestCachePolicy
 
         guard let data = try? await transport.data(for: request),
               let image = ImageDownsampler.decode(data, maxPixelSize: maxPixelSize)
@@ -121,6 +126,10 @@ private actor InFlightThumbnails {
         maxPixelSize: CGFloat,
         transport: any HTTPTransporting
     ) async -> UIImage? {
+        if let cached = ArtworkThumbnailLoader.cachedThumbnail(forKey: key) {
+            return cached
+        }
+
         if let existing = tasks[key] {
             return await existing.value
         }
