@@ -106,7 +106,7 @@ enum DiagnosticsMetricSummaryExtractor {
     }
 
     private static func appLaunchSummary(from object: [String: Any]) -> DiagnosticsAppLaunchSummary? {
-        guard let launchMetrics = dictionary(forKeys: ["appLaunchMetrics"], in: object) else {
+        guard let launchMetrics = dictionary(forKeys: ["applicationLaunchMetrics", "appLaunchMetrics"], in: object) else {
             return nil
         }
 
@@ -181,31 +181,43 @@ enum DiagnosticsMetricSummaryExtractor {
     }
 
     private static func histogramSummary(from object: [String: Any], keys: [String]) -> HistogramSummary? {
-        guard let histogram = dictionary(forKeys: keys, in: object),
-              let starts = numberArray(forKeys: ["bucketStartTimes"], in: histogram),
-              let ends = numberArray(forKeys: ["bucketEndTimes"], in: histogram),
-              let counts = numberArray(forKeys: ["bucketCounts"], in: histogram),
-              starts.count == ends.count,
-              starts.count == counts.count,
-              starts.isEmpty == false else {
+        guard let histogram = dictionary(forKeys: keys, in: object) else {
             return nil
         }
 
-        let multiplier = durationUnitMultiplier(from: histogram["unit"])
-        var totalSamples = 0.0
-        var weightedTotal = 0.0
+        if let starts = numberArray(forKeys: ["bucketStartTimes"], in: histogram),
+           let ends = numberArray(forKeys: ["bucketEndTimes"], in: histogram),
+           let counts = numberArray(forKeys: ["bucketCounts"], in: histogram),
+           starts.count == ends.count,
+           starts.count == counts.count,
+           starts.isEmpty == false {
+            let multiplier = durationUnitMultiplier(from: histogram["unit"])
+            var totalSamples = 0.0
+            var weightedTotal = 0.0
 
-        for index in starts.indices {
-            let count = counts[index]
-            let midpoint = (starts[index] + ends[index]) / 2
-            weightedTotal += midpoint * count
-            totalSamples += count
+            for index in starts.indices {
+                let count = counts[index]
+                let midpoint = (starts[index] + ends[index]) / 2
+                weightedTotal += midpoint * count
+                totalSamples += count
+            }
+
+            guard totalSamples > 0 else { return nil }
+            return HistogramSummary(
+                meanMilliseconds: (weightedTotal / totalSamples) * multiplier,
+                sampleCount: Int(totalSamples.rounded())
+            )
         }
 
-        guard totalSamples > 0 else { return nil }
+        guard let values = durationValues(forKeys: ["histogramValue", "histogramValues"], in: histogram),
+              values.isEmpty == false else {
+            return nil
+        }
+
+        let total = values.reduce(0, +)
         return HistogramSummary(
-            meanMilliseconds: (weightedTotal / totalSamples) * multiplier,
-            sampleCount: Int(totalSamples.rounded())
+            meanMilliseconds: total / Double(values.count),
+            sampleCount: values.count
         )
     }
 
@@ -233,6 +245,9 @@ enum DiagnosticsMetricSummaryExtractor {
     private static func durationMilliseconds(from value: Any, defaultUnit: DurationUnit) -> Double? {
         if let number = value as? NSNumber {
             return number.doubleValue * defaultUnit.multiplierToMilliseconds
+        }
+        if let string = value as? String {
+            return parseDurationStringMilliseconds(string, defaultUnit: defaultUnit)
         }
 
         guard let dictionary = value as? [String: Any] else { return nil }
@@ -273,6 +288,28 @@ enum DiagnosticsMetricSummaryExtractor {
         return nil
     }
 
+    private static func durationValues(forKeys keys: [String], in object: [String: Any]) -> [Double]? {
+        for key in keys {
+            if let values = object[key] as? [Any] {
+                let durations = values.compactMap { durationMilliseconds(from: $0, defaultUnit: .milliseconds) }
+                return durations.count == values.count ? durations : nil
+            }
+            if let values = object[key] as? [String: Any] {
+                let sorted = values.sorted { lhs, rhs in
+                    let lhsIndex = Int(lhs.key) ?? Int.max
+                    let rhsIndex = Int(rhs.key) ?? Int.max
+                    if lhsIndex == rhsIndex {
+                        return lhs.key < rhs.key
+                    }
+                    return lhsIndex < rhsIndex
+                }
+                let durations = sorted.compactMap { durationMilliseconds(from: $0.value, defaultUnit: .milliseconds) }
+                return durations.count == sorted.count ? durations : nil
+            }
+        }
+        return nil
+    }
+
     private static func numberArray(forKeys keys: [String], in object: [String: Any]) -> [Double]? {
         guard let values = array(forKeys: keys, in: object) else { return nil }
         let numbers = values.compactMap { ($0 as? NSNumber)?.doubleValue }
@@ -295,6 +332,36 @@ enum DiagnosticsMetricSummaryExtractor {
             }
         }
         return nil
+    }
+
+    private static func parseDurationStringMilliseconds(
+        _ raw: String,
+        defaultUnit: DurationUnit
+    ) -> Double? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return nil }
+
+        if let value = Double(trimmed) {
+            return value * defaultUnit.multiplierToMilliseconds
+        }
+
+        let components = trimmed.split(whereSeparator: \.isWhitespace)
+        if components.count >= 2,
+           let value = Double(components[0]),
+           let unit = DurationUnit(rawValue: String(components[1]).lowercased()) {
+            return value * unit.multiplierToMilliseconds
+        }
+
+        let numberPrefix = trimmed.prefix { $0.isNumber || $0 == "." || $0 == "-" || $0 == "+" }
+        guard numberPrefix.isEmpty == false,
+              let value = Double(String(numberPrefix)) else {
+            return nil
+        }
+        let unitSuffix = trimmed.dropFirst(numberPrefix.count)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        let unit = DurationUnit(rawValue: unitSuffix) ?? defaultUnit
+        return value * unit.multiplierToMilliseconds
     }
 
     private struct HistogramSummary {

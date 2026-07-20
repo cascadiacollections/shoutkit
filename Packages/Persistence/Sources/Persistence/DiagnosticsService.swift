@@ -1,5 +1,6 @@
 import FeatureFlags
 import Foundation
+import Observation
 #if canImport(OSLog)
 import OSLog
 #endif
@@ -21,15 +22,16 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
 
     private static let diagnosticsFeature = FeatureCatalog.diagnostics
     #if canImport(OSLog)
-    private static let logger = Logger(subsystem: "ShoutKit.Persistence", category: "DiagnosticsService")
+    private nonisolated(unsafe) static let logger = Logger(subsystem: "ShoutKit.Persistence", category: "DiagnosticsService")
     #endif
 
     private let featureFlags: any FeatureFlagProviding
     private let settings: SettingsStore
-    private let payloadStore: any DiagnosticsPayloadPersisting
     private let subscribe: SubscriptionHandler
     private let unsubscribe: SubscriptionHandler
+    private let ingestWorker: DiagnosticsIngestWorker
     private var isSubscribed = false
+    private var observationTask: Task<Void, Never>?
 
     /// Passing nil for `subscribe`/`unsubscribe` uses the real MXMetricManager
     /// handlers; tests inject stubs. (nil-defaults rather than direct default
@@ -44,11 +46,16 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
     ) {
         self.featureFlags = featureFlags
         self.settings = settings
-        self.payloadStore = payloadStore
         self.subscribe = subscribe ?? DiagnosticsService.defaultSubscribe
         self.unsubscribe = unsubscribe ?? DiagnosticsService.defaultUnsubscribe
+        self.ingestWorker = DiagnosticsIngestWorker(payloadStore: payloadStore)
         super.init()
+        observeCollectionEligibility()
         refreshSubscription()
+    }
+
+    deinit {
+        observationTask?.cancel()
     }
 
     public func refreshSubscription() {
@@ -65,12 +72,16 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
     func ingest(metricPayloads: [Data], diagnosticPayloads: [Data]) {
         guard shouldCollectDiagnostics else { return }
         let receivedAt = Date()
-        payloadStore.persist(
-            metricPayloads: metricPayloads,
-            diagnosticPayloads: diagnosticPayloads,
-            receivedAt: receivedAt
-        )
-        logMetricPayloadSummaries(limit: metricPayloads.count, receivedAt: receivedAt)
+        let metricPayloadsToPersist = metricPayloads
+        let diagnosticPayloadsToPersist = diagnosticPayloads
+        let worker = ingestWorker
+        Task(priority: .utility) {
+            await worker.persistAndLogSummaries(
+                metricPayloads: metricPayloadsToPersist,
+                diagnosticPayloads: diagnosticPayloadsToPersist,
+                receivedAt: receivedAt
+            )
+        }
     }
 
     var shouldCollectDiagnostics: Bool {
@@ -79,42 +90,61 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
 
     var subscribedForCollection: Bool { isSubscribed }
 
-    private func logMetricPayloadSummaries(limit: Int, receivedAt: Date) {
-        guard limit > 0 else { return }
-        do {
-            let summaries = try payloadStore.metricPayloadSummaries(limit: limit)
-            for summary in summaries {
-                if let launch = summary.launch {
-                    Self.log(
-                        """
-                        MetricKit launch receivedAt=\(receivedAt.formatted(.iso8601)) \
-                        timeToFirstDrawMeanMs=\(Self.describe(launch.meanTimeToFirstDrawMilliseconds)) \
-                        timeToFirstDrawSamples=\(launch.timeToFirstDrawSampleCount) \
-                        resumeMeanMs=\(Self.describe(launch.meanResumeTimeMilliseconds)) \
-                        resumeSamples=\(launch.resumeSampleCount)
-                        """
-                    )
-                }
-                for transaction in summary.networkTransactions {
-                    Self.log(transaction.logMessage)
-                }
+    private func observeCollectionEligibility() {
+        observationTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            var previous = (
+                self.settings.isDiagnosticsSharingEnabled,
+                self.featureFlags.isEnabled(Self.diagnosticsFeature)
+            )
+            let changes = Observations {
+                (
+                    self.settings.isDiagnosticsSharingEnabled,
+                    self.featureFlags.isEnabled(Self.diagnosticsFeature)
+                )
             }
-        } catch {
-            Self.log("Failed to summarize persisted MetricKit payloads: \(error)")
+
+            for await change in changes {
+                guard change != previous else { continue }
+                previous = change
+                refreshSubscription()
+            }
         }
     }
 
-    private static func describe(_ value: Double?) -> String {
+    private nonisolated static func describe(_ value: Double?) -> String {
         guard let value else { return "n/a" }
         return String(format: "%.2f", value)
     }
 
-    private static func log(_ message: String) {
+    private nonisolated static func log(_ message: String) {
         #if canImport(OSLog)
         logger.notice("\(message, privacy: .public)")
         #else
         print(message)
         #endif
+    }
+
+    private nonisolated static func logMetricPayloadSummaries(
+        _ summaries: [DiagnosticsMetricPayloadSummary],
+        receivedAt: Date
+    ) {
+        for summary in summaries {
+            if let launch = summary.launch {
+                Self.log(
+                    """
+                    MetricKit launch receivedAt=\(receivedAt.formatted(.iso8601)) \
+                    timeToFirstDrawMeanMs=\(Self.describe(launch.meanTimeToFirstDrawMilliseconds)) \
+                    timeToFirstDrawSamples=\(launch.timeToFirstDrawSampleCount) \
+                    resumeMeanMs=\(Self.describe(launch.meanResumeTimeMilliseconds)) \
+                    resumeSamples=\(launch.resumeSampleCount)
+                    """
+                )
+            }
+            for transaction in summary.networkTransactions {
+                Self.log(transaction.logMessage)
+            }
+        }
     }
 
     private static func defaultSubscribe(_ service: DiagnosticsService) {
@@ -123,6 +153,30 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
         #else
         _ = service
         #endif
+    }
+
+    private actor DiagnosticsIngestWorker {
+        private let payloadStore: any DiagnosticsPayloadPersisting
+
+        init(payloadStore: any DiagnosticsPayloadPersisting) {
+            self.payloadStore = payloadStore
+        }
+
+        func persistAndLogSummaries(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date) {
+            do {
+                try payloadStore.persist(
+                    metricPayloads: metricPayloads,
+                    diagnosticPayloads: diagnosticPayloads,
+                    receivedAt: receivedAt
+                )
+                let summaries = metricPayloads.compactMap {
+                    DiagnosticsMetricSummaryExtractor.summary(from: $0, receivedAt: receivedAt)
+                }
+                DiagnosticsService.logMetricPayloadSummaries(summaries, receivedAt: receivedAt)
+            } catch {
+                DiagnosticsService.log("Failed to persist MetricKit payloads: \(error)")
+            }
+        }
     }
 
     private static func defaultUnsubscribe(_ service: DiagnosticsService) {
