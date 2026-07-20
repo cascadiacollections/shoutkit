@@ -30,6 +30,9 @@ struct RootView: View {
     @State private var selectedTab = ShoutKitTab.listenNow
     @State private var isShowingNowPlaying = false
     @State private var isShowingSettings = false
+    @State private var listenNowViewModel = BrowseViewModel()
+    @State private var browseViewModel = BrowseViewModel()
+    @State private var searchViewModel = SearchViewModel()
     @AppStorage("hasCompletedFirstRun") private var hasCompletedFirstRun = false
 
     var body: some View {
@@ -64,8 +67,7 @@ struct RootView: View {
             // `initial: true` drains a link that arrived before this view existed
             // (cold launch via deep link), so no listener handshake is needed.
             .onChange(of: launchRouter.pending, initial: true) { _, link in
-                guard let link else { return }
-                launchRouter.clearPending()
+                guard let link, launchRouter.consumePending(link) else { return }
                 handle(link)
             }
             // Keep the quick-play widget's favorite list in sync. `initial: true`
@@ -101,7 +103,7 @@ struct RootView: View {
         TabView(selection: $selectedTab) {
             Tab("Listen Now", systemImage: "play.circle", value: ShoutKitTab.listenNow) {
                 NavigationStack {
-                    ListenNowView(viewModel: BrowseViewModel())
+                    ListenNowView(viewModel: listenNowViewModel)
                         .navigationTitle("Listen Now")
                         .toolbar {
                             ToolbarItem(placement: .topBarTrailing) {
@@ -118,14 +120,14 @@ struct RootView: View {
 
             Tab("Browse", systemImage: "square.grid.2x2", value: ShoutKitTab.browse) {
                 NavigationStack {
-                    BrowseLandingView(viewModel: BrowseViewModel())
+                    BrowseLandingView(viewModel: browseViewModel)
                         .navigationTitle("Browse")
                 }
             }
 
             Tab("Search", systemImage: "magnifyingglass", value: ShoutKitTab.search, role: .search) {
                 NavigationStack {
-                    SearchView(viewModel: SearchViewModel())
+                    SearchView(viewModel: searchViewModel)
                         .navigationTitle("Search")
                 }
             }
@@ -162,11 +164,11 @@ struct RootView: View {
         }
     }
 
-    /// An `Equatable` fingerprint of the favorites list — station ids in display
-    /// order — so `onChange` fires on add, remove, and reorder without depending
-    /// on `[FavoriteStation]` element equality.
+    /// An `Equatable` fingerprint of the favorites list — station ids and stream
+    /// snapshots in display order — so `onChange` fires on add/remove/reorder and
+    /// on stream-URL refreshes without depending on `[FavoriteStation]` equality.
     private var favoritesSignature: [String] {
-        favorites.map(\.stationID)
+        favorites.map { "\($0.stationID)|\($0.streamURLString ?? "")" }
     }
 
     private var currentHandoffLink: StationLink? {

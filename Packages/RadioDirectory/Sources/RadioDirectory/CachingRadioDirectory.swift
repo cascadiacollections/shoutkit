@@ -135,6 +135,10 @@ public actor CachingRadioDirectory: RadioDirectoryProviding {
         try await base.stations(inGenre: genre, limit: limit)
     }
 
+    public func station(id: String) async throws(RadioDirectoryError) -> Station? {
+        try await base.station(id: id)
+    }
+
     public func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
         try await base.streamEndpoint(for: station)
     }
