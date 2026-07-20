@@ -86,8 +86,9 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
         let signpostID = Self.signposter.makeSignpostID()
         let interval = Self.signposter.beginInterval("HTTP request", id: signpostID)
         // Passing a per-task delegate overrides the session delegate for that
-        // callback chain; when Debug installs Pulse as the session delegate, use
-        // `nil` here so Pulse still receives task metrics.
+        // callback chain. If the session has no delegate, attach a per-task
+        // observer so we can log metrics. If Debug installed Pulse as the
+        // session delegate, pass `nil` here so Pulse still receives metrics.
         let metricsObserver = session.delegate == nil ? TaskMetricsObserver() : nil
         do {
             let response = try await session.data(for: request, delegate: metricsObserver)

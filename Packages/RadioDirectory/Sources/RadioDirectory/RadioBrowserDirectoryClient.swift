@@ -270,7 +270,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
             }
         }
 
-        preconditionFailure("RadioBrowserGeoFilter.queryItemSets always contains at least one entry.")
+        preconditionFailure("`geoFilter.map { ... } ?? [[]]` guarantees at least one query-item set.")
     }
 
     /// Walks the mirror list in order with backoff between attempts, so one dead
