@@ -173,10 +173,13 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
     /// same shape its tests exercise.
     public nonisolated func audioPlayerDidReadMetadata(player: AudioPlayer, metadata: [String: String]) {
         // ICY key casing varies by server ("StreamTitle", "streamtitle",
-        // "Streamtitle", …); match case-insensitively so a noncanonical server
-        // doesn't leave the previous track's title on screen indefinitely.
-        guard let streamTitle = metadata.first(where: { $0.key.lowercased() == "streamtitle" })?.value
-        else { return }
+        // "Streamtitle", …); try the common spellings directly, then fall back
+        // to a case-insensitive scan so a noncanonical server doesn't leave
+        // the previous track's title on screen indefinitely.
+        let streamTitle = metadata["StreamTitle"]
+            ?? metadata["streamtitle"]
+            ?? metadata.first(where: { $0.key.lowercased() == "streamtitle" })?.value
+        guard let streamTitle else { return }
         let trackInfo = ICYMetadataParser.parseTrack(from: streamTitle)
         MainActor.assumeIsolated {
             self.onTrackInfo?(trackInfo)

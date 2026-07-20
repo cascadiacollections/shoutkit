@@ -75,7 +75,7 @@ public enum LiveActivityArtworkStore {
     /// Drops every staged file except `token`'s — the cache only ever needs the
     /// art currently on screen.
     public static func purge(except token: String? = nil) {
-        purge(keeping: token.map { [$0] } ?? [])
+        purge(keeping: token.map { Set([$0]) } ?? [])
     }
 
     /// Drops every staged file whose token is not in `tokens`.
