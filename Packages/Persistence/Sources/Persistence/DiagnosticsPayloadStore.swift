@@ -1,11 +1,8 @@
 import Foundation
 import GRDB
-#if canImport(OSLog)
-import OSLog
-#endif
 
 public protocol DiagnosticsPayloadPersisting: AnyObject {
-    func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date)
+    func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date) throws
     func metricPayloadSummaries(limit: Int) throws -> [DiagnosticsMetricPayloadSummary]
 }
 
@@ -16,11 +13,13 @@ private enum DiagnosticsPayloadKind: String, Codable {
     case diagnostic
 }
 
-public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
-    #if canImport(OSLog)
-    private static let logger = Logger(subsystem: "com.cascadiacollections.shoutkit", category: "diagnostics")
-    #endif
+private enum DiagnosticsPayloadStoreError: Error {
+    case invalidRetentionCutoffDate
+}
 
+private let diagnosticsPayloadRetentionDays = 30
+
+public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
     private struct Record: Codable, FetchableRecord, PersistableRecord {
         static let databaseTableName = "diagnostic_payloads"
 
@@ -31,7 +30,6 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
     }
 
     private let dbQueue: DatabaseQueue
-
     public init(path: String) throws {
         dbQueue = try DatabaseQueue(path: path)
         try migrate()
@@ -41,24 +39,22 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
         try self.init(path: Self.defaultDatabasePath().path)
     }
 
-    public func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date) {
+    public func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date) throws {
         guard !metricPayloads.isEmpty || !diagnosticPayloads.isEmpty else { return }
-        do {
-            try dbQueue.write { database in
-                for payload in metricPayloads {
-                    try Record(id: nil, kind: .metric, payload: payload, receivedAt: receivedAt).insert(database)
-                }
-                for payload in diagnosticPayloads {
-                    try Record(id: nil, kind: .diagnostic, payload: payload, receivedAt: receivedAt).insert(database)
-                }
+        guard let cutoff = Calendar.current.date(byAdding: .day, value: -diagnosticsPayloadRetentionDays, to: receivedAt) else {
+            throw DiagnosticsPayloadStoreError.invalidRetentionCutoffDate
+        }
+        try dbQueue.write { database in
+            for payload in metricPayloads {
+                try Record(id: nil, kind: .metric, payload: payload, receivedAt: receivedAt).insert(database)
             }
-        } catch {
-            assertionFailure("Failed to persist diagnostics payloads: \(error)")
-            #if canImport(OSLog)
-            Self.logger.error("Failed to persist diagnostics payloads: \(String(describing: error), privacy: .private)")
-            #else
-            print("DiagnosticsPayloadStore persist error: \(error)")
-            #endif
+            for payload in diagnosticPayloads {
+                try Record(id: nil, kind: .diagnostic, payload: payload, receivedAt: receivedAt).insert(database)
+            }
+
+            _ = try Record
+                .filter(Column("receivedAt") < cutoff)
+                .deleteAll(database)
         }
     }
 
@@ -114,13 +110,20 @@ public final class InMemoryDiagnosticsPayloadStore: DiagnosticsPayloadPersisting
     private(set) public var metricPayloads: [Data] = []
     private(set) public var diagnosticPayloads: [Data] = []
     private var metricRecords: [(payload: Data, receivedAt: Date)] = []
+    private var diagnosticRecords: [(payload: Data, receivedAt: Date)] = []
 
     public init() {}
 
-    public func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date) {
-        self.metricPayloads.append(contentsOf: metricPayloads)
-        self.diagnosticPayloads.append(contentsOf: diagnosticPayloads)
+    public func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date) throws {
+        guard let cutoff = Calendar.current.date(byAdding: .day, value: -diagnosticsPayloadRetentionDays, to: receivedAt) else {
+            throw DiagnosticsPayloadStoreError.invalidRetentionCutoffDate
+        }
         self.metricRecords.append(contentsOf: metricPayloads.map { ($0, receivedAt) })
+        self.diagnosticRecords.append(contentsOf: diagnosticPayloads.map { ($0, receivedAt) })
+        self.metricRecords.removeAll { $0.receivedAt < cutoff }
+        self.diagnosticRecords.removeAll { $0.receivedAt < cutoff }
+        self.metricPayloads = self.metricRecords.map(\.payload)
+        self.diagnosticPayloads = self.diagnosticRecords.map(\.payload)
     }
 
     public func metricPayloadSummaries(limit: Int) throws -> [DiagnosticsMetricPayloadSummary] {

@@ -1,5 +1,6 @@
 import FeatureFlags
 import Foundation
+import Observation
 import Testing
 
 @testable import Persistence
@@ -13,6 +14,7 @@ struct DiagnosticsServiceTests {
         return defaults
     }
 
+    @Observable
     @MainActor
     private final class FeatureFlagsStub: FeatureFlagProviding {
         var enabled = false
@@ -67,7 +69,7 @@ struct DiagnosticsServiceTests {
         #expect(payloadStore.diagnosticPayloads.isEmpty)
     }
 
-    @Test func collectionStartsWhenFlagAndOptInEnabled() throws {
+    @Test func collectionStartsWhenFlagAndOptInEnabled() async throws {
         let settings = SettingsStore(defaults: try makeDefaults())
         settings.isDiagnosticsSharingEnabled = true
         let featureFlags = FeatureFlagsStub()
@@ -85,6 +87,9 @@ struct DiagnosticsServiceTests {
         service.ingest(metricPayloads: [Data("metric".utf8)], diagnosticPayloads: [Data("diag".utf8)])
 
         #expect(subscribeCalls == 1)
+        await waitUntil {
+            payloadStore.metricPayloads.count == 1 && payloadStore.diagnosticPayloads.count == 1
+        }
         #expect(payloadStore.metricPayloads.count == 1)
         #expect(payloadStore.diagnosticPayloads.count == 1)
     }
@@ -109,5 +114,47 @@ struct DiagnosticsServiceTests {
 
         #expect(unsubscribeCalls == 1)
         #expect(service.subscribedForCollection == false)
+    }
+
+    @Test func refreshesSubscriptionWhenFeatureFlagChanges() async throws {
+        let settings = SettingsStore(defaults: try makeDefaults())
+        settings.isDiagnosticsSharingEnabled = true
+        let featureFlags = FeatureFlagsStub()
+        featureFlags.enabled = false
+        let payloadStore = InMemoryDiagnosticsPayloadStore()
+        var subscribeCalls = 0
+        var unsubscribeCalls = 0
+        let service = DiagnosticsService(
+            featureFlags: featureFlags,
+            settings: settings,
+            payloadStore: payloadStore,
+            subscribe: { _ in subscribeCalls += 1 },
+            unsubscribe: { _ in unsubscribeCalls += 1 }
+        )
+
+        #expect(service.subscribedForCollection == false)
+
+        featureFlags.enabled = true
+        await waitUntil { service.subscribedForCollection }
+        #expect(subscribeCalls == 1)
+
+        featureFlags.enabled = false
+        await waitUntil { service.subscribedForCollection == false }
+        #expect(unsubscribeCalls == 1)
+    }
+
+    private func waitUntil(
+        timeoutSeconds: TimeInterval = 1,
+        intervalNanoseconds: UInt64 = 10_000_000,
+        condition: @escaping () -> Bool
+    ) async {
+        let deadline = Date().addingTimeInterval(timeoutSeconds)
+        while await MainActor.run(body: condition) == false {
+            if Date() >= deadline {
+                Issue.record("Condition was not met before timeout")
+                return
+            }
+            try? await Task.sleep(nanoseconds: intervalNanoseconds)
+        }
     }
 }
