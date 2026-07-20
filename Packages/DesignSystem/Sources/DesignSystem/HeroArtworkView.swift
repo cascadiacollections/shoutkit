@@ -20,6 +20,7 @@ public struct HeroArtworkView: View {
     private static let minTileSize: CGFloat = 120
 
     private let artworkURL: URL?
+    private let fallbackArtworkURL: URL?
     private let size: CGFloat
     private let isPlaying: Bool
 
@@ -28,8 +29,14 @@ public struct HeroArtworkView: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    public init(artworkURL: URL?, size: CGFloat = 280, isPlaying: Bool = false) {
+    public init(
+        artworkURL: URL?,
+        fallbackArtworkURL: URL? = nil,
+        size: CGFloat = 280,
+        isPlaying: Bool = false
+    ) {
         self.artworkURL = artworkURL
+        self.fallbackArtworkURL = fallbackArtworkURL
         self.size = size
         self.isPlaying = isPlaying
     }
@@ -47,8 +54,13 @@ public struct HeroArtworkView: View {
             )
             .scaleEffect(playbackScale)
             .animation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.75), value: isPlaying)
-            .task(id: artworkURL) {
-                let loaded = await ArtworkLoader.load(artworkURL)
+            .onChange(of: artworkRequest) { _, _ in
+                artwork = nil
+            }
+            .task(id: artworkRequest) {
+                let loaded = await ArtworkLoadPolicy.load(artworkRequest) { url in
+                    await ArtworkLoader.load(url)
+                }
                 // The store's await isn't cancellation-responsive, so a task
                 // cancelled by a URL change still resumes here — without this
                 // guard it would overwrite the new URL's artwork with the old.
@@ -122,6 +134,10 @@ public struct HeroArtworkView: View {
     private var playbackScale: CGFloat {
         if reduceMotion { return 1 }
         return isPlaying ? 1 : 0.85
+    }
+
+    private var artworkRequest: ArtworkLoadRequest {
+        ArtworkLoadRequest(primaryURL: artworkURL, fallbackURL: fallbackArtworkURL)
     }
 }
 

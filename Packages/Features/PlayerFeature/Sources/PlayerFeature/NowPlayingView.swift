@@ -22,7 +22,10 @@ public struct NowPlayingView: View {
 
     public var body: some View {
         ZStack {
-            AmbientArtworkBackdrop(artworkURL: effectiveArtworkURL)
+            AmbientArtworkBackdrop(
+                artworkURL: effectiveArtwork.primaryURL,
+                fallbackArtworkURL: effectiveArtwork.fallbackURL
+            )
 
             if let playback, let station = playback.currentStation {
                 content(playback: playback, station: station)
@@ -32,8 +35,13 @@ public struct NowPlayingView: View {
         }
         .presentationDragIndicator(.visible)
         .tint(accent)
-        .task(id: effectiveArtworkURL) {
-            let loaded = await ArtworkLoader.load(effectiveArtworkURL)
+        .onChange(of: artworkLoadRequest) { _, _ in
+            artworkAccent = nil
+        }
+        .task(id: artworkLoadRequest) {
+            let loaded = await ArtworkLoadPolicy.load(artworkLoadRequest) { url in
+                await ArtworkLoader.load(url)
+            }
             // The store's await isn't cancellation-responsive, so a task
             // cancelled by a URL change still resumes here — without this
             // guard it would overwrite the new URL's accent with the old.
@@ -44,11 +52,18 @@ public struct NowPlayingView: View {
         }
     }
 
-    private var effectiveArtworkURL: URL? {
-        PlayerFeature.effectiveArtworkURL(
+    private var effectiveArtwork: EffectiveArtworkSelection {
+        PlayerFeature.effectiveArtworkSelection(
             settings: settings,
             playback: playback,
             station: playback?.currentStation
+        )
+    }
+
+    private var artworkLoadRequest: ArtworkLoadRequest {
+        ArtworkLoadRequest(
+            primaryURL: effectiveArtwork.primaryURL,
+            fallbackURL: effectiveArtwork.fallbackURL
         )
     }
 
@@ -70,7 +85,8 @@ public struct NowPlayingView: View {
             grabberSpacer
 
             HeroArtworkView(
-                artworkURL: effectiveArtworkURL,
+                artworkURL: effectiveArtwork.primaryURL,
+                fallbackArtworkURL: effectiveArtwork.fallbackURL,
                 size: 272,
                 isPlaying: isPlaying(playback)
             )

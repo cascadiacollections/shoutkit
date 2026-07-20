@@ -18,12 +18,14 @@ public struct AmbientArtworkBackdrop: View {
     private static let blurWashMinPixels: CGFloat = 512
 
     private let artworkURL: URL?
+    private let fallbackArtworkURL: URL?
 
     @State private var artwork: LoadedArtwork?
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
-    public init(artworkURL: URL?) {
+    public init(artworkURL: URL?, fallbackArtworkURL: URL? = nil) {
         self.artworkURL = artworkURL
+        self.fallbackArtworkURL = fallbackArtworkURL
     }
 
     public var body: some View {
@@ -40,8 +42,13 @@ public struct AmbientArtworkBackdrop: View {
         }
         .ignoresSafeArea()
         .accessibilityHidden(true)
-        .task(id: artworkURL) {
-            let loaded = await ArtworkLoader.load(artworkURL)
+        .onChange(of: artworkRequest) { _, _ in
+            artwork = nil
+        }
+        .task(id: artworkRequest) {
+            let loaded = await ArtworkLoadPolicy.load(artworkRequest) { url in
+                await ArtworkLoader.load(url)
+            }
             // The store's await isn't cancellation-responsive, so a task
             // cancelled by a URL change still resumes here — without this
             // guard it would overwrite the new URL's artwork with the old.
@@ -104,6 +111,10 @@ public struct AmbientArtworkBackdrop: View {
             startPoint: .top,
             endPoint: .bottom
         )
+    }
+
+    private var artworkRequest: ArtworkLoadRequest {
+        ArtworkLoadRequest(primaryURL: artworkURL, fallbackURL: fallbackArtworkURL)
     }
 }
 
