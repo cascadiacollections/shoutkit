@@ -7,6 +7,9 @@ import Persistence
 import Playback
 import RadioDirectory
 import SwiftData
+#if canImport(WatchConnectivity)
+import WatchConnectivity
+#endif
 
 /// Everything the app constructs exactly once and shares between the SwiftUI
 /// scene and App Intents (which run in the same process but outside the view
@@ -38,6 +41,7 @@ struct AppServices {
 @MainActor
 enum AppDependencies {
     private(set) static var services: AppServices?
+    private static let watchLastStationSync = PhoneWatchLastStationSync()
 
     /// Idempotent: the app root calls this at launch, and App Intents call it in
     /// `perform()` — whichever runs first constructs the shared graph, so an
@@ -177,6 +181,7 @@ enum AppDependencies {
     ) {
         controller.onStationPlayed = { station in
             store.logRecent(station)
+            watchLastStationSync.publish(station: station)
             // Radio-Browser etiquette: report plays so the community directory
             // can rank popularity. Fire-and-forget; never affects playback.
             // User-toggleable in Settings (the README privacy story promises it).
@@ -298,3 +303,54 @@ enum AppDependencies {
         return trimmedAPIKey
     }
 }
+
+#if canImport(WatchConnectivity)
+
+private final class PhoneWatchLastStationSync: NSObject, WCSessionDelegate {
+    private enum Keys {
+        static let lastStation = "watchSync.lastStation"
+    }
+
+    private let session: WCSession?
+    private let encoder = JSONEncoder()
+
+    override init() {
+        if WCSession.isSupported() {
+            let session = WCSession.default
+            self.session = session
+        } else {
+            session = nil
+        }
+        super.init()
+        self.session?.delegate = self
+        self.session?.activate()
+    }
+
+    func publish(station: Station) {
+        guard let session,
+              session.activationState == .activated,
+              session.isWatchAppInstalled else { return }
+        guard let encoded = try? encoder.encode(station) else { return }
+        try? session.updateApplicationContext([Keys.lastStation: encoded])
+    }
+
+    func session(
+        _ session: WCSession,
+        activationDidCompleteWith activationState: WCSessionActivationState,
+        error: Error?
+    ) {}
+
+    func sessionDidBecomeInactive(_ session: WCSession) {}
+
+    func sessionDidDeactivate(_ session: WCSession) {
+        session.activate()
+    }
+}
+
+#else
+
+private final class PhoneWatchLastStationSync {
+    func publish(station: Station) {}
+}
+
+#endif
