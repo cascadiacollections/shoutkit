@@ -173,11 +173,8 @@ extension PlaybackController {
         // emitted for the *previous* station can land after a fast station
         // switch has already set `activeStation` to the new one. Legitimate
         // ICY metadata only flows once this station's stream has started;
-        // while the new endpoint is still resolving (`outputStarted == false`)
-        // any arriving track info can only be the old station's — attributing
-        // it here would show it on every surface and log it to history under
-        // the wrong station.
-        guard outputStarted else { return }
+        // any arriving track info for the old station is dropped by the
+        // generation guard above, preventing stale attribution across surfaces.
 
         // Conservative gate: junk (a URL, the station's own name, promo copy,
         // a bare ID token) never reaches now-playing or history. A track that
@@ -246,8 +243,8 @@ extension PlaybackController {
             guard self.nowPlaying?.title == info.title,
                   self.nowPlaying?.artist == info.artist else { return }
             // Resolution for the current track is complete; clearing the
-            // handle is what re-arms the duplicate-push retry in
-            // handleTrackInfo. (A superseded task returns above and leaves
+            // handle is what re-arms this method's duplicate-push retry.
+            // (A superseded task returns above and leaves
             // the handle owned by its replacement.)
             self.albumArtTask = nil
             self.albumArtURL = resources.artworkURL
