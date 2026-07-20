@@ -52,8 +52,19 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
         // Prefer album art URL when provided; fall back to the station's own artwork.
         let targetArtworkURL = artworkURL ?? station.artworkURL
 
+        // The iOS 27 NowPlaying framework latches the first artwork it resolves
+        // for a given content id and never re-pulls `Artwork` for that id again.
+        // With a station-stable id, the station art pushed at track-start (before
+        // album art resolves) wins for the whole session and the lock screen never
+        // shows album art — verified on-device: the system requested artwork bytes
+        // for the station URL but never for the later album-art URL. Folding the
+        // artwork identity into the content id makes each distinct artwork new
+        // content the framework refreshes. (`duration: .live` means there's no
+        // scrubber position to lose when the item identity changes per track.)
+        let contentID = targetArtworkURL.map { "\(station.id)#\($0.absoluteString)" } ?? station.id
+
         var content = RadioContent(
-            id: station.id,
+            id: contentID,
             stationName: station.name,
             programName: programName(for: track),
             artwork: artwork(for: targetArtworkURL)

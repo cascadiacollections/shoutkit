@@ -80,8 +80,16 @@ enum AppDependencies {
 
         // Lock screen / Dynamic Island Live Activity follows playback by
         // observing the controller's @Observable state directly.
+        // Live Activity is off by default (see FeatureCatalog.liveActivity): its
+        // artwork can lag the current track and it adds little over the system
+        // Now Playing surface. Only follow playback when the flag is on; otherwise
+        // dismiss any activity left over from a launch when it was enabled.
         let activityCoordinator = NowPlayingActivityCoordinator()
-        activityCoordinator.observe(controller)
+        if featureFlags.isEnabled(FeatureCatalog.liveActivity) {
+            activityCoordinator.observe(controller)
+        } else {
+            activityCoordinator.endAnyExistingActivities()
+        }
 
         // Sleep timer pauses (not stops) playback so the mini-player survives
         // and resuming in the morning is one tap.

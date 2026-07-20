@@ -107,6 +107,25 @@ public final class NowPlayingActivityCoordinator {
         })
     }
 
+    /// Ends any Live Activity this app started in a previous launch, without
+    /// beginning observation. Called at bootstrap when the Live Activity feature
+    /// is disabled: activities persist across launches until explicitly ended, so
+    /// one requested while the feature was on would otherwise linger on the Lock
+    /// Screen after it's turned off.
+    public func endAnyExistingActivities() {
+        let existing = Activity<NowPlayingActivityAttributes>.activities
+        guard existing.isEmpty == false else { return }
+        // ActivityKit's Activity handle is thread-safe but not Sendable-annotated
+        // and `end` is async, so each call must leave the main actor (same pattern
+        // as `update(_:isPlaying:)` / `endActivity()`).
+        Task {
+            for activity in existing {
+                nonisolated(unsafe) let activity = activity
+                await activity.end(nil, dismissalPolicy: .immediate)
+            }
+        }
+    }
+
     private func playbackStateChanged(_ state: PlaybackState) {
         switch state {
         case let .loading(station), let .buffering(station), let .playing(station):
