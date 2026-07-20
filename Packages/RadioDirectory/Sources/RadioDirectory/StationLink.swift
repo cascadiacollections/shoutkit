@@ -50,8 +50,14 @@ public struct StationLink: Equatable, Sendable {
             id: stationID,
             name: name,
             genre: Self.value(in: items, named: "genre") ?? "",
+            tags: Station.tags(fromCSV: Self.value(in: items, named: "tags")),
+            country: Self.value(in: items, named: "country"),
+            codec: Self.value(in: items, named: "codec"),
+            language: Self.value(in: items, named: "language"),
             listenerCount: Int(Self.value(in: items, named: "listenerCount") ?? "") ?? 0,
             bitrate: Int(Self.value(in: items, named: "bitrate") ?? ""),
+            clickTrend: Int(Self.value(in: items, named: "clickTrend") ?? ""),
+            votes: Int(Self.value(in: items, named: "votes") ?? ""),
             artworkURL: Self.httpsURLValue(in: items, named: "artworkURL"),
             preferredStreamURL: streamURL
         )
@@ -129,11 +135,39 @@ public struct StationLink: Equatable, Sendable {
         }
 
         if let artworkURL = station.artworkURL {
-            items.append(URLQueryItem(name: "artworkURL", value: artworkURL.absoluteString))
+            if Self.isHTTPSURL(artworkURL) {
+                items.append(URLQueryItem(name: "artworkURL", value: artworkURL.absoluteString))
+            }
         }
 
         if let streamURL = station.preferredStreamURL {
-            items.append(URLQueryItem(name: "streamURL", value: streamURL.absoluteString))
+            if Self.isHTTPSURL(streamURL) {
+                items.append(URLQueryItem(name: "streamURL", value: streamURL.absoluteString))
+            }
+        }
+
+        if let tagsCSV = Station.tagsCSV(from: station.tags) {
+            items.append(URLQueryItem(name: "tags", value: tagsCSV))
+        }
+
+        if let country = station.country {
+            items.append(URLQueryItem(name: "country", value: country))
+        }
+
+        if let codec = station.codec {
+            items.append(URLQueryItem(name: "codec", value: codec))
+        }
+
+        if let language = station.language {
+            items.append(URLQueryItem(name: "language", value: language))
+        }
+
+        if let clickTrend = station.clickTrend {
+            items.append(URLQueryItem(name: "clickTrend", value: String(clickTrend)))
+        }
+
+        if let votes = station.votes {
+            items.append(URLQueryItem(name: "votes", value: String(votes)))
         }
 
         return items
@@ -157,6 +191,10 @@ public struct StationLink: Equatable, Sendable {
         }
 
         return url
+    }
+
+    private static func isHTTPSURL(_ url: URL) -> Bool {
+        url.scheme?.caseInsensitiveCompare("https") == .orderedSame
     }
 
     private static func boolValue(in items: [URLQueryItem], named name: String) -> Bool? {

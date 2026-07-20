@@ -26,17 +26,41 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
     /// here (see the app-side DebugSupport package) so this package never
     /// depends on inspection tooling.
     private static let sharedSessionOverride = OSAllocatedUnfairLock<URLSession?>(initialState: nil)
+    private static let sharedSessionResolved = OSAllocatedUnfairLock<Bool>(initialState: false)
 
     /// Installs the session that backs `shared`. Only the first install wins,
     /// and it must happen before the first network call touches `shared` —
     /// call it at the top of the app's bootstrap, nowhere else.
     public static func installSharedSession(_ session: URLSession) {
-        sharedSessionOverride.withLock { $0 = $0 ?? session }
+        if sharedSessionResolved.withLock({ $0 }) {
+            logger.error(
+                "installSharedSession ignored because URLSessionHTTPTransport.shared was already resolved"
+            )
+            assertionFailure(
+                "URLSessionHTTPTransport.installSharedSession must run before first access of .shared."
+            )
+            return
+        }
+
+        let installed = sharedSessionOverride.withLock { current -> Bool in
+            guard current == nil else { return false }
+            current = session
+            return true
+        }
+        if !installed {
+            logger.error("installSharedSession ignored because a shared session is already installed")
+            assertionFailure(
+                "URLSessionHTTPTransport.installSharedSession called more than once; first install wins."
+            )
+        }
     }
 
-    public static let shared = URLSessionHTTPTransport(
-        session: sharedSessionOverride.withLock { $0 } ?? .shared
-    )
+    public static let shared: URLSessionHTTPTransport = {
+        sharedSessionResolved.withLock { $0 = true }
+        return URLSessionHTTPTransport(
+            session: sharedSessionOverride.withLock { $0 } ?? .shared
+        )
+    }()
 
     /// A configuration tuned for the app's interactive HTTP traffic (directory
     /// JSON and artwork): `waitsForConnectivity = false` so an offline device
@@ -61,11 +85,11 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
     public func send(_ request: URLRequest) async throws -> (Data, URLResponse) {
         let signpostID = Self.signposter.makeSignpostID()
         let interval = Self.signposter.beginInterval("HTTP request", id: signpostID)
-        let metricsObserver = TaskMetricsObserver()
+        let metricsObserver = session.delegate == nil ? TaskMetricsObserver() : nil
         do {
             let response = try await session.data(for: request, delegate: metricsObserver)
             Self.logTaskMetrics(
-                metricsObserver.metrics,
+                metricsObserver?.metrics,
                 request: request,
                 response: response.1
             )

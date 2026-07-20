@@ -11,6 +11,10 @@ struct StationNameFormatterTests {
         #expect(StationNameFormatter.normalize("Radio X (128k)") == "Radio X")
     }
 
+    @Test func mismatchedBracketPairsAreLeftAlone() {
+        #expect(StationNameFormatter.normalize("Radio (Foo]") == "Radio (Foo]")
+    }
+
     @Test func whitespaceRunsCollapse() {
         #expect(StationNameFormatter.normalize("Classic   Rock_101") == "Classic Rock 101")
     }

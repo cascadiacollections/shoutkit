@@ -45,6 +45,22 @@ struct SearchViewModelTests {
         #expect(queries == ["kexp"])
     }
 
+    @Test func whitespaceOnlyQueryChangesDoNotTriggerDuplicateSearch() async {
+        let directory = FakeRadioDirectory()
+        await directory.setSearchStationsResult(.success([.fixture(id: "a", name: "Station A")]))
+        let viewModel = SearchViewModel(directory: directory)
+
+        viewModel.query = "jazz"
+        await waitUntil { viewModel.phase != .idle && viewModel.phase != .searching }
+        viewModel.query = "jazz "
+        try? await Task.sleep(for: .milliseconds(400))
+
+        let callCount = await directory.searchCallCount
+        let queries = await directory.searchedQueries
+        #expect(callCount == 1)
+        #expect(queries == ["jazz"])
+    }
+
     @Test func clearingTheQueryResetsToIdleWithoutSearching() async {
         let directory = FakeRadioDirectory()
         await directory.setSearchStationsResult(.success([.fixture(id: "a", name: "Station A")]))
