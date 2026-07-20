@@ -13,6 +13,12 @@ private enum DiagnosticsPayloadKind: String, Codable {
     case diagnostic
 }
 
+private enum DiagnosticsPayloadStoreError: Error {
+    case invalidRetentionCutoffDate
+}
+
+private let diagnosticsPayloadRetentionDays = 30
+
 public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
     private struct Record: Codable, FetchableRecord, PersistableRecord {
         static let databaseTableName = "diagnostic_payloads"
@@ -24,8 +30,6 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
     }
 
     private let dbQueue: DatabaseQueue
-    private static let payloadRetentionDays = 30
-
     public init(path: String) throws {
         dbQueue = try DatabaseQueue(path: path)
         try migrate()
@@ -37,6 +41,9 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
 
     public func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date) throws {
         guard !metricPayloads.isEmpty || !diagnosticPayloads.isEmpty else { return }
+        guard let cutoff = Calendar.current.date(byAdding: .day, value: -diagnosticsPayloadRetentionDays, to: receivedAt) else {
+            throw DiagnosticsPayloadStoreError.invalidRetentionCutoffDate
+        }
         try dbQueue.write { database in
             for payload in metricPayloads {
                 try Record(id: nil, kind: .metric, payload: payload, receivedAt: receivedAt).insert(database)
@@ -45,8 +52,6 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
                 try Record(id: nil, kind: .diagnostic, payload: payload, receivedAt: receivedAt).insert(database)
             }
 
-            let cutoff = Calendar.current.date(byAdding: .day, value: -Self.payloadRetentionDays, to: receivedAt)
-                ?? receivedAt
             _ = try Record
                 .filter(Column("receivedAt") < cutoff)
                 .deleteAll(database)
@@ -110,9 +115,11 @@ public final class InMemoryDiagnosticsPayloadStore: DiagnosticsPayloadPersisting
     public init() {}
 
     public func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date) throws {
+        guard let cutoff = Calendar.current.date(byAdding: .day, value: -diagnosticsPayloadRetentionDays, to: receivedAt) else {
+            throw DiagnosticsPayloadStoreError.invalidRetentionCutoffDate
+        }
         self.metricRecords.append(contentsOf: metricPayloads.map { ($0, receivedAt) })
         self.diagnosticRecords.append(contentsOf: diagnosticPayloads.map { ($0, receivedAt) })
-        let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: receivedAt) ?? receivedAt
         self.metricRecords.removeAll { $0.receivedAt < cutoff }
         self.diagnosticRecords.removeAll { $0.receivedAt < cutoff }
         self.metricPayloads = self.metricRecords.map(\.payload)

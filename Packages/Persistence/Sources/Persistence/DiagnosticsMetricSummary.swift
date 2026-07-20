@@ -295,15 +295,19 @@ enum DiagnosticsMetricSummaryExtractor {
                 return durations.count == values.count ? durations : nil
             }
             if let values = object[key] as? [String: Any] {
-                let sorted = values.sorted { lhs, rhs in
-                    let lhsIndex = Int(lhs.key) ?? Int.max
-                    let rhsIndex = Int(rhs.key) ?? Int.max
-                    if lhsIndex == rhsIndex {
-                        return lhs.key < rhs.key
-                    }
-                    return lhsIndex < rhsIndex
+                let indexedValues = values.compactMap { keyValue -> (Int, Any)? in
+                    guard let index = Int(keyValue.key) else { return nil }
+                    return (index, keyValue.value)
                 }
-                let durations = sorted.compactMap { durationMilliseconds(from: $0.value, defaultUnit: .milliseconds) }
+                guard indexedValues.count == values.count else { return nil }
+                let sorted = indexedValues.sorted { $0.0 < $1.0 }
+                let expectedIndices = 0..<sorted.count
+                guard zip(expectedIndices, sorted).allSatisfy({ expected, actual in
+                    expected == actual.0
+                }) else { return nil }
+                let durations = sorted.compactMap {
+                    durationMilliseconds(from: $0.1, defaultUnit: .milliseconds)
+                }
                 return durations.count == sorted.count ? durations : nil
             }
         }
@@ -338,6 +342,8 @@ enum DiagnosticsMetricSummaryExtractor {
         _ raw: String,
         defaultUnit: DurationUnit
     ) -> Double? {
+        // Supports "1810", "1810 ms", "+1.5ms", and "-2.3 s".
+        // Returns nil for malformed numeric components such as "1.2-3.4ms".
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.isEmpty == false else { return nil }
 
@@ -352,12 +358,22 @@ enum DiagnosticsMetricSummaryExtractor {
             return value * unit.multiplierToMilliseconds
         }
 
-        let numberPrefix = trimmed.prefix { $0.isNumber || $0 == "." || $0 == "-" || $0 == "+" }
-        guard numberPrefix.isEmpty == false,
-              let value = Double(String(numberPrefix)) else {
+        var index = trimmed.startIndex
+        if index < trimmed.endIndex, (trimmed[index] == "+" || trimmed[index] == "-") {
+            index = trimmed.index(after: index)
+        }
+        let numberStart = trimmed.startIndex
+        let firstNonNumber = trimmed[index...].firstIndex {
+            $0.isNumber == false && $0 != "."
+        } ?? trimmed.endIndex
+        let numberPart = String(trimmed[numberStart..<firstNonNumber])
+        guard numberPart.isEmpty == false,
+              numberPart != "+",
+              numberPart != "-",
+              let value = Double(numberPart) else {
             return nil
         }
-        let unitSuffix = trimmed.dropFirst(numberPrefix.count)
+        let unitSuffix = trimmed[firstNonNumber...]
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
         let unit = DurationUnit(rawValue: unitSuffix) ?? defaultUnit

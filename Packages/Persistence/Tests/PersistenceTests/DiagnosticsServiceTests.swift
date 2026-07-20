@@ -15,6 +15,7 @@ struct DiagnosticsServiceTests {
     }
 
     @Observable
+    @MainActor
     private final class FeatureFlagsStub: FeatureFlagProviding {
         var enabled = false
 
@@ -145,10 +146,10 @@ struct DiagnosticsServiceTests {
     private func waitUntil(
         timeoutSeconds: TimeInterval = 1,
         intervalNanoseconds: UInt64 = 10_000_000,
-        condition: @MainActor @escaping () -> Bool
+        condition: @escaping () -> Bool
     ) async {
         let deadline = Date().addingTimeInterval(timeoutSeconds)
-        while await condition() == false {
+        while await MainActor.run(body: condition) == false {
             if Date() >= deadline {
                 Issue.record("Condition was not met before timeout")
                 return

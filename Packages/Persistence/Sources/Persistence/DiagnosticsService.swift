@@ -92,12 +92,9 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
 
     private func observeCollectionEligibility() {
         observationTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            var previous = (
-                self.settings.isDiagnosticsSharingEnabled,
-                self.featureFlags.isEnabled(Self.diagnosticsFeature)
-            )
-            let changes = Observations {
+            var previous: (Bool, Bool)?
+            let changes = Observations { [weak self] in
+                guard let self else { return (false, false) }
                 (
                     self.settings.isDiagnosticsSharingEnabled,
                     self.featureFlags.isEnabled(Self.diagnosticsFeature)
@@ -105,9 +102,15 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
             }
 
             for await change in changes {
+                if Task.isCancelled { return }
+                guard let self else { return }
+                if previous == nil {
+                    previous = change
+                    continue
+                }
                 guard change != previous else { continue }
                 previous = change
-                refreshSubscription()
+                self.refreshSubscription()
             }
         }
     }
