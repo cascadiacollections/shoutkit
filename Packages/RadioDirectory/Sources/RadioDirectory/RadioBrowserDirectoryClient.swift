@@ -270,7 +270,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
             }
         }
 
-        preconditionFailure("`geoFilter.map { ... } ?? [[]]` guarantees at least one query-item set.")
+        preconditionFailure("Internal error: geo filter query-item set should never be empty.")
     }
 
     /// Walks the mirror list in order with backoff between attempts, so one dead

@@ -303,7 +303,11 @@ enum PlaylistParser {
             return url
         }
 
-        for line in lines where line.lowercased().hasPrefix("http://") || line.lowercased().hasPrefix("https://") {
+        for line in lines {
+            let lowercased = line.lowercased()
+            guard lowercased.hasPrefix("http://") || lowercased.hasPrefix("https://") else {
+                continue
+            }
             if let url = URL(string: line) {
                 return url
             }
