@@ -95,7 +95,6 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
 
     private func observeCollectionEligibility() {
         observationTask = Task { @MainActor [weak self] in
-            var previous: (Bool, Bool)?
             let changes = Observations { [weak self] in
                 guard let self else { return (false, false) }
                 return (
@@ -104,15 +103,9 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
                 )
             }
 
-            for await change in changes {
+            for await _ in changes {
                 if Task.isCancelled { return }
                 guard let self else { return }
-                guard let previousValue = previous else {
-                    previous = change
-                    continue
-                }
-                guard change != previousValue else { continue }
-                previous = change
                 self.refreshSubscription()
             }
         }
