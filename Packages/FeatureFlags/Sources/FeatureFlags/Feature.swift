@@ -70,7 +70,9 @@ public enum FeatureCatalog {
     public static let liveActivity = Feature(
         key: "liveActivity",
         title: "Live Activity",
-        summary: "Show a now-playing Live Activity on the Lock Screen and Dynamic Island. Off by default: its artwork can lag the current track, and it adds little over the system Now Playing surface.",
+        summary: "Show a now-playing Live Activity on the Lock Screen and Dynamic Island. "
+            + "Off by default: its artwork can lag the current track, and it adds little "
+            + "over the system Now Playing surface.",
         stage: .internalOnly,
         defaultEnabled: false
     )

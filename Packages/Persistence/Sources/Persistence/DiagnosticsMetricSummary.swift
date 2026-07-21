@@ -1,5 +1,9 @@
 import Foundation
 
+// MetricKit payload parsing is inherently verbose (many optional metric
+// sub-dictionaries); this parser file exceeds the default length limit.
+// swiftlint:disable file_length
+
 public struct DiagnosticsMetricPayloadSummary: Equatable, Sendable {
     public let receivedAt: Date
     public let launch: DiagnosticsAppLaunchSummary?
@@ -88,6 +92,7 @@ public struct DiagnosticsNetworkTransactionSummary: Equatable, Sendable {
     }
 }
 
+// swiftlint:disable:next type_body_length
 enum DiagnosticsMetricSummaryExtractor {
     static func summary(from payload: Data, receivedAt: Date) -> DiagnosticsMetricPayloadSummary? {
         guard let json = try? JSONSerialization.jsonObject(with: payload),
@@ -106,7 +111,10 @@ enum DiagnosticsMetricSummaryExtractor {
     }
 
     private static func appLaunchSummary(from object: [String: Any]) -> DiagnosticsAppLaunchSummary? {
-        guard let launchMetrics = dictionary(forKeys: ["applicationLaunchMetrics", "appLaunchMetrics"], in: object) else {
+        guard let launchMetrics = dictionary(
+            forKeys: ["applicationLaunchMetrics", "appLaunchMetrics"],
+            in: object
+        ) else {
             return nil
         }
 
@@ -359,7 +367,7 @@ enum DiagnosticsMetricSummaryExtractor {
         }
 
         var index = trimmed.startIndex
-        if index < trimmed.endIndex, (trimmed[index] == "+" || trimmed[index] == "-") {
+        if index < trimmed.endIndex, trimmed[index] == "+" || trimmed[index] == "-" {
             index = trimmed.index(after: index)
         }
         let numberStart = trimmed.startIndex

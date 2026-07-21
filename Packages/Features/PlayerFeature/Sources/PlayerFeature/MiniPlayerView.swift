@@ -45,6 +45,22 @@ public struct MiniPlayerView: View {
     }
 
     @ViewBuilder
+    private func favoriteButton(station: Station) -> some View {
+        if let library {
+            Button {
+                library.toggleFavorite(station)
+            } label: {
+                Image(systemName: library.isFavorite(station) ? "heart.fill" : "heart")
+                    .foregroundStyle(library.isFavorite(station) ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(library.isFavorite(station) ? "Remove favorite" : "Add favorite")
+        }
+    }
+
+    @ViewBuilder
     private func content(playback: PlaybackController, station: Station) -> some View {
         let artworkSelection = effectiveArtworkSelection(
             settings: settings,
@@ -72,18 +88,7 @@ public struct MiniPlayerView: View {
 
             Spacer(minLength: ShoutKitSpacing.small)
 
-            if let library {
-                Button {
-                    library.toggleFavorite(station)
-                } label: {
-                    Image(systemName: library.isFavorite(station) ? "heart.fill" : "heart")
-                        .foregroundStyle(library.isFavorite(station) ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(library.isFavorite(station) ? "Remove favorite" : "Add favorite")
-            }
+            favoriteButton(station: station)
 
             Button {
                 playback.togglePlayPause()

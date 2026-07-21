@@ -7,6 +7,7 @@ public protocol StationPlayReporting: Sendable {
     func reportPlay(stationID: String) async
 }
 
+// swiftlint:disable type_body_length
 /// Directory client for Radio-Browser (radio-browser.info) — a free, open-source,
 /// keyless community radio directory. Unlike SHOUTcast, responses are JSON and
 /// station objects carry a directly playable `url_resolved`, so no PLS/M3U
@@ -283,18 +284,21 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         preconditionFailure("Unreachable: geo filter loop must return or throw before completion.")
     }
 
-    /// Walks the mirror list in order with backoff between attempts, so one dead
-    /// mirror doesn't take discovery down.
+    /// Walks the mirror list in order with backoff, bounded by the retry policy:
+    /// with `maximumRetries == 0` it makes a single attempt so a transport error
+    /// surfaces to the geo-filter fallback chain instead of being masked by
+    /// silently walking to the next mirror.
     private func request(path: String, queryItems: [URLQueryItem]) async throws(RadioDirectoryError) -> Data {
         let transport = self.transport
         let retryPolicy = self.retryPolicy
         let logger = self.logger
         let hosts = self.hosts
+        let attemptBudget = min(hosts.count, retryPolicy.maximumRetries + 1)
 
         do {
             return try await transport.retryingData(
                 retryPolicy: retryPolicy,
-                totalAttempts: hosts.count,
+                totalAttempts: attemptBudget,
                 onRetry: { _, delay in
                     logger.debug(
                         "Radio-Browser request failed; trying next mirror in \(delay, privacy: .public) seconds"
@@ -353,6 +357,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         return .transport(error.localizedDescription)
     }
 }
+// swiftlint:enable type_body_length
 
 // MARK: - Wire types
 

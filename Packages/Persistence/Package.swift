@@ -8,8 +8,10 @@ let package = Package(
         .iOS(.v27),
         .watchOS(.v27),
         // Declared so the pure-SwiftData test suite can run on the mac host
-        // (`swift test`); the app product itself remains iOS-only.
-        .macOS(.v15)
+        // (`swift test`); the app product itself remains iOS-only. Pinned to
+        // v26 because DiagnosticsService uses the Observation `Observations`
+        // async sequence, which is macOS 26+.
+        .macOS(.v26)
     ],
     products: [
         .library(name: "Persistence", targets: ["Persistence"])

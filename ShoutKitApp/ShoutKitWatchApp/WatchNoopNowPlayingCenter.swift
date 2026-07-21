@@ -62,10 +62,13 @@ final class WatchNoopNowPlayingCenter: NowPlayingPresenting {
             Task { @MainActor in self?.onStop?() }
             return .success
         }))
-        targets.append((center.togglePlayPauseCommand, center.togglePlayPauseCommand.addTarget { @Sendable [weak self] _ in
-            Task { @MainActor in self?.onToggle?() }
-            return .success
-        }))
+        targets.append((
+            center.togglePlayPauseCommand,
+            center.togglePlayPauseCommand.addTarget { @Sendable [weak self] _ in
+                Task { @MainActor in self?.onToggle?() }
+                return .success
+            }
+        ))
         commandTargets = targets
         center.playCommand.isEnabled = true
         center.pauseCommand.isEnabled = true

@@ -88,13 +88,13 @@ struct AlbumArtLookupTests {
 
         let artist = "Storefront Artist \(UUID().uuidString)"
         let title = "Storefront Track \(UUID().uuidString)"
-        let us = await AlbumArtLookup.lookup(
+        let usResult = await AlbumArtLookup.lookup(
             artist: artist,
             title: title,
             regionIdentifier: "US",
             transport: transport
         )
-        let gb = await AlbumArtLookup.lookup(
+        let gbResult = await AlbumArtLookup.lookup(
             artist: artist,
             title: title,
             regionIdentifier: "GB",
@@ -107,8 +107,8 @@ struct AlbumArtLookupTests {
             transport: transport
         )
 
-        #expect(us == usCached)
-        #expect(us != gb)
+        #expect(usResult == usCached)
+        #expect(usResult != gbResult)
         #expect(await transport.requestCount == 2)
     }
 
@@ -144,6 +144,7 @@ struct AlbumArtLookupTests {
     }
 
     private actor StubLookupTransport: HTTPTransporting {
+        // swiftlint:disable:next nesting
         typealias Responder = @Sendable (URLRequest) async throws -> Data
 
         private let responder: Responder

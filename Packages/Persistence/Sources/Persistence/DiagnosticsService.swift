@@ -22,7 +22,10 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
 
     private static let diagnosticsFeature = FeatureCatalog.diagnostics
     #if canImport(OSLog)
-    private nonisolated(unsafe) static let logger = Logger(subsystem: "ShoutKit.Persistence", category: "DiagnosticsService")
+    private nonisolated(unsafe) static let logger = Logger(
+        subsystem: "ShoutKit.Persistence",
+        category: "DiagnosticsService"
+    )
     #endif
 
     private let featureFlags: any FeatureFlagProviding
