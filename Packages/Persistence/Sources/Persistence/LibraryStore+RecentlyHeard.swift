@@ -73,6 +73,9 @@ extension LibraryStore {
             }
 
             shouldContinue = tracks.count == fetchLimit
+            if shouldContinue, save(operation: "trim recently heard tracks batch") == false {
+                return
+            }
         }
     }
 }
