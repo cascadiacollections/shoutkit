@@ -43,6 +43,8 @@ jobs:
             build-mode: none
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
