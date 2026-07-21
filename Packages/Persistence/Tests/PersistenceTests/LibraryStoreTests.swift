@@ -18,6 +18,7 @@ private func station(_ id: String) -> Station {
 }
 
 @MainActor
+// swiftlint:disable:next type_body_length
 struct LibraryStoreTests {
     @Test func togglingFavoriteAddsThenRemoves() {
         let (store, _) = makeStoreAndContext()

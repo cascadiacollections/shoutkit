@@ -41,7 +41,11 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
 
     public func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date) throws {
         guard !metricPayloads.isEmpty || !diagnosticPayloads.isEmpty else { return }
-        guard let cutoff = Calendar.current.date(byAdding: .day, value: -diagnosticsPayloadRetentionDays, to: receivedAt) else {
+        guard let cutoff = Calendar.current.date(
+            byAdding: .day,
+            value: -diagnosticsPayloadRetentionDays,
+            to: receivedAt
+        ) else {
             throw DiagnosticsPayloadStoreError.invalidRetentionCutoffDate
         }
         try dbQueue.write { database in
@@ -115,7 +119,11 @@ public final class InMemoryDiagnosticsPayloadStore: DiagnosticsPayloadPersisting
     public init() {}
 
     public func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date) throws {
-        guard let cutoff = Calendar.current.date(byAdding: .day, value: -diagnosticsPayloadRetentionDays, to: receivedAt) else {
+        guard let cutoff = Calendar.current.date(
+            byAdding: .day,
+            value: -diagnosticsPayloadRetentionDays,
+            to: receivedAt
+        ) else {
             throw DiagnosticsPayloadStoreError.invalidRetentionCutoffDate
         }
         self.metricRecords.append(contentsOf: metricPayloads.map { ($0, receivedAt) })

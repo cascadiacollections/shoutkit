@@ -87,9 +87,10 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
                       let failedItem = notification.object as? AVPlayerItem,
                       self.player?.currentItem === failedItem else { return }
                 let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
-                self.onStatusChange?(.failed(.streamFailed(
-                    error?.localizedDescription ?? failedItem.error?.localizedDescription ?? "The stream stopped unexpectedly."
-                )))
+                let message = error?.localizedDescription
+                    ?? failedItem.error?.localizedDescription
+                    ?? "The stream stopped unexpectedly."
+                self.onStatusChange?(.failed(.streamFailed(message)))
             }
         }
     }

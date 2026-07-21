@@ -101,12 +101,12 @@ struct PlaybackControllerAlbumArtTests {
         controller.play(station())
         await waitForStart(output)
         output.onStatusChange?(.playing)
-        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        output.emitTrackInfo("Song", "Band")
         await drainMainQueue()
         #expect(lookups == 1)
         #expect(controller.albumArtURL == nil)
 
-        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        output.emitTrackInfo("Song", "Band")
         await drainMainQueue()
 
         #expect(lookups == 2)
@@ -126,7 +126,7 @@ struct PlaybackControllerAlbumArtTests {
 
         await waitForStart(output)
         output.onStatusChange?(.playing)
-        output.onTrackInfo?(AudioTrackInfo(title: "Song", artist: "Band"))
+        output.emitTrackInfo("Song", "Band")
         #expect(controller.nowPlaying?.title == "Song")
     }
 

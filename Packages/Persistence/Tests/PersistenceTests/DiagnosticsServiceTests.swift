@@ -16,7 +16,7 @@ struct DiagnosticsServiceTests {
 
     @Observable
     @MainActor
-    private final class FeatureFlagsStub: FeatureFlagProviding {
+    fileprivate final class FeatureFlagsStub: FeatureFlagProviding {
         var enabled = false
 
         func isEnabled(_: Feature) -> Bool { enabled }
@@ -149,7 +149,7 @@ struct DiagnosticsServiceTests {
         condition: @escaping () -> Bool
     ) async {
         let deadline = Date().addingTimeInterval(timeoutSeconds)
-        while await MainActor.run(body: condition) == false {
+        while condition() == false {
             if Date() >= deadline {
                 Issue.record("Condition was not met before timeout")
                 return

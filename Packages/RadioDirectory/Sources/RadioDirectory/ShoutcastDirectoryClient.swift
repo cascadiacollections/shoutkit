@@ -1,6 +1,8 @@
 import Foundation
 import OSLog
 
+// swiftlint:disable file_length
+
 public actor ShoutcastDirectoryClient: RadioDirectoryProviding {
     private let apiKey: String
     private let endpoints: ShoutcastEndpoints

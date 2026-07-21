@@ -86,6 +86,7 @@ public enum ArtworkLoader {
     private actor ArtworkStore {
         static let shared = ArtworkStore()
 
+        // swiftlint:disable:next nesting
         private struct Entry {
             let token = UUID()
             let task: Task<LoadedArtwork?, Never>

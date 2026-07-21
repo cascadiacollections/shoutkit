@@ -77,7 +77,9 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
                 return
             } catch {
                 guard Self.shouldRetrySessionDeactivation(error), attempt < 4 else {
-                    Self.logger.error("Audio session deactivation failed after stop: \(String(describing: error), privacy: .public)")
+                    Self.logger.error(
+                        "Audio session deactivation failed after stop: \(String(describing: error), privacy: .public)"
+                    )
                     return
                 }
                 try? await Task.sleep(for: Self.sessionDeactivationRetryDelay)
