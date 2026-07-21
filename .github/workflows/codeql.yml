@@ -61,10 +61,11 @@ jobs:
           set -o pipefail
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
           xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
+            -configuration Release \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath DerivedData \
             CODE_SIGNING_ALLOWED=NO \
-            GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" build 2>&1 | tee build.log
+            GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" build 2>&1 | tee build-release.log
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
