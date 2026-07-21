@@ -16,8 +16,6 @@ permissions:
   actions: read
   contents: read
   security-events: write
-  packages: read
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
