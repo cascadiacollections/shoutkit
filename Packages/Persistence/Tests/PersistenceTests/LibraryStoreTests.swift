@@ -39,8 +39,14 @@ struct LibraryStoreTests {
     // MARK: - Favorite ordering
 
     private func favoritesBySortIndex(_ context: ModelContext) throws -> [FavoriteStation] {
+        // Break ties on `createdAt` so rows sharing a `sortIndex` (e.g. the
+        // non-legacy duplicate case) read back in a deterministic order rather
+        // than SwiftData's unspecified fetch order.
         try context.fetch(
-            FetchDescriptor<FavoriteStation>(sortBy: [SortDescriptor(\.sortIndex, order: .forward)])
+            FetchDescriptor<FavoriteStation>(sortBy: [
+                SortDescriptor(\.sortIndex, order: .forward),
+                SortDescriptor(\.createdAt, order: .forward)
+            ])
         )
     }
 

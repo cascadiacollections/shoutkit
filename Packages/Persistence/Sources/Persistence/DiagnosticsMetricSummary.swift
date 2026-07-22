@@ -384,7 +384,14 @@ enum DiagnosticsMetricSummaryExtractor {
         let unitSuffix = trimmed[firstNonNumber...]
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
-        let unit = DurationUnit(rawValue: unitSuffix) ?? defaultUnit
+        let unit: DurationUnit
+        if unitSuffix.isEmpty {
+            unit = defaultUnit
+        } else if let explicitUnit = DurationUnit(rawValue: unitSuffix) {
+            unit = explicitUnit
+        } else {
+            return nil
+        }
         return value * unit.multiplierToMilliseconds
     }
 

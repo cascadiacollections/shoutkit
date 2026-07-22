@@ -36,10 +36,19 @@ public enum ShoutKitModelContainer {
         open: (ModelConfiguration) throws -> ModelContainer
     ) -> ModelContainer {
         isPersistentStoreAvailable = true
-        let configuration = ModelConfiguration(
-            schema: schema,
-            isStoredInMemoryOnly: inMemory
-        )
+        let configuration: ModelConfiguration
+        if inMemory {
+            configuration = ModelConfiguration(
+                "ShoutKitInMemory-\(UUID().uuidString)",
+                schema: schema,
+                isStoredInMemoryOnly: true
+            )
+        } else {
+            configuration = ModelConfiguration(
+                schema: schema,
+                isStoredInMemoryOnly: false
+            )
+        }
 
         let attempts = inMemory ? 1 : 2
         for attempt in 1...attempts {

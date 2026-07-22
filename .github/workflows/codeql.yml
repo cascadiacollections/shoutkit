@@ -1,0 +1,73 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly full scan so newly-published queries run against unchanged code
+    # (Monday 07:00 UTC). Push/PR runs only cover what a change touches.
+    - cron: "0 7 * * 1"
+
+# CodeQL needs to write analysis results back as code-scanning alerts; it reads
+# the checked-out code and (for the Swift build) resolves package dependencies.
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: ${{ matrix.language == 'swift' && 45 || 15 }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Swift needs a real compile, so it runs on the same Xcode 27 image as
+          # CI and reuses CI's exact build invocation (see ci.yml "Build app").
+          - language: swift
+            runner: xcode-27
+            build-mode: manual
+          # Workflow/action scanning — no build. This replaces the `actions`
+          # coverage that GitHub's default CodeQL setup provided; default setup
+          # must be turned OFF for this advanced workflow to run at all (the two
+          # can't coexist — see the repo's Code security settings).
+          - language: actions
+            runner: ubuntu-latest
+            build-mode: none
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      # Mirrors ci.yml: select the newest Xcode and build the app for the iOS
+      # Simulator so CodeQL can trace the Swift compilation. Keep the xcodebuild
+      # flags in sync with the CI build job.
+      - name: Build app (Swift)
+        if: matrix.language == 'swift'
+        run: |
+          set -o pipefail
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
+          xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
+            -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" build 2>&1 | tee build-release.log
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"

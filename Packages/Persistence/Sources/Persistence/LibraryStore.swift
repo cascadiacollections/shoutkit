@@ -259,11 +259,16 @@ public final class LibraryStore {
             }
 
             shouldContinue = recents.count == fetchLimit
+            if shouldContinue, save(operation: "trim recents batch") == false {
+                return
+            }
         }
     }
+}
 
-    // MARK: - Helpers
+// MARK: - Helpers
 
+extension LibraryStore {
     private func reloadFavoriteIDs() {
         let descriptor = FetchDescriptor<FavoriteStation>()
         guard let favorites = fetch(descriptor, operation: "reload favorites") else {

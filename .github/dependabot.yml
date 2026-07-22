@@ -17,15 +17,21 @@ updates:
   # here — the rest resolve exclusively through local `.package(path:)`
   # references (see THIRD_PARTY_LICENSES.md for the full inventory). One
   # multi-directory entry, not one entry per package, so `groups` can span
-  # directories: Factory is `exact`-pinned in four manifests, and an ungrouped
-  # bump of just one would leave the graph with conflicting exact pins.
+  # directories: Factory is `exact`-pinned in seven of these manifests, and an
+  # ungrouped bump of just one would leave the graph with conflicting exact
+  # pins — so all directories that reference it must live under this single
+  # entry for the `factory` group below to cover them together.
   - package-ecosystem: swift
     directories:
       - "/Packages/RadioDirectory"
       - "/Packages/DesignSystem"
       - "/Packages/LiveActivity"
       - "/Packages/Playback"
+      - "/Packages/Persistence"
       - "/Packages/DebugSupport"
+      - "/Packages/FeatureFlags"
+      - "/Packages/BrowseFeatureCore"
+      - "/Packages/SearchFeatureCore"
       - "/Packages/Features/BrowseFeature"
       - "/Packages/Features/SearchFeature"
     schedule:
