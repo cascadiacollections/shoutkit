@@ -102,6 +102,11 @@ public final class NowPlayingCenter: NowPlayingPresenting {
             Task { @MainActor in self?.onToggle?() }
             return .success
         }))
+        let seekCommand = center.changePlaybackPositionCommand
+        targets.append((seekCommand, seekCommand.addTarget { @Sendable _ in
+            guard hasActiveItem.withLock({ $0 }) else { return .noActionableNowPlayingItem }
+            return .commandFailed
+        }))
 
         commandTargets = targets
 
@@ -109,6 +114,7 @@ public final class NowPlayingCenter: NowPlayingPresenting {
         center.playCommand.isEnabled = true
         center.pauseCommand.isEnabled = true
         center.togglePlayPauseCommand.isEnabled = true
+        center.changePlaybackPositionCommand.isEnabled = false
     }
 
     /// Pushes current station + live track metadata to the system.
@@ -123,6 +129,7 @@ public final class NowPlayingCenter: NowPlayingPresenting {
         info[MPMediaItemPropertyAlbumTitle] = station.genre
         info[MPNowPlayingInfoPropertyIsLiveStream] = true
         info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0
+        MPRemoteCommandCenter.shared().changePlaybackPositionCommand.isEnabled = false
 
         // Prefer album art URL when provided; fall back to the station's own artwork.
         let targetArtworkURL = artworkURL ?? station.artworkURL
@@ -144,6 +151,7 @@ public final class NowPlayingCenter: NowPlayingPresenting {
         artworkCacheURL = nil
         cachedArtwork = nil
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+        MPRemoteCommandCenter.shared().changePlaybackPositionCommand.isEnabled = false
     }
 
     private func loadArtworkIfNeeded(from url: URL?) {
