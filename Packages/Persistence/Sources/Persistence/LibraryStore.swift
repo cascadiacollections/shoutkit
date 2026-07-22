@@ -264,9 +264,11 @@ public final class LibraryStore {
             }
         }
     }
+}
 
-    // MARK: - Helpers
+// MARK: - Helpers
 
+extension LibraryStore {
     private func reloadFavoriteIDs() {
         let descriptor = FetchDescriptor<FavoriteStation>()
         guard let favorites = fetch(descriptor, operation: "reload favorites") else {
