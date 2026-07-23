@@ -1,11 +1,13 @@
 # Contributing to ShoutKit
 
-Thanks for your interest! ShoutKit is a native iOS 26 SwiftUI internet-radio client built in the
+Thanks for your interest! ShoutKit is a native iOS 27 SwiftUI internet-radio client built in the
 open. This document covers everything you need to build, test, and land a change.
 
 ## Building
 
-Requirements: Xcode 26 with the iOS 26 SDK.
+Requirements: Xcode 27 with the iOS 27 SDK (the package manifests are `swift-tools-version: 6.4`
+and the deployment floor is iOS 27, so an earlier Xcode can't open or build the project — see
+`DECISIONS.md`).
 
 ```sh
 xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
@@ -18,13 +20,20 @@ can be supplied via `ShoutKitApp/Config/Secrets.xcconfig`; see the README.)
 
 ## Running tests
 
-All three suites run on the mac host:
+These package suites run on the mac host — the same set CI's `host-tests` job runs:
 
 ```sh
-for pkg in RadioDirectory Playback Persistence; do (cd "Packages/$pkg" && swift test); done
+for pkg in RadioDirectory Playback Persistence ImageIODownsample FeatureFlags \
+           BrowseFeatureCore SearchFeatureCore; do
+  (cd "Packages/$pkg" && swift test --disable-xctest)
+done
 ```
 
-The iOS-only production types (`AVPlayerAudioOutput`, `NowPlayingCenter`) are gated behind
+(CI passes `--disable-xctest` to skip the legacy XCTest pass, which segfaults under the current
+Xcode 27 beta xctest agent; every suite is Swift Testing, so the real tests run either way — see
+the note in `.github/workflows/ci.yml`.)
+
+The iOS-only production types (`AudioStreamingPlaybackEngine`, `NowPlayingCenter`) are gated behind
 `#if canImport(UIKit)`, so the Playback controller/state-machine tests execute against fakes on
 any platform; the gated types compile as part of the app build.
 
