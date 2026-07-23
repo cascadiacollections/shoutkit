@@ -14,9 +14,14 @@ public struct SearchView: View {
     // search field, matching Apple Music/Podcasts — nobody switches to Search
     // to look at it.
     @FocusState private var isSearchFieldFocused: Bool
+    // Bumped by the caller when the Search tab is re-tapped while already
+    // selected, so re-selecting Search also refocuses the field — `onAppear`
+    // alone only covers the first switch into this tab.
+    private let reactivationToken: Int
 
-    public init(viewModel: @autoclosure @escaping () -> SearchViewModel) {
+    public init(viewModel: @autoclosure @escaping () -> SearchViewModel, reactivationToken: Int = 0) {
         _viewModel = State(wrappedValue: viewModel())
+        self.reactivationToken = reactivationToken
     }
 
     public var body: some View {
@@ -31,6 +36,9 @@ public struct SearchView: View {
         .searchable(text: $viewModel.query, prompt: "Stations, genres")
         .searchFocused($isSearchFieldFocused)
         .onAppear {
+            isSearchFieldFocused = true
+        }
+        .onChange(of: reactivationToken) {
             isSearchFieldFocused = true
         }
         .task {
