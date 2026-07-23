@@ -25,7 +25,11 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         }
     }
 
-    func start(url: URL) {
+    // `streamGeneration` tags ICY metadata so the controller can discard track
+    // callbacks from a superseded stream after a fast station switch (see
+    // AudioStreamingPlaybackEngine). This engine emits no track info, so it only
+    // needs to satisfy the `AudioOutput` signature.
+    func start(url: URL, streamGeneration _: UInt64) {
         tearDownPlayer()
 
         let item = AVPlayerItem(url: url)

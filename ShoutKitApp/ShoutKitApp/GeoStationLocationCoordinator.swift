@@ -154,9 +154,15 @@ final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationM
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
+        // Mirror the generation guard in didUpdateLocations: a failure delivered
+        // for a superseded request (the feature was toggled, or a newer
+        // requestLocation was issued) must not clear a country code a fresher
+        // fix already resolved.
+        let generation = preciseLocationGeneration
         Task { @MainActor in
             self.logger.error("Location request failed: \(error.localizedDescription, privacy: .public)")
-            guard self.featureFlags.isEnabled(self.geoStationsFeature),
+            guard self.preciseLocationGeneration == generation,
+                  self.featureFlags.isEnabled(self.geoStationsFeature),
                   self.settings.isPreciseGeoStationLocationEnabled else {
                 return
             }
