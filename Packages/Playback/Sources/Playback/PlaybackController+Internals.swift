@@ -2,11 +2,12 @@ import Foundation
 import RadioDirectory
 
 // Internal wiring for `PlaybackController`: stream start/restart, audio-status
-// handling, ICY track-info fan-out, album-art resolution, and the resource-
-// hygiene timers (paused release, stall ceiling, bounded auto-reconnect). Split
-// out of PlaybackController.swift so the public state/intents surface stays a
-// short, readable file. The controller's stored properties are `internal` (not
-// `private`) to let this extension drive them; none of that is public API.
+// handling, ICY track-info fan-out, and album-art resolution. Split out of
+// PlaybackController.swift so the public state/intents surface stays a short,
+// readable file; the timer-driven housekeeping and recovery it schedules lives
+// one file further out, in PlaybackController+Recovery.swift. The controller's
+// stored properties are `internal` (not `private`) to let these extensions drive
+// them; none of that is public API.
 
 // MARK: - Wiring
 
@@ -23,6 +24,7 @@ extension PlaybackController {
         pausedReleaseTimer.cancel()
         stallCeilingTimer.cancel()
         reconnectTimer.cancel()
+        resumeWatchdogTimer.cancel()
         activeStation = station
         state = .loading(station)
         outputStarted = false
@@ -115,12 +117,16 @@ extension PlaybackController {
         switch status {
         case .buffering:
             pausedReleaseTimer.cancel()
+            // Leaving `.paused` for `.buffering` is the output acknowledging a
+            // resume (or a restart); the watchdog has nothing left to guard.
+            resumeWatchdogTimer.cancel()
             state = .buffering(station)
             scheduleStallCeiling(for: station)
         case .playing:
             pausedReleaseTimer.cancel()
             stallCeilingTimer.cancel()
             reconnectTimer.cancel()
+            resumeWatchdogTimer.cancel()
             // A successful (re)connect clears the budget for the next drop.
             reconnectAttempts = 0
             state = .playing(station)
@@ -143,6 +149,7 @@ extension PlaybackController {
         case let .failed(playbackError):
             pausedReleaseTimer.cancel()
             stallCeilingTimer.cancel()
+            resumeWatchdogTimer.cancel()
             tapToAudioTrace?.cancel()
             tapToAudioTrace = nil
             // Tear the dead player down before retrying: a failed AVPlayerItem
@@ -269,6 +276,11 @@ extension PlaybackController {
         // audio session during the call and clobber `resumeAfterInterruption`
         // in `startPlayback`, killing the auto-resume when the call ends.
         reconnectTimer.cancel()
+        // Nor a resume watchdog — the interruption owns the paused state now.
+        resumeWatchdogTimer.cancel()
+        // Whether the output is left holding a player that should be told about
+        // the pause (the `.loading` branch tears its player down instead).
+        var shouldPauseOutput = false
         switch state {
         case .playing, .buffering:
             // The system already paused the player; remember to resume.
@@ -276,12 +288,20 @@ extension PlaybackController {
             stallCeilingTimer.cancel()
             state = .paused(station)
             schedulePausedRelease()
+            shouldPauseOutput = outputStarted
         case .loading:
             // Don't let a pending start fire mid-interruption.
             resumeAfterInterruption = true
             resolveTask?.cancel()
             tapToAudioTrace?.cancel()
             tapToAudioTrace = nil
+            // The stream may already have started even though no status has
+            // landed yet (`state` only leaves `.loading` on the first status
+            // callback). Tear it down rather than leaving it streaming through
+            // the interruption; `resume()` restarts from `outputStarted == false`.
+            if outputStarted {
+                output.stop()
+            }
             outputStarted = false
             state = .paused(station)
             schedulePausedRelease()
@@ -289,74 +309,16 @@ extension PlaybackController {
             break
         }
         nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
-    }
 
-    // MARK: - Resource hygiene
-
-    /// Releases the player and audio session once playback has sat paused for
-    /// `pausedReleaseTimeout` — otherwise a paused app keeps the `audio`
-    /// background assertion (and the resident AVPlayerItem) alive for hours.
-    /// Live radio has no position to lose: `resume()` restarts the stream via
-    /// its `outputStarted == false` path. `state`, `nowPlaying`, and the
-    /// lock-screen surface stay untouched, so the release is invisible and
-    /// the lock-screen play button keeps working.
-    func schedulePausedRelease() {
-        pausedReleaseTimer.schedule(after: pausedReleaseTimeout) { [weak self] in
-            guard let self, case .paused = self.state else { return }
-            self.output.stop()
-            self.outputStarted = false
-        }
-    }
-
-    /// Bounds how long a stalled stream may sit buffering — AVPlayer's
-    /// `automaticallyWaitsToMinimizeStalling` otherwise retries a stalled
-    /// live stream forever, churning the network radio in the background.
-    /// The stream is parked as `.paused` rather than `.failed`: a stall isn't
-    /// a user error, and paused keeps the lock screen accurate with a play
-    /// button that routes to the restart path.
-    func scheduleStallCeiling(for station: Station) {
-        stallCeilingTimer.schedule(after: stallTimeout) { [weak self] in
-            guard let self, case .buffering = self.state else { return }
-            self.output.stop()
-            self.outputStarted = false
-            // Try to recover the stalled stream before parking it. When the
-            // reconnect budget is spent, `attemptReconnect` parks as `.paused`
-            // and pushes the lock-screen surface (teardown above suppressed the
-            // player's own `.paused` callback). No paused-release is scheduled
-            // on the give-up path: the player and session are already gone.
-            self.attemptReconnect(for: station, fallback: .paused(station))
-        }
-    }
-
-    /// Bounded, backed-off automatic reconnect. A "reconnect" for live radio is
-    /// just a fresh ``startPlayback(of:isReconnect:)`` (there's no position to
-    /// resume), preserving the last-known track so the lock screen stays put
-    /// while it re-buffers. Once the attempt budget is spent, `fallback` — the
-    /// terminal state we'd have shown with no reconnect at all — is applied and
-    /// the lock-screen surface is refreshed to match.
-    func attemptReconnect(for station: Station, fallback: PlaybackState) {
-        guard reconnectAttempts < maxReconnectAttempts else {
-            reconnectAttempts = 0
-            state = fallback
-            nowPlayingCenter.update(
-                station: station,
-                track: nowPlaying,
-                isPlaying: false,
-                artworkURL: albumArtURL
-            )
-            return
-        }
-
-        reconnectAttempts += 1
-        // Exponential backoff: base × 1, 2, 4, … so a flapping network isn't
-        // hammered and the budget spans a useful window.
-        let delay = reconnectBaseDelay * (1 << (reconnectAttempts - 1))
-        // Keep `.buffering` so rows show a spinner and the lock screen stays
-        // sane; ICY will refresh the track once the stream is back.
-        state = .buffering(station)
-        reconnectTimer.schedule(after: delay) { [weak self] in
-            guard let self, self.activeStation?.id == station.id else { return }
-            self.startPlayback(of: station, isReconnect: true)
+        // Tell the output it is paused too, not just our own state machine. The
+        // system silences the audio without informing the streaming engine, and
+        // an engine that never learned it was paused can refuse to resume later
+        // (AudioStreaming's `resume()` acts only on its own `.paused` state),
+        // which used to leave playback stuck until the listener switched
+        // stations. Done last so the status callback it may emit synchronously
+        // lands after this transition instead of racing it.
+        if shouldPauseOutput {
+            output.pause()
         }
     }
 

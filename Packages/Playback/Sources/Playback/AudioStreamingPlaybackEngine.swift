@@ -20,6 +20,21 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     private let streamGeneration = OSAllocatedUnfairLock(initialState: UInt64.zero)
     private var sessionDeactivationTask: Task<Void, Never>?
 
+    /// The URL of the stream currently loaded into `player`, kept so ``resume()``
+    /// can rejoin a stream the player is no longer able to resume.
+    private var currentURL: URL?
+
+    /// Whether the most recent `.stopped` transition was one we asked for.
+    /// AudioStreaming reports `.stopped` both for ``stop()`` and for its
+    /// end-of-stream path, which a live stream reaches whenever the server drops
+    /// the connection — only the latter is a failure.
+    private var didRequestStop = false
+
+    /// One failure report per stream. A single collapse can surface as both an
+    /// `AudioPlayerError` and a `.stopped` transition, and each report the
+    /// controller sees spends another of its bounded reconnect attempts.
+    private var hasReportedFailure = false
+
     // Block-based notification observers are not auto-removed on dealloc, so
     // deinit is isolated to read this on the main actor without an escape hatch.
     private var notificationTokens: [NSObjectProtocol] = []
@@ -38,6 +53,9 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
 
     public func start(url: URL, streamGeneration: UInt64) {
         self.streamGeneration.withLock { $0 = streamGeneration }
+        currentURL = url
+        didRequestStop = false
+        hasReportedFailure = false
         activateSession()
         player.play(url: url)
     }
@@ -49,15 +67,65 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
 
     public func resume() {
         activateSession()
+        // `AudioPlayer.resume()` acts only when AudioStreaming's own state is
+        // exactly `.paused`, and that state can differ from ours: the system
+        // stops the engine for an interruption without telling the library, and
+        // a live stream the server closed leaves it `.stopped`. In those cases
+        // `resume()` returns having done nothing — no audio, no state change —
+        // so playback stayed stuck until the listener picked another station.
+        // Rejoin the stream instead; live radio has no position to preserve.
+        guard player.state == .paused else {
+            replayCurrentStream()
+            return
+        }
         player.resume()
     }
 
     public func stop() {
+        didRequestStop = true
         sessionDeactivationTask?.cancel()
         player.stop()
         sessionDeactivationTask = Task { @MainActor in
             await self.deactivateSessionAfterStop()
         }
+    }
+
+    /// Restarts the current stream from scratch — what a station switch does,
+    /// minus the switch. Used when the player can't be resumed.
+    private func replayCurrentStream() {
+        guard let currentURL else { return }
+        didRequestStop = false
+        hasReportedFailure = false
+        // `play(url:)` doesn't always change the player's public state (it is
+        // already `.bufferring` when a stalled stream is rejoined), so the
+        // transition out of paused has to be reported here or the controller
+        // would keep waiting for a callback that never comes.
+        onStatusChange?(.buffering)
+        player.play(url: currentURL)
+    }
+
+    /// AudioStreaming's end-of-stream path stops the player without raising an
+    /// error, which for live radio means the server closed the connection.
+    /// Swallowing it left the controller showing a dead stream as playing — and,
+    /// once paused, holding a player that would never resume. Surface it as a
+    /// retryable failure so the bounded auto-reconnect takes over.
+    private func handleUnexpectedStop() {
+        guard didRequestStop == false else { return }
+        // State changes are delivered asynchronously on the main queue, so the
+        // `.stopped` from a teardown that has since been followed by a fresh
+        // `start()` can land late. Ignore it unless the player is still stopped.
+        guard player.state == .stopped else { return }
+        // A stop the player took because of an error is reported through
+        // `audioPlayerUnexpectedError` with a classified reason; let that one
+        // through rather than pre-empting it with a generic message.
+        guard player.stopReason != .error else { return }
+        reportFailure(.streamFailed("The stream ended unexpectedly."))
+    }
+
+    private func reportFailure(_ error: PlaybackError) {
+        guard hasReportedFailure == false else { return }
+        hasReportedFailure = true
+        onStatusChange?(.failed(error))
     }
 
     private func activateSession() {
@@ -199,7 +267,12 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
                 self.onStatusChange?(.buffering)
             case .paused:
                 self.onStatusChange?(.paused)
-            case .ready, .running, .stopped, .error, .disposed:
+            case .stopped:
+                self.handleUnexpectedStop()
+            case .ready, .running, .error, .disposed:
+                // `.error` arrives alongside `audioPlayerUnexpectedError`, which
+                // is where the typed failure comes from; the rest are lifecycle
+                // states with no equivalent in `AudioStatus`.
                 break
             }
         }
@@ -215,7 +288,7 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
 
     public nonisolated func audioPlayerUnexpectedError(player: AudioPlayer, error: AudioPlayerError) {
         executeOnMainActor {
-            self.onStatusChange?(.failed(Self.classify(error)))
+            self.reportFailure(Self.classify(error))
         }
     }
 

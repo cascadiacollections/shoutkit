@@ -107,6 +107,12 @@ public final class PlaybackController {
     @ObservationIgnored let stallTimeout: Duration
     @ObservationIgnored let stallCeilingTimer = OneShotTimer()
 
+    /// How long a resume may go unacknowledged before the stream is rejoined
+    /// (see ``scheduleResumeWatchdog(for:)``). Injectable so tests don't wait
+    /// seconds; no user-facing setting.
+    @ObservationIgnored let resumeWatchdogTimeout: Duration
+    @ObservationIgnored let resumeWatchdogTimer = OneShotTimer()
+
     /// Bounded automatic reconnect (see ``attemptReconnect(for:fallback:)``).
     /// A stall or a mid-play failure retries the stream a few times on a
     /// backed-off schedule before surfacing a terminal state — network radio
@@ -140,7 +146,8 @@ public final class PlaybackController {
         pausedReleaseTimeout: Duration = .seconds(10 * 60),
         stallTimeout: Duration = .seconds(90),
         maxReconnectAttempts: Int = 3,
-        reconnectBaseDelay: Duration = .seconds(2)
+        reconnectBaseDelay: Duration = .seconds(2),
+        resumeWatchdogTimeout: Duration = .seconds(2)
     ) {
         self.directory = directory
         self.output = output
@@ -149,6 +156,7 @@ public final class PlaybackController {
         self.stallTimeout = stallTimeout
         self.maxReconnectAttempts = maxReconnectAttempts
         self.reconnectBaseDelay = reconnectBaseDelay
+        self.resumeWatchdogTimeout = resumeWatchdogTimeout
 
         configureOutput()
         configureRemoteCommands()
@@ -174,6 +182,9 @@ public final class PlaybackController {
         // A user pause must win over a pending auto-reconnect, or a stream the
         // user just stopped would resurrect itself when the reconnect fires.
         reconnectTimer.cancel()
+        // Likewise over a resume that is still waiting to be acknowledged: the
+        // watchdog would otherwise rejoin a stream the user just paused.
+        resumeWatchdogTimer.cancel()
         // Likewise it must win over a pending interruption auto-resume: pausing
         // during a phone call means "stay paused" when the call ends.
         resumeAfterInterruption = false
@@ -198,6 +209,10 @@ public final class PlaybackController {
         case .paused:
             if outputStarted {
                 pausedReleaseTimer.cancel()
+                // Armed before the call, so an output that acknowledges the
+                // resume synchronously cancels the watchdog rather than racing
+                // it (see `scheduleResumeWatchdog(for:)`).
+                scheduleResumeWatchdog(for: station)
                 output.resume()
             } else {
                 // Paused during loading, or the paused-release timeout tore
@@ -241,6 +256,7 @@ public final class PlaybackController {
         pausedReleaseTimer.cancel()
         stallCeilingTimer.cancel()
         reconnectTimer.cancel()
+        resumeWatchdogTimer.cancel()
         reconnectAttempts = 0
         output.stop()
         activeStation = nil

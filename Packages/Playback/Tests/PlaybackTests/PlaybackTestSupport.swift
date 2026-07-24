@@ -15,6 +15,14 @@ final class FakeAudioOutput: AudioOutput {
     private(set) var startedStreamGenerations: [UInt64] = []
     private(set) var stopCount = 0
     private(set) var resumeCount = 0
+    private(set) var pauseCount = 0
+
+    /// When true, `resume()` reports nothing back — standing in for a streaming
+    /// engine that quietly refuses to resume a player whose stream is already
+    /// gone (AudioStreaming's `resume()` no-ops unless its own state is exactly
+    /// `.paused`; `AVPlayer.play()` does nothing for an ended item). This is the
+    /// case the controller's resume watchdog exists for.
+    var resumeSilentlyFails = false
 
     var startedURL: URL? { startedURLs.last }
     var stopCalled: Bool { stopCount > 0 }
@@ -23,9 +31,13 @@ final class FakeAudioOutput: AudioOutput {
         startedURLs.append(url)
         startedStreamGenerations.append(streamGeneration)
     }
-    func pause() { onStatusChange?(.paused) }
+    func pause() {
+        pauseCount += 1
+        onStatusChange?(.paused)
+    }
     func resume() {
         resumeCount += 1
+        guard resumeSilentlyFails == false else { return }
         onStatusChange?(.playing)
     }
     func stop() { stopCount += 1 }
@@ -118,14 +130,16 @@ func makeController(
     output: FakeAudioOutput,
     presenter: NowPlayingPresenterSpy = NowPlayingPresenterSpy(),
     maxReconnectAttempts: Int = 3,
-    reconnectBaseDelay: Duration = .seconds(2)
+    reconnectBaseDelay: Duration = .seconds(2),
+    resumeWatchdogTimeout: Duration = .seconds(2)
 ) -> PlaybackController {
     PlaybackController(
         directory: directory,
         output: output,
         nowPlayingCenter: presenter,
         maxReconnectAttempts: maxReconnectAttempts,
-        reconnectBaseDelay: reconnectBaseDelay
+        reconnectBaseDelay: reconnectBaseDelay,
+        resumeWatchdogTimeout: resumeWatchdogTimeout
     )
 }
 
@@ -137,7 +151,8 @@ func makeController(
     pausedReleaseTimeout: Duration = .seconds(10 * 60),
     stallTimeout: Duration = .seconds(90),
     maxReconnectAttempts: Int = 3,
-    reconnectBaseDelay: Duration = .seconds(2)
+    reconnectBaseDelay: Duration = .seconds(2),
+    resumeWatchdogTimeout: Duration = .seconds(2)
 ) -> PlaybackController {
     PlaybackController(
         directory: BundledRadioDirectory(stations: stations),
@@ -146,7 +161,8 @@ func makeController(
         pausedReleaseTimeout: pausedReleaseTimeout,
         stallTimeout: stallTimeout,
         maxReconnectAttempts: maxReconnectAttempts,
-        reconnectBaseDelay: reconnectBaseDelay
+        reconnectBaseDelay: reconnectBaseDelay,
+        resumeWatchdogTimeout: resumeWatchdogTimeout
     )
 }
 

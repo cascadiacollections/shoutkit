@@ -1,5 +1,58 @@
 # Decisions
 
+## 2026-07-24 (resume must never be a silent no-op)
+
+Reported from real use: after pausing, tapping play did nothing at all — no
+audio, no error, no state change — and the only way back was switching stations
+and returning. `AudioPlayer.resume()` (AudioStreaming 1.4.4) returns immediately
+unless the library's *own* internal state is exactly `.paused`, and it reports
+nothing when it declines. `AudioStreamingPlaybackEngine` was reporting `.paused`
+to the controller unconditionally, so any drift between the two states produced a
+`.paused` the controller could never leave: `output.resume()` kept poking a
+player that had already moved on. Two drift sources found — the system stops the
+audio engine for an interruption (call, Siri, alarm) without informing
+AudioStreaming, and the library's end-of-stream path (which a live stream reaches
+whenever the server closes the connection) leaves it `.stopped`, a transition the
+engine's `audioPlayerStateChanged` switch was discarding. `play(url:)` recreates
+the audio entry from scratch, which is why picking another station cleared it.
+
+- **Fixed at the source, then guarded at the layer above.** The engine now
+  rejoins the stream itself when the player isn't resumable (`player.state !=
+  .paused`), and surfaces an unrequested `.stopped` as a retryable
+  `.streamFailed` so a dropped live stream reaches the existing bounded
+  reconnect instead of showing a dead stream as playing. On top of that,
+  `PlaybackController` arms a **resume watchdog**: if `state` hasn't left
+  `.paused` within `resumeWatchdogTimeout` (default 2 s, injected like the other
+  hygiene windows), it tears the player down and rejoins. Belt *and* braces
+  deliberately — the same silent-refusal shape exists in
+  `WatchRadioPlaybackEngine` (`AVPlayer.play()` does nothing for an ended or
+  failed item), and the watchdog covers any future `AudioOutput` without each
+  backend having to re-learn the lesson. Recovery is orchestration, so it belongs
+  to the controller, consistent with the 2026-07-10 reconnect entry.
+- **The controller now keeps the output's state in step rather than only its
+  own.** `handleInterruptionBegan` calls `output.pause()` (and, in the `.loading`
+  window where the stream has started but no status has landed, `output.stop()`
+  instead of silently dropping the flag). A state machine that narrates a pause
+  its player never heard about is the bug class, not an implementation detail.
+- **Engine-side failure reports are deduped per stream.** One collapse can
+  surface as both an `AudioPlayerError` and a `.stopped` transition, and each
+  report the controller sees spends another reconnect attempt. A stop the player
+  took *because of* an error still defers to `audioPlayerUnexpectedError`, which
+  carries the classified reason.
+- **`PlaybackController+Recovery.swift`.** The watchdog pushed
+  `PlaybackController+Internals.swift` past the 400-line `file_length` limit
+  (`swiftlint --strict`), so the timer-driven housekeeping and recovery (paused
+  release, resume watchdog, stall ceiling, bounded reconnect) split into a
+  sibling file — same remedy as the 2026-07-10 `+Internals` split, no
+  lint-disable. New coverage lives in `PlaybackResumeRecoveryTests` for the same
+  reason: folding it into the existing suites walked their bodies up toward the
+  `type_body_length` limit.
+- **Not adopted: making every resume a restart.** Live radio has no position to
+  preserve, so unconditionally re-playing on resume would also be *correct* — but
+  it spends a re-buffer on every pause/play, including the common case where the
+  player is perfectly resumable. The watchdog pays that cost only when the fast
+  path actually fails.
+
 ## 2026-07-18 (0.3.0 QA-checklist outcomes: streaming intents, artwork caching)
 
 - **Streaming intent responses ("still working…") — not adopting.**

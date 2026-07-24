@@ -132,6 +132,17 @@ All notable changes to ShoutKit are documented here. The format follows
   - Out-of-order ICY metadata loads can no longer regress the displayed track to the previous
     song; a transient artwork-download failure at play start no longer leaves the lock screen
     artless for the whole session
+- **Play/pause no longer gets stuck after a pause**: tapping play after a pause could do nothing
+  at all — no audio, no error — leaving the only way out switching to another station and back.
+  The streaming engine refuses to resume a player whose stream is already gone, and did so
+  silently, which happened whenever its own state had drifted from the app's: the system stops the
+  audio engine for an interruption (call, Siri, alarm) without informing it, and a live stream the
+  server closes ends the same way. Now:
+  - An interruption pauses the engine as well as the app's state machine, so the two can't drift
+  - A live stream the server drops is surfaced instead of swallowed, so the app reconnects rather
+    than showing a dead stream as playing
+  - A resume the engine doesn't act on within a couple of seconds rejoins the stream — the
+    switch-stations workaround, done automatically, for any playback backend
 - **Live Activity correctness**: the lock screen / Dynamic Island activity no longer shows
   "Live" while playback is paused after rapid pause/track-change races (updates are now applied
   in order with the play state tracked at the source), and a superseded artwork download can no
