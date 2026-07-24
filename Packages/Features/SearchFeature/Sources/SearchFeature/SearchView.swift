@@ -38,7 +38,7 @@ public struct SearchView: View {
         .onAppear {
             isSearchFieldFocused = true
         }
-        .onChange(of: reactivationToken) {
+        .onChange(of: reactivationToken) { _, _ in
             isSearchFieldFocused = true
         }
         .task {
