@@ -11,8 +11,9 @@ import Testing
 // happens once the engine's own state has drifted from the controller's (the
 // system stops the audio engine for an interruption without telling it; a live
 // stream the server closes ends the same way). Two guards, tested here: the
-// controller keeps the output's state in step, and a resume nothing acknowledges
-// rejoins the stream. Short injected watchdog windows; the default is 2 s.
+// controller keeps the output's state in step, and a resume the output never
+// acknowledges rejoins the stream instead of leaving playback stuck. Short
+// injected watchdog windows; the production default is 2 s.
 
 @MainActor
 struct PlaybackResumeRecoveryTests {
