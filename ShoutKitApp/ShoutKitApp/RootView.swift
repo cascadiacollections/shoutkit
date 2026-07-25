@@ -34,6 +34,11 @@ struct RootView: View {
     @State private var listenNowViewModel = BrowseViewModel()
     @State private var browseViewModel = BrowseViewModel()
     @State private var searchViewModel = SearchViewModel()
+    // Bumped whenever the Search tab is re-tapped while already selected, so
+    // SearchView can refocus its search field (Apple Music re-tap behavior).
+    // `selectedTab` itself doesn't change on reselection, so `onChange` alone
+    // can't observe it — this binding's `set` fires on every tap regardless.
+    @State private var searchReactivationToken = 0
     @AppStorage("hasCompletedFirstRun") private var hasCompletedFirstRun = false
 
     var body: some View {
@@ -104,7 +109,7 @@ struct RootView: View {
     }
 
     private var tabView: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: tabSelection) {
             Tab("Listen Now", systemImage: "play.circle", value: ShoutKitTab.listenNow) {
                 NavigationStack {
                     ListenNowView(viewModel: listenNowViewModel)
@@ -131,7 +136,7 @@ struct RootView: View {
 
             Tab("Search", systemImage: "magnifyingglass", value: ShoutKitTab.search, role: .search) {
                 NavigationStack {
-                    SearchView(viewModel: searchViewModel)
+                    SearchView(viewModel: searchViewModel, reactivationToken: searchReactivationToken)
                         .navigationTitle("Search")
                 }
             }
@@ -178,6 +183,21 @@ struct RootView: View {
     private var currentHandoffLink: StationLink? {
         guard let station = playback?.state.handoffStation else { return nil }
         return StationLink(station: station)
+    }
+
+    /// Wraps `selectedTab` so re-tapping the already-selected Search tab is
+    /// observable. `TabView` writes through this binding on every tap, even
+    /// when the value doesn't change, unlike a plain `@State` + `onChange`.
+    private var tabSelection: Binding<ShoutKitTab> {
+        Binding(
+            get: { selectedTab },
+            set: { newValue in
+                if newValue == .search, selectedTab == .search {
+                    searchReactivationToken += 1
+                }
+                selectedTab = newValue
+            }
+        )
     }
 
     private func handleTabSwipe(_ value: DragGesture.Value) {
