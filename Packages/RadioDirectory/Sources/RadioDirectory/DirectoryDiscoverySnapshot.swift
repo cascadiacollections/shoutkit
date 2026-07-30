@@ -103,6 +103,20 @@ public protocol DirectoryDiscoveryCaching: Sendable {
     func invalidateMemoryCache() async
 }
 
+/// The cache a surface gets when there's nothing persisted behind it — previews,
+/// tests, and the (practically impossible) case of Application Support being
+/// unresolvable. Reports no saved content, so callers take their live path without
+/// having to branch on whether persistence was configured at all.
+public struct UnavailableDirectoryDiscoveryCache: DirectoryDiscoveryCaching {
+    public init() {}
+
+    public func discoverySnapshotState() async -> DirectoryDiscoverySnapshotState? {
+        nil
+    }
+
+    public func invalidateMemoryCache() async {}
+}
+
 /// Persistence seam for ``DirectoryDiscoverySnapshot``. Both operations are
 /// best-effort by contract: a missing, unreadable, or unwritable store degrades
 /// to "no snapshot", never to an error the caller has to handle.

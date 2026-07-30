@@ -28,9 +28,8 @@ struct AppServices {
     /// Retained for app lifetime so MetricKit subscription state remains active.
     let diagnosticsService: any DiagnosticsServicing
     let directory: any RadioDirectoryProviding
-    /// The persisted-snapshot facet of `directory`, so background refresh can
-    /// push past its in-memory window. Present even when Application Support
-    /// can't be resolved — it just has no saved stations to hand back.
+    /// The persisted-snapshot facet of `directory`. Present even when Application
+    /// Support can't be resolved — it just has no saved stations to hand back.
     let directoryDiscoveryCache: any DirectoryDiscoveryCaching
     /// Retained here so the Observation and Core Location tasks stay alive for
     /// the app's lifetime; it keeps the geo-station filter synchronized with the
@@ -269,13 +268,9 @@ enum AppDependencies {
         let geoStationLocationCoordinator: GeoStationLocationCoordinator
     }
 
-    /// Routes the decorated directory (preferred + caching + snapshot) and its
-    /// snapshot facet through Factory so BrowseViewModel/SearchViewModel resolve
-    /// them instead of their being threaded manually through RootView, and returns
-    /// the directory for the callers that hold it directly.
-    private static func registerProductionDirectory(
-        _ services: DirectoryServices
-    ) -> any RadioDirectoryProviding {
+    /// Routes the directory and its snapshot facet through Factory so the view
+    /// models resolve them instead of their being threaded through RootView.
+    private static func registerProductionDirectory(_ services: DirectoryServices) -> any RadioDirectoryProviding {
         registerProductionRadioDirectory(services.directory)
         registerProductionDiscoveryCache(services.discoveryCache)
         return services.directory
@@ -285,10 +280,9 @@ enum AppDependencies {
     /// source. Supplying SHOUTCAST_DEV_KEY in Config/Secrets.xcconfig opts into
     /// SHOUTcast's own directory instead. Either base is wrapped in
     /// PreferredRadioDirectory so curated stations (KEXP) always appear first,
-    /// then in CachingRadioDirectory so Listen Now and Browse refreshing at
-    /// launch share one fetch instead of hitting the directory twice — and so
-    /// that fetch is written to disk, letting the next launch paint stations
-    /// before (or without) reaching the network.
+    /// then in CachingRadioDirectory so Listen Now and Browse refreshing at launch
+    /// share one fetch — and so that fetch is written to disk, letting the next
+    /// launch paint stations before (or without) reaching the network.
     private static func makeDirectory(
         settings: SettingsStore,
         featureFlags: any FeatureFlagProviding
@@ -299,8 +293,7 @@ enum AppDependencies {
             featureFlags: featureFlags,
             geoFilterProvider: geoFilterProvider
         )
-        // Shared by both branches: the snapshot is scoped by source identity, so
-        // one file safely serves whichever directory the build is configured for.
+        // One file serves either branch: snapshots are scoped by source identity.
         let snapshotStore = FileDirectorySnapshotStore.applicationSupport()
 
         if let apiKey = shoutcastAPIKey() {
@@ -323,11 +316,9 @@ enum AppDependencies {
         let caching = CachingRadioDirectory(
             base: directory,
             snapshotStore: snapshotStore,
-            // Radio-Browser results are geo-filtered, so saved stations are only
-            // reusable while the filter that produced them still applies.
+            // Geo-filtered results are only reusable while that filter still applies.
             snapshotIdentity: {
-                let geoFilter = await geoFilterProvider.currentGeoFilter()
-                return "radio-browser;\(geoFilter?.snapshotIdentity ?? "unfiltered")"
+                "radio-browser;" + (await geoFilterProvider.currentGeoFilter()?.snapshotIdentity ?? "unfiltered")
             }
         )
         return DirectoryServices(

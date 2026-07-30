@@ -13,11 +13,11 @@ public extension Container {
     }
 
     /// The persisted-snapshot facet of the directory stack, so landing surfaces can
-    /// paint saved stations before (or without) reaching the network. Absent by
-    /// default: previews and tests run against in-memory directories with nothing
-    /// on disk, and the surfaces degrade to a plain live fetch.
-    var directoryDiscoveryCache: Factory<(any DirectoryDiscoveryCaching)?> {
-        self { nil as (any DirectoryDiscoveryCaching)? }
+    /// paint saved stations before (or without) reaching the network. Defaults to the
+    /// unavailable cache — previews and tests run against in-memory directories with
+    /// nothing on disk — and `AppDependencies.bootstrap()` registers the real one.
+    var directoryDiscoveryCache: Factory<any DirectoryDiscoveryCaching> {
+        self { UnavailableDirectoryDiscoveryCache() }
             .scope(.singleton)
     }
 }

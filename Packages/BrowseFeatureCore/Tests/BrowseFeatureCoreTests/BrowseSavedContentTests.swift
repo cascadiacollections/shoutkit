@@ -161,7 +161,10 @@ struct BrowseSavedContentTests {
     @Test func refreshWithoutACacheBehavesLikeAPlainLiveFetch() async {
         let directory = FakeRadioDirectory()
         await directory.setTopStationsResult(.success([.fixture(id: "live", name: "Live Station")]))
-        let viewModel = BrowseViewModel(directory: directory, discoveryCache: nil)
+        let viewModel = BrowseViewModel(
+            directory: directory,
+            discoveryCache: UnavailableDirectoryDiscoveryCache()
+        )
 
         await viewModel.refresh()
 

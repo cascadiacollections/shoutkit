@@ -75,13 +75,13 @@ public final class BrowseViewModel {
     public private(set) var genrePhase: GenreStationsPhase?
 
     @ObservationIgnored private let directory: any RadioDirectoryProviding
-    @ObservationIgnored private let discoveryCache: (any DirectoryDiscoveryCaching)?
+    @ObservationIgnored private let discoveryCache: any DirectoryDiscoveryCaching
     @ObservationIgnored private var genreTask: Task<Void, Never>?
     @ObservationIgnored private var refreshGeneration = 0
 
     public init(
         directory: any RadioDirectoryProviding = Container.shared.radioDirectory(),
-        discoveryCache: (any DirectoryDiscoveryCaching)? = Container.shared.directoryDiscoveryCache()
+        discoveryCache: any DirectoryDiscoveryCaching = Container.shared.directoryDiscoveryCache()
     ) {
         self.directory = directory
         self.discoveryCache = discoveryCache
@@ -111,7 +111,7 @@ public final class BrowseViewModel {
         if source == .userInitiated {
             // Otherwise the short in-memory window would answer a pull-to-refresh
             // without going anywhere near the directory.
-            await discoveryCache?.invalidateMemoryCache()
+            await discoveryCache.invalidateMemoryCache()
         }
 
         await loadLiveContent(generation: generation)
@@ -121,7 +121,6 @@ public final class BrowseViewModel {
     /// whether it's fresh enough to stand alone — in which case the caller skips
     /// the directory fetch for this pass.
     private func presentSavedContent(generation: Int) async -> Bool {
-        guard let discoveryCache else { return false }
         guard let state = await discoveryCache.discoverySnapshotState() else { return false }
         let savedStations = state.snapshot.savedStations
         guard savedStations.isEmpty == false else { return false }
