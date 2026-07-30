@@ -33,6 +33,25 @@ Every directory is wrapped in `PreferredRadioDirectory`, so curated stations are
 when a directory source omits them — KEXP is bundled using its official 160K/64K AAC stream URLs.
 `PreviewRadioDirectory` is reserved for previews and tests.
 
+### Stations without the wait
+
+Discovery content is cached in two tiers by `CachingRadioDirectory`. A 60-second in-memory window
+coalesces the launch fetches Listen Now and Browse both issue, and every successful fetch is also
+written to a small JSON snapshot in Application Support. Landing surfaces paint that snapshot
+first, so a launch shows stations immediately rather than a spinner, and within a six-hour
+stability window the snapshot *is* the answer — no directory request at all, and the same list as
+the previous launch instead of a reshuffled top-click ranking. Pull-to-refresh and the four-hourly
+`BGAppRefreshTask` both bypass the window and rewrite the snapshot.
+
+The live calls (`topStations`, `genres`) never serve the snapshot; the saved copy is reachable only
+through the `DirectoryDiscoveryCaching` seam, so a surface always knows whether it's showing live
+or saved content. When the directory can't be reached, saved stations stay on screen with a note
+rather than being replaced by an error — the error state is reserved for having nothing to show.
+Snapshots are scoped by directory source and geo filter, so travelling (or toggling the
+geo-stations flag) refetches instead of serving another region's stations. Favorites and recents
+are separately offline-capable via SwiftData; search results and per-genre lists are user-driven
+and deliberately not persisted.
+
 ### Optional: SHOUTcast directory
 
 To use SHOUTcast's own directory instead of Radio-Browser, supply a developer key. The app reads
@@ -124,7 +143,9 @@ tracking. The complete list of network traffic the app produces:
   device beyond a generic `ShoutKit/x.y` User-Agent.
 - **Stream and artwork fetches** directly from the stations you choose to play.
 
-Favorites and recents live in a local SwiftData store on your device.
+Favorites and recents live in a local SwiftData store on your device, alongside a small snapshot of
+the public station list the landing surfaces last fetched (so they can render without a network
+round trip). Nothing about you is stored in either, and nothing leaves the device.
 
 ## Roadmap
 

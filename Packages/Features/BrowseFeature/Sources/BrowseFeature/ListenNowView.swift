@@ -54,7 +54,7 @@ public struct ListenNowView: View {
         }
         .background(Color.shoutKitBackground)
         .task { await viewModel.refresh() }
-        .refreshable { await viewModel.refresh() }
+        .refreshable { await viewModel.refresh(source: .userInitiated) }
         .onChange(of: recents.map(\.stationID), initial: true) { _, _ in
             recentlyPlayedTeaser.sync(withVisibleIDsNewestFirst: visibleRecents.map(\.stationID))
         }
@@ -112,13 +112,15 @@ public struct ListenNowView: View {
             } actions: {
                 if error.isRetryable {
                     Button("Try Again") {
-                        Task { await viewModel.refresh() }
+                        Task { await viewModel.refresh(source: .userInitiated) }
                     }
                     .buttonStyle(.glassProminent)
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 260)
         case let .loaded(loaded):
+            SavedStationsNotice(origin: loaded.origin, refreshError: viewModel.refreshError)
+
             if BrowseConfiguration.showsFeaturedSpotlight, let spotlight = loaded.spotlight {
                 SpotlightCard(
                     station: spotlight,

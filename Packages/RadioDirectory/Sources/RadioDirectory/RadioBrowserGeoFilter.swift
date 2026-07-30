@@ -23,6 +23,13 @@ public struct RadioBrowserGeoFilter: Equatable, Sendable {
         )
     }
 
+    /// Stable key for this filter, used to scope persisted directory snapshots
+    /// so content captured for one country/language isn't served after the filter
+    /// changes — travel, or the geo-stations flag being toggled.
+    public var snapshotIdentity: String {
+        "country=\(countryCode ?? "any");language=\(languageCode ?? "any")"
+    }
+
     var queryItemSets: [[URLQueryItem]] {
         var queryItemSets: [[URLQueryItem]] = []
 

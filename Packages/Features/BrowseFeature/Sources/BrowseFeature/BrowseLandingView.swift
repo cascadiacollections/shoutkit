@@ -28,7 +28,7 @@ public struct BrowseLandingView: View {
             await viewModel.refresh()
         }
         .refreshable {
-            await viewModel.refresh()
+            await viewModel.refresh(source: .userInitiated)
         }
     }
 
@@ -52,13 +52,14 @@ public struct BrowseLandingView: View {
             } actions: {
                 if error.isRetryable {
                     Button("Try Again") {
-                        Task { await viewModel.refresh() }
+                        Task { await viewModel.refresh(source: .userInitiated) }
                     }
                     .buttonStyle(.glassProminent)
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 260)
         case let .loaded(loaded):
+            SavedStationsNotice(origin: loaded.origin, refreshError: viewModel.refreshError)
             loadedContent(loaded)
         }
     }
@@ -102,7 +103,7 @@ public struct BrowseLandingView: View {
         } actions: {
             if error.isRetryable {
                 Button("Try Again") {
-                    Task { await viewModel.refresh() }
+                    Task { await viewModel.refresh(source: .userInitiated) }
                 }
                 .buttonStyle(.glassProminent)
             }
