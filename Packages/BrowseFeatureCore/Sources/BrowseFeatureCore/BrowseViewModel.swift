@@ -103,6 +103,10 @@ public final class BrowseViewModel {
             phase = .loading
         }
         genresError = nil
+        // Cleared here rather than only on success: while a retry is in flight the
+        // "offline" note would otherwise still be claiming something this pass
+        // hasn't established. It comes back if this fetch fails too.
+        refreshError = nil
 
         if source == .userInitiated {
             // Otherwise the short in-memory window would answer a pull-to-refresh
@@ -163,7 +167,6 @@ public final class BrowseViewModel {
             let (genres, genresError) = await genresResult
             guard refreshGeneration == generation else { return }
             self.genresError = genresError
-            refreshError = nil
 
             phase = .loaded(
                 BrowseContent(

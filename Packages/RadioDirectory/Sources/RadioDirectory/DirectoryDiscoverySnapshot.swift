@@ -130,13 +130,11 @@ public actor FileDirectorySnapshotStore: DirectorySnapshotStoring {
     )
 
     private let fileURL: URL
-    private let fileManager: FileManager
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
-    public init(fileURL: URL, fileManager: FileManager = .default) {
+    public init(fileURL: URL) {
         self.fileURL = fileURL
-        self.fileManager = fileManager
 
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -150,8 +148,12 @@ public actor FileDirectorySnapshotStore: DirectorySnapshotStoring {
     /// Store rooted in the app's Application Support container. `nil` only when
     /// that container can't be resolved, in which case the app runs without a
     /// persisted snapshot rather than failing to launch.
-    public static func applicationSupport(fileManager: FileManager = .default) -> FileDirectorySnapshotStore? {
-        guard let container = try? fileManager.url(
+    ///
+    /// `FileManager` isn't `Sendable`, so it's used per-isolation-domain here and
+    /// inside the actor rather than injected across the boundary; nothing needs to
+    /// substitute one (tests inject a `fileURL` in a temporary directory instead).
+    public static func applicationSupport() -> FileDirectorySnapshotStore? {
+        guard let container = try? FileManager.default.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
@@ -164,8 +166,7 @@ public actor FileDirectorySnapshotStore: DirectorySnapshotStoring {
         return FileDirectorySnapshotStore(
             fileURL: container
                 .appendingPathComponent(directoryName, isDirectory: true)
-                .appendingPathComponent(fileName, isDirectory: false),
-            fileManager: fileManager
+                .appendingPathComponent(fileName, isDirectory: false)
         )
     }
 
@@ -202,7 +203,7 @@ public actor FileDirectorySnapshotStore: DirectorySnapshotStoring {
     /// `withIntermediateDirectories: true` is a no-op when the directory already
     /// exists, so this needs no existence check (same as the diagnostics store).
     private func createContainerDirectoryIfNeeded() throws {
-        try fileManager.createDirectory(
+        try FileManager.default.createDirectory(
             at: fileURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )

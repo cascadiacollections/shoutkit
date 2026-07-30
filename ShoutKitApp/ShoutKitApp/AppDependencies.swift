@@ -66,12 +66,7 @@ enum AppDependencies {
         let featureFlags = sharedFeatureFlags()
         let diagnosticsService = makeDiagnosticsService(settings: settings, featureFlags: featureFlags)
         let directoryServices = makeDirectory(settings: settings, featureFlags: featureFlags)
-        let directory = directoryServices.directory
-        // Route the decorated (preferred + caching) instance through Factory so
-        // BrowseViewModel/SearchViewModel resolve it instead of it being threaded
-        // manually through RootView.
-        registerProductionRadioDirectory(directory)
-        registerProductionDiscoveryCache(directoryServices.discoveryCache)
+        let directory = registerProductionDirectory(directoryServices)
         let controller = PlaybackController(directory: directory)
         let stationConnectionPrewarmer = StationConnectionPrewarmer()
 
@@ -272,6 +267,18 @@ enum AppDependencies {
         let discoveryCache: any DirectoryDiscoveryCaching
         let playReporter: (any StationPlayReporting)?
         let geoStationLocationCoordinator: GeoStationLocationCoordinator
+    }
+
+    /// Routes the decorated directory (preferred + caching + snapshot) and its
+    /// snapshot facet through Factory so BrowseViewModel/SearchViewModel resolve
+    /// them instead of their being threaded manually through RootView, and returns
+    /// the directory for the callers that hold it directly.
+    private static func registerProductionDirectory(
+        _ services: DirectoryServices
+    ) -> any RadioDirectoryProviding {
+        registerProductionRadioDirectory(services.directory)
+        registerProductionDiscoveryCache(services.discoveryCache)
+        return services.directory
     }
 
     /// Radio-Browser (free, open source, keyless) is the default discovery
