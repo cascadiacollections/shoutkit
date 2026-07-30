@@ -174,7 +174,10 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
     // MARK: - Persisted snapshot
 
     public func discoverySnapshotState() async -> DirectoryDiscoverySnapshotState? {
-        guard let snapshot = await loadPersistedSnapshot() else { return nil }
+        let sourceIdentity = await snapshotIdentity()
+        guard let snapshot = await snapshotIfIdentityMatches(sourceIdentity) else { return nil }
+        // The conservative, oldest-half date: a surface may only skip its fetch
+        // while *everything* it would render is inside the window.
         guard let capturedAt = snapshot.capturedAt else { return nil }
         return DirectoryDiscoverySnapshotState(
             snapshot: snapshot,
@@ -187,10 +190,21 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
         topStationsCache = nil
     }
 
-    /// Reads the stored snapshot once per process, coalescing concurrent first
-    /// callers onto one file read, and discards a snapshot captured under a
-    /// different source identity (another directory, or another geo filter).
-    private func loadPersistedSnapshot() async -> DirectoryDiscoverySnapshot? {
+    /// The stored snapshot, but only while it still matches the identity in force
+    /// *now* — the geo filter changes at runtime (a Settings toggle, or a location
+    /// update), and content captured for another region has to stop being served
+    /// the moment that happens, not on the next launch. A mismatch reads as "no
+    /// snapshot": not served to a surface, and not merged into by ``persist``.
+    private func snapshotIfIdentityMatches(_ sourceIdentity: String?) async -> DirectoryDiscoverySnapshot? {
+        guard let snapshot = await storedSnapshot(),
+              snapshot.sourceIdentity == sourceIdentity else { return nil }
+        return snapshot
+    }
+
+    /// Reads the store once per process, coalescing concurrent first callers onto
+    /// one file read. Identity is deliberately *not* checked here — that's the
+    /// caller's job, per read, for the reason above.
+    private func storedSnapshot() async -> DirectoryDiscoverySnapshot? {
         if didLoadPersistedSnapshot {
             return persistedSnapshot
         }
@@ -204,11 +218,8 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
             return nil
         }
 
-        let snapshotIdentity = self.snapshotIdentity
         let task = Task<DirectoryDiscoverySnapshot?, Never> {
-            guard let stored = await snapshotStore.load() else { return nil }
-            guard await snapshotIdentity() == stored.sourceIdentity else { return nil }
-            return stored
+            await snapshotStore.load()
         }
 
         snapshotLoad = task
@@ -220,8 +231,9 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
     }
 
     /// Rewrites the stored snapshot with one freshly fetched half, carrying the
-    /// other half forward untouched — the two are fetched independently, and a
-    /// genres-only refresh must not drop the saved stations (or backdate them).
+    /// other half forward when it was captured under the same identity — the two are
+    /// fetched independently, and a genres-only refresh must not drop the saved
+    /// stations (or backdate them).
     private func persist(
         topStations: [Station]? = nil,
         limit: Int? = nil,
@@ -232,12 +244,13 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
         // Both awaits are taken *before* the merge. The actor can admit another
         // `persist` while they're suspended (genres and top stations are fetched
         // concurrently), and merging against a snapshot read before that point
-        // would drop the half the other write just added.
-        _ = await loadPersistedSnapshot()
+        // would drop the half the other write just added. `existing` is nil once
+        // the identity has moved on, so the other half is never carried across a
+        // region change and stamped with the new identity.
         let sourceIdentity = await snapshotIdentity()
+        let existing = await snapshotIfIdentityMatches(sourceIdentity)
 
         let capturedAt = now()
-        let existing = persistedSnapshot
         let snapshot = DirectoryDiscoverySnapshot(
             topStations: topStations.map {
                 DirectoryDiscoverySnapshot.TopStations(

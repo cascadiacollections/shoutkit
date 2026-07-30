@@ -52,8 +52,10 @@ public struct DirectoryDiscoverySnapshot: Codable, Equatable, Sendable {
         self.sourceIdentity = sourceIdentity
     }
 
-    /// The oldest capture date among the halves present — "what you're looking at
-    /// is at least this old", which is the honest thing to show a reader.
+    /// The oldest capture date among the halves present — "all of this is at least
+    /// this old". Used for the freshness decision, where the conservative answer is
+    /// the right one; a reader being told how old the *stations* are wants
+    /// ``TopStations/capturedAt`` instead.
     public var capturedAt: Date? {
         [topStations?.capturedAt, genres?.capturedAt].compactMap { $0 }.min()
     }

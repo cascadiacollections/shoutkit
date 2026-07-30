@@ -132,7 +132,10 @@ public final class BrowseViewModel {
                 spotlight: savedStations.first,
                 stations: savedStations,
                 genres: state.snapshot.savedGenres,
-                origin: .saved(capturedAt: state.snapshot.capturedAt)
+                // The stations' own capture date, not the snapshot's oldest half:
+                // the note this feeds is about the stations, so older genres (from
+                // a genres fetch that failed on its own) mustn't backdate it.
+                origin: .saved(capturedAt: state.snapshot.topStations?.capturedAt)
             )
         )
         genresError = nil

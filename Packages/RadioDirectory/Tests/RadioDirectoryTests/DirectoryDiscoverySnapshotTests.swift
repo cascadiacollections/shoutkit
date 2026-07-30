@@ -1,4 +1,5 @@
 import Foundation
+import os
 import Testing
 
 @testable import RadioDirectory
@@ -132,6 +133,45 @@ struct CachingRadioDirectorySnapshotTests {
         )
 
         #expect(await cache.discoverySnapshotState() == nil)
+    }
+
+    @Test func snapshotStopsBeingServedWhenTheIdentityChangesMidSession() async throws {
+        let identity = OSAllocatedUnfairLock(initialState: "country=US")
+        let cache = CachingRadioDirectory(
+            base: CountingDirectory(),
+            snapshotStore: InMemorySnapshotStore(seeded: seededSnapshot(sourceIdentity: "country=US")),
+            snapshotIdentity: { identity.withLock { $0 } },
+            now: { referenceDate }
+        )
+
+        #expect(await cache.discoverySnapshotState() != nil)
+        identity.withLock { $0 = "country=JP" }
+
+        // Travel, or the geo flag being toggled, has to take effect immediately —
+        // the identity is checked per read, not once when the file was loaded.
+        #expect(await cache.discoverySnapshotState() == nil)
+    }
+
+    @Test func persistedHalvesAreNotCarriedAcrossAnIdentityChange() async throws {
+        let identity = OSAllocatedUnfairLock(initialState: "country=US")
+        let store = InMemorySnapshotStore(seeded: seededSnapshot(sourceIdentity: "country=US"))
+        let cache = CachingRadioDirectory(
+            base: CountingDirectory(),
+            snapshotStore: store,
+            snapshotIdentity: { identity.withLock { $0 } },
+            now: { referenceDate }
+        )
+
+        _ = await cache.discoverySnapshotState()
+        identity.withLock { $0 = "country=JP" }
+        _ = try await cache.genres()
+
+        let saved = await store.saved
+        // A genres fetch must not launder the previous region's stations into a
+        // snapshot stamped with the new identity.
+        #expect(saved?.sourceIdentity == "country=JP")
+        #expect(saved?.topStations == nil)
+        #expect(saved?.genres?.genres.isEmpty == false)
     }
 
     @Test func snapshotIsReadFromDiskOnlyOnce() async throws {
