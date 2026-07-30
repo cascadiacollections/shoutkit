@@ -7,6 +7,17 @@ All notable changes to ShoutKit are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- **Stations are there the moment you open the app**: Listen Now and Browse now save the
+  station list to disk and paint it instantly on the next launch, instead of showing
+  "Tuning in…" while the directory answers. Within six hours of the last successful update the
+  saved list is used as-is and no request is made at all, so opening the app repeatedly shows the
+  same stations rather than a reshuffled ranking. Pull to refresh (or leave the app for a few
+  hours) to get a fresh list
+- **The station list survives losing your connection**: if the directory can't be reached, the
+  saved stations stay on screen with a short "showing saved stations" note, rather than being
+  replaced by a "Directory Unavailable" page. The error page now only appears when there's nothing
+  saved yet — a first launch with no connection. Favorites, recents, and playback were already
+  offline-capable and are unchanged. Genre chips still need a connection
 - **iOS 27 now-playing surface**: on iOS 27 the lock screen / Control Center / Dynamic Island
   now-playing surface is driven by the new typed `MediaSession` / `RadioContent` framework instead
   of the legacy `MPNowPlayingInfoCenter` bridge; iOS 26 is unchanged. Transport controls, artwork,

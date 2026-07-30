@@ -28,6 +28,9 @@ struct AppServices {
     /// Retained for app lifetime so MetricKit subscription state remains active.
     let diagnosticsService: any DiagnosticsServicing
     let directory: any RadioDirectoryProviding
+    /// The persisted-snapshot facet of `directory`. Present even when Application
+    /// Support can't be resolved — it just has no saved stations to hand back.
+    let directoryDiscoveryCache: any DirectoryDiscoveryCaching
     /// Retained here so the Observation and Core Location tasks stay alive for
     /// the app's lifetime; it keeps the geo-station filter synchronized with the
     /// feature flag, locale fallback, and optional precise-location override.
@@ -62,11 +65,7 @@ enum AppDependencies {
         let featureFlags = sharedFeatureFlags()
         let diagnosticsService = makeDiagnosticsService(settings: settings, featureFlags: featureFlags)
         let directoryServices = makeDirectory(settings: settings, featureFlags: featureFlags)
-        let directory = directoryServices.directory
-        // Route the decorated (preferred + caching) instance through Factory so
-        // BrowseViewModel/SearchViewModel resolve it instead of it being threaded
-        // manually through RootView.
-        registerProductionRadioDirectory(directory)
+        let directory = registerProductionDirectory(directoryServices)
         let controller = PlaybackController(directory: directory)
         let stationConnectionPrewarmer = StationConnectionPrewarmer()
 
@@ -108,6 +107,7 @@ enum AppDependencies {
             settingsStore: settings,
             diagnosticsService: diagnosticsService,
             directory: directory,
+            directoryDiscoveryCache: directoryServices.discoveryCache,
             geoStationLocationCoordinator: directoryServices.geoStationLocationCoordinator,
             activityCoordinator: activityCoordinator,
             stationLaunchRouter: StationLaunchRouter()
@@ -174,12 +174,6 @@ enum AppDependencies {
         }
     }
 
-    /// Radio-Browser (free, open source, keyless) is the default discovery
-    /// source. Supplying SHOUTCAST_DEV_KEY in Config/Secrets.xcconfig opts into
-    /// SHOUTcast's own directory instead. Either base is wrapped in
-    /// PreferredRadioDirectory so curated stations (KEXP) always appear first,
-    /// then in CachingRadioDirectory so Listen Now and Browse refreshing at
-    /// launch share one fetch instead of hitting the directory twice.
     /// Wires the controller's app-layer callbacks: recents + play reporting on
     /// station change, local listening history on each heard track, and the
     /// gated album-art / Apple Music resolver. Extracted from `bootstrap()` so
@@ -269,10 +263,26 @@ enum AppDependencies {
     /// sync — grouped in a struct (not a tuple) so each member stays named.
     private struct DirectoryServices {
         let directory: any RadioDirectoryProviding
+        let discoveryCache: any DirectoryDiscoveryCaching
         let playReporter: (any StationPlayReporting)?
         let geoStationLocationCoordinator: GeoStationLocationCoordinator
     }
 
+    /// Routes the directory and its snapshot facet through Factory so the view
+    /// models resolve them instead of their being threaded through RootView.
+    private static func registerProductionDirectory(_ services: DirectoryServices) -> any RadioDirectoryProviding {
+        registerProductionRadioDirectory(services.directory)
+        registerProductionDiscoveryCache(services.discoveryCache)
+        return services.directory
+    }
+
+    /// Radio-Browser (free, open source, keyless) is the default discovery
+    /// source. Supplying SHOUTCAST_DEV_KEY in Config/Secrets.xcconfig opts into
+    /// SHOUTcast's own directory instead. Either base is wrapped in
+    /// PreferredRadioDirectory so curated stations (KEXP) always appear first,
+    /// then in CachingRadioDirectory so Listen Now and Browse refreshing at launch
+    /// share one fetch — and so that fetch is written to disk, letting the next
+    /// launch paint stations before (or without) reaching the network.
     private static func makeDirectory(
         settings: SettingsStore,
         featureFlags: any FeatureFlagProviding
@@ -283,11 +293,19 @@ enum AppDependencies {
             featureFlags: featureFlags,
             geoFilterProvider: geoFilterProvider
         )
+        // One file serves either branch: snapshots are scoped by source identity.
+        let snapshotStore = FileDirectorySnapshotStore.applicationSupport()
 
         if let apiKey = shoutcastAPIKey() {
             let directory = PreferredRadioDirectory(base: ShoutcastDirectoryClient(apiKey: apiKey))
+            let caching = CachingRadioDirectory(
+                base: directory,
+                snapshotStore: snapshotStore,
+                snapshotIdentity: { "shoutcast" }
+            )
             return DirectoryServices(
-                directory: CachingRadioDirectory(base: directory),
+                directory: caching,
+                discoveryCache: caching,
                 playReporter: nil,
                 geoStationLocationCoordinator: geoStationLocationCoordinator
             )
@@ -295,8 +313,17 @@ enum AppDependencies {
 
         let radioBrowser = RadioBrowserDirectoryClient(geoFilterProvider: geoFilterProvider)
         let directory = PreferredRadioDirectory(base: radioBrowser)
+        let caching = CachingRadioDirectory(
+            base: directory,
+            snapshotStore: snapshotStore,
+            // Geo-filtered results are only reusable while that filter still applies.
+            snapshotIdentity: {
+                "radio-browser;" + (await geoFilterProvider.currentGeoFilter()?.snapshotIdentity ?? "unfiltered")
+            }
+        )
         return DirectoryServices(
-            directory: CachingRadioDirectory(base: directory),
+            directory: caching,
+            discoveryCache: caching,
             playReporter: radioBrowser,
             geoStationLocationCoordinator: geoStationLocationCoordinator
         )

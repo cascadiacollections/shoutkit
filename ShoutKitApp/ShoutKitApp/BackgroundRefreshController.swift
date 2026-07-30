@@ -134,6 +134,11 @@ final class BackgroundRefreshController {
         if didRefreshFavoriteSnapshots {
             QuickPlayWidgetPublisher.publishStations(services.libraryStore.favoriteStations())
         }
+        // A foreground process that's still alive can have a warm in-memory
+        // window; this wake exists to put *new* content on disk, so start by
+        // dropping it. The warm calls below then persist what they fetch, which
+        // is what the next launch paints from.
+        await services.directoryDiscoveryCache.invalidateMemoryCache()
         let didWarmTopStations = await warmTopStationsCache(using: services.directory)
         await warmGenresCache(using: services.directory)
 

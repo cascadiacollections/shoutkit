@@ -6,13 +6,33 @@ import Foundation
 /// refresh at launch, and without this the directory is hit twice for identical
 /// data (which also matters for Radio-Browser etiquette).
 ///
+/// Successful fetches are also written to a ``DirectorySnapshotStoring`` so the
+/// content survives process death. That persisted copy is deliberately *not*
+/// served from `genres()`/`topStations(limit:)` — those stay "what the directory
+/// says now", and callers that want the saved copy ask for it explicitly through
+/// ``DirectoryDiscoveryCaching``. Keeping the two apart is what lets a surface
+/// know whether it's showing live or saved content.
+///
 /// Search, genre, and stream-endpoint calls are user-driven and distinct, so they
 /// pass straight through. Failures are never cached; the next call retries.
-public actor CachingRadioDirectory: RadioDirectoryProviding {
+public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryCaching {
+    /// Six hours: long enough that opening the app repeatedly in a day shows the
+    /// same, instantly-painted list instead of a reshuffled one (top-click
+    /// rankings drift constantly), short enough that a day's browsing isn't
+    /// spent on yesterday's directory. Pull-to-refresh and the 4-hourly
+    /// background refresh both bypass it.
+    public static let defaultSnapshotTimeToLive: TimeInterval = 6 * 60 * 60
+
     private let base: any RadioDirectoryProviding
     private let timeToLive: TimeInterval
     /// Injected clock so TTL expiry is testable.
     private let now: @Sendable () -> Date
+
+    private let snapshotStore: (any DirectorySnapshotStoring)?
+    private let snapshotTimeToLive: TimeInterval
+    /// Evaluated per snapshot read/write rather than captured once: the geo
+    /// filter it describes changes at runtime.
+    private let snapshotIdentity: @Sendable () async -> String?
 
     private var genresCache: (value: [Genre], fetchedAt: Date)?
     private var genresInFlight: Task<Result<[Genre], RadioDirectoryError>, Never>?
@@ -40,13 +60,25 @@ public actor CachingRadioDirectory: RadioDirectoryProviding {
     private var topStationsInFlight: TopStationsInFlight?
     private var topStationsGeneration = 0
 
+    /// Mirrors what's on disk. Read once per process (the disk read is coalesced
+    /// through `snapshotLoad`), then kept in step by every persisted write.
+    private var persistedSnapshot: DirectoryDiscoverySnapshot?
+    private var didLoadPersistedSnapshot = false
+    private var snapshotLoad: Task<DirectoryDiscoverySnapshot?, Never>?
+
     public init(
         base: any RadioDirectoryProviding,
         timeToLive: TimeInterval = 60,
+        snapshotStore: (any DirectorySnapshotStoring)? = nil,
+        snapshotTimeToLive: TimeInterval = CachingRadioDirectory.defaultSnapshotTimeToLive,
+        snapshotIdentity: @escaping @Sendable () async -> String? = { nil },
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.base = base
         self.timeToLive = timeToLive
+        self.snapshotStore = snapshotStore
+        self.snapshotTimeToLive = snapshotTimeToLive
+        self.snapshotIdentity = snapshotIdentity
         self.now = now
     }
 
@@ -80,6 +112,7 @@ public actor CachingRadioDirectory: RadioDirectoryProviding {
 
         if case let .success(genres) = result {
             genresCache = (genres, now())
+            await persist(genres: genres)
         }
         return try result.get()
     }
@@ -97,6 +130,24 @@ public actor CachingRadioDirectory: RadioDirectoryProviding {
             return Array(stations.prefix(limit))
         }
 
+        let result = await fetchTopStations(limit: limit)
+
+        if case let .success(stations) = result {
+            // Don't let a slower, smaller fetch downgrade a fresher, larger
+            // cache entry a concurrent caller already stored.
+            let keepExisting = topStationsCache.map { isFresh($0.fetchedAt) && $0.fetchedLimit > limit } ?? false
+            if !keepExisting {
+                topStationsCache = TopStationsCache(value: stations, fetchedLimit: limit, fetchedAt: now())
+                await persist(topStations: stations, limit: limit)
+            }
+        }
+        return try Array(result.get().prefix(limit))
+    }
+
+    /// Issues the base top-stations fetch, registering it so concurrent callers
+    /// can coalesce onto it. Extracted from `topStations(limit:)` so the cache
+    /// bookkeeping there stays readable.
+    private func fetchTopStations(limit: Int) async -> Result<[Station], RadioDirectoryError> {
         let base = self.base
         let task = Task<Result<[Station], RadioDirectoryError>, Never> {
             do {
@@ -117,16 +168,108 @@ public actor CachingRadioDirectory: RadioDirectoryProviding {
         if topStationsInFlight?.generation == generation {
             topStationsInFlight = nil
         }
+        return result
+    }
 
-        if case let .success(stations) = result {
-            // Don't let a slower, smaller fetch downgrade a fresher, larger
-            // cache entry a concurrent caller already stored.
-            let keepExisting = topStationsCache.map { isFresh($0.fetchedAt) && $0.fetchedLimit > limit } ?? false
-            if !keepExisting {
-                topStationsCache = TopStationsCache(value: stations, fetchedLimit: limit, fetchedAt: now())
-            }
+    // MARK: - Persisted snapshot
+
+    public func discoverySnapshotState() async -> DirectoryDiscoverySnapshotState? {
+        let sourceIdentity = await snapshotIdentity()
+        guard let snapshot = await snapshotIfIdentityMatches(sourceIdentity) else { return nil }
+        // The conservative, oldest-half date: a surface may only skip its fetch
+        // while *everything* it would render is inside the window.
+        guard let capturedAt = snapshot.capturedAt else { return nil }
+        return DirectoryDiscoverySnapshotState(
+            snapshot: snapshot,
+            isFresh: now().timeIntervalSince(capturedAt) < snapshotTimeToLive
+        )
+    }
+
+    public func invalidateMemoryCache() async {
+        genresCache = nil
+        topStationsCache = nil
+    }
+
+    /// The stored snapshot, but only while it still matches the identity in force
+    /// *now* — the geo filter changes at runtime (a Settings toggle, or a location
+    /// update), and content captured for another region has to stop being served
+    /// the moment that happens, not on the next launch. A mismatch reads as "no
+    /// snapshot": not served to a surface, and not merged into by ``persist``.
+    private func snapshotIfIdentityMatches(_ sourceIdentity: String?) async -> DirectoryDiscoverySnapshot? {
+        guard let snapshot = await storedSnapshot(),
+              snapshot.sourceIdentity == sourceIdentity else { return nil }
+        return snapshot
+    }
+
+    /// Reads the store once per process, coalescing concurrent first callers onto
+    /// one file read. Identity is deliberately *not* checked here — that's the
+    /// caller's job, per read, for the reason above.
+    private func storedSnapshot() async -> DirectoryDiscoverySnapshot? {
+        if didLoadPersistedSnapshot {
+            return persistedSnapshot
         }
-        return try Array(result.get().prefix(limit))
+
+        if let snapshotLoad {
+            return await snapshotLoad.value
+        }
+
+        guard let snapshotStore else {
+            didLoadPersistedSnapshot = true
+            return nil
+        }
+
+        let task = Task<DirectoryDiscoverySnapshot?, Never> {
+            await snapshotStore.load()
+        }
+
+        snapshotLoad = task
+        let snapshot = await task.value
+        snapshotLoad = nil
+        didLoadPersistedSnapshot = true
+        persistedSnapshot = snapshot
+        return snapshot
+    }
+
+    /// Rewrites the stored snapshot with one freshly fetched half, carrying the
+    /// other half forward when it was captured under the same identity — the two are
+    /// fetched independently, and a genres-only refresh must not drop the saved
+    /// stations (or backdate them).
+    private func persist(
+        topStations: [Station]? = nil,
+        limit: Int? = nil,
+        genres: [Genre]? = nil
+    ) async {
+        guard let snapshotStore else { return }
+
+        // Both awaits are taken *before* the merge. The actor can admit another
+        // `persist` while they're suspended (genres and top stations are fetched
+        // concurrently), and merging against a snapshot read before that point
+        // would drop the half the other write just added. `existing` is nil once
+        // the identity has moved on, so the other half is never carried across a
+        // region change and stamped with the new identity.
+        let sourceIdentity = await snapshotIdentity()
+        let existing = await snapshotIfIdentityMatches(sourceIdentity)
+
+        let capturedAt = now()
+        let snapshot = DirectoryDiscoverySnapshot(
+            topStations: topStations.map {
+                DirectoryDiscoverySnapshot.TopStations(
+                    stations: $0,
+                    limit: limit ?? $0.count,
+                    capturedAt: capturedAt
+                )
+            } ?? existing?.topStations,
+            genres: genres.map {
+                DirectoryDiscoverySnapshot.Genres(genres: $0, capturedAt: capturedAt)
+            } ?? existing?.genres,
+            sourceIdentity: sourceIdentity
+        )
+
+        // In-memory truth is updated synchronously with the merge; the file write
+        // follows. If two concurrent writes race to the file the loser only costs
+        // the on-disk copy one half until the next successful fetch rewrites it.
+        persistedSnapshot = snapshot
+        await snapshotStore.save(snapshot)
     }
 
     // MARK: - Pass-through calls

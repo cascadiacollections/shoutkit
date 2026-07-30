@@ -1,5 +1,64 @@
 # Decisions
 
+## 2026-07-30 (stations on disk: launch without waiting for the directory)
+
+Reported from real use: opening the app before a drive, or on a weak connection,
+meant watching "Tuning in…" before any station could be tapped — and when the
+list did arrive it had reshuffled, because Radio-Browser's top-click ranking
+drifts continuously. `CachingRadioDirectory` already coalesced Listen Now's and
+Browse's launch fetches, but its cache was in-memory with a 60-second TTL, so it
+contributed nothing to a cold launch: every process start began with a network
+round trip, and no connection meant an error page instead of a station list.
+`BackgroundRefreshController` was warming that same in-memory cache every four
+hours, which died with the process that warmed it.
+
+- **The snapshot is a separate tier, not a longer TTL on the existing one.**
+  Successful `topStations`/`genres` fetches are now written to a
+  `DirectorySnapshotStoring` (a JSON file), but `topStations(limit:)` and
+  `genres()` deliberately still mean "what the directory says now" — they never
+  serve the file. The saved copy is reachable only through the new
+  `DirectoryDiscoveryCaching` seam. That separation is what lets a surface know
+  whether it is showing live or saved content; folding the file into the existing
+  calls would have made every result ambiguous, and the "showing saved stations"
+  note unimplementable without guessing.
+- **The stability window (6 h) is a decision not to fetch, not a decision to
+  hide staleness.** Inside it, `BrowseViewModel.refresh()` renders the snapshot
+  and stops — no request at all — so repeat launches in a day show a byte-identical
+  list. That directly answers the "it does not change frequently" half of the
+  request, and cuts directory traffic (Radio-Browser etiquette) rather than just
+  hiding latency. Outside the window the snapshot still paints first and live
+  content swaps in behind it, so the wait is gone either way. Pull-to-refresh and
+  the 4-hourly background wake both bypass the window; `invalidateMemoryCache()`
+  exists because otherwise the 60-second in-memory window would answer a
+  pull-to-refresh without going anywhere near the network.
+- **A failed fetch no longer replaces a usable list with an error page.** Saved
+  stations outlive it, with a one-line note explaining they aren't live. The
+  error page is now reserved for a screen with nothing on it — which, after the
+  first successful launch, means never. The same guard covers an
+  answered-but-empty directory response: it can report "No Stations" only when
+  there is nothing to fall back to.
+- **Snapshots are scoped by source identity** (`radio-browser;country=US;language=en`,
+  or `shoutcast`), evaluated per read and write rather than captured at
+  construction, because `MutableRadioBrowserGeoFilterProvider`'s filter changes at
+  runtime. Without it, travelling — or toggling the geo-stations flag — would serve
+  another region's stations for up to the stability window. A mismatch reads as
+  "no snapshot", so the content is simply refetched.
+- **Application Support, not Caches**, even though the content is regenerable and
+  Caches is the conventional home for it. The whole point of the file is to be
+  there on the launch where the network isn't, and the system may evict a Caches
+  directory at any time. It's excluded from backup instead (per-file, not on the
+  shared `ShoutKit/` directory — the diagnostics database lives there too and its
+  backup policy isn't this type's to decide). The file is a few KB.
+- **Versioned in the file name** (`DiscoverySnapshot.v1.json`) rather than with a
+  schema field: a future shape change simply finds no file and refetches, and
+  decode failures already degrade to "no snapshot" on the same path as a first
+  launch.
+- **Not persisted: search results and per-genre station lists.** Both are
+  user-driven, keyed by arbitrary strings, and neither is on the path being fixed
+  (the wait at launch). Tapping a genre chip still needs the network, and still
+  says so. Favorites and recents were already offline — they're SwiftData-backed —
+  so the mini-player and Favorites tab were never part of this problem.
+
 ## 2026-07-24 (resume must never be a silent no-op)
 
 Reported from real use: after pausing, tapping play did nothing at all — no

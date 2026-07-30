@@ -4,6 +4,9 @@
     "Couldn't Load Genre" : {
 
     },
+    "Couldn't reach the station directory. Showing what's loaded." : {
+
+    },
     "Directory Unavailable" : {
 
     },
@@ -30,6 +33,12 @@
 
     },
     "Nothing here yet" : {
+
+    },
+    "Offline — showing saved stations." : {
+
+    },
+    "Offline — showing stations saved %@." : {
 
     },
     "Pause" : {
