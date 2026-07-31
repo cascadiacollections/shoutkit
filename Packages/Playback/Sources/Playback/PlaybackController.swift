@@ -132,8 +132,21 @@ public final class PlaybackController {
     @ObservationIgnored var activeStreamGeneration: UInt64 = 0
 
     /// Set when the system interrupts playback that was active, so playback can
-    /// resume automatically when the interruption ends with a resume hint.
+    /// resume automatically when the interruption ends. Armed per interruption
+    /// (see ``handleInterruptionBegan(station:)``) — never left set across one.
     @ObservationIgnored var resumeAfterInterruption = false
+
+    /// Whether an interruption that ends *without* the system's resume hint may
+    /// still resume playback, which holds only for the window below (see
+    /// ``handleInterruptionEnded(shouldResume:otherAudioIsPlaying:)``).
+    @ObservationIgnored var mayResumeWithoutSystemHint = false
+
+    /// How long after an interruption begins a hintless end may still resume.
+    /// Long enough to cover a call, an alarm, or a Siri exchange; short enough
+    /// that a listener who moved on to another app for a while isn't surprised by
+    /// radio starting itself. Injectable like the other windows; no user setting.
+    @ObservationIgnored let hintlessResumeWindow: Duration
+    @ObservationIgnored let hintlessResumeWindowTimer = OneShotTimer()
 
     /// Designated initializer with every collaborator explicit — what tests use.
     /// The iOS production defaults live in the convenience initializer (in
@@ -147,7 +160,8 @@ public final class PlaybackController {
         stallTimeout: Duration = .seconds(90),
         maxReconnectAttempts: Int = 3,
         reconnectBaseDelay: Duration = .seconds(2),
-        resumeWatchdogTimeout: Duration = .seconds(2)
+        resumeWatchdogTimeout: Duration = .seconds(2),
+        hintlessResumeWindow: Duration = .seconds(90)
     ) {
         self.directory = directory
         self.output = output
@@ -157,6 +171,7 @@ public final class PlaybackController {
         self.maxReconnectAttempts = maxReconnectAttempts
         self.reconnectBaseDelay = reconnectBaseDelay
         self.resumeWatchdogTimeout = resumeWatchdogTimeout
+        self.hintlessResumeWindow = hintlessResumeWindow
 
         configureOutput()
         configureRemoteCommands()
@@ -187,7 +202,7 @@ public final class PlaybackController {
         resumeWatchdogTimer.cancel()
         // Likewise it must win over a pending interruption auto-resume: pausing
         // during a phone call means "stay paused" when the call ends.
-        resumeAfterInterruption = false
+        disarmInterruptionResume()
         // Pausing while the stream endpoint is still resolving must cancel the
         // pending start, or audio would begin after the user asked it not to.
         if case let .loading(station) = state {
@@ -265,7 +280,7 @@ public final class PlaybackController {
         albumArtURL = nil
         appleMusicURL = nil
         outputStarted = false
-        resumeAfterInterruption = false
+        disarmInterruptionResume()
         nowPlayingCenter.clear()
     }
 

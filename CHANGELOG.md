@@ -125,6 +125,23 @@ All notable changes to ShoutKit are documented here. The format follows
   once per URL and shared across the backdrop, hero, and tint views (previously three decodes)
 
 ### Fixed
+- **Notifications, calls, and Siri no longer strand your station**: an ordinary notification now
+  ducks live radio for its sound instead of pausing it outright, and when a real interruption
+  (call, alarm, Siri) ends, playback comes back even in the cases where iOS doesn't tell the app
+  it should — as long as nothing else has started playing meanwhile and the interruption was
+  short. Pausing during a call still means paused when it ends, and an interruption that starts
+  while you're already paused can no longer cause playback to start itself later
+- **Playback survives the system refusing the audio session**: resuming right after a call or
+  Siri could leave the app showing "playing" with no sound, because the audio session activation
+  failed and the failure was ignored. Activation is now verified and retried briefly, and a
+  stream is only started once the session is really active — otherwise it reconnects
+- **An audio-server restart no longer needs an app relaunch**: if iOS resets media services
+  mid-listen (which invalidates every audio object in the app), playback used to go permanently
+  silent. The player and audio session are now rebuilt and the station rejoined automatically
+- Unplugging headphones while nothing was playing no longer replaces an on-screen playback error
+  with a silent paused state, or cancels a reconnect that was already in flight
+- iOS playback now declares itself as long-form audio (like the watch app already did), which is
+  what the system uses for AirPlay 2 routing and volume handling on shared routes
 - Album artwork now appears on Tesla and other strict Bluetooth AVRCP clients by returning cover
   art at the exact dimensions requested by the connected device
 - **Playback recovery hardening** (comprehensive bug sweep):

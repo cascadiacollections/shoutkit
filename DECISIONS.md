@@ -1,5 +1,88 @@
 # Decisions
 
+## 2026-07-31 (OS disruptions: what happens to a stream when the system takes over)
+
+An audit of the interruption path — everything that happens when iOS takes the
+audio session away and gives it back (call, alarm, Siri, another app, a
+notification, a route change, an audio-server restart). Six defects and one
+missing piece of session configuration, all in the same seam: the app was faithful
+about *losing* audio and unreliable about getting it back.
+
+- **A notification should duck live radio, not pause it.** The session is now
+  configured with `setPrefersNoInterruptionsFromSystemAlerts(true)`, so ordinary
+  system alerts lower this stream for their sound instead of interrupting it. That
+  removes the whole class at the source: an alert that never becomes an
+  interruption cannot leave playback paused. Genuine interruptions (calls, alarms,
+  Siri) are unaffected — they still arrive, and are still handled below.
+- **A hintless `.ended` now resumes, under three guards.** The old rule was "resume
+  only if `AVAudioSessionInterruptionOptions.shouldResume` is set", which is
+  Apple's letter but leaves the listener's station silent whenever iOS omits the
+  hint — in a pocket or a car, the loudest failure this app has. Ignoring the hint
+  entirely is worse (it steals the session back from whatever the listener
+  started), so the resume is gated on all three of: the stream was running when the
+  interruption began, no other app holds audio now (`isOtherAudioPlaying`, carried
+  to the controller on the status enum rather than queried behind its back), and
+  the interruption ended within `hintlessResumeWindow` (90 s). The window is the
+  line between "the OS borrowed the session" and "the listener moved on"; a long
+  interruption with no hint stays paused, which is the old behavior. Tuning it is a
+  one-line change, and `PlaybackInterruptionTests` pins every branch.
+- **Arming is per-interruption.** `resumeAfterInterruption` was only ever cleared
+  on the paths that consumed it, so an interruption iOS never ended — it does not
+  guarantee an `.ended` for every `.began` — left the flag set indefinitely. The
+  *next* interruption to end with a resume hint then started audio from a station
+  the listener had left paused. `handleInterruptionBegan` now disarms before
+  re-arming, and only the `.playing`/`.buffering`/`.loading` branches arm at all.
+- **A refused session activation is no longer silent.** `activateSession()` was
+  `try? setActive(true)`, and the failure was routine: the system commonly refuses
+  activation for a moment either side of a disruption. The engine then started (or
+  "resumed") the player into a session it did not have — no audio, no callback, and
+  the app reporting playing. Activation now returns whether it succeeded, retries
+  on a short backoff (~3.5 s across four tries), and starts the player only once
+  it is real; if it never becomes real the engine reports a *retryable* failure so
+  the controller's existing bounded reconnect owns the next attempt instead of a
+  new parallel retry mechanism.
+- **A media-services reset is recoverable.** `mediaServicesWereResetNotification`
+  was unobserved. When the audio server restarts, every audio object in the
+  process is dead — including the `AVAudioEngine` inside AudioStreaming's player —
+  and the session configuration is gone, so no retry of the *existing* player ever
+  worked: playback stayed silent until the app was relaunched. The engine now
+  rebuilds the player and reconfigures the session, then reports a retryable
+  failure to rejoin through the reconnect path. Delegate callbacks are matched
+  against the current player by `ObjectIdentifier` (`Sendable`, unlike the player)
+  so a discarded engine finishing its teardown can't drive playback state.
+- **A route disconnect only pauses what was playing.** The `.oldDeviceUnavailable`
+  handler called `pause()` unconditionally, which reported `.paused` from an idle
+  or failed state — silently rewriting a `.failed` into a pause with a play button,
+  and cancelling a pending reconnect. It now checks the player is actually
+  playing or buffering first.
+- **Volume is deliberately still untouched.** The audit looked for it: the app
+  reads no volume, renders no volume control, and shouldn't — system volume is the
+  listener's, and ducking during an alert is the system's. What *was* missing on
+  iOS was the `.longFormAudio` route-sharing policy (the watch engine already asked
+  for it), which is what makes this app the system's long-form audio app for
+  AirPlay 2 routing and shared-route volume handling. Set now, with a fallback to
+  the plain category so a throwing `setCategory` can never be the reason a stream
+  plays silently.
+- **`PlaybackController+Interruptions.swift` and
+  `AudioStreamingPlaybackEngine+Session.swift`.** Both changes pushed their files
+  past the 400-line `file_length` limit (`swiftlint --strict`), so the interruption
+  policy and the engine's session ownership each moved to a sibling file — the same
+  remedy as the earlier `+Internals`/`+Recovery` splits, no lint-disable. The
+  interruption policy in particular earns a named home: the two halves are
+  asymmetric (a beginning is a fact to mirror, an ending is a decision), and that
+  decision is the thing a future reader will want to find.
+- **Not adopted: resuming when the app returns to foreground.** An interruption the
+  system never ends leaves the station paused with a working play button, and
+  auto-playing on foreground would mean audio the listener didn't ask for at the
+  moment they picked up the phone for something else. The lock-screen and
+  mini-player play buttons already recover in one tap.
+- **Not adopted: suppressing `.notifyOthersOnDeactivation` during a reconnect
+  gap.** Tearing down for a rejoin deactivates the session, which invites other
+  apps to resume in the backoff window; the reconnect then takes it back. Fixing it
+  means teaching `AudioOutput.stop()` the difference between "the listener stopped"
+  and "we are about to rejoin", and the churn is inaudible today. Noted rather
+  than done.
+
 ## 2026-07-30 (stations on disk: launch without waiting for the directory)
 
 Reported from real use: opening the app before a drive, or on a weak connection,

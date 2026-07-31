@@ -8,8 +8,13 @@ public enum AudioStatus: Equatable, Sendable {
     case failed(PlaybackError)
     /// The system interrupted playback (phone call, Siri, another app took focus).
     case interruptionBegan
-    /// The interruption ended; `shouldResume` reflects the system's hint.
-    case interruptionEnded(shouldResume: Bool)
+    /// The interruption ended. `shouldResume` reflects the system's hint, which
+    /// iOS does not always set even for interruptions that plainly should resume;
+    /// `otherAudioIsPlaying` reports whether another app holds audio *now*, which
+    /// is what makes resuming without the hint safe rather than a way to yank the
+    /// session back from whatever the listener started meanwhile. The policy that
+    /// weighs the two lives in `PlaybackController.handleInterruptionEnded`.
+    case interruptionEnded(shouldResume: Bool, otherAudioIsPlaying: Bool)
 }
 
 /// A live "now playing" track update parsed from a stream's ICY metadata.

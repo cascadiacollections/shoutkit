@@ -111,7 +111,7 @@ struct PlaybackControllerTests {
         #expect(controller.state == .paused(station()))
 
         // FakeAudioOutput.resume() reports .playing, so a resume hint restores playback.
-        output.onStatusChange?(.interruptionEnded(shouldResume: true))
+        output.onStatusChange?(.interruptionEnded(shouldResume: true, otherAudioIsPlaying: false))
         #expect(controller.state == .playing(station()))
     }
 
@@ -123,8 +123,10 @@ struct PlaybackControllerTests {
         await waitForStart(output)
         output.onStatusChange?(.playing)
 
+        // No hint *and* another app holding audio: staying paused is the only
+        // safe answer (the hintless-resume policy lives in PlaybackInterruptionTests).
         output.onStatusChange?(.interruptionBegan)
-        output.onStatusChange?(.interruptionEnded(shouldResume: false))
+        output.onStatusChange?(.interruptionEnded(shouldResume: false, otherAudioIsPlaying: true))
         #expect(controller.state == .paused(station()))
     }
 

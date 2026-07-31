@@ -30,7 +30,7 @@ extension PlaybackController {
         outputStarted = false
         let streamGeneration = activeStreamGeneration &+ 1
         activeStreamGeneration = streamGeneration
-        resumeAfterInterruption = false
+        disarmInterruptionResume()
         // A reconnect keeps the last-known track on screen while it re-buffers
         // (ICY repopulates it on success) and must NOT reset the attempt
         // counter — resetting here would refill the budget every retry and
@@ -163,11 +163,8 @@ extension PlaybackController {
             attemptReconnect(for: station, fallback: .failed(playbackError))
         case .interruptionBegan:
             handleInterruptionBegan(station: station)
-        case let .interruptionEnded(shouldResume):
-            if resumeAfterInterruption, shouldResume {
-                resume()
-            }
-            resumeAfterInterruption = false
+        case let .interruptionEnded(shouldResume, otherAudioIsPlaying):
+            handleInterruptionEnded(shouldResume: shouldResume, otherAudioIsPlaying: otherAudioIsPlaying)
         }
     }
 
@@ -268,57 +265,6 @@ extension PlaybackController {
                 isPlaying: self.isOutputPlaying,
                 artworkURL: artworkURL
             )
-        }
-    }
-
-    func handleInterruptionBegan(station: Station) {
-        // A reconnect must not fire mid-interruption: it would try to grab the
-        // audio session during the call and clobber `resumeAfterInterruption`
-        // in `startPlayback`, killing the auto-resume when the call ends.
-        reconnectTimer.cancel()
-        // Nor a resume watchdog — the interruption owns the paused state now.
-        resumeWatchdogTimer.cancel()
-        // Whether the output is left holding a player that should be told about
-        // the pause (the `.loading` branch tears its player down instead).
-        var shouldPauseOutput = false
-        switch state {
-        case .playing, .buffering:
-            // The system already paused the player; remember to resume.
-            resumeAfterInterruption = true
-            stallCeilingTimer.cancel()
-            state = .paused(station)
-            schedulePausedRelease()
-            shouldPauseOutput = outputStarted
-        case .loading:
-            // Don't let a pending start fire mid-interruption.
-            resumeAfterInterruption = true
-            resolveTask?.cancel()
-            tapToAudioTrace?.cancel()
-            tapToAudioTrace = nil
-            // The stream may already have started even though no status has
-            // landed yet (`state` only leaves `.loading` on the first status
-            // callback). Tear it down rather than leaving it streaming through
-            // the interruption; `resume()` restarts from `outputStarted == false`.
-            if outputStarted {
-                output.stop()
-            }
-            outputStarted = false
-            state = .paused(station)
-            schedulePausedRelease()
-        default:
-            break
-        }
-        nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
-
-        // Tell the output it is paused too, not just our own state machine. The
-        // system silences the audio without informing the streaming engine, and
-        // an engine that never learned it was paused can refuse to resume later
-        // (AudioStreaming's `resume()` acts only on its own `.paused` state),
-        // which used to leave playback stuck until the listener switched
-        // stations. Done last so the status callback it may emit synchronously
-        // lands after this transition instead of racing it.
-        if shouldPauseOutput {
-            output.pause()
         }
     }
 

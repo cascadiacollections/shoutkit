@@ -131,7 +131,8 @@ func makeController(
     presenter: NowPlayingPresenterSpy = NowPlayingPresenterSpy(),
     maxReconnectAttempts: Int = 3,
     reconnectBaseDelay: Duration = .seconds(2),
-    resumeWatchdogTimeout: Duration = .seconds(2)
+    resumeWatchdogTimeout: Duration = .seconds(2),
+    hintlessResumeWindow: Duration = .seconds(90)
 ) -> PlaybackController {
     PlaybackController(
         directory: directory,
@@ -139,7 +140,8 @@ func makeController(
         nowPlayingCenter: presenter,
         maxReconnectAttempts: maxReconnectAttempts,
         reconnectBaseDelay: reconnectBaseDelay,
-        resumeWatchdogTimeout: resumeWatchdogTimeout
+        resumeWatchdogTimeout: resumeWatchdogTimeout,
+        hintlessResumeWindow: hintlessResumeWindow
     )
 }
 
@@ -152,7 +154,8 @@ func makeController(
     stallTimeout: Duration = .seconds(90),
     maxReconnectAttempts: Int = 3,
     reconnectBaseDelay: Duration = .seconds(2),
-    resumeWatchdogTimeout: Duration = .seconds(2)
+    resumeWatchdogTimeout: Duration = .seconds(2),
+    hintlessResumeWindow: Duration = .seconds(90)
 ) -> PlaybackController {
     PlaybackController(
         directory: BundledRadioDirectory(stations: stations),
@@ -162,7 +165,8 @@ func makeController(
         stallTimeout: stallTimeout,
         maxReconnectAttempts: maxReconnectAttempts,
         reconnectBaseDelay: reconnectBaseDelay,
-        resumeWatchdogTimeout: resumeWatchdogTimeout
+        resumeWatchdogTimeout: resumeWatchdogTimeout,
+        hintlessResumeWindow: hintlessResumeWindow
     )
 }
 
