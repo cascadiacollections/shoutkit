@@ -168,7 +168,7 @@ struct PlaybackResumeRecoveryTests {
         #expect(controller.state == .paused(station()))
 
         // Auto-resume restarts instead of resuming a torn-down player.
-        output.onStatusChange?(.interruptionEnded(shouldResume: true))
+        output.onStatusChange?(.interruptionEnded(shouldResume: true, otherAudioIsPlaying: false))
         await waitForStart(output, count: 2)
         #expect(output.startedURLs.count == 2)
         #expect(output.resumeCount == 0)

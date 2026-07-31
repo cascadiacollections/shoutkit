@@ -6,29 +6,35 @@ import os
 
 /// ``RadioPlaybackEngine`` backed by AudioStreaming's `AudioPlayer`
 /// (`AVAudioEngine`), registered as the production ``Container/radioPlaybackEngine``
-/// default. AudioStreaming doesn't touch `AVAudioSession` itself, so session
-/// activation/teardown and interruption/route-change handling live here.
+/// default. AudioStreaming doesn't touch `AVAudioSession` itself, so this type owns
+/// the session outright; everything session-shaped (configuration, activation,
+/// teardown, and the OS-disruption notifications) lives one file over, in
+/// AudioStreamingPlaybackEngine+Session.swift. Members that file drives are
+/// `internal` rather than `private` for that reason; none of it is public API.
 @MainActor
 public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
-    private static let logger = Logger(subsystem: "ShoutKit.Playback", category: "AudioStreamingPlaybackEngine")
-    private static let sessionDeactivationRetryDelay: Duration = .milliseconds(150)
+    static let logger = Logger(subsystem: "ShoutKit.Playback", category: "AudioStreamingPlaybackEngine")
 
     public var onStatusChange: ((AudioStatus) -> Void)?
     public var onTrackInfo: ((AudioTrackInfo) -> Void)?
 
-    private let player = AudioPlayer()
+    /// `var`, not `let`: a media-services reset invalidates every audio object in
+    /// the process (including the `AVAudioEngine` inside this player), so
+    /// recovering means building a new one — see `handleMediaServicesReset()`.
+    var player = AudioPlayer()
     private let streamGeneration = OSAllocatedUnfairLock(initialState: UInt64.zero)
-    private var sessionDeactivationTask: Task<Void, Never>?
+    var sessionDeactivationTask: Task<Void, Never>?
+    var sessionActivationTask: Task<Void, Never>?
 
     /// The URL of the stream currently loaded into `player`, kept so ``resume()``
     /// can rejoin a stream the player is no longer able to resume.
-    private var currentURL: URL?
+    var currentURL: URL?
 
     /// Whether the most recent `.stopped` transition was one we asked for.
     /// AudioStreaming reports `.stopped` both for ``stop()`` and for its
     /// end-of-stream path, which a live stream reaches whenever the server drops
     /// the connection — only the latter is a failure.
-    private var didRequestStop = false
+    var didRequestStop = false
 
     /// One failure report per stream. A single collapse can surface as both an
     /// `AudioPlayerError` and a `.stopped` transition, and each report the
@@ -37,15 +43,17 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
 
     // Block-based notification observers are not auto-removed on dealloc, so
     // deinit is isolated to read this on the main actor without an escape hatch.
-    private var notificationTokens: [NSObjectProtocol] = []
+    var notificationTokens: [NSObjectProtocol] = []
 
     public init() {
         player.delegate = self
+        configureSession()
         observeAudioSessionNotifications()
     }
 
     isolated deinit {
         sessionDeactivationTask?.cancel()
+        sessionActivationTask?.cancel()
         for token in notificationTokens {
             NotificationCenter.default.removeObserver(token)
         }
@@ -56,33 +64,45 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         currentURL = url
         didRequestStop = false
         hasReportedFailure = false
-        activateSession()
-        player.play(url: url)
+        withActiveSession { [weak self] in
+            // A newer start (or a stop) supersedes this one; the pending
+            // activation is cancelled for those, and this is the belt to that
+            // brace — never begin streaming a URL that is no longer current.
+            guard let self, self.currentURL == url else { return }
+            self.player.play(url: url)
+        }
     }
 
     public func pause() {
+        // A pause outranks a deferred activation: without this, a resume the
+        // session refused could still start audio moments after the listener —
+        // or the system, mid-interruption — asked for silence.
+        cancelPendingSessionActivation()
         player.pause()
         onStatusChange?(.paused)
     }
 
     public func resume() {
-        activateSession()
-        // `AudioPlayer.resume()` acts only when AudioStreaming's own state is
-        // exactly `.paused`, and that state can differ from ours: the system
-        // stops the engine for an interruption without telling the library, and
-        // a live stream the server closed leaves it `.stopped`. In those cases
-        // `resume()` returns having done nothing — no audio, no state change —
-        // so playback stayed stuck until the listener picked another station.
-        // Rejoin the stream instead; live radio has no position to preserve.
-        guard player.state == .paused else {
-            replayCurrentStream()
-            return
+        withActiveSession { [weak self] in
+            guard let self else { return }
+            // `AudioPlayer.resume()` acts only when AudioStreaming's own state is
+            // exactly `.paused`, and that state can differ from ours: the system
+            // stops the engine for an interruption without telling the library, and
+            // a live stream the server closed leaves it `.stopped`. In those cases
+            // `resume()` returns having done nothing — no audio, no state change —
+            // so playback stayed stuck until the listener picked another station.
+            // Rejoin the stream instead; live radio has no position to preserve.
+            guard self.player.state == .paused else {
+                self.replayCurrentStream()
+                return
+            }
+            self.player.resume()
         }
-        player.resume()
     }
 
     public func stop() {
         didRequestStop = true
+        cancelPendingSessionActivation()
         sessionDeactivationTask?.cancel()
         player.stop()
         sessionDeactivationTask = Task { @MainActor in
@@ -122,45 +142,26 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         reportFailure(.streamFailed("The stream ended unexpectedly."))
     }
 
-    private func reportFailure(_ error: PlaybackError) {
+    func reportFailure(_ error: PlaybackError) {
         guard hasReportedFailure == false else { return }
         hasReportedFailure = true
         onStatusChange?(.failed(error))
     }
 
-    private func activateSession() {
-        sessionDeactivationTask?.cancel()
-        let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.playback, mode: .default)
-        try? session.setActive(true)
-    }
-
-    private func deactivateSessionAfterStop() async {
-        let session = AVAudioSession.sharedInstance()
-
-        for attempt in 0..<5 {
-            guard Task.isCancelled == false else { return }
-            do {
-                try session.setActive(false, options: [.notifyOthersOnDeactivation])
-                return
-            } catch {
-                guard Self.shouldRetrySessionDeactivation(error), attempt < 4 else {
-                    Self.logger.error(
-                        "Audio session deactivation failed after stop: \(String(describing: error), privacy: .public)"
-                    )
-                    return
-                }
-                try? await Task.sleep(for: Self.sessionDeactivationRetryDelay)
-            }
+    /// Hops to the main actor, then drops the callback unless `player` is still
+    /// the current one. A player discarded by `handleMediaServicesReset()` can
+    /// still be finishing its own teardown, and a dead engine must not drive
+    /// playback state. Compared by `ObjectIdentifier` because that is `Sendable`
+    /// and this crosses isolation domains.
+    private nonisolated func executeOnMainActor(
+        for player: AudioPlayer,
+        _ body: @escaping @MainActor () -> Void
+    ) {
+        let sender = ObjectIdentifier(player)
+        executeOnMainActor { [weak self] in
+            guard let self, ObjectIdentifier(self.player) == sender else { return }
+            body()
         }
-    }
-
-    private static func shouldRetrySessionDeactivation(_ error: any Error) -> Bool {
-        let nsError = error as NSError
-        guard let code = AVAudioSession.ErrorCode(rawValue: nsError.code) else {
-            return false
-        }
-        return code == .isBusy
     }
 
     private nonisolated func executeOnMainActor(_ body: @escaping @MainActor () -> Void) {
@@ -176,56 +177,6 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
                 body()
             }
         }
-    }
-
-    private func observeAudioSessionNotifications() {
-        let center = NotificationCenter.default
-        let session = AVAudioSession.sharedInstance()
-
-        // Observers use queue: .main so MainActor.assumeIsolated is safe inside.
-        notificationTokens.append(center.addObserver(
-            forName: AVAudioSession.interruptionNotification,
-            object: session,
-            queue: .main
-        ) { [weak self] notification in
-            guard let rawType = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
-                  let type = AVAudioSession.InterruptionType(rawValue: rawType) else {
-                return
-            }
-
-            let rawOptions = notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
-            let shouldResume = AVAudioSession.InterruptionOptions(rawValue: rawOptions).contains(.shouldResume)
-
-            MainActor.assumeIsolated {
-                guard let self else { return }
-                switch type {
-                case .began:
-                    self.onStatusChange?(.interruptionBegan)
-                case .ended:
-                    self.onStatusChange?(.interruptionEnded(shouldResume: shouldResume))
-                @unknown default:
-                    break
-                }
-            }
-        })
-
-        notificationTokens.append(center.addObserver(
-            forName: AVAudioSession.routeChangeNotification,
-            object: session,
-            queue: .main
-        ) { [weak self] notification in
-            guard let rawReason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
-                  let reason = AVAudioSession.RouteChangeReason(rawValue: rawReason),
-                  reason == .oldDeviceUnavailable else {
-                return
-            }
-
-            MainActor.assumeIsolated {
-                // Headphones unplugged: pause rather than continue on the speaker.
-                guard let self else { return }
-                self.pause()
-            }
-        })
     }
 
     /// Maps an AudioStreaming error to the app's typed `PlaybackError`, reusing
@@ -259,7 +210,7 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
         with newState: AudioPlayerState,
         previous: AudioPlayerState
     ) {
-        executeOnMainActor {
+        executeOnMainActor(for: player) {
             switch newState {
             case .playing:
                 self.onStatusChange?(.playing)
@@ -287,7 +238,7 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
     ) {}
 
     public nonisolated func audioPlayerUnexpectedError(player: AudioPlayer, error: AudioPlayerError) {
-        executeOnMainActor {
+        executeOnMainActor(for: player) {
             self.reportFailure(Self.classify(error))
         }
     }
@@ -309,7 +260,7 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
         let generation = streamGeneration.withLock { $0 }
         let parsed = ICYMetadataParser.parseTrack(from: streamTitle)
         let trackInfo = AudioTrackInfo(title: parsed.title, artist: parsed.artist, streamGeneration: generation)
-        executeOnMainActor {
+        executeOnMainActor(for: player) {
             self.onTrackInfo?(trackInfo)
         }
     }

@@ -137,6 +137,10 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     private func activateAudioSession(completion: @escaping @MainActor () -> Void) {
         let session = AVAudioSession.sharedInstance()
         try? session.setCategory(.playback, mode: .default, policy: .longFormAudio)
+        // Ordinary system alerts duck this stream instead of interrupting it, so a
+        // notification can't pause the watch's audio (and leave it paused when iOS
+        // omits the resume hint). Genuine interruptions still arrive normally.
+        try? session.setPrefersNoInterruptionsFromSystemAlerts(true)
         session.activate(options: []) { _, _ in
             Task { @MainActor in completion() }
         }
@@ -164,7 +168,14 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
                 case .began:
                     self.onStatusChange?(.interruptionBegan)
                 case .ended:
-                    self.onStatusChange?(.interruptionEnded(shouldResume: shouldResume))
+                    // Read on the main actor rather than captured from the
+                    // notification block (`AVAudioSession` isn't `Sendable`), and
+                    // read at all because the controller resumes a hintless end
+                    // only when nothing else holds audio.
+                    self.onStatusChange?(.interruptionEnded(
+                        shouldResume: shouldResume,
+                        otherAudioIsPlaying: AVAudioSession.sharedInstance().isOtherAudioPlaying
+                    ))
                 @unknown default:
                     break
                 }

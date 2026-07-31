@@ -135,7 +135,7 @@ struct PlaybackResourceHygieneTests {
         // The interruption (e.g. a long phone call) outlasts the release.
         await waitUntil { output.stopCount == 1 }
 
-        output.onStatusChange?(.interruptionEnded(shouldResume: true))
+        output.onStatusChange?(.interruptionEnded(shouldResume: true, otherAudioIsPlaying: false))
         await waitForStart(output, count: 2)
         #expect(output.startedURLs.count == 2, "resume hint must restart the released stream")
     }
