@@ -16,12 +16,12 @@ import os
 extension AudioStreamingPlaybackEngine {
     private static let sessionDeactivationRetryDelay: Duration = .milliseconds(150)
 
-    /// Backoff for reactivating the session. `setActive(true)` legitimately fails
+    /// Backoff between reactivation attempts. `setActive(true)` legitimately fails
     /// for a moment either side of an OS disruption — the tail of a phone call,
     /// Siri still holding the session, a route still settling — and the failure
     /// used to be swallowed, so playback resumed into a session it never got and
-    /// produced no audio at all. Four tries spanning ~3.5 s cover that window
-    /// without becoming a spin.
+    /// produced no audio at all. One immediate attempt plus these four retries
+    /// (five in total, ~3.55 s of waiting) covers that window without spinning.
     private static let sessionActivationRetryDelays: [Duration] = [
         .milliseconds(150),
         .milliseconds(400),
@@ -149,11 +149,18 @@ extension AudioStreamingPlaybackEngine {
 
     // MARK: - OS disruptions
 
+    // Observers use queue: .main throughout, so MainActor.assumeIsolated is safe
+    // inside them. One method per notification: together they overran the
+    // 50-line `function_body_length` budget, and each reads better alone anyway.
     func observeAudioSessionNotifications() {
         let center = NotificationCenter.default
         let session = AVAudioSession.sharedInstance()
+        observeInterruptions(on: session, with: center)
+        observeRouteChanges(on: session, with: center)
+        observeMediaServicesReset(with: center)
+    }
 
-        // Observers use queue: .main so MainActor.assumeIsolated is safe inside.
+    private func observeInterruptions(on session: AVAudioSession, with center: NotificationCenter) {
         notificationTokens.append(center.addObserver(
             forName: AVAudioSession.interruptionNotification,
             object: session,
@@ -194,7 +201,9 @@ extension AudioStreamingPlaybackEngine {
                 }
             }
         })
+    }
 
+    private func observeRouteChanges(on session: AVAudioSession, with center: NotificationCenter) {
         notificationTokens.append(center.addObserver(
             forName: AVAudioSession.routeChangeNotification,
             object: session,
@@ -218,10 +227,13 @@ extension AudioStreamingPlaybackEngine {
                 self.pause()
             }
         })
+    }
 
-        // `object: nil` deliberately: unlike the interruption and route-change
-        // notifications, this one is not documented as posted by the session
-        // instance, and a mismatched object filter would silently never fire.
+    /// `object: nil` deliberately: unlike the interruption and route-change
+    /// notifications, this one is not documented as posted by the session
+    /// instance, and a mismatched object filter would silently never fire — which
+    /// is also why this one takes no `session` parameter.
+    private func observeMediaServicesReset(with center: NotificationCenter) {
         notificationTokens.append(center.addObserver(
             forName: AVAudioSession.mediaServicesWereResetNotification,
             object: nil,
