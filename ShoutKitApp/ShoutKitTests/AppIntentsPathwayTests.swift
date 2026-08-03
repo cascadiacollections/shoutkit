@@ -28,6 +28,16 @@ import Testing
     /// favorited or played anything — the curated `PreferredStations` seed the
     /// suggestions — otherwise Siri has nothing to resolve "play ⟨station⟩"
     /// against on a fresh install.
+    ///
+    /// Re-enabled here, having been quarantined against #116. It reaches that
+    /// bug through `knownStations()`, which appends `IntentStationCache.load()`,
+    /// so the snapshot-DTO fix in this PR should cover it — but #116 left open
+    /// whether it *also* trapped on the `IntentDefinitions` metadata path,
+    /// independently of `Codable`. That question is only answerable by running
+    /// it, which is now possible: the app test plan started executing in CI in
+    /// #115. If this passes, the serialization boundary was the whole story and
+    /// #116 is closed; if it still traps, the root cause is broader and #116
+    /// should stay open with this test disabled again.
     @Test func stationEntityQuerySuggestsStationsOnAFreshLibrary() async throws {
         let definitions = IntentDefinitions(bundleIdentifier: "com.cascadiacollections.shoutkit")
         let stationEntity = definitions.entities["StationEntity"]

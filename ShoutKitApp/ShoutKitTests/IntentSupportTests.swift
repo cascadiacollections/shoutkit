@@ -79,6 +79,15 @@ import Testing
 
     // MARK: - IntentStationCache
 
+    // These cases guard the regression in #116: `StationEntity` used to be the
+    // persisted type, and because the `@AppEntity(schema:)` macro's synthesized
+    // property storage didn't survive a `Codable` round-trip, decoding one
+    // trapped in `EntityProperty` — on the launch path, once the cache had been
+    // written. The cache now persists a plain `CachedStation` snapshot instead,
+    // so anything here that reads an entity back out of `UserDefaults` is
+    // exercising that boundary. Each case gets its own defaults suite: they ran
+    // against `UserDefaults.standard` in parallel before, which made them
+    // interdependent.
     @Test func intentCacheKeepsNewestFirstAndDeduplicates() throws {
         let defaults = try makeDefaults()
         // Remembered entries are prepended, so the batch we just added is at the

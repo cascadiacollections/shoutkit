@@ -14,8 +14,6 @@ import SwiftData
 import SwiftUI
 
 struct RootView: View {
-    private let swipeTabThreshold: CGFloat = 70
-
     let launchRouter: StationLaunchRouter
     let isPersistentStoreAvailable: Bool
 
@@ -100,12 +98,17 @@ struct RootView: View {
                 activity.requiredUserInfoKeys = Set(userInfo.keys)
                 activity.userInfo = userInfo
             }
-            .simultaneousGesture(
-                DragGesture()
-                    .onEnded { value in
-                        handleTabSwipe(value)
-                    }
-            )
+            // Deliberately no root-level swipe-between-tabs gesture. A
+            // `simultaneousGesture(DragGesture())` here fires *in addition to*
+            // whatever the child handled, so a horizontal drag past the
+            // threshold also switched tabs while the user was scrolling a
+            // `StationCarousel`, swiping a row to delete in Favorites or the
+            // Listen Now teaser, or using the interactive back-swipe in a
+            // `NavigationStack`. Constraining it doesn't rescue it: the only
+            // filter that separates it from those (start near a screen edge)
+            // is the back-swipe's own trigger. Apple Music and the system
+            // `TabView` don't page between tabs either, so matching them is
+            // both the safe and the expected behavior.
     }
 
     private var tabView: some View {
@@ -199,35 +202,13 @@ struct RootView: View {
             }
         )
     }
-
-    private func handleTabSwipe(_ value: DragGesture.Value) {
-        let horizontal = value.translation.width
-        let vertical = value.translation.height
-
-        guard abs(horizontal) > abs(vertical), abs(horizontal) >= swipeTabThreshold else { return }
-        if horizontal < 0 {
-            selectedTab = selectedTab.next ?? selectedTab
-        } else {
-            selectedTab = selectedTab.previous ?? selectedTab
-        }
-    }
 }
 
-private enum ShoutKitTab: Hashable, CaseIterable {
+private enum ShoutKitTab: Hashable {
     case listenNow
     case browse
     case search
     case favorites
-
-    var next: Self? {
-        guard let index = Self.allCases.firstIndex(of: self), index < Self.allCases.count - 1 else { return nil }
-        return Self.allCases[index + 1]
-    }
-
-    var previous: Self? {
-        guard let index = Self.allCases.firstIndex(of: self), index > 0 else { return nil }
-        return Self.allCases[index - 1]
-    }
 }
 
 #Preview {

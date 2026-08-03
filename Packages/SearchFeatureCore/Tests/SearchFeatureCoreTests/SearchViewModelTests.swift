@@ -61,6 +61,29 @@ struct SearchViewModelTests {
         #expect(queries == ["jazz"])
     }
 
+    /// The same whitespace edit as above, but landing *while* the search is
+    /// still running — the case that used to strand the spinner: the didSet
+    /// cancelled the in-flight task before deciding the query was a duplicate,
+    /// so nothing ever published a phase and nothing re-issued the search.
+    @Test func whitespaceEditDuringAnInFlightSearchStillPublishesResults() async {
+        let directory = FakeRadioDirectory()
+        let stations: [Station] = [.fixture(id: "a", name: "Station A")]
+        await directory.setSearchStationsResult(.success(stations))
+        await directory.setSearchDelay(.milliseconds(400))
+        let viewModel = SearchViewModel(directory: directory)
+
+        viewModel.query = "jazz"
+        await waitUntil { viewModel.phase == .searching }
+
+        viewModel.query = "jazz "
+
+        await waitUntil { viewModel.phase != .searching }
+
+        #expect(viewModel.phase == .results(stations))
+        let callCount = await directory.searchCallCount
+        #expect(callCount == 1)
+    }
+
     @Test func clearingTheQueryResetsToIdleWithoutSearching() async {
         let directory = FakeRadioDirectory()
         await directory.setSearchStationsResult(.success([.fixture(id: "a", name: "Station A")]))
