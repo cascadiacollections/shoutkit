@@ -8,6 +8,13 @@ import Testing
 /// The App Intents framework itself is exercised through real system pathways in
 /// `AppIntentsPathwayTests`.
 @Suite struct IntentSupportTests {
+    private func makeDefaults() throws -> UserDefaults {
+        let suiteName = "IntentSupportTests-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        return defaults
+    }
+
     private func makeStation(
         id: String = "station-1",
         name: String = "KEXP",
@@ -72,26 +79,52 @@ import Testing
 
     // MARK: - IntentStationCache
 
-    @Test func intentCacheKeepsNewestFirstAndDeduplicates() {
+    @Test func intentCacheKeepsNewestFirstAndDeduplicates() throws {
+        let defaults = try makeDefaults()
         // Remembered entries are prepended, so the batch we just added is at the
-        // front regardless of what earlier runs left in `UserDefaults.standard`.
+        // front regardless of what was already in this cache.
         let batch = (0..<3).map { StationEntity(station: makeStation(id: "fresh-\($0)", name: "S\($0)")) }
-        IntentStationCache.remember(batch)
+        IntentStationCache.remember(batch, defaults: defaults)
 
-        let loaded = IntentStationCache.load()
+        let loaded = IntentStationCache.load(defaults: defaults)
         #expect(loaded.prefix(3).map(\.id) == ["fresh-0", "fresh-1", "fresh-2"])
 
         // Re-remembering an existing id must not create a duplicate.
-        IntentStationCache.remember([batch[0]])
-        #expect(IntentStationCache.load().filter { $0.id == "fresh-0" }.count == 1)
+        IntentStationCache.remember([batch[0]], defaults: defaults)
+        #expect(
+            IntentStationCache.load(defaults: defaults).filter { $0.id == "fresh-0" }.count == 1
+        )
     }
 
-    @Test func intentCacheIsBoundedToItsCapacity() {
+    @Test func intentCacheIsBoundedToItsCapacity() throws {
+        let defaults = try makeDefaults()
         let many = (0..<80).map { StationEntity(station: makeStation(id: "cap-\($0)")) }
-        IntentStationCache.remember(many)
+        IntentStationCache.remember(many, defaults: defaults)
 
         // Capacity is 50; the cache never grows unbounded no matter how many
         // stations a session hands it.
-        #expect(IntentStationCache.load().count <= 50)
+        #expect(IntentStationCache.load(defaults: defaults).count <= 50)
+    }
+
+    @Test func intentCacheLoadsPersistedStationSnapshots() throws {
+        let defaults = try makeDefaults()
+        let cachedJSON = """
+        [
+          {
+            "id": "cached-1",
+            "name": "Cached FM",
+            "genre": "Eclectic",
+            "artworkURLString": "https://example.com/cached.png",
+            "streamURLString": "https://example.com/cached"
+          }
+        ]
+        """
+        defaults.set(Data(cachedJSON.utf8), forKey: "intents.station.cache")
+
+        let loaded = try #require(IntentStationCache.load(defaults: defaults).first)
+
+        #expect(loaded.id == "cached-1")
+        #expect(loaded.title == "Cached FM")
+        #expect(loaded.station.preferredStreamURL == URL(string: "https://example.com/cached"))
     }
 }
