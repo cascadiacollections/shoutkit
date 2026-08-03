@@ -89,9 +89,14 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
     /// `.responsiveData`) tells the scheduler nobody is blocked on these, so they
     /// yield to the directory and to artwork a visible row actually needs.
     ///
-    /// Requests refused by these limits fail like any other transport error, and
-    /// nothing caches a failure — so when a prefetched row does scroll into view,
-    /// its own load goes out on the interactive session and succeeds normally.
+    /// A request refused by these limits fails at the URLSession layer without
+    /// producing an HTTP response at all, so it leaves nothing behind: not in
+    /// `URLCache`, not in the decoded-thumbnail cache (which only stores
+    /// successes), and not in the in-flight table (which clears on completion).
+    /// A refusal therefore can't suppress that artwork later — when the row
+    /// scrolls into view, its own load is issued fresh on the interactive
+    /// session. Whether *that* request succeeds is an ordinary network question,
+    /// no different from any other fetch.
     public static func speculativeConfiguration() -> URLSessionConfiguration {
         let configuration = URLSessionConfiguration.default
         configuration.waitsForConnectivity = false

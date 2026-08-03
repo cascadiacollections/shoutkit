@@ -44,8 +44,11 @@ public actor StationConnectionPrewarmer {
     /// good trade normally and the wrong one when the device is conserving, so
     /// the whole thing is skipped rather than trimmed. Nothing downstream cares:
     /// `play(_:)` resolves and connects on its own regardless.
-    /// - Returns: how many distinct hosts were warmed — 0 when skipped. Callers
-    ///   fire and forget; the value exists so the skip is observable.
+    /// - Returns: how many distinct hosts were *attempted* — 0 when skipped.
+    ///   Deliberately not a success count: ``warm(_:timeout:)`` treats `.ready`,
+    ///   `.failed` and `.cancelled` as equally terminal and the timeout resolves
+    ///   the same way, because none of them changes what the caller does next.
+    ///   Callers fire and forget; the value exists so the skip is observable.
     @discardableResult
     public func prewarm(streamURLs: [URL]) async -> Int {
         guard isLowPowerModeEnabled() == false else {
