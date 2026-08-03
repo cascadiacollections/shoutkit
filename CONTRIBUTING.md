@@ -43,13 +43,18 @@ through the `ShoutKit.xctestplan` test plan. That's what CI's `build` job runs, 
 place those three execute:
 
 ```sh
+# Pick any installed iPhone simulator — `xcrun simctl list devices available`
+# shows what you have; the model doesn't matter.
 xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
-  -destination 'platform=iOS Simulator,name=iPhone 17' test
+  -destination "platform=iOS Simulator,name=$(xcrun simctl list devices available \
+    | grep -o 'iPhone [^(]*' | head -1 | sed 's/ *$//')" test
 ```
 
-(CI resolves the simulator by UDID instead of by name, because the runner image's device list
-changes between Xcode betas.) The test plan also re-runs RadioDirectory/Playback/Persistence, so
-the host loop above is the fast local check and this is the complete one.
+Don't hardcode a device name in scripts: the set of installed simulators differs between machines
+and shifts between Xcode releases, and a stale `name=iPhone NN` fails the whole invocation with an
+unhelpful "unable to find a device" error. CI resolves one by UDID for the same reason. The test
+plan also re-runs RadioDirectory/Playback/Persistence, so the host loop above is the fast local
+check and this is the complete one.
 
 If `swift test` fails at the `CodeSign` step with "resource fork, Finder information, or similar
 detritus not allowed", your build wrote provenance extended attributes onto the test bundle

@@ -36,10 +36,15 @@
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.music</string>
 	<!-- Same cleartext-stream reality as the iOS app (see its Info.plist), but
-	     the correctly-spelled media-only key is enough here:
-	     WatchRadioPlaybackEngine plays through AVPlayer, so the stream is
-	     loaded by AVFoundation, and the watch app issues no other network
-	     requests of its own. -->
+	     the narrow media-only key is the right one here rather than the global
+	     relaxation: WatchRadioPlaybackEngine plays through AVPlayer, so the one
+	     thing that may be http:// — the stream itself — is loaded by
+	     AVFoundation, which is exactly what this key covers.
+
+	     The watch does make other requests: WatchAppDependencies builds a
+	     RadioBrowserDirectoryClient for directory lookups, over URLSession. That
+	     traffic is https and stays fully ATS-enforced, which is the point of
+	     keeping the exception scoped to media instead of widening it. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoadsForMedia</key>
