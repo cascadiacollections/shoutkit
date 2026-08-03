@@ -143,15 +143,25 @@ struct DiagnosticsServiceTests {
         #expect(unsubscribeCalls == 1)
     }
 
+    /// Polls until `condition` holds. The timeout only bounds the *failing*
+    /// path — the loop returns the moment the condition is true — so a generous
+    /// budget costs a passing run nothing and is purely flake insurance. One
+    /// second was not enough: `collectionStartsWhenFlagAndOptInEnabled` records
+    /// its issue waiting on `Observations` to propagate a flag change, and CI
+    /// runs this suite alongside 70-odd other cases in parallel, where that
+    /// propagation loses the scheduler race often enough to redden unrelated
+    /// PRs. Seen on #115, whose diff doesn't touch this package.
     private func waitUntil(
-        timeoutSeconds: TimeInterval = 1,
+        timeoutSeconds: TimeInterval = 5,
         intervalNanoseconds: UInt64 = 10_000_000,
         condition: @escaping () -> Bool
     ) async {
-        let deadline = Date().addingTimeInterval(timeoutSeconds)
+        let start = Date()
+        let deadline = start.addingTimeInterval(timeoutSeconds)
         while condition() == false {
             if Date() >= deadline {
-                Issue.record("Condition was not met before timeout")
+                let waited = String(format: "%.2f", Date().timeIntervalSince(start))
+                Issue.record("Condition was not met before timeout (waited \(waited)s of \(timeoutSeconds)s)")
                 return
             }
             try? await Task.sleep(nanoseconds: intervalNanoseconds)
