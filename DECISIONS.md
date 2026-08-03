@@ -47,6 +47,17 @@ invoked.
   and the test plan gained the two package suites. Folded into the existing job rather than added as
   a new one so the Debug app is still built exactly once; the Pulse symbol check reads the same
   build product either way.
+- **The first run of that job immediately found a crash, and three tests are quarantined for it.**
+  Decoding a `StationEntity` traps in `EntityProperty` (see #116): the type is both
+  `@AppEntity(schema:)` and `Codable`, and the schema macro's synthesized property storage doesn't
+  survive the synthesized `Codable` round-trip. Two `IntentSupportTests` cases and one
+  `AppIntentsPathwayTests` case are `.disabled(…)` against it so the other suites can start gating
+  merges now, rather than holding CI enforcement hostage to a production fix in Siri/Shortcuts code.
+  A disabled test is visible in every run and the reasons name the root cause, so this is a marker
+  rather than a sweep — but the marker only pays off if #116 actually gets picked up. Worth noting
+  what the quarantine does *not* cover: `IntentStationCache.load()` is on the launch path, so if the
+  diagnosis holds, a populated cache crashes the app at launch in shipped builds. That is a device
+  check, not a CI one.
 
 ## 2026-07-31 (OS disruptions: what happens to a stream when the system takes over)
 
