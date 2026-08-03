@@ -101,17 +101,26 @@ jobs:
         run: |
           set -euo pipefail
           UDID="$(xcrun simctl list devices available --json | python3 -c '
-          import json, sys
+          import json, re, sys
+
+          def version(runtime_identifier):
+              # ...SimRuntime.iOS-27-1 -> (27, 1). Compared as numbers, not as
+              # text: lexicographically "iOS-9-0" sorts above "iOS-27-0", and
+              # "iOS-27-10" below "iOS-27-2".
+              return tuple(int(part) for part in re.findall(r"\d+", runtime_identifier.rsplit(".", 1)[-1]))
+
           runtimes = json.load(sys.stdin)["devices"]
           candidates = [
-              (runtime, device)
+              (version(runtime), device["name"], device["udid"])
               for runtime, devices in runtimes.items()
               if "iOS" in runtime
               for device in devices
               if device.get("isAvailable") and "iPhone" in device["name"]
           ]
-          candidates.sort(key=lambda pair: pair[0])
-          print(candidates[-1][1]["udid"] if candidates else "")
+          # Device name is the tiebreak so a runner with several iPhones on the
+          # newest runtime still resolves to the same one every run.
+          candidates.sort(key=lambda candidate: candidate[:2])
+          print(candidates[-1][2] if candidates else "")
           ')"
           if [ -z "$UDID" ]; then
             echo "::error::No available iPhone simulator on the runner image"
@@ -143,11 +152,17 @@ jobs:
       # logs live on Azure blob storage, which repo-scoped tokens (and remote
       # agents working a PR) can't always reach — annotations are readable via
       # the Checks API, so a failure stays diagnosable from the API alone.
+      # The patterns cover both test frameworks, since a mixed run can fail
+      # either way: `Test Case '…' failed` / `XCTAssert…` from the legacy XCTest
+      # reporter, `recorded an issue` / `Expectation failed` from Swift Testing
+      # (which every suite here actually uses), plus xcodebuild's own
+      # `Testing failed:` summary line. Deliberately unanchored — xcodebuild
+      # indents all of them under the action it's reporting on.
       - name: Emit compile errors and test failures as annotations
         if: failure()
         run: |
-          grep -E "(error|fatal error): |^Test .* failed|XCTAssert|Expectation failed" build.log \
-            | sort -u | head -20 | sed 's/^/::error::/' || true
+          grep -E "(error|fatal error): |Test Case .* failed|recorded an issue|Expectation failed|Testing failed:|XCTAssert" \
+            build.log | sort -u | head -20 | sed 's/^/::error::/' || true
 
       # Pulse (kean/Pulse) is declared only by the app-side DebugSupport package
       # and gated behind #if DEBUG end to end (see
