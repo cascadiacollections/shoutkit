@@ -1,5 +1,53 @@
 # Decisions
 
+## 2026-08-03 (power review: what the app spends when nobody asked it to)
+
+A pass over hardware efficiency and the power signals the platform offers. The finding was
+uniform: the app reads **none** of them. `isLowPowerModeEnabled`, `thermalState`,
+`NSProcessInfoPowerStateDidChange`, `NWPath.isExpensive`/`isConstrained`,
+`allowsConstrainedNetworkAccess` — zero occurrences across the tree. Accessibility signals are
+handled well (`accessibilityReduceMotion` / `reduceTransparency` are respected in
+`HeroArtworkView`, `PlayingIndicator`, `AmbientArtworkBackdrop`, `StationRow`), so the gap is
+specifically power, not system-signal awareness in general.
+
+- **Speculative traffic now travels on its own session.** Everything shared one
+  `URLSessionHTTPTransport.shared`, configured `.responsiveData` with expensive and constrained
+  network access at their permissive defaults. That is right for a stream endpoint the listener is
+  waiting on and wrong for artwork six rows below the fold: on Low Data Mode or cellular the app
+  was spending the user's allowance on work they never asked for, at foreground priority.
+  `speculativeConfiguration()` refuses constrained and expensive paths and asks for `.background`
+  scheduling; `ArtworkThumbnailLoader.prefetch` uses it. Deliberately *not* applied to the row's
+  own load, the directory, or playback — a visible row still fetches over the interactive session.
+  The two compose because failures are never cached: a prefetch the network refuses simply leaves
+  the artwork to load normally when the row appears.
+- **Low Power Mode disables the two purely speculative paths outright** — station connection
+  prewarming and artwork prefetch. Both trade radio time now against latency the listener may never
+  benefit from, which is a good trade normally and the wrong one at 20% battery. Skipped in full
+  rather than trimmed: warming three hosts instead of five still spends the radio for the same
+  speculative reason.
+- **Sampled per call, not observed.** Both sites are re-entered constantly (prewarm at launch,
+  prefetch on every row appearance), so reading `ProcessInfo` at the decision point tracks a mode
+  the user can toggle mid-session without any of the bookkeeping a
+  `NSProcessInfoPowerStateDidChange` observer would need. An observer buys nothing here and is the
+  kind of state that goes stale.
+- **Deliberately not done: `UIDevice.batteryLevel` / `batteryState`.** Reaching for the raw level
+  to make our own conservation policy would duplicate — and disagree with — the system's, which
+  already accounts for charging state, thermals, and user intent. Low Power Mode *is* that signal;
+  polling battery percentage is the anti-pattern it exists to replace.
+- **Deliberately not done: thermal throttling.** `thermalState` is the right lever for sustained
+  GPU or compute load, and this app has neither: `AmbientArtworkBackdrop` renders once per artwork
+  change (no `repeatForever`), `PlayingIndicator` runs at ~8 fps and pauses on
+  `scenePhase != .active` or Reduce Motion, and the only 1 Hz `TimelineView` is gated on
+  `sleepTimer.isActive`. Decode is already bounded by ImageIO downsampling. Adding a thermal
+  observer would be ceremony without a workload to throttle.
+- **Background refresh needs nothing.** `BGTaskScheduler` already defers discretionary work in Low
+  Power Mode at the system level; duplicating that check would be redundant.
+- **Left open:** `AVAudioSession.setPreferredIOBufferDuration` is unset, so playback runs at the
+  default IO buffer. A longer buffer means proportionally fewer render wakeups across a long
+  background listen, which is the single largest remaining battery lever for a radio app — but it
+  trades against resume latency and interacts with AudioStreaming's own buffering, so it wants
+  device measurement rather than a guessed constant.
+
 ## 2026-08-03 (external iOS review: ATS, root gestures, a stranded spinner, untested bundles)
 
 Four findings from an outside review of the whole tree. Each was invisible from inside the

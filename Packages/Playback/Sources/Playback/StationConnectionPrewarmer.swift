@@ -18,21 +18,48 @@ public actor StationConnectionPrewarmer {
     private let handshakeTimeout: TimeInterval
     private let logger = Logger(subsystem: "ShoutKit.Playback", category: "StationConnectionPrewarmer")
 
-    public init(maxHosts: Int = 5, handshakeTimeout: TimeInterval = 4) {
+    /// Injected so the Low Power Mode branch is testable; production reads the
+    /// live value. Sampled per call rather than captured once, because the mode
+    /// flips mid-session (the system enables it at 20%, the user toggles it).
+    private let isLowPowerModeEnabled: @Sendable () -> Bool
+
+    public init(
+        maxHosts: Int = 5,
+        handshakeTimeout: TimeInterval = 4,
+        isLowPowerModeEnabled: @escaping @Sendable () -> Bool = {
+            ProcessInfo.processInfo.isLowPowerModeEnabled
+        }
+    ) {
         self.maxHosts = maxHosts
         self.handshakeTimeout = handshakeTimeout
+        self.isLowPowerModeEnabled = isLowPowerModeEnabled
     }
 
     /// Warms up to `maxHosts` distinct hosts drawn from `streamURLs` (in order,
     /// so the caller's ranking — most-played/favorited first — is honored).
-    public func prewarm(streamURLs: [URL]) async {
+    ///
+    /// A no-op in Low Power Mode. Prewarming spends radio time on stations the
+    /// listener may never tap — up to `maxHosts` DNS lookups and TLS handshakes
+    /// at launch — to save a fraction of a second on one they might. That's a
+    /// good trade normally and the wrong one when the device is conserving, so
+    /// the whole thing is skipped rather than trimmed. Nothing downstream cares:
+    /// `play(_:)` resolves and connects on its own regardless.
+    /// - Returns: how many distinct hosts were warmed — 0 when skipped. Callers
+    ///   fire and forget; the value exists so the skip is observable.
+    @discardableResult
+    public func prewarm(streamURLs: [URL]) async -> Int {
+        guard isLowPowerModeEnabled() == false else {
+            logger.debug("Skipping station prewarm: Low Power Mode is enabled")
+            return 0
+        }
+
         var seenHosts = Set<String>()
         let targets = streamURLs
             .compactMap(Target.init(url:))
             .filter { seenHosts.insert($0.dedupeKey).inserted }
             .prefix(maxHosts)
 
-        guard targets.isEmpty == false else { return }
+        guard targets.isEmpty == false else { return 0 }
         logger.debug("Prewarming \(targets.count, privacy: .public) station host(s)")
 
         await withTaskGroup(of: Void.self) { group in
@@ -42,6 +69,7 @@ public actor StationConnectionPrewarmer {
                 }
             }
         }
+        return targets.count
     }
 
     /// A resolved connection destination. Built from a stream URL, defaulting the

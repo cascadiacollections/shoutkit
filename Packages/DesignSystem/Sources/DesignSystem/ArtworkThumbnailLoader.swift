@@ -1,3 +1,4 @@
+import Foundation
 import UIKit
 import RadioDirectory
 
@@ -61,12 +62,25 @@ public nonisolated enum ArtworkThumbnailLoader {
     /// Fire-and-forget: failures are silent, and a URL that is already cached or
     /// already in flight is skipped, so calling this from every row's `onAppear`
     /// with an overlapping look-ahead window is cheap.
+    ///
+    /// Skipped entirely in Low Power Mode, and routed over the speculative
+    /// transport (see ``URLSessionHTTPTransport/speculativeConfiguration()``) so
+    /// Low Data Mode and cellular suppress it too. Both are deliberate: this is
+    /// the one artwork path nobody is waiting on, so it's the first thing that
+    /// should stop when the device is trying to conserve. A row that scrolls
+    /// into view still loads its own artwork over the interactive session — the
+    /// listener just pays the decode at that moment instead of ahead of time.
     public static func prefetch(
         _ urls: [URL?],
         maxPixelSize: CGFloat,
-        transport: any HTTPTransporting = URLSessionHTTPTransport.shared
+        transport: any HTTPTransporting = URLSessionHTTPTransport.speculative
     ) {
         guard maxPixelSize > 0 else { return }
+        // Read per call rather than cached: Low Power Mode flips mid-session
+        // (the system enables it at 20%, the user can toggle it any time), and
+        // prefetching is re-driven by every row that appears, so sampling here
+        // tracks the current state without needing a change observer.
+        guard ProcessInfo.processInfo.isLowPowerModeEnabled == false else { return }
 
         for case let url? in urls {
             let key = cacheKey(url: url, maxPixelSize: maxPixelSize)
