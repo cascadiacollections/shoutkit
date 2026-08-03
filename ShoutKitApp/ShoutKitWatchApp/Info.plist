@@ -35,9 +35,13 @@
 	<false/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.music</string>
+	<!-- Same cleartext-stream reality as the iOS app (see its Info.plist), but
+	     the correctly-spelled media-only key is enough here: WatchRadioPlayback-
+	     Engine plays through AVPlayer, so the stream is loaded by AVFoundation,
+	     and the watch app issues no other network requests of its own. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsArbitraryLoadsInMedia</key>
+		<key>NSAllowsArbitraryLoadsForMedia</key>
 		<true/>
 	</dict>
 	<key>WKApplication</key>

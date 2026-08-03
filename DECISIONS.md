@@ -1,5 +1,53 @@
 # Decisions
 
+## 2026-08-03 (external iOS review: ATS, root gestures, a stranded spinner, untested bundles)
+
+Four findings from an outside review of the whole tree. Each was invisible from inside the
+codebase for the same reason — the code reads correctly and the mistake is one level down, in a
+plist key, a gesture modifier's semantics, a statement's position, or a CI action that was never
+invoked.
+
+- **The ATS exception was a typo, so ATS was fully enforced.** Both Info.plists carried
+  `NSAllowsArbitraryLoadsInMedia`, which is not an App Transport Security key — the real one is
+  `NSAllowsArbitraryLoadsForMedia`. iOS ignored it silently, so every cleartext station was
+  blocked, and no build or lint step could have caught it. Fixing the spelling wasn't enough for
+  iOS, either: `...ForMedia` only covers AVFoundation's own media loading, and iOS playback runs
+  through AudioStreaming, which fetches the stream with `URLSession`. So the iOS app now sets
+  `NSAllowsArbitraryLoads` (and *only* that key — iOS ignores it outright when any of the narrower
+  `...ForMedia` / `...InWebContent` / `...InLocalNetworking` keys are also present, which would
+  have reintroduced the bug in a subtler form). The watch app keeps the narrow
+  `...ForMedia` key, correctly spelled: `WatchRadioPlaybackEngine` plays through `AVPlayer` and the
+  watch issues no other requests. Everything the app itself talks to remains https; the relaxation
+  is for third-party stream endpoints, which are frequently http-only with no TLS endpoint at all.
+  Considered and rejected: upgrading stream URLs to https the way
+  `RadioBrowserDirectoryClient.artworkURL(from:)` upgrades favicons. That's fine for artwork, where
+  the failure mode is a placeholder, but a station that doesn't serve TLS would simply stop playing.
+- **`simultaneousGesture` on the root meant every horizontal drag also switched tabs.** The
+  swipe-between-tabs gesture on `RootView` fired *in addition to* whatever the child gesture did,
+  so dragging a `StationCarousel`, swiping a row to delete in Favorites or the Listen Now teaser,
+  or using a `NavigationStack`'s interactive back-swipe all changed tabs once the drag passed 70pt.
+  Removed rather than constrained: the only filter that would separate a tab swipe from those is
+  "starts near a screen edge", which is the back-swipe's own trigger. Apple Music and the system
+  `TabView` don't page between tabs either, so the removal matches the pattern the rest of the app
+  already follows.
+- **One statement above a guard could strand Search on its spinner forever.**
+  `SearchViewModel.query`'s `didSet` cancelled the in-flight search *before* checking whether the
+  trimmed query had actually changed. Any edit that trims to the same string — a trailing space, an
+  autocorrection, a paste with surrounding whitespace — therefore killed the running search, and
+  the duplicate guard then returned without re-issuing it. `performSearch` bailed on its
+  cancellation check without publishing, so `phase` stayed `.searching` with nothing left to
+  complete it. The cancel moved below the guard. The existing whitespace test passed throughout
+  because it waited for the search to *finish* before adding the space; the new one holds the fake
+  directory open so the edit lands while the search is genuinely in flight.
+- **Four test bundles were maintained but never executed.** CI ran `swift test` for seven packages
+  and `xcodebuild build` twice — and no `test` action anywhere. `ShoutKitTests`, `DesignSystemTests`,
+  and `NowPlayingActivityCoreTests` can't build for the mac host (app target; UIKit; iOS-only
+  manifests), so none of them ran in any job, and `ShoutKit.xctestplan` was inert. The Debug half of
+  the `build` job now runs `xcodebuild test` against a concrete simulator instead of a bare build,
+  and the test plan gained the two package suites. Folded into the existing job rather than added as
+  a new one so the Debug app is still built exactly once; the Pulse symbol check reads the same
+  build product either way.
+
 ## 2026-07-31 (OS disruptions: what happens to a stream when the system takes over)
 
 An audit of the interruption path — everything that happens when iOS takes the

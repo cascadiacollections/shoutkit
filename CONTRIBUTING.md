@@ -37,6 +37,20 @@ The iOS-only production types (`AudioStreamingPlaybackEngine`, `NowPlayingCenter
 `#if canImport(UIKit)`, so the Playback controller/state-machine tests execute against fakes on
 any platform; the gated types compile as part of the app build.
 
+The remaining suites — `ShoutKitTests` plus the iOS-only packages `DesignSystemTests` and
+`NowPlayingActivityCoreTests` — can't build for the mac host at all, so they run on a simulator
+through the `ShoutKit.xctestplan` test plan. That's what CI's `build` job runs, and it's the only
+place those three execute:
+
+```sh
+xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
+  -destination 'platform=iOS Simulator,name=iPhone 17' test
+```
+
+(CI resolves the simulator by UDID instead of by name, because the runner image's device list
+changes between Xcode betas.) The test plan also re-runs RadioDirectory/Playback/Persistence, so
+the host loop above is the fast local check and this is the complete one.
+
 If `swift test` fails at the `CodeSign` step with "resource fork, Finder information, or similar
 detritus not allowed", your build wrote provenance extended attributes onto the test bundle
 (seen on some macOS betas). Workaround:

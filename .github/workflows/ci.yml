@@ -76,13 +76,14 @@ jobs:
         run: swift test --disable-xctest
 
   build:
-    name: Build app + compile Playback tests (iOS Simulator)
+    name: Test + build app (iOS Simulator)
     runs-on: xcode-27
     # Debug + Release builds share one DerivedData root (package resolution
     # and unchanged modules are reused across the pair), but building the app
     # twice still roughly doubles this job's time versus the single-config
-    # baseline.
-    timeout-minutes: 45
+    # baseline. The Debug half now runs the test plan rather than a bare
+    # build, which adds the simulator boot and the test run on top.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
 
@@ -91,28 +92,62 @@ jobs:
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
           xcodebuild -version
 
-      # Also compiles the UIKit-gated production types (AudioStreamingPlaybackEngine,
-      # NowPlayingCenter) that the host test job never sees. GIT_COMMIT_SHA is
+      # Resolved by UDID at runtime rather than pinned by device name: the
+      # Xcode beta runner images rotate which iPhone models and iOS runtimes
+      # ship, and a stale `name=iPhone NN` destination fails the whole job with
+      # an unhelpful "unable to find a device" error.
+      - name: Select an iOS Simulator
+        id: simulator
+        run: |
+          set -euo pipefail
+          UDID="$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          runtimes = json.load(sys.stdin)["devices"]
+          candidates = [
+              (runtime, device)
+              for runtime, devices in runtimes.items()
+              if "iOS" in runtime
+              for device in devices
+              if device.get("isAvailable") and "iPhone" in device["name"]
+          ]
+          candidates.sort(key=lambda pair: pair[0])
+          print(candidates[-1][1]["udid"] if candidates else "")
+          ')"
+          if [ -z "$UDID" ]; then
+            echo "::error::No available iPhone simulator on the runner image"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Using simulator $UDID"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      # `test`, not `build`: this is the only job that runs ShoutKitTests and
+      # the iOS-only package suites (DesignSystemTests,
+      # NowPlayingActivityCoreTests) — none of them can run on the macOS host,
+      # so before this they were maintained but never executed. It also still
+      # compiles the UIKit-gated production types (AudioStreamingPlaybackEngine,
+      # NowPlayingCenter) the host test job never sees. GIT_COMMIT_SHA is
       # stamped into the app's Info.plist (surfaced in Settings → About) so a
       # distributed build maps back to an exact source revision; archive/release
       # builds must pass it the same way.
-      - name: Build app
+      - name: Test app (Debug)
         run: |
           set -o pipefail
           xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
             -derivedDataPath DerivedData \
             CODE_SIGNING_ALLOWED=NO \
-            GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" build 2>&1 | tee build.log
+            GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" test 2>&1 | tee build.log
 
-      # Surface compiler errors as check annotations. Raw job logs live on
-      # Azure blob storage, which repo-scoped tokens (and remote agents
-      # working a PR) can't always reach — annotations are readable via the
-      # Checks API, so a build failure stays diagnosable from the API alone.
-      - name: Emit compile errors as annotations
+      # Surface compiler errors and test failures as check annotations. Raw job
+      # logs live on Azure blob storage, which repo-scoped tokens (and remote
+      # agents working a PR) can't always reach — annotations are readable via
+      # the Checks API, so a failure stays diagnosable from the API alone.
+      - name: Emit compile errors and test failures as annotations
         if: failure()
         run: |
-          grep -E "(error|fatal error): " build.log | sort -u | head -10 | sed 's/^/::error::/' || true
+          grep -E "(error|fatal error): |^Test .* failed|XCTAssert|Expectation failed" build.log \
+            | sort -u | head -20 | sed 's/^/::error::/' || true
 
       # Pulse (kean/Pulse) is declared only by the app-side DebugSupport package
       # and gated behind #if DEBUG end to end (see

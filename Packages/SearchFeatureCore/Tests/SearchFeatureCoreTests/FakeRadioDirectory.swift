@@ -6,6 +6,9 @@ import RadioDirectory
 actor FakeRadioDirectory: RadioDirectoryProviding {
     var genresResult: Result<[Genre], RadioDirectoryError> = .success([])
     var searchStationsResult: Result<[Station], RadioDirectoryError> = .success([])
+    /// Holds each search open so a test can act while one is genuinely in
+    /// flight (rather than only before or after it).
+    var searchDelay: Duration = .zero
 
     private(set) var searchCallCount = 0
     private(set) var searchedQueries: [String] = []
@@ -16,6 +19,10 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
 
     func setSearchStationsResult(_ result: Result<[Station], RadioDirectoryError>) {
         searchStationsResult = result
+    }
+
+    func setSearchDelay(_ delay: Duration) {
+        searchDelay = delay
     }
 
     func genres() async throws(RadioDirectoryError) -> [Genre] {
@@ -32,6 +39,9 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
     func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
         searchCallCount += 1
         searchedQueries.append(query)
+        if searchDelay > .zero {
+            try? await Task.sleep(for: searchDelay)
+        }
         switch searchStationsResult {
         case let .success(stations): return stations
         case let .failure(error): throw error
