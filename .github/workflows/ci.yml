@@ -152,17 +152,26 @@ jobs:
       # logs live on Azure blob storage, which repo-scoped tokens (and remote
       # agents working a PR) can't always reach — annotations are readable via
       # the Checks API, so a failure stays diagnosable from the API alone.
-      # The patterns cover both test frameworks, since a mixed run can fail
-      # either way: `Test Case '…' failed` / `XCTAssert…` from the legacy XCTest
-      # reporter, `recorded an issue` / `Expectation failed` from Swift Testing
-      # (which every suite here actually uses), plus xcodebuild's own
-      # `Testing failed:` summary line. Deliberately unanchored — xcodebuild
-      # indents all of them under the action it's reporting on.
+      # Ordered by signal, because the budget is small and the app under test
+      # writes a *lot* of OS-log noise to this same stream. Notably a broad
+      # `error: ` match is useless here: the simulator emits pages of
+      # `[error] CoreData: error: …` during app launch that crowd out the real
+      # failure, so compiler errors are matched on the `file.swift:LINE:COL:`
+      # shape instead. Test patterns cover both frameworks — `recorded an
+      # issue` / `Expectation failed` from Swift Testing (what every suite here
+      # uses), `Test Case '…' failed` / `XCTAssert…` from XCTest — plus
+      # `Fatal error:` for a runtime trap, which crashes the test process and
+      # otherwise leaves no assertion line at all.
       - name: Emit compile errors and test failures as annotations
         if: failure()
         run: |
-          grep -E "(error|fatal error): |Test Case .* failed|recorded an issue|Expectation failed|Testing failed:|XCTAssert" \
-            build.log | sort -u | head -20 | sed 's/^/::error::/' || true
+          {
+            grep -E "Fatal error: |recorded an issue|Expectation failed|Test Case .* failed|XCTAssert|Test run .* failed|\*\* (TEST|BUILD) FAILED \*\*" build.log || true
+            # xcodebuild's end-of-run roster, which names the failing tests and
+            # matches none of the patterns above.
+            sed -n "/^Failing tests:/,/^$/p" build.log || true
+            grep -E "[^ /]+\.(swift|h|m|mm):[0-9]+:[0-9]+: (error|fatal error): |^error: " build.log || true
+          } | sed '/^[[:space:]]*$/d' | sort -u | head -30 | sed 's/^/::error::/'
 
       # Pulse (kean/Pulse) is declared only by the app-side DebugSupport package
       # and gated behind #if DEBUG end to end (see
