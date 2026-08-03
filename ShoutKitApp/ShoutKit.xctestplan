@@ -39,6 +39,20 @@
         "identifier" : "PersistenceTests",
         "name" : "PersistenceTests"
       }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Packages/DesignSystem",
+        "identifier" : "DesignSystemTests",
+        "name" : "DesignSystemTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Packages/LiveActivity",
+        "identifier" : "NowPlayingActivityCoreTests",
+        "name" : "NowPlayingActivityCoreTests"
+      }
     }
   ],
   "version" : 1

@@ -37,9 +37,26 @@
 	<false/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.music</string>
+	<!-- Internet radio is a cleartext medium: a large share of the stations
+	     Radio-Browser and SHOUTcast list serve their streams over plain http://
+	     and offer no TLS endpoint at all, so ATS has to be relaxed for the app
+	     to play them.
+
+	     This is deliberately the *global* key rather than the media-only one.
+	     iOS playback runs through AudioStreaming, which fetches the stream with
+	     URLSession — NSAllowsArbitraryLoadsForMedia only covers AVFoundation's
+	     own media loading and would leave the stream blocked. (Note also that
+	     iOS ignores NSAllowsArbitraryLoads entirely when any of the narrower
+	     ...ForMedia / ...InWebContent / ...InLocalNetworking keys are present,
+	     so the two must not be combined here.)
+
+	     Everything the app itself talks to is https and unaffected: the
+	     directory mirrors, the iTunes Search API, and station artwork (whose
+	     http favicons are best-effort upgraded in RadioBrowserDirectoryClient).
+	     The relaxation exists for third-party stream endpoints only. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsArbitraryLoadsInMedia</key>
+		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>

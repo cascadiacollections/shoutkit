@@ -125,6 +125,19 @@ All notable changes to ShoutKit are documented here. The format follows
   once per URL and shared across the backdrop, hero, and tint views (previously three decodes)
 
 ### Fixed
+- **Stations that stream over plain http now play**: a misspelled App Transport Security key meant
+  the app's cleartext exception was silently ignored, so any station whose stream isn't served over
+  https was blocked by iOS before a single byte arrived. A large share of the Radio-Browser and
+  SHOUTcast catalogue is http-only, and those stations simply failed to start. Everything ShoutKit
+  itself talks to — the directory, artwork, the album-art lookup — remains https
+- **Scrolling a carousel or swiping a row no longer jumps you to another tab**: a swipe-between-tabs
+  gesture on the root view ran alongside, rather than instead of, whatever you were actually
+  swiping, so dragging the Popular Stations carousel, swiping a station away in Favorites or Listen
+  Now, or swiping back from a genre could all switch tabs. Tabs are now changed by tapping them, as
+  in Apple Music
+- **Search no longer gets stuck on the spinner**: typing a trailing space (or accepting an
+  autocorrection) while a search was still running cancelled it without starting a new one, leaving
+  the spinner up until the query was edited again
 - **Notifications, calls, and Siri no longer strand your station**: an ordinary notification now
   ducks live radio for its sound instead of pausing it outright, and when a real interruption
   (call, alarm, Siri) ends, playback comes back even in the cases where iOS doesn't tell the app

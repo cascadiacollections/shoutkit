@@ -21,16 +21,24 @@ public final class SearchViewModel {
     public var query: String = "" {
         didSet {
             guard query != oldValue else { return }
-            searchTask?.cancel()
 
             let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            // An edit that leaves the *trimmed* query unchanged (a trailing
+            // space, an autocorrection, a paste with surrounding whitespace)
+            // isn't a new search — and must not cancel the running one either.
+            // Cancelling above this guard stranded `phase` on `.searching`
+            // forever: the in-flight task returned on its cancellation check
+            // without publishing, and nothing re-issued it because the query
+            // was a duplicate. Hence the cancel lives below the guard.
+            guard trimmed != lastTrimmedQuery else { return }
+
+            searchTask?.cancel()
             if trimmed.isEmpty {
                 // Clearing resets instantly; only real queries wait out the
                 // debounce. The empty value still flows through the stream so
                 // it supersedes any keystroke waiting in the debounce window.
                 phase = .idle
             }
-            guard trimmed != lastTrimmedQuery else { return }
             lastTrimmedQuery = trimmed
             queries.yield(trimmed)
         }
