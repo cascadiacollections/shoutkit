@@ -22,8 +22,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     /// level; the named mirrors are direct fallbacks if it misbehaves.
     public static let defaultHosts: [URL] = [
         URL(string: "https://all.api.radio-browser.info") ?? URL(fileURLWithPath: "/"),
-        URL(string: "https://de1.api.radio-browser.info") ?? URL(fileURLWithPath: "/"),
-        URL(string: "https://nl1.api.radio-browser.info") ?? URL(fileURLWithPath: "/")
+        URL(string: "https://de1.api.radio-browser.info") ?? URL(fileURLWithPath: "/")
     ]
 
     private let hosts: [URL]
