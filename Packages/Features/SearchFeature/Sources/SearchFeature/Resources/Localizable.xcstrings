@@ -4,13 +4,16 @@
     "Browse by Genre" : {
 
     },
+    "Couldn't Load Genres" : {
+
+    },
     "Find your sound" : {
 
     },
-    "Search for stations by name or genre." : {
+    "Search Unavailable" : {
 
     },
-    "Search Unavailable" : {
+    "Search for stations by name or genre." : {
 
     },
     "Searching" : {

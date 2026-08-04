@@ -91,20 +91,8 @@ public struct NowPlayingView: View {
                 isPlaying: isPlaying(playback)
             )
             .padding(.top, ShoutKitSpacing.medium)
-            .appleMusicContextMenu(url: appleMusicURL, openURL: openURL)
 
-            VStack(spacing: ShoutKitSpacing.extraSmall) {
-                Text(station.name)
-                    .font(.title2.bold())
-                    .multilineTextAlignment(.center)
-
-                Text(trackLine(playback) ?? station.genre)
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .contentTransition(.opacity)
-            }
-            .padding(.horizontal, ShoutKitSpacing.large)
+            titleBlock(playback: playback, station: station)
 
             statusBadge(playback)
 
@@ -112,7 +100,7 @@ public struct NowPlayingView: View {
 
             transportControls(playback: playback, station: station)
 
-            bottomBar
+            routePicker
                 .padding(.bottom, ShoutKitSpacing.large)
         }
         .padding(.horizontal, ShoutKitSpacing.large)
@@ -121,6 +109,64 @@ public struct NowPlayingView: View {
 
     private var grabberSpacer: some View {
         Color.clear.frame(height: ShoutKitSpacing.small)
+    }
+
+    /// Station and track, leading-aligned with an overflow menu on the trailing
+    /// edge — the Now Playing convention across Apple's own players. Centered
+    /// text with no anchor is fine for one line and starts drifting as soon as a
+    /// long station name and a long track title disagree about how many they
+    /// need.
+    private func titleBlock(playback: PlaybackController, station: Station) -> some View {
+        HStack(alignment: .top, spacing: ShoutKitSpacing.small) {
+            VStack(alignment: .leading, spacing: ShoutKitSpacing.extraSmall) {
+                Text(station.name)
+                    .font(.title2.bold())
+                    .lineLimit(2)
+
+                Text(trackLine(playback) ?? station.genre)
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .contentTransition(.opacity)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            overflowMenu(playback: playback)
+        }
+    }
+
+    /// The actions that aren't playback: leaving for Apple Music, and ending the
+    /// stream outright.
+    ///
+    /// Stop used to sit in the transport row beside play/pause, which put a
+    /// control that dismisses the whole screen one 8 pt gap from the one people
+    /// reach for constantly — and gave a live-radio player a three-button
+    /// transport where two of the buttons do overlapping things.
+    private func overflowMenu(playback: PlaybackController) -> some View {
+        Menu {
+            if let appleMusicURL {
+                Button("View in Apple Music", systemImage: "music.note") {
+                    openURL(appleMusicURL)
+                }
+            }
+            Button("Stop", systemImage: "stop.fill", role: .destructive) {
+                playback.stop()
+                dismiss()
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.title3)
+                .frame(width: 44, height: 44)
+        }
+        .buttonStyle(.glass)
+        .buttonBorderShape(.circle)
+        .accessibilityLabel("More")
+    }
+
+    private var routePicker: some View {
+        RoutePickerView(tintColor: .secondaryLabel, activeTintColor: UIColor(accent))
+            .frame(width: 44, height: 44)
+            .accessibilityLabel("AirPlay and output devices")
     }
 
     @ViewBuilder
@@ -144,31 +190,26 @@ public struct NowPlayingView: View {
         }
     }
 
+    /// Favorite · play/pause · sleep timer. A live stream has nothing to scrub
+    /// and nothing to skip to, so play/pause is the only true transport control
+    /// here; it gets the size and the center, flanked by the two things people
+    /// actually do while listening.
     private func transportControls(playback: PlaybackController, station: Station) -> some View {
         HStack(spacing: ShoutKitSpacing.extraLarge) {
-            Button {
-                playback.stop()
-                dismiss()
-            } label: {
-                Image(systemName: "stop.fill")
-                    .font(.title2)
-            }
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
-            .accessibilityLabel("Stop")
+            favoriteButton(station: station)
 
             Button {
                 playback.togglePlayPause()
             } label: {
                 playPauseIcon(playback)
                     .font(.system(size: 34, weight: .bold))
-                    .frame(width: 72, height: 72)
+                    .frame(width: 76, height: 76)
             }
             .buttonStyle(.glassProminent)
             .buttonBorderShape(.circle)
             .accessibilityLabel(isPlaying(playback) ? "Pause" : "Play")
 
-            favoriteButton(station: station)
+            sleepTimerButton
         }
     }
 
@@ -186,19 +227,6 @@ public struct NowPlayingView: View {
             .tint(library.isFavorite(station) ? (artworkAccent ?? .shoutKitHighlight) : .primary)
             .accessibilityLabel(library.isFavorite(station) ? "Remove favorite" : "Add favorite")
         } else {
-            Color.clear.frame(width: 44, height: 44)
-        }
-    }
-
-    private var bottomBar: some View {
-        HStack {
-            sleepTimerButton
-            Spacer()
-            RoutePickerView(tintColor: .secondaryLabel, activeTintColor: UIColor(accent))
-                .frame(width: 44, height: 44)
-                .accessibilityLabel("AirPlay and output devices")
-            Spacer()
-            // Balances the timer button so AirPlay stays centered.
             Color.clear.frame(width: 44, height: 44)
         }
     }
@@ -221,6 +249,10 @@ public struct NowPlayingView: View {
                 sleepTimerLabel(sleepTimer)
                     .frame(minWidth: 44, minHeight: 44)
             }
+            .buttonStyle(.glass)
+            // Capsule, not circle: the running timer's label carries a countdown
+            // and has to be allowed to grow.
+            .buttonBorderShape(.capsule)
             .accessibilityLabel(sleepTimer.isActive ? "Sleep timer running" : "Sleep timer")
         } else {
             Color.clear.frame(width: 44, height: 44)
@@ -268,26 +300,5 @@ public struct NowPlayingView: View {
         guard let track = playback.nowPlaying, let title = track.title else { return nil }
         if let artist = track.artist { return "\(title) — \(artist)" }
         return title
-    }
-}
-
-private extension View {
-    /// Attaches a "View in Apple Music" context menu to the artwork when a link
-    /// was resolved for the current track. With no link the view is returned
-    /// untouched — an empty `contextMenu` still reacts to long-press, which
-    /// reads as a bug, so station-only artwork stays inert.
-    @ViewBuilder
-    func appleMusicContextMenu(url: URL?, openURL: OpenURLAction) -> some View {
-        if let url {
-            contextMenu {
-                Button {
-                    openURL(url)
-                } label: {
-                    Label("View in Apple Music", systemImage: "music.note")
-                }
-            }
-        } else {
-            self
-        }
     }
 }

@@ -18,6 +18,10 @@ public enum SearchPhase: Equatable, Sendable {
 @MainActor
 @Observable
 public final class SearchViewModel {
+    private enum Configuration {
+        static let resultLimit = 40
+    }
+
     public var query: String = "" {
         didSet {
             guard query != oldValue else { return }
@@ -31,6 +35,13 @@ public final class SearchViewModel {
             // without publishing, and nothing re-issued it because the query
             // was a duplicate. Hence the cancel lives below the guard.
             guard trimmed != lastTrimmedQuery else { return }
+
+            // Typing over a genre chip's text turns the request back into a name
+            // search. Set before `runSearch` can see it, so the very edit that
+            // abandons the genre doesn't get answered as one.
+            if trimmed != activeGenreQuery {
+                activeGenre = nil
+            }
 
             searchTask?.cancel()
             if trimmed.isEmpty {
@@ -47,6 +58,18 @@ public final class SearchViewModel {
     public private(set) var phase: SearchPhase = .idle
     public private(set) var genres: [Genre] = []
     public private(set) var genreLoadError: RadioDirectoryError?
+    /// The genre chip whose stations are on screen, if the current results came
+    /// from a chip rather than from typing. Drives the chip's selected state and
+    /// picks the genre query over the name search below.
+    public private(set) var activeGenre: Genre?
+
+    /// ``activeGenre``'s name in the form queries take — trimmed, like everything
+    /// that flows through `query`. The whole `Genre` is what's stored, not just
+    /// this string, so the chip grid can match on identity (including
+    /// `stationCount`) to decide which chip renders selected.
+    private var activeGenreQuery: String? {
+        activeGenre?.name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     @ObservationIgnored private let directory: any RadioDirectoryProviding
     @ObservationIgnored private var searchTask: Task<Void, Never>?
@@ -88,8 +111,35 @@ public final class SearchViewModel {
         }
     }
 
+    /// Browses a genre. The name lands in the search field so the results are
+    /// labeled and the field's own Clear button gets you back out — but the
+    /// request itself goes to the directory's genre/tag query, not to the name
+    /// search. Tapping "Jazz" used to return stations *called* Jazz.
     public func selectGenre(_ genre: Genre) {
-        query = genre.name
+        activeGenre = genre
+
+        let trimmed = genre.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard query.trimmingCharacters(in: .whitespacesAndNewlines) != trimmed else {
+            // The field already holds this text — the same chip tapped twice, or
+            // a genre the user happened to type — so `query`'s `didSet` won't
+            // fire. Run it here rather than leaving the chip visibly inert.
+            runSearch(trimmed)
+            return
+        }
+        // The trimmed name, not the raw one: every other value that reaches
+        // `query` gets compared in trimmed form, so a directory tag arriving with
+        // stray whitespace would fail `activeGenreQuery`'s check on the way in and
+        // silently downgrade its own chip to a name search.
+        query = trimmed
+    }
+
+    /// Re-runs whatever is currently in the field, keeping the *kind* of request
+    /// intact — retrying a failed genre chip must not quietly become a name
+    /// search for the genre's name.
+    public func retry() {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return }
+        runSearch(trimmed)
     }
 
     private func runSearch(_ query: String) {
@@ -104,12 +154,22 @@ public final class SearchViewModel {
 
     private func performSearch(_ query: String) async {
         do {
-            let stations = try await directory.searchStations(matching: query, limit: 40)
+            let stations = try await fetchStations(matching: query)
             guard Task.isCancelled == false else { return }
             phase = stations.isEmpty ? .empty : .results(stations)
         } catch {
             guard Task.isCancelled == false else { return }
             phase = .failed(error)
         }
+    }
+
+    /// A chip tap asks the directory what's *tagged* with a genre; typing asks
+    /// what's *named* like the query. Same phase either way — two different
+    /// questions with the same shape of answer.
+    private func fetchStations(matching query: String) async throws(RadioDirectoryError) -> [Station] {
+        if let activeGenreQuery, activeGenreQuery == query {
+            return try await directory.stations(inGenre: activeGenreQuery, limit: Configuration.resultLimit)
+        }
+        return try await directory.searchStations(matching: query, limit: Configuration.resultLimit)
     }
 }

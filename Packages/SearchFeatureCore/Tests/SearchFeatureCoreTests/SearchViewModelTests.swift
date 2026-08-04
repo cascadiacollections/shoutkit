@@ -126,6 +126,112 @@ struct SearchViewModelTests {
         #expect(viewModel.query == "Jazz")
     }
 
+    /// A chip tap asks the directory for stations *tagged* Jazz, not stations
+    /// *named* Jazz — the two return very different lists, and the name search
+    /// is the wrong one for a genre chip.
+    @Test func selectGenreBrowsesTheGenreRatherThanSearchingItsName() async {
+        let directory = FakeRadioDirectory()
+        let stations: [Station] = [.fixture(id: "a", name: "Blue Note Radio", genre: "Jazz")]
+        await directory.setSearchStationsResult(.success(stations))
+        let viewModel = SearchViewModel(directory: directory)
+
+        viewModel.selectGenre(Genre(name: "Jazz"))
+
+        await waitUntil { viewModel.phase != .idle && viewModel.phase != .searching }
+
+        #expect(viewModel.phase == .results(stations))
+        #expect(viewModel.activeGenre == Genre(name: "Jazz"))
+        let genreQueries = await directory.genreStationQueries
+        let nameQueries = await directory.searchedQueries
+        #expect(genreQueries == ["Jazz"])
+        #expect(nameQueries.isEmpty)
+    }
+
+    /// A directory tag can arrive padded. Storing the raw name while comparing
+    /// trimmed values used to make the chip clear its own `activeGenre` on the way
+    /// in, silently demoting the browse to a name search.
+    @Test func aGenreNameWithStrayWhitespaceStillBrowsesTheGenre() async {
+        let directory = FakeRadioDirectory()
+        await directory.setSearchStationsResult(.success([.fixture(id: "a", name: "Blue Note Radio")]))
+        let viewModel = SearchViewModel(directory: directory)
+
+        viewModel.selectGenre(Genre(name: "  Jazz  "))
+
+        await waitUntil { viewModel.phase != .idle && viewModel.phase != .searching }
+
+        #expect(viewModel.query == "Jazz")
+        #expect(viewModel.activeGenre == Genre(name: "  Jazz  "))
+        let genreQueries = await directory.genreStationQueries
+        let nameQueries = await directory.searchedQueries
+        #expect(genreQueries == ["Jazz"])
+        #expect(nameQueries.isEmpty)
+    }
+
+    /// Tapping the chip a second time can't rely on `query`'s `didSet` — the text
+    /// is already there — so it has to re-issue the request itself.
+    @Test func selectingTheSameGenreTwiceRepeatsTheGenreQuery() async {
+        let directory = FakeRadioDirectory()
+        await directory.setSearchStationsResult(.success([.fixture(id: "a", name: "Blue Note Radio")]))
+        let viewModel = SearchViewModel(directory: directory)
+
+        viewModel.selectGenre(Genre(name: "Jazz"))
+        await waitUntil { viewModel.phase != .idle && viewModel.phase != .searching }
+        viewModel.selectGenre(Genre(name: "Jazz"))
+        await waitUntilAsync { await directory.genreStationQueries.count == 2 }
+
+        let genreQueries = await directory.genreStationQueries
+        #expect(genreQueries == ["Jazz", "Jazz"])
+    }
+
+    /// Editing the field abandons the genre: the text no longer describes a chip,
+    /// so the request goes back to being a name search.
+    @Test func typingOverAGenreReturnsToNameSearch() async {
+        let directory = FakeRadioDirectory()
+        await directory.setSearchStationsResult(.success([.fixture(id: "a", name: "Jazzy FM")]))
+        let viewModel = SearchViewModel(directory: directory)
+
+        viewModel.selectGenre(Genre(name: "Jazz"))
+        await waitUntil { viewModel.phase != .idle && viewModel.phase != .searching }
+
+        viewModel.query = "Jazzy"
+        await waitUntilAsync { await directory.searchedQueries.isEmpty == false }
+
+        #expect(viewModel.activeGenre == nil)
+        let genreQueries = await directory.genreStationQueries
+        let nameQueries = await directory.searchedQueries
+        #expect(genreQueries == ["Jazz"])
+        #expect(nameQueries == ["Jazzy"])
+    }
+
+    @Test func retryReissuesTheGenreQueryRatherThanANameSearch() async {
+        let directory = FakeRadioDirectory()
+        await directory.setSearchStationsResult(.failure(.httpStatus(503)))
+        let viewModel = SearchViewModel(directory: directory)
+
+        viewModel.selectGenre(Genre(name: "Jazz"))
+        await waitUntil { viewModel.phase == .failed(.httpStatus(503)) }
+
+        viewModel.retry()
+        await waitUntilAsync { await directory.genreStationQueries.count == 2 }
+
+        let genreQueries = await directory.genreStationQueries
+        let nameQueries = await directory.searchedQueries
+        #expect(genreQueries == ["Jazz", "Jazz"])
+        #expect(nameQueries.isEmpty)
+    }
+
+    @Test func retryDoesNothingWithAnEmptyField() async {
+        let directory = FakeRadioDirectory()
+        let viewModel = SearchViewModel(directory: directory)
+
+        viewModel.retry()
+        try? await Task.sleep(for: .milliseconds(50))
+
+        #expect(viewModel.phase == .idle)
+        let callCount = await directory.searchCallCount
+        #expect(callCount == 0)
+    }
+
     @Test func loadGenresPopulatesGenresOnSuccess() async {
         let directory = FakeRadioDirectory()
         await directory.setGenresResult(.success([Genre(name: "Jazz"), Genre(name: "Rock")]))

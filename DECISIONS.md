@@ -1,5 +1,80 @@
 # Decisions
 
+## 2026-08-04 (UX pass: one discovery surface, and controls that mean one thing each)
+
+A simplification pass over the shell and the three screens people actually spend time in, taking
+Apple's Human Interface Guidelines as the arbiter rather than "it works". The recurring finding was
+duplication that had become invisible from the inside: the same content reachable two ways, the
+same accessibility branch written twice, the same failure rendered three ways.
+
+- **The Browse tab is gone; Listen Now is the only discovery surface.** Browse and Listen Now issued
+  the *same* `topStations` fetch and drew it twice — and Browse drew it twice again on its own
+  screen, as a carousel of the first ten stations directly above a grid that began with those same
+  ten. Its genre strip duplicated Search's. HIG's "one place for one thing" reading of tab bars is
+  hard to satisfy when two tabs answer the same question, so Listen Now absorbed the station list as
+  a **More Stations** section fed by `stations.dropFirst(carouselLimit)` — disjoint from the
+  carousel above it, so nothing appears twice — and genre browsing consolidated into Search. Three
+  tabs: Listen Now · Search · Favorites. Nothing was dropped, only de-duplicated: every station,
+  genre, and control that was reachable before still is.
+- **A genre chip now browses the genre instead of searching its name.** Search's chips set
+  `query = genre.name`, which ran `searchStations` — so tapping "Jazz" returned stations *called*
+  Jazz. `RadioDirectoryProviding.stations(inGenre:limit:)` (the tag query Browse was already using)
+  is now what a chip calls, tracked by `SearchViewModel.activeGenre`. The name still lands in the
+  field so the result set is labeled and the field's Clear button gets you out, and typing over it
+  drops back to a name search. Chips render selected while their genre is showing, and `retry()`
+  re-issues the same *kind* of request rather than silently downgrading a failed genre browse.
+- **Recently Played on Listen Now is no longer a `List` inside a `ScrollView`.** The nested list
+  existed only to get `swipeActions`, and a nested list has no intrinsic height, so it was given
+  one: `count * 76 + spacing`. 76 pt is a guess about a row whose height is set by Dynamic Type, so
+  at the first size step up the section clipped its last row. Dismissal moved to the row's context
+  menu (with a matching VoiceOver custom action, since a context menu is invisible to it) — where
+  iOS puts "remove this suggestion" anyway. The undo banner moved from `overlay(alignment: .bottom)`
+  to `safeAreaInset(edge: .bottom)`: as an overlay it rendered underneath the tab bar's mini-player
+  accessory, which is exactly where the bottom of that screen is.
+- **Now Playing's transport row is Favorite · Play/Pause · Sleep timer.** Stop sat beside play/pause
+  — one 8 pt gap between the control people tap constantly and one that ends the stream *and*
+  dismisses the screen, in a player where pause already does the audible half of stopping. It moved,
+  with "View in Apple Music", into an overflow menu on the trailing edge of the title block, which
+  is also where the title moved: leading-aligned, because centered text with no anchor drifts as
+  soon as a long station name and a long track title disagree about line count. AirPlay is alone on
+  the bottom row and genuinely centered now, instead of centered by a `Color.clear` spacer
+  counterweighting the sleep timer. The artwork's long-press menu went away with the ellipsis menu
+  arriving — one discoverable path beats one discoverable and one hidden.
+- **`shoutKitBackground` is the system grouped background, not a hand-mixed near-white/near-black.**
+  A fixed pair of RGB values can't track what the system shifts underneath it — sheets, popovers,
+  and elevated presentations, Increase Contrast, and the inset-grouped `List` style Favorites uses.
+  Paired with a new `shoutKitCardBackground` (`secondarySystemGroupedBackground`) for `StationRow`,
+  which was filling with `.background`: on the old canvas that read as a card, and on any surface
+  the system paints `systemBackground` it was white on white.
+- **The accent has two appearances.** One fixed blue (0.04, 0.44, 0.72) has to be dark enough to
+  read as text on white, which makes it too dark to read as tinted text or a glyph on near-black —
+  and it was doing both. Dark mode gets a lifted variant at comparable contrast; same for the
+  favorited heart's `shoutKitHighlight`.
+- **`glassControlBackground(in:)` is the one glass-or-material decision.** `GlassControlSurface`
+  owned that branch and had **zero call sites**, while `StationRow` carried a hand-copied version
+  under a comment promising it matched — the kind of promise that quietly stops being true. Both now
+  call one view modifier, and the Listen Now undo banner uses `GlassControlSurface` itself, so the
+  banner degrades under Reduce Transparency like every other glass control (as a bare
+  `.regularMaterial` background it didn't).
+- **`DirectoryUnavailableView` replaces three hand-rolled copies.** Listen Now, Search, and the
+  genre strip each had their own `ContentUnavailableView` with the same icon, the same retry
+  gating, and different minimum heights — so one failure looked like three different failures
+  depending on where you were standing.
+- **Deleted: `SpotlightCard` and `BrowseConfiguration`.** The featured-station hero had been behind
+  a compile-time `false` since beta 1 for a reason its own comment stated — it's the first directory
+  result, not editorial content, so it wasn't earning a 220 pt hero. Dead UI kept alive by a flag
+  nobody was going to flip; `BrowseContent.spotlight` stays on the view model (it's tested, and
+  costs nothing) so bringing an *earned* hero back doesn't start from zero. `GlassActionCluster`
+  went the same way — a public wrapper around `GlassEffectContainer` with no callers.
+- **Deliberately not done: renaming the `BrowseFeature` package.** The module now holds Listen Now
+  and nothing named Browse, which reads oddly, but the rename touches five manifests and every
+  import for zero behavior change. Left as a name that's a little wrong rather than churn that's
+  entirely cosmetic.
+- **Deliberately not done: removing the first-run welcome screen.** HIG is unenthusiastic about
+  anything between launch and content, and this is a single screen with a single button. It states
+  the one thing worth stating (no account, tap to listen) and never returns. Not the friction worth
+  spending a behavior change on.
+
 ## 2026-08-03 (power review: what the app spends when nobody asked it to)
 
 A pass over hardware efficiency and the power signals the platform offers. The finding was

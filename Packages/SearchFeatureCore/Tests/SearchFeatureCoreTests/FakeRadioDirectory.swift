@@ -12,6 +12,11 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
 
     private(set) var searchCallCount = 0
     private(set) var searchedQueries: [String] = []
+    /// Genres asked for through the dedicated genre query. Tracked separately
+    /// from `searchedQueries` because the whole point of the genre path is that
+    /// it is *not* a name search — the protocol's default implementation would
+    /// silently make it one.
+    private(set) var genreStationQueries: [String] = []
 
     func setGenresResult(_ result: Result<[Genre], RadioDirectoryError>) {
         genresResult = result
@@ -48,6 +53,17 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
         }
     }
 
+    func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        genreStationQueries.append(genre)
+        if searchDelay > .zero {
+            try? await Task.sleep(for: searchDelay)
+        }
+        switch searchStationsResult {
+        case let .success(stations): return stations
+        case let .failure(error): throw error
+        }
+    }
+
     func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
         throw .invalidResponse
     }
@@ -70,6 +86,18 @@ extension Station {
 func waitUntil(_ condition: () -> Bool, upTo seconds: TimeInterval = 5) async {
     let deadline = Date().addingTimeInterval(seconds)
     while condition() == false, Date() < deadline {
+        try? await Task.sleep(for: .milliseconds(10))
+    }
+}
+
+/// `waitUntil` for conditions that read the fake directory's actor-isolated call
+/// log. Deliberately a separate name rather than an overload: a trailing-closure
+/// call would be ambiguous between the two, since the sync version's only other
+/// parameter has a default.
+@MainActor
+func waitUntilAsync(_ condition: () async -> Bool, upTo seconds: TimeInterval = 5) async {
+    let deadline = Date().addingTimeInterval(seconds)
+    while await condition() == false, Date() < deadline {
         try? await Task.sleep(for: .milliseconds(10))
     }
 }

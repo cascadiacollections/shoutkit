@@ -1,7 +1,7 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Couldn't Load Genre" : {
+    "%@ removed" : {
 
     },
     "Couldn't reach the station directory. Showing what's loaded." : {
@@ -10,26 +10,10 @@
     "Directory Unavailable" : {
 
     },
-    "Featured Station" : {
+    "More Like This" : {
 
     },
-    "Featured station, %@, %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Featured station, %1$@, %2$@"
-          }
-        }
-      }
-    },
-    "Genres" : {
-
-    },
-    "No Stations" : {
-
-    },
-    "No stations in this genre yet." : {
+    "More Stations" : {
 
     },
     "Nothing here yet" : {
@@ -41,10 +25,7 @@
     "Offline — showing stations saved %@." : {
 
     },
-    "Pause" : {
-
-    },
-    "Play" : {
+    "Play a few stations to get recommendations here." : {
 
     },
     "Popular Stations" : {
@@ -56,10 +37,13 @@
     "Recently Played" : {
 
     },
-    "Try Again" : {
+    "Remove from Recently Played" : {
 
     },
     "Tuning in…" : {
+
+    },
+    "Undo" : {
 
     }
   },

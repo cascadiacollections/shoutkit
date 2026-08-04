@@ -2,6 +2,21 @@ import Playback
 import RadioDirectory
 import SwiftUI
 
+/// An extra, destructive row action — offered in the row's context menu and as a
+/// VoiceOver custom action. The title is supplied by the feature layer because
+/// it's localized in that module's string catalog, not this one.
+public struct StationRowAction {
+    public let title: String
+    public let systemImage: String
+    public let perform: () -> Void
+
+    public init(title: String, systemImage: String, perform: @escaping () -> Void) {
+        self.title = title
+        self.systemImage = systemImage
+        self.perform = perform
+    }
+}
+
 /// A reusable station list row: artwork, name, metadata, and a glass play/pause
 /// indicator that reflects the shared playback phase. Presentational only — state
 /// and callbacks are injected by the feature layer.
@@ -15,22 +30,22 @@ public struct StationRow: View {
     private let isFavorite: Bool
     private let onTap: () -> Void
     private let onToggleFavorite: (() -> Void)?
-
-    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    private let removeAction: StationRowAction?
 
     public init(
         station: Station,
         phase: StationPlaybackPhase,
         isFavorite: Bool = false,
         onTap: @escaping () -> Void,
-        onToggleFavorite: (() -> Void)? = nil
+        onToggleFavorite: (() -> Void)? = nil,
+        removeAction: StationRowAction? = nil
     ) {
         self.station = station
         self.phase = phase
         self.isFavorite = isFavorite
         self.onTap = onTap
         self.onToggleFavorite = onToggleFavorite
+        self.removeAction = removeAction
     }
 
     private var isActive: Bool {
@@ -61,19 +76,22 @@ public struct StationRow: View {
             .padding(ShoutKitSpacing.small)
             .background {
                 RoundedRectangle(cornerRadius: ShoutKitRadius.medium, style: .continuous)
-                    .fill(isActive ? AnyShapeStyle(.tint.opacity(0.10)) : AnyShapeStyle(.background))
+                    .fill(isActive ? AnyShapeStyle(.tint.opacity(0.12)) : AnyShapeStyle(Color.shoutKitCardBackground))
             }
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(phase == .playing ? "Pauses playback" : "Plays this station")
-        // The context menu is invisible to VoiceOver, so expose the favorite
-        // toggle as a custom action too.
+        // The context menu is invisible to VoiceOver, so expose the same actions
+        // as custom actions too.
         .accessibilityActions {
             if onToggleFavorite != nil {
                 Button(isFavorite ? "Remove Favorite" : "Add to Favorites") {
                     onToggleFavorite?()
                 }
+            }
+            if let removeAction {
+                Button(removeAction.title, action: removeAction.perform)
             }
         }
         .contextMenu {
@@ -85,16 +103,18 @@ public struct StationRow: View {
                           systemImage: isFavorite ? "heart.slash" : "heart")
                 }
             }
+            if let removeAction {
+                Button(role: .destructive, action: removeAction.perform) {
+                    Label(removeAction.title, systemImage: removeAction.systemImage)
+                }
+            }
         }
     }
 
     /// A visual play/pause indicator only — not its own tappable control. The
-    /// whole row is the button; this just renders the circular glass affordance,
-    /// falling back to material + stroke under Reduce Transparency/Increase
-    /// Contrast exactly like `GlassControlSurface`.
-    @ViewBuilder
+    /// whole row is the button; this just renders the circular glass affordance.
     private var playIndicator: some View {
-        let icon = Group {
+        Group {
             switch phase {
             case .loading:
                 ProgressView()
@@ -106,17 +126,8 @@ public struct StationRow: View {
             }
         }
         .foregroundStyle(isActive ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
-
-        if reduceTransparency || colorSchemeContrast == .increased {
-            icon
-                .frame(width: 44, height: 44)
-                .background(.regularMaterial, in: Circle())
-                .overlay { Circle().stroke(.primary.opacity(0.18), lineWidth: 1) }
-        } else {
-            icon
-                .frame(width: 44, height: 44)
-                .glassEffect(.regular, in: Circle())
-        }
+        .frame(width: 44, height: 44)
+        .glassControlBackground(in: Circle())
     }
 
     private var subtitle: String {

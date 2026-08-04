@@ -59,12 +59,13 @@ public struct SearchView: View {
         case .empty:
             ContentUnavailableView.search
         case let .failed(error):
-            ContentUnavailableView(
-                "Search Unavailable",
-                systemImage: "wifi.exclamationmark",
-                description: Text(error.localizedDescription)
-            )
-            .frame(maxWidth: .infinity, minHeight: 200)
+            DirectoryUnavailableView(
+                title: String(localized: "Search Unavailable", bundle: .module),
+                error: error,
+                minHeight: 200
+            ) {
+                viewModel.retry()
+            }
         }
     }
 
@@ -72,19 +73,12 @@ public struct SearchView: View {
     private var browseGenres: some View {
         if viewModel.genres.isEmpty {
             if let error = viewModel.genreLoadError {
-                ContentUnavailableView {
-                    Label("Couldn't Load Genres", systemImage: "wifi.exclamationmark")
-                } description: {
-                    Text(error.localizedDescription)
-                } actions: {
-                    if error.isRetryable {
-                        Button("Try Again") {
-                            Task { await viewModel.loadGenres() }
-                        }
-                        .buttonStyle(.glassProminent)
-                    }
+                DirectoryUnavailableView(
+                    title: String(localized: "Couldn't Load Genres", bundle: .module),
+                    error: error
+                ) {
+                    Task { await viewModel.loadGenres() }
                 }
-                .frame(maxWidth: .infinity, minHeight: 240)
             } else {
                 ContentUnavailableView(
                     "Find your sound",
@@ -95,7 +89,7 @@ public struct SearchView: View {
             }
         } else {
             SectionHeaderView(String(localized: "Browse by Genre", bundle: .module))
-            FlowChips(genres: viewModel.genres) { genre in
+            GenreChips(genres: viewModel.genres, selected: viewModel.activeGenre) { genre in
                 viewModel.selectGenre(genre)
             }
         }
@@ -117,9 +111,11 @@ public struct SearchView: View {
     }
 }
 
-/// A simple wrapping row of genre chips.
-private struct FlowChips: View {
+/// A wrapping grid of genre chips, with the browsed one held selected so the
+/// results below are attributable to a tap you can see you made.
+private struct GenreChips: View {
     let genres: [Genre]
+    let selected: Genre?
     let onSelect: (Genre) -> Void
 
     private let columns = [GridItem(.adaptive(minimum: 110), spacing: ShoutKitSpacing.small)]
@@ -127,16 +123,27 @@ private struct FlowChips: View {
     var body: some View {
         LazyVGrid(columns: columns, alignment: .leading, spacing: ShoutKitSpacing.small) {
             ForEach(genres) { genre in
-                Button {
-                    onSelect(genre)
-                } label: {
-                    Text(genre.name)
-                        .font(.subheadline.weight(.medium))
-                        .frame(maxWidth: .infinity)
-                        .lineLimit(1)
-                }
-                .buttonStyle(.glass)
+                chip(genre)
+                    .accessibilityAddTraits(genre == selected ? .isSelected : [])
             }
+        }
+    }
+
+    // Two branches rather than one style value: `ButtonStyle` has no type-erased
+    // box, so the choice has to be made in the view tree.
+    @ViewBuilder
+    private func chip(_ genre: Genre) -> some View {
+        let label = Text(genre.name)
+            .font(.subheadline.weight(.medium))
+            .frame(maxWidth: .infinity)
+            .lineLimit(1)
+
+        if genre == selected {
+            Button { onSelect(genre) } label: { label }
+                .buttonStyle(.glassProminent)
+        } else {
+            Button { onSelect(genre) } label: { label }
+                .buttonStyle(.glass)
         }
     }
 }
