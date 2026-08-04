@@ -29,15 +29,25 @@ import Testing
     /// suggestions — otherwise Siri has nothing to resolve "play ⟨station⟩"
     /// against on a fresh install.
     ///
-    /// Disabled against the same production bug as the `IntentStationCache`
-    /// cases in `IntentSupportTests` (see the note there, and #116): decoding a
-    /// `StationEntity` traps in `EntityProperty`. This test reaches it through
-    /// `knownStations()`, which appends `IntentStationCache.load()` — and Swift
-    /// Testing runs cases in parallel against a shared `UserDefaults.standard`,
-    /// so a sibling test's `remember(…)` is what leaves something to decode.
-    /// It may or may not also trap on the `IntentDefinitions` metadata path
-    /// independently of `Codable`; that's untangled with the fix, not here.
-    @Test(.disabled("StationEntity decode traps in EntityProperty — see #116"))
+    /// Disabled for the CI environment, **not** for #116 — that bug is fixed and
+    /// this test helped prove it. Re-enabled against the snapshot-DTO fix, the
+    /// `EntityProperty` trap was gone: 8 of the 9 cases passed, including every
+    /// one that decodes a cached `StationEntity`. What this case hit instead was
+    ///
+    ///   Caught error: Underlying session was cancelled. (transportCancelled…)
+    ///
+    /// `IntentDefinitions` drives the real App Intents system pathway, which
+    /// needs a live session with the intents daemon. A headless CI simulator
+    /// doesn't reliably provide one, and the cancellation is that session going
+    /// away — nothing to do with our entity or its storage. The suite doc above
+    /// always said this one wants a host: it is an integration test, and Cmd+U
+    /// on a real simulator or device is where it means something.
+    ///
+    /// Worth knowing for anyone re-enabling it: the failure is cheap but the
+    /// aftermath is not. A failed test leaves xcodebuild collecting simulator
+    /// diagnostics for a 600 s timeout, so the job runs ~15 min instead of ~8
+    /// even though the tests themselves finish in 8 s.
+    @Test(.disabled("IntentDefinitions has no live intents session in CI — run it on a host"))
     func stationEntityQuerySuggestsStationsOnAFreshLibrary() async throws {
         let definitions = IntentDefinitions(bundleIdentifier: "com.cascadiacollections.shoutkit")
         let stationEntity = definitions.entities["StationEntity"]

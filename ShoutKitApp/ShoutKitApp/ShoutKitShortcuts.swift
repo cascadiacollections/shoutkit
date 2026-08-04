@@ -22,7 +22,7 @@ private let shortcutsLogger = Logger(subsystem: "ShoutKit.App", category: "Short
 /// conformance this replaces. Raising the deployment floor to iOS 27 for this
 /// was previously deferred (see DECISIONS.md, 2026-07-06) — revisited here.
 @AppEntity(schema: .audio.liveRadioStation)
-struct StationEntity: Codable, Sendable {
+struct StationEntity: Sendable {
     static let defaultQuery = StationEntityQuery()
 
     let id: String
@@ -48,6 +48,20 @@ struct StationEntity: Codable, Sendable {
         genre = station.genre
         artworkURLString = station.artworkURL?.absoluteString
         streamURLString = station.preferredStreamURL?.absoluteString
+    }
+
+    fileprivate init(
+        id: String,
+        name: String,
+        genre: String,
+        artworkURLString: String?,
+        streamURLString: String?
+    ) {
+        self.id = id
+        self.name = name
+        self.genre = genre
+        self.artworkURLString = artworkURLString
+        self.streamURLString = streamURLString
     }
 
     var station: Station {
@@ -173,21 +187,47 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
 /// UserDefaults-backed memory of stations previously handed to Shortcuts, so the
 /// entity query can reconstruct them from a bare id.
 enum IntentStationCache {
-    private static let key = DefaultsKey<[StationEntity]>.codable("intents.station.cache", default: [])
-    private static let capacity = 50
+    private struct CachedStation: Codable, Sendable {
+        let id: String
+        let name: String
+        let genre: String
+        let artworkURLString: String?
+        let streamURLString: String?
 
-    static func load() -> [StationEntity] {
-        UserDefaults.standard.value(for: key)
+        init(entity: StationEntity) {
+            id = entity.id
+            name = entity.name
+            genre = entity.genre
+            artworkURLString = entity.artworkURLString
+            streamURLString = entity.streamURLString
+        }
+
+        var entity: StationEntity {
+            StationEntity(
+                id: id,
+                name: name,
+                genre: genre,
+                artworkURLString: artworkURLString,
+                streamURLString: streamURLString
+            )
+        }
     }
 
-    static func remember(_ entities: [StationEntity]) {
+    private static let key = DefaultsKey<[CachedStation]>.codable("intents.station.cache", default: [])
+    private static let capacity = 50
+
+    static func load(defaults: UserDefaults = .standard) -> [StationEntity] {
+        defaults.value(for: key).map(\.entity)
+    }
+
+    static func remember(_ entities: [StationEntity], defaults: UserDefaults = .standard) {
         guard entities.isEmpty == false else { return }
 
         var seen = Set<String>()
-        let merged = (entities + load()).filter { seen.insert($0.id).inserted }
-        let capped = Array(merged.prefix(capacity))
+        let merged = (entities + load(defaults: defaults)).filter { seen.insert($0.id).inserted }
+        let capped = Array(merged.prefix(capacity)).map(CachedStation.init(entity:))
 
-        UserDefaults.standard.set(capped, for: key)
+        defaults.set(capped, for: key)
     }
 }
 

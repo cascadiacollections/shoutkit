@@ -8,6 +8,13 @@ import Testing
 /// The App Intents framework itself is exercised through real system pathways in
 /// `AppIntentsPathwayTests`.
 @Suite struct IntentSupportTests {
+    private func makeDefaults() throws -> UserDefaults {
+        let suiteName = "IntentSupportTests-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        return defaults
+    }
+
     private func makeStation(
         id: String = "station-1",
         name: String = "KEXP",
@@ -72,49 +79,61 @@ import Testing
 
     // MARK: - IntentStationCache
 
-    // Both cases below are disabled against a real, unfixed production bug, not
-    // a flaw in the tests: decoding a `StationEntity` traps.
-    //
-    //   AppIntents/EntityProperty.swift:552: Fatal error: title:
-    //   Non-optional value can not be nil. Expected an instance of Swift.String
-    //
-    // `StationEntity` is both `@AppEntity(schema: .audio.liveRadioStation)` and
-    // `Codable`, with `title` as a computed shadow of `name`. `EntityProperty`
-    // is the backing store for `@Property`, so the schema macro is synthesizing
-    // stored property storage that the synthesized `Codable` conformance does
-    // not round-trip — decode leaves the wrapper empty and the first read traps.
-    // Every test that touches `StationEntity` as a plain Swift value passes;
-    // only the ones that decode one fail.
-    //
-    // This is not confined to tests. `IntentStationCache.load()` sits on the
-    // launch path (`AppDependencies.bootstrap()` → `scheduleLaunchWarmups()` →
-    // `indexKnownStationsForSpotlight()` → `StationEntityQuery.knownStations()`),
-    // so once the cache has been written once — one Siri or Shortcuts station
-    // search — every later cold launch decodes it. See #116; re-enable with the
-    // fix. Note also that these cases share `UserDefaults.standard` while Swift
-    // Testing runs them in parallel, which wants fixing at the same time.
-    @Test(.disabled("StationEntity decode traps in EntityProperty — see #116"))
-    func intentCacheKeepsNewestFirstAndDeduplicates() {
+    // These cases guard the regression in #116: `StationEntity` used to be the
+    // persisted type, and because the `@AppEntity(schema:)` macro's synthesized
+    // property storage didn't survive a `Codable` round-trip, decoding one
+    // trapped in `EntityProperty` — on the launch path, once the cache had been
+    // written. The cache now persists a plain `CachedStation` snapshot instead,
+    // so anything here that reads an entity back out of `UserDefaults` is
+    // exercising that boundary. Each case gets its own defaults suite: they ran
+    // against `UserDefaults.standard` in parallel before, which made them
+    // interdependent.
+    @Test func intentCacheKeepsNewestFirstAndDeduplicates() throws {
+        let defaults = try makeDefaults()
         // Remembered entries are prepended, so the batch we just added is at the
-        // front regardless of what earlier runs left in `UserDefaults.standard`.
+        // front regardless of what was already in this cache.
         let batch = (0..<3).map { StationEntity(station: makeStation(id: "fresh-\($0)", name: "S\($0)")) }
-        IntentStationCache.remember(batch)
+        IntentStationCache.remember(batch, defaults: defaults)
 
-        let loaded = IntentStationCache.load()
+        let loaded = IntentStationCache.load(defaults: defaults)
         #expect(loaded.prefix(3).map(\.id) == ["fresh-0", "fresh-1", "fresh-2"])
 
         // Re-remembering an existing id must not create a duplicate.
-        IntentStationCache.remember([batch[0]])
-        #expect(IntentStationCache.load().filter { $0.id == "fresh-0" }.count == 1)
+        IntentStationCache.remember([batch[0]], defaults: defaults)
+        #expect(
+            IntentStationCache.load(defaults: defaults).filter { $0.id == "fresh-0" }.count == 1
+        )
     }
 
-    @Test(.disabled("StationEntity decode traps in EntityProperty — see #116"))
-    func intentCacheIsBoundedToItsCapacity() {
+    @Test func intentCacheIsBoundedToItsCapacity() throws {
+        let defaults = try makeDefaults()
         let many = (0..<80).map { StationEntity(station: makeStation(id: "cap-\($0)")) }
-        IntentStationCache.remember(many)
+        IntentStationCache.remember(many, defaults: defaults)
 
         // Capacity is 50; the cache never grows unbounded no matter how many
         // stations a session hands it.
-        #expect(IntentStationCache.load().count <= 50)
+        #expect(IntentStationCache.load(defaults: defaults).count <= 50)
+    }
+
+    @Test func intentCacheLoadsPersistedStationSnapshots() throws {
+        let defaults = try makeDefaults()
+        let cachedJSON = """
+        [
+          {
+            "id": "cached-1",
+            "name": "Cached FM",
+            "genre": "Eclectic",
+            "artworkURLString": "https://example.com/cached.png",
+            "streamURLString": "https://example.com/cached"
+          }
+        ]
+        """
+        defaults.set(Data(cachedJSON.utf8), forKey: "intents.station.cache")
+
+        let loaded = try #require(IntentStationCache.load(defaults: defaults).first)
+
+        #expect(loaded.id == "cached-1")
+        #expect(loaded.title == "Cached FM")
+        #expect(loaded.station.preferredStreamURL == URL(string: "https://example.com/cached"))
     }
 }
