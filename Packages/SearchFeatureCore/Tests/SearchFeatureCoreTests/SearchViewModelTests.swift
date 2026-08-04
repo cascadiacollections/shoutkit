@@ -147,6 +147,26 @@ struct SearchViewModelTests {
         #expect(nameQueries.isEmpty)
     }
 
+    /// A directory tag can arrive padded. Storing the raw name while comparing
+    /// trimmed values used to make the chip clear its own `activeGenre` on the way
+    /// in, silently demoting the browse to a name search.
+    @Test func aGenreNameWithStrayWhitespaceStillBrowsesTheGenre() async {
+        let directory = FakeRadioDirectory()
+        await directory.setSearchStationsResult(.success([.fixture(id: "a", name: "Blue Note Radio")]))
+        let viewModel = SearchViewModel(directory: directory)
+
+        viewModel.selectGenre(Genre(name: "  Jazz  "))
+
+        await waitUntil { viewModel.phase != .idle && viewModel.phase != .searching }
+
+        #expect(viewModel.query == "Jazz")
+        #expect(viewModel.activeGenre == Genre(name: "  Jazz  "))
+        let genreQueries = await directory.genreStationQueries
+        let nameQueries = await directory.searchedQueries
+        #expect(genreQueries == ["Jazz"])
+        #expect(nameQueries.isEmpty)
+    }
+
     /// Tapping the chip a second time can't rely on `query`'s `didSet` — the text
     /// is already there — so it has to re-issue the request itself.
     @Test func selectingTheSameGenreTwiceRepeatsTheGenreQuery() async {

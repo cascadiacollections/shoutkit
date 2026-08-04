@@ -115,9 +115,9 @@ public struct ListenNowView: View {
             loadingState
         case .empty:
             ContentUnavailableView(
-                "Nothing here yet",
+                String(localized: "Nothing here yet", bundle: .module),
                 systemImage: "dot.radiowaves.left.and.right",
-                description: Text("Pull to refresh or try again soon.")
+                description: Text(String(localized: "Pull to refresh or try again soon.", bundle: .module))
             )
             .frame(maxWidth: .infinity, minHeight: 260)
         case let .failed(error):
@@ -144,7 +144,7 @@ public struct ListenNowView: View {
     private var loadingState: some View {
         VStack(spacing: ShoutKitSpacing.medium) {
             ProgressView()
-            Text("Tuning in…")
+            Text(String(localized: "Tuning in…", bundle: .module))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }

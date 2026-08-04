@@ -35,7 +35,11 @@ public struct DirectoryUnavailableView: View {
             Text(error.localizedDescription)
         } actions: {
             if error.isRetryable {
-                Button("Try Again", action: retry)
+                // `String(localized:bundle:)`, not a bare literal: a
+                // `LocalizedStringKey` in a package resolves against
+                // `Bundle.main`, so this module's catalog entry would never be
+                // consulted and the button would sit in English forever.
+                Button(String(localized: "Try Again", bundle: .module), action: retry)
                     .buttonStyle(.glassProminent)
             }
         }

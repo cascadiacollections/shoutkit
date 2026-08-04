@@ -39,7 +39,7 @@ public final class SearchViewModel {
             // Typing over a genre chip's text turns the request back into a name
             // search. Set before `runSearch` can see it, so the very edit that
             // abandons the genre doesn't get answered as one.
-            if trimmed != activeGenre?.name {
+            if trimmed != activeGenreQuery {
                 activeGenre = nil
             }
 
@@ -62,6 +62,14 @@ public final class SearchViewModel {
     /// from a chip rather than from typing. Drives the chip's selected state and
     /// picks the genre query over the name search below.
     public private(set) var activeGenre: Genre?
+
+    /// ``activeGenre``'s name in the form queries take — trimmed, like everything
+    /// that flows through `query`. The whole `Genre` is what's stored, not just
+    /// this string, so the chip grid can match on identity (including
+    /// `stationCount`) to decide which chip renders selected.
+    private var activeGenreQuery: String? {
+        activeGenre?.name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     @ObservationIgnored private let directory: any RadioDirectoryProviding
     @ObservationIgnored private var searchTask: Task<Void, Never>?
@@ -118,7 +126,11 @@ public final class SearchViewModel {
             runSearch(trimmed)
             return
         }
-        query = genre.name
+        // The trimmed name, not the raw one: every other value that reaches
+        // `query` gets compared in trimmed form, so a directory tag arriving with
+        // stray whitespace would fail `activeGenreQuery`'s check on the way in and
+        // silently downgrade its own chip to a name search.
+        query = trimmed
     }
 
     /// Re-runs whatever is currently in the field, keeping the *kind* of request
@@ -155,8 +167,8 @@ public final class SearchViewModel {
     /// what's *named* like the query. Same phase either way — two different
     /// questions with the same shape of answer.
     private func fetchStations(matching query: String) async throws(RadioDirectoryError) -> [Station] {
-        if let activeGenre, activeGenre.name == query {
-            return try await directory.stations(inGenre: activeGenre.name, limit: Configuration.resultLimit)
+        if let activeGenreQuery, activeGenreQuery == query {
+            return try await directory.stations(inGenre: activeGenreQuery, limit: Configuration.resultLimit)
         }
         return try await directory.searchStations(matching: query, limit: Configuration.resultLimit)
     }
