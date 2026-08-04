@@ -7,6 +7,13 @@ All notable changes to ShoutKit are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- **ShoutKit now backs off when your battery is low or your data is limited**: the app used to
+  fetch artwork for stations you hadn't scrolled to yet, and open connections to your top stations
+  at launch, under every condition — including on cellular, in Low Data Mode, and in Low Power
+  Mode. Both are guesses about what you'll do next, so both now stop when the device is trying to
+  conserve, and neither ever uses your cellular allowance for a guess. Nothing you actually look at
+  or listen to is affected: artwork for stations on screen, the station directory, and playback
+  itself are unchanged
 - **Stations are there the moment you open the app**: Listen Now and Browse now save the
   station list to disk and paint it instantly on the next launch, instead of showing
   "Tuning in…" while the directory answers. Within six hours of the last successful update the

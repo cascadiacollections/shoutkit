@@ -77,6 +77,42 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
         return configuration
     }
 
+    /// A configuration for *speculative* traffic — artwork for rows that haven't
+    /// scrolled into view yet — as opposed to anything a listener is waiting on.
+    ///
+    /// The distinction matters because the two deserve opposite treatment under
+    /// pressure. `allowsConstrainedNetworkAccess = false` means Low Data Mode
+    /// suppresses this traffic outright: the user has told the system not to
+    /// spend their allowance on work they didn't ask for, and a look-ahead fetch
+    /// is exactly that. `allowsExpensiveNetworkAccess = false` extends the same
+    /// courtesy to cellular and Personal Hotspot. `.background` (rather than
+    /// `.responsiveData`) tells the scheduler nobody is blocked on these, so they
+    /// yield to the directory and to artwork a visible row actually needs.
+    ///
+    /// A request refused by these limits fails at the URLSession layer without
+    /// producing an HTTP response at all, so it leaves nothing behind: not in
+    /// `URLCache`, not in the decoded-thumbnail cache (which only stores
+    /// successes), and not in the in-flight table (which clears on completion).
+    /// A refusal therefore can't suppress that artwork later — when the row
+    /// scrolls into view, its own load is issued fresh on the interactive
+    /// session. Whether *that* request succeeds is an ordinary network question,
+    /// no different from any other fetch.
+    public static func speculativeConfiguration() -> URLSessionConfiguration {
+        let configuration = URLSessionConfiguration.default
+        configuration.waitsForConnectivity = false
+        configuration.allowsConstrainedNetworkAccess = false
+        configuration.allowsExpensiveNetworkAccess = false
+        configuration.networkServiceType = .background
+        return configuration
+    }
+
+    /// Shared transport for speculative work. Deliberately plain rather than
+    /// mirroring `shared`'s install hook: this carries no user-visible traffic,
+    /// so it isn't worth routing through the Debug inspection proxy.
+    public static let speculative = URLSessionHTTPTransport(
+        session: URLSession(configuration: URLSessionHTTPTransport.speculativeConfiguration())
+    )
+
     private let session: URLSession
 
     public init(session: URLSession = .shared) {
