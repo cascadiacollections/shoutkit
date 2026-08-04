@@ -35,24 +35,38 @@ public enum ShoutKitLayout {
 
 public extension Color {
     /// Brand accent — used for tint, active playback, and prominent controls.
-    static let shoutKitAccent = Color(red: 0.04, green: 0.44, blue: 0.72)
-
-    /// A warmer secondary accent for editorial spotlights.
-    static let shoutKitHighlight = Color(red: 0.94, green: 0.35, blue: 0.36)
-
-    /// Primary background that adapts to light and dark appearance so Liquid Glass
-    /// surfaces layer correctly in both.
-    static let shoutKitBackground = Color(uiColor: UIColor { traits in
+    ///
+    /// Two appearances rather than one fixed value. The light-mode blue is dark
+    /// enough to read as text on white, which makes it *too* dark to read as
+    /// tinted text or a glyph on a near-black background — the same ink can't
+    /// serve both, so dark mode gets a lifted variant at comparable contrast.
+    static let shoutKitAccent = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.05, green: 0.06, blue: 0.08, alpha: 1)
-            : UIColor(red: 0.97, green: 0.98, blue: 0.99, alpha: 1)
+            ? UIColor(red: 0.36, green: 0.69, blue: 0.98, alpha: 1)
+            : UIColor(red: 0.04, green: 0.44, blue: 0.72, alpha: 1)
     })
 
-    static let shoutKitInk = Color(uiColor: UIColor { traits in
+    /// A warmer secondary accent, used for the favorited heart. Lifted in dark
+    /// appearance for the same reason as the accent above.
+    static let shoutKitHighlight = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark
-            ? UIColor(white: 0.97, alpha: 1)
-            : UIColor(red: 0.08, green: 0.10, blue: 0.12, alpha: 1)
+            ? UIColor(red: 1.00, green: 0.48, blue: 0.49, alpha: 1)
+            : UIColor(red: 0.85, green: 0.24, blue: 0.25, alpha: 1)
     })
+
+    /// The canvas discovery surfaces sit on.
+    ///
+    /// The system grouped background, not a hand-mixed near-white/near-black:
+    /// it's the appearance `shoutKitCardBackground`, `List`'s inset-grouped
+    /// style, and Liquid Glass are all tuned against, and it tracks the
+    /// contexts a fixed color can't — sheets, popovers, and elevated
+    /// presentations shift it, and Increase Contrast deepens it.
+    static let shoutKitBackground = Color(.systemGroupedBackground)
+
+    /// Fill for content cards sitting on ``shoutKitBackground``. Paired with it
+    /// by the system, so the two keep a legible step apart in every appearance
+    /// instead of collapsing to white-on-white or black-on-black.
+    static let shoutKitCardBackground = Color(.secondarySystemGroupedBackground)
 }
 
 public extension LinearGradient {

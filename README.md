@@ -36,7 +36,7 @@ when a directory source omits them — KEXP is bundled using its official 160K/6
 ### Stations without the wait
 
 Discovery content is cached in two tiers by `CachingRadioDirectory`. A 60-second in-memory window
-coalesces the launch fetches Listen Now and Browse both issue, and every successful fetch is also
+coalesces the discovery fetches issued around launch, and every successful fetch is also
 written to a small JSON snapshot in Application Support. Landing surfaces paint that snapshot
 first, so a launch shows stations immediately rather than a spinner, and within a six-hour
 stability window the snapshot *is* the answer — no directory request at all, and the same list as
@@ -74,7 +74,7 @@ SHOUTCAST_DEV_KEY = your_key_here
 - `ShoutKitApp`: thin SwiftUI app targets — the iPhone/iPad app keeps app-level wiring in
   `AppDependencies.bootstrap()` (shared between the scene and App Intents), while the watch app
   carries a separate minimal service graph for native watch playback. The phone app provides the
-  4-tab root shell (Listen Now · Browse · Search · Favorites) with the persistent mini-player and
+  3-tab root shell (Listen Now · Search · Favorites) with the persistent mini-player and
   Siri/Shortcuts (`PlayStationIntent` with a station entity resolved from favorites, recents,
   curated stations, and live search); the watch companion focuses on now playing, recent stations,
   and a complication quick-start path.

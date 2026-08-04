@@ -7,6 +7,27 @@ All notable changes to ShoutKit are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- **Three tabs instead of four**: Browse showed the same popular stations as Listen Now — as a row
+  of cards and then again as a list right underneath — and offered the same genre chips as Search.
+  Listen Now now carries the full station list under a **More Stations** heading (the stations that
+  aren't already in the row of cards above it), and genres live in Search. Nothing is gone: every
+  station, genre, and control is still one tap away, just not two places at once
+- **Genre chips browse the genre**: tapping "Jazz" in Search used to search for stations whose
+  *name* contains "Jazz". It now asks the directory for stations that actually are jazz, and the
+  tapped chip stays highlighted so you can see what you're looking at. Clear the search field to
+  get back to the full genre list
+- **Now Playing is easier to hit**: Stop used to sit right next to play/pause, so a slip ended the
+  stream and closed the screen. Play/pause is bigger and centered now, with the favorite heart on
+  one side and the sleep timer on the other; Stop and "View in Apple Music" moved into the **⋯**
+  menu next to the station name. AirPlay sits on its own at the bottom
+- **Recently Played reads correctly at every text size**: the section on Listen Now was drawn at a
+  fixed row height, so the last row clipped once you increased text size. To remove a station from
+  the list, press and hold it and choose **Remove from Recently Played** (the swipe is gone); the
+  **Undo** banner now appears above the mini-player instead of behind it
+- **Better contrast in Dark Mode**: the blue accent and the favorited heart were a single fixed
+  color tuned for a white background, which left them dim on a dark one. Both now have a dark-mode
+  appearance, and station cards use the system's paired background colors so they stay visibly
+  distinct from the surface behind them in both appearances
 - **ShoutKit now backs off when your battery is low or your data is limited**: the app used to
   fetch artwork for stations you hadn't scrolled to yet, and open connections to your top stations
   at launch, under every condition — including on cellular, in Low Data Mode, and in Low Power
@@ -14,8 +35,8 @@ All notable changes to ShoutKit are documented here. The format follows
   conserve, and neither ever uses your cellular allowance for a guess. Nothing you actually look at
   or listen to is affected: artwork for stations on screen, the station directory, and playback
   itself are unchanged
-- **Stations are there the moment you open the app**: Listen Now and Browse now save the
-  station list to disk and paint it instantly on the next launch, instead of showing
+- **Stations are there the moment you open the app**: Listen Now now saves the
+  station list to disk and paints it instantly on the next launch, instead of showing
   "Tuning in…" while the directory answers. Within six hours of the last successful update the
   saved list is used as-is and no request is made at all, so opening the app repeatedly shows the
   same stations rather than a reshuffled ranking. Pull to refresh (or leave the app for a few
@@ -29,7 +50,7 @@ All notable changes to ShoutKit are documented here. The format follows
   now-playing surface is driven by the new typed `MediaSession` / `RadioContent` framework instead
   of the legacy `MPNowPlayingInfoCenter` bridge; iOS 26 is unchanged. Transport controls, artwork,
   and live track metadata behave the same — the change is internal, selected by OS version
-- **Smoother list scrolling**: the Browse and Search station lists now prefetch artwork for
+- **Smoother list scrolling**: the Listen Now and Search station lists now prefetch artwork for
   rows about to scroll into view, so thumbnails are decoded ahead of time instead of stalling as
   each row appears. Repeated loads of the same artwork are also coalesced so a prefetch and a
   visible row never fetch the same image twice

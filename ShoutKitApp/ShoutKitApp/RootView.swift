@@ -30,7 +30,6 @@ struct RootView: View {
     @State private var isShowingNowPlaying = false
     @State private var isShowingSettings = false
     @State private var listenNowViewModel = BrowseViewModel()
-    @State private var browseViewModel = BrowseViewModel()
     @State private var searchViewModel = SearchViewModel()
     // Bumped whenever the Search tab is re-tapped while already selected, so
     // SearchView can refocus its search field (Apple Music re-tap behavior).
@@ -52,9 +51,11 @@ struct RootView: View {
             }
             .tabBarMinimizeBehavior(.onScrollDown)
             .sheet(isPresented: $isShowingNowPlaying) {
+                // No `presentationBackground`: `NowPlayingView`'s own ambient
+                // backdrop fills the sheet edge to edge, so a material behind it
+                // was a layer nobody could ever see.
                 NowPlayingView()
                     .presentationDetents([.large])
-                    .presentationBackground(.regularMaterial)
             }
             .fullScreenCover(isPresented: .init(get: { hasCompletedFirstRun == false }, set: { _ in })) {
                 WelcomeOverlayView {
@@ -111,6 +112,14 @@ struct RootView: View {
             // both the safe and the expected behavior.
     }
 
+    /// Three tabs, each answering a different question: what should I play, what
+    /// exists, what's mine.
+    ///
+    /// There was a fourth — Browse — and it answered the same question as Listen
+    /// Now with the same `topStations` fetch, rendered as a carousel above a grid
+    /// of the same ten stations, plus a genre strip that duplicated the one in
+    /// Search. Listen Now absorbed the station list; Search kept genres and got a
+    /// real genre query instead of a name search.
     private var tabView: some View {
         TabView(selection: tabSelection) {
             Tab("Listen Now", systemImage: "play.circle", value: ShoutKitTab.listenNow) {
@@ -127,13 +136,6 @@ struct RootView: View {
                         .sheet(isPresented: $isShowingSettings) {
                             SettingsView()
                         }
-                }
-            }
-
-            Tab("Browse", systemImage: "square.grid.2x2", value: ShoutKitTab.browse) {
-                NavigationStack {
-                    BrowseLandingView(viewModel: browseViewModel)
-                        .navigationTitle("Browse")
                 }
             }
 
@@ -206,7 +208,6 @@ struct RootView: View {
 
 private enum ShoutKitTab: Hashable {
     case listenNow
-    case browse
     case search
     case favorites
 }

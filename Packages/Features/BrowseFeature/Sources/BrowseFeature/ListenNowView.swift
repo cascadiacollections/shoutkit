@@ -7,16 +7,26 @@ import RadioDirectory
 import SwiftData
 import SwiftUI
 
-/// A lighter, personalized landing: a featured spotlight, recently played, and a
-/// popular carousel. Reuses ``BrowseViewModel`` for directory content.
+/// The home surface: what you just played, what that suggests, and what's
+/// popular right now — personal content first, the directory underneath.
+///
+/// This is the app's only discovery screen. It used to share the job with a
+/// Browse tab that showed the *same* `topStations` fetch as a carousel and then
+/// again as a grid, one tap away; the two are one surface now, and the popular
+/// carousel and the station list below it are disjoint slices of the same list
+/// rather than the same ten stations twice.
 public struct ListenNowView: View {
     private enum Configuration {
         static let recommendationLimit = 10
+        /// How many of the top stations become poster cards. The rest fall
+        /// through to the list below, so nothing appears in both.
+        static let carouselLimit = 10
     }
 
     @State private var viewModel: BrowseViewModel
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
+    @Environment(\.displayScale) private var displayScale
     private let recommendationService: any RecommendationServicing
     private let featureFlags: any FeatureFlagProviding
     @State private var cachedRecommendations: [Station] = []
@@ -58,28 +68,31 @@ public struct ListenNowView: View {
         .onChange(of: recents.map(\.stationID), initial: true) { _, _ in
             recentlyPlayedTeaser.sync(withVisibleIDsNewestFirst: visibleRecents.map(\.stationID))
         }
-        .overlay(alignment: .bottom) { dismissUndoBanner }
+        // A safe-area inset rather than an overlay: as an overlay the banner
+        // rendered *under* the tab bar's mini-player accessory, which is exactly
+        // where the bottom of this screen already is.
+        .safeAreaInset(edge: .bottom) { dismissUndoBanner }
         .animation(.default, value: dismissUndo?.stationID)
     }
 
     @ViewBuilder
     private var dismissUndoBanner: some View {
         if let dismissUndo {
-            HStack(spacing: ShoutKitSpacing.small) {
-                Text(String(localized: "\(dismissUndo.stationName) removed", bundle: .module))
-                    .font(.subheadline)
-                    .lineLimit(1)
-                Spacer(minLength: ShoutKitSpacing.small)
-                Button(String(localized: "Undo", bundle: .module)) {
-                    undoDismiss(dismissUndo)
+            GlassControlSurface(in: Capsule()) {
+                HStack(spacing: ShoutKitSpacing.small) {
+                    Text(String(localized: "\(dismissUndo.stationName) removed", bundle: .module))
+                        .font(.subheadline)
+                        .lineLimit(1)
+                    Spacer(minLength: ShoutKitSpacing.small)
+                    Button(String(localized: "Undo", bundle: .module)) {
+                        undoDismiss(dismissUndo)
+                    }
+                    .font(.subheadline.weight(.semibold))
                 }
-                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, ShoutKitSpacing.small)
             }
             .padding(.horizontal, ShoutKitSpacing.medium)
-            .padding(.vertical, ShoutKitSpacing.small)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: ShoutKitRadius.medium, style: .continuous))
-            .padding(.horizontal, ShoutKitSpacing.medium)
-            .padding(.bottom, ShoutKitSpacing.medium)
+            .padding(.bottom, ShoutKitSpacing.small)
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
@@ -99,42 +112,43 @@ public struct ListenNowView: View {
     private var content: some View {
         switch viewModel.phase {
         case .loading:
-            ProgressView("Tuning in…")
-                .frame(maxWidth: .infinity, minHeight: 260)
+            loadingState
         case .empty:
-            ContentUnavailableView("Nothing here yet", systemImage: "radio")
-                .frame(maxWidth: .infinity, minHeight: 260)
-        case let .failed(error):
-            ContentUnavailableView {
-                Label("Directory Unavailable", systemImage: "wifi.exclamationmark")
-            } description: {
-                Text(error.localizedDescription)
-            } actions: {
-                if error.isRetryable {
-                    Button("Try Again") {
-                        Task { await viewModel.refresh(source: .userInitiated) }
-                    }
-                    .buttonStyle(.glassProminent)
-                }
-            }
+            ContentUnavailableView(
+                "Nothing here yet",
+                systemImage: "dot.radiowaves.left.and.right",
+                description: Text("Pull to refresh or try again soon.")
+            )
             .frame(maxWidth: .infinity, minHeight: 260)
+        case let .failed(error):
+            DirectoryUnavailableView(
+                title: String(localized: "Directory Unavailable", bundle: .module),
+                error: error,
+                minHeight: 260
+            ) {
+                Task { await viewModel.refresh(source: .userInitiated) }
+            }
         case let .loaded(loaded):
             SavedStationsNotice(origin: loaded.origin, refreshError: viewModel.refreshError)
-
-            if BrowseConfiguration.showsFeaturedSpotlight, let spotlight = loaded.spotlight {
-                SpotlightCard(
-                    station: spotlight,
-                    phase: playback?.phase(for: spotlight) ?? .idle,
-                    onPlay: { playback?.toggle(spotlight) }
-                )
-            }
 
             recentlyPlayed
 
             recommendationsSection(loaded)
 
             popularCarousel(loaded)
+
+            moreStations(loaded)
         }
+    }
+
+    private var loadingState: some View {
+        VStack(spacing: ShoutKitSpacing.medium) {
+            ProgressView()
+            Text("Tuning in…")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, minHeight: 260)
     }
 
     @ViewBuilder
@@ -143,57 +157,43 @@ public struct ListenNowView: View {
         if displayed.isEmpty == false {
             VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
                 SectionHeaderView(String(localized: "Recently Played", bundle: .module))
-                // A real List (rather than the LazyVGrid used elsewhere on this screen) is
-                // required for swipe-to-dismiss; it's nested inside the outer ScrollView
-                // with its own scrolling disabled and sized to its content.
-                List {
-                    ForEach(displayed) { recent in
-                        let station = recent.station
-                        StationRow(
-                            station: station,
-                            phase: playback?.phase(for: station) ?? .idle,
-                            isFavorite: library?.isFavorite(station) ?? false,
-                            onTap: { playback?.toggle(station) },
-                            onToggleFavorite: library.map { store in { store.toggleFavorite(station) } }
-                        )
-                        .listRowInsets(EdgeInsets())
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                    }
-                    .onDelete(perform: deleteRecents)
+                // Plain rows, not a nested `List`. The `List` was here only to
+                // get swipe-to-dismiss, and it had to be given an explicit
+                // height computed from a hard-coded 76 pt row — a number that
+                // stops being true at the first Dynamic Type step up, clipping
+                // the last row or leaving a gap. Dismissal moved to the row's
+                // context menu (and a VoiceOver action), which is where iOS puts
+                // "remove this suggestion" anyway.
+                ForEach(Array(displayed.enumerated()), id: \.element.stationID) { index, recent in
+                    let station = recent.station
+                    let stationID = recent.stationID
+                    let stationName = recent.name
+                    StationRow(
+                        station: station,
+                        phase: playback?.phase(for: station) ?? .idle,
+                        isFavorite: library?.isFavorite(station) ?? false,
+                        onTap: { playback?.toggle(station) },
+                        onToggleFavorite: library.map { store in { store.toggleFavorite(station) } },
+                        removeAction: StationRowAction(
+                            title: String(localized: "Remove from Recently Played", bundle: .module),
+                            systemImage: "clock.badge.xmark"
+                        ) {
+                            dismissRecent(stationID: stationID, stationName: stationName, at: index)
+                        }
+                    )
                 }
-                .listStyle(.plain)
-                .listRowSpacing(ShoutKitSpacing.small)
-                .scrollDisabled(true)
-                .scrollContentBackground(.hidden)
-                .frame(height: recentlyPlayedListHeight(count: displayed.count))
             }
         }
     }
 
-    private func recentlyPlayedListHeight(count: Int) -> CGFloat {
-        guard count > 0 else { return 0 }
-        let rowHeight: CGFloat = 76
-        return CGFloat(count) * rowHeight + CGFloat(count - 1) * ShoutKitSpacing.small
-    }
-
-    private func deleteRecents(at offsets: IndexSet) {
-        // Materialise the displayed slice before removal so offset resolution
-        // isn't affected by live-query updates mid-deletion (same approach as
-        // LibraryView's deleteRecents). Swiping only ever dismisses one row at
-        // a time here (there's no edit-mode multi-select), so the undo banner
-        // just tracks whichever one was dismissed most recently.
-        let displayed = displayedRecentStations
-        for offset in offsets {
-            let recent = displayed[offset]
-            // A soft hide, not `removeRecent` — the play record stays intact so
-            // recommendations still learn from it even once this teaser is empty.
-            library?.hideFromListenNow(stationID: recent.stationID)
-            // Removed here too (not just left to the query refresh) so the slot
-            // doesn't backfill from `recents` — dismissing shrinks the list.
-            recentlyPlayedTeaser.remove(recent.stationID)
-            presentDismissUndo(stationID: recent.stationID, stationName: recent.name, restoreIndex: offset)
-        }
+    private func dismissRecent(stationID: String, stationName: String, at index: Int) {
+        // A soft hide, not `removeRecent` — the play record stays intact so
+        // recommendations still learn from it even once this teaser is empty.
+        library?.hideFromListenNow(stationID: stationID)
+        // Removed here too (not just left to the query refresh) so the slot
+        // doesn't backfill from `recents` — dismissing shrinks the list.
+        recentlyPlayedTeaser.remove(stationID)
+        presentDismissUndo(stationID: stationID, stationName: stationName, restoreIndex: index)
     }
 
     private func presentDismissUndo(stationID: String, stationName: String, restoreIndex: Int) {
@@ -221,25 +221,20 @@ public struct ListenNowView: View {
         // `.task` sits on the (possibly empty) Group so recommendations still
         // compute before the first carousel render.
         if recommendationsEnabled {
-            Group {
-                if !cachedRecommendations.isEmpty {
-                    VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
-                        SectionHeaderView(String(localized: "More Like This", bundle: .module))
-                        StationCarousel(
-                            stations: cachedRecommendations,
-                            phase: { playback?.phase(for: $0) ?? .idle },
-                            onTap: { playback?.toggle($0) }
-                        )
-                    }
-                } else {
+            VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
+                SectionHeaderView(String(localized: "More Like This", bundle: .module))
+                if cachedRecommendations.isEmpty {
                     // Otherwise the flag has no visible effect at all, and
                     // looks like it silently did nothing after being enabled.
-                    VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
-                        SectionHeaderView(String(localized: "More Like This", bundle: .module))
-                        Text(String(localized: "Play a few stations to get recommendations here.", bundle: .module))
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
+                    Text(String(localized: "Play a few stations to get recommendations here.", bundle: .module))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    StationCarousel(
+                        stations: cachedRecommendations,
+                        phase: { playback?.phase(for: $0) ?? .idle },
+                        onTap: { playback?.toggle($0) }
+                    )
                 }
             }
             .task(id: recommendationCacheKey(loaded)) {
@@ -265,10 +260,34 @@ public struct ListenNowView: View {
         VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
             SectionHeaderView(String(localized: "Popular Stations", bundle: .module))
             StationCarousel(
-                stations: Array(loaded.stations.prefix(10)),
+                stations: Array(loaded.stations.prefix(Configuration.carouselLimit)),
                 phase: { playback?.phase(for: $0) ?? .idle },
                 onTap: { playback?.toggle($0) }
             )
+        }
+    }
+
+    /// The tail of the popular list, as rows. The carousel above already showed
+    /// the head of it, so this section starts where that one stopped.
+    @ViewBuilder
+    private func moreStations(_ loaded: BrowseContent) -> some View {
+        let stations = Array(loaded.stations.dropFirst(Configuration.carouselLimit))
+        if stations.isEmpty == false {
+            VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
+                SectionHeaderView(String(localized: "More Stations", bundle: .module))
+                LazyVGrid(columns: ShoutKitLayout.stationColumns, spacing: ShoutKitSpacing.small) {
+                    ForEach(Array(stations.enumerated()), id: \.element.id) { index, station in
+                        StationRow(
+                            station: station,
+                            phase: playback?.phase(for: station) ?? .idle,
+                            isFavorite: library?.isFavorite(station) ?? false,
+                            onTap: { playback?.toggle(station) },
+                            onToggleFavorite: library.map { store in { store.toggleFavorite(station) } }
+                        )
+                        .prefetchStationArtwork(after: index, in: stations, displayScale: displayScale)
+                    }
+                }
+            }
         }
     }
 }
