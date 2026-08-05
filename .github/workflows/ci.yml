@@ -55,14 +55,13 @@ jobs:
       # assets*. The checksum means a substituted artifact fails verification;
       # nothing makes the download itself durable. A warm cache is the buffer.
       #
-      # Whether *this* job pays that download is a separate question, and one we
-      # haven't settled: `.when(platforms: [.iOS])` in Packages/Playback gates
-      # the target dependency, and reading SwiftPM's `parseArtifacts`
-      # (Workspace+BinaryArtifacts.swift) suggests binary targets are enumerated
-      # with no platform filtering, i.e. the gate stops linking but not
-      # fetching. Reasoned from source, not yet confirmed against an observed
-      # resolve log — see DECISIONS.md. Caching is worthwhile either way, so
-      # nothing here depends on the answer.
+      # And this job does pay that download, despite `.when(platforms: [.iOS])`
+      # in Packages/Playback: a platform condition gates the *target* dependency,
+      # not resolution, so the artifacts are fetched here and simply never
+      # linked. Observed, not just inferred — the cold run on PR #127 logged
+      # `Downloading binary artifact .../vorbis.xcframework.zip` (and ogg)
+      # during the *Playback* `swift test` step, which links neither. See
+      # DECISIONS.md 2026-08-05.
       - name: Cache SwiftPM clones and binary artifacts
         uses: actions/cache@v4
         with:

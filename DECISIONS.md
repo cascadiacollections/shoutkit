@@ -25,8 +25,15 @@
   `for target in manifest.targets where target.type == .binary` over root *and* dependency manifests.
   So `swift test` in `Packages/Playback` downloads both xcframeworks before running a suite that
   links neither. Same class of mistake as the Pulse one: assuming a source- or platform-level gate
-  implies dependency-graph absence. (Reasoned from upstream source, not yet confirmed against an
-  observed download log.)
+  implies dependency-graph absence.
+- **Confirmed by observation, not left as inference.** The cold-cache `host-tests` run on PR #127
+  (run 422, job log 04:09:07Z) logged `Downloading binary artifact
+  https://github.com/sbooth/vorbis-binary-xcframework/releases/download/0.1.2/vorbis.xcframework.zip`
+  and the ogg equivalent — inside the **second** `swift test` step, which is `Packages/Playback`,
+  the suite that links neither. The very next run, with the cache warm, logged `Fetching binary
+  artifact … from cache (0.33s)` and `Cache hit occurred on the primary key, not saving cache`
+  instead. That pair settles both questions at once: the platform gate does not spare this job the
+  fetch, and the cache does eliminate it.
 - **Cache keys fold in a toolchain fingerprint** (`swift --version` / `xcodebuild -version`, hashed)
   alongside the resolved-file hash. `xcode-27` is a rotating beta image and SwiftPM's
   manifest-compile cache is toolchain specific; keying the whole store on the toolchain is cheaper
