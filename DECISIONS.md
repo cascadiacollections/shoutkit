@@ -1,5 +1,55 @@
 # Decisions
 
+## 2026-08-05 (CI caches the SwiftPM store; the ogg/vorbis artifacts aren't pinned by Package.resolved)
+
+- **Both resolving jobs (`host-tests`, `build`) now cache the SwiftPM store.** Neither had any cache,
+  so every run re-fetched the whole dependency graph — including AudioStreaming's two transitive
+  `binaryTarget` packages, the ogg and vorbis xcframeworks, at ~5.6 MB zipped and ~22 MB unpacked
+  *per resolving job*.
+- **The reason this is more than a speed fix**: the artifacts are fetched live from third-party
+  GitHub *release assets* (`github.com/sbooth/{ogg,vorbis}-binary-xcframework/releases/download/...`)
+  on every cold resolve. Integrity is covered, by the chain the 2026-07-13 entry already described:
+  `Package.resolved` pins each package by revision, that revision's manifest carries the
+  `binaryTarget` SHA-256, and the downloaded zip must match it. Note the checksum lives in the
+  *pinned manifest*, not in `Package.resolved` — a v3 lockfile records only `revision` and
+  `version`, and `grep -c checksum` over every `Package.resolved` in this repo returns zero. What
+  the chain does *not* underwrite is *availability*: delete or re-cut either release and CI breaks
+  with no local copy to fall back on. This sharpens the provenance concession recorded under
+  2026-07-13 (AudioStreaming): we already accepted trusting sbooth's builds; we had also, without
+  saying so, accepted depending on them staying downloadable. A warm cache is the cheap half of the
+  answer; self-hosted static xcframeworks would be the real one.
+- **Correction to the 2026-07-13 AudioStreaming entry**, in the same spirit as the `#if DEBUG`/Pulse
+  correction above it. That entry claims the `condition: .when(platforms: [.iOS])` gate means the mac
+  host job "never fetches or links" AudioStreaming. *Links* is right; *fetches* is not. A platform
+  condition applies to a **target** dependency — `.package(url:)` takes no condition (SwiftPM has no
+  such API), so the repo is cloned and its manifest read unconditionally. Binary artifacts are then
+  enumerated with no platform or condition filtering whatsoever; from SwiftPM's
+  `Workspace+BinaryArtifacts.swift`, `parseArtifacts` walks
+  `for target in manifest.targets where target.type == .binary` over root *and* dependency manifests.
+  So `swift test` in `Packages/Playback` downloads both xcframeworks before running a suite that
+  links neither. Same class of mistake as the Pulse one: assuming a source- or platform-level gate
+  implies dependency-graph absence.
+- **Confirmed by observation, not left as inference.** The cold-cache `host-tests` run on PR #127
+  (run 422, job log 04:09:07Z) logged `Downloading binary artifact
+  https://github.com/sbooth/vorbis-binary-xcframework/releases/download/0.1.2/vorbis.xcframework.zip`
+  and the ogg equivalent — inside the **second** `swift test` step, which is `Packages/Playback`,
+  the suite that links neither. The very next run, with the cache warm, logged `Fetching binary
+  artifact … from cache (0.33s)` and `Cache hit occurred on the primary key, not saving cache`
+  instead. That pair settles both questions at once: the platform gate does not spare this job the
+  fetch, and the cache does eliminate it.
+- **Cache keys fold in a toolchain fingerprint** (`swift --version` / `xcodebuild -version`, hashed)
+  alongside the resolved-file hash. `xcode-27` is a rotating beta image and SwiftPM's
+  manifest-compile cache is toolchain specific; keying the whole store on the toolchain is cheaper
+  than reasoning about which parts of it survive an image bump. `restore-keys` falls back on the
+  toolchain prefix so a `Package.resolved` change reuses the unchanged majority instead of
+  re-fetching everything.
+- **The `build` job caches `DerivedData/SourcePackages`, not `DerivedData`.** Xcode splits the work:
+  downloaded artifacts land in the shared `~/Library/Caches/org.swift.swiftpm` store, while the
+  per-workspace checkouts and resolved artifact tree live under the derived-data path. Both are
+  restored. Build *products* are deliberately excluded — the Pulse symbol checks in this job have to
+  reflect this commit's actual link result, and a cached `Products/` directory would quietly hollow
+  them out.
+
 ## 2026-08-04 (UX pass: one discovery surface, and controls that mean one thing each)
 
 A simplification pass over the shell and the three screens people actually spend time in, taking
