@@ -10,6 +10,22 @@ import RadioDirectory
 // than a branch in `handleStatusChange`.
 
 extension PlaybackController {
+    func handleRouteLost(station: Station) {
+        guard case .playing = state else {
+            guard case .buffering = state else { return }
+            resumeAfterRouteChange = true
+            output.pause()
+            return
+        }
+        resumeAfterRouteChange = true
+        output.pause()
+    }
+
+    func handleRouteAvailable() {
+        guard resumeAfterRouteChange else { return }
+        resume()
+    }
+
     func handleInterruptionBegan(station: Station) {
         // A reconnect must not fire mid-interruption: it would try to grab the
         // audio session during the call and clobber the arming below in
