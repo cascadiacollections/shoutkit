@@ -44,17 +44,25 @@ jobs:
           # image bump.
           echo "id=$(swift --version 2>&1 | shasum -a 256 | cut -c1-12)" >> "$GITHUB_OUTPUT"
 
-      # AudioStreaming transitively pulls two remote `binaryTarget` packages
-      # (ogg/vorbis xcframeworks, ~5.6 MB zipped, ~22 MB unpacked). Their
-      # artifacts are NOT pinned by Package.resolved — it records the manifest
-      # revision and a SHA-256, but the zips themselves are fetched live from
-      # third-party GitHub *release assets* on every cold resolve. And the
-      # `.when(platforms: [.iOS])` gate in Packages/Playback doesn't spare this
-      # job: platform conditions gate linking, not resolution, so SwiftPM
-      # downloads both artifacts here before running suites that link neither.
-      # Caching the shared store therefore buys two things: it drops the
-      # per-run download, and it leaves a warm copy if an upstream release
-      # asset ever disappears.
+      # This job resolves seven package graphs, and caching the store they all
+      # share cuts that to one cold resolve per toolchain/lockfile pair.
+      #
+      # The store is worth caching for a second reason. AudioStreaming pulls two
+      # remote `binaryTarget` packages (ogg/vorbis xcframeworks, ~5.6 MB zipped,
+      # ~22 MB unpacked), and those artifacts are NOT pinned by
+      # Package.resolved — it records a manifest revision and a SHA-256, but the
+      # zips themselves are fetched live from third-party GitHub *release
+      # assets*. The checksum means a substituted artifact fails verification;
+      # nothing makes the download itself durable. A warm cache is the buffer.
+      #
+      # Whether *this* job pays that download is a separate question, and one we
+      # haven't settled: `.when(platforms: [.iOS])` in Packages/Playback gates
+      # the target dependency, and reading SwiftPM's `parseArtifacts`
+      # (Workspace+BinaryArtifacts.swift) suggests binary targets are enumerated
+      # with no platform filtering, i.e. the gate stops linking but not
+      # fetching. Reasoned from source, not yet confirmed against an observed
+      # resolve log — see DECISIONS.md. Caching is worthwhile either way, so
+      # nothing here depends on the answer.
       - name: Cache SwiftPM clones and binary artifacts
         uses: actions/cache@v4
         with:
