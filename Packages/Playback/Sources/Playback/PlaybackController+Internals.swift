@@ -168,7 +168,7 @@ extension PlaybackController {
         case let .interruptionEnded(shouldResume, otherAudioIsPlaying):
             handleInterruptionEnded(shouldResume: shouldResume, otherAudioIsPlaying: otherAudioIsPlaying)
         case .routeLost:
-            handleRouteLost(station: station)
+            handleRouteLost()
         case .routeAvailable:
             handleRouteAvailable()
         }

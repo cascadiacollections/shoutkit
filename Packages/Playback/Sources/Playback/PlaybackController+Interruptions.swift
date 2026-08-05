@@ -10,15 +10,14 @@ import RadioDirectory
 // than a branch in `handleStatusChange`.
 
 extension PlaybackController {
-    func handleRouteLost(station: Station) {
-        guard case .playing = state else {
-            guard case .buffering = state else { return }
+    func handleRouteLost() {
+        switch state {
+        case .playing, .buffering:
             resumeAfterRouteChange = true
             output.pause()
-            return
+        default:
+            break
         }
-        resumeAfterRouteChange = true
-        output.pause()
     }
 
     func handleRouteAvailable() {
