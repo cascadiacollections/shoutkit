@@ -33,9 +33,37 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Select latest Xcode
+        id: toolchain
         run: |
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
           swift --version
+          # Folded into the SwiftPM cache key below: `xcode-27` is a rotating
+          # beta image, and SwiftPM's manifest-compile cache is toolchain
+          # specific. Artifacts and clones aren't, but keying the whole store on
+          # the toolchain is cheaper than reasoning about which parts survive an
+          # image bump.
+          echo "id=$(swift --version 2>&1 | shasum -a 256 | cut -c1-12)" >> "$GITHUB_OUTPUT"
+
+      # AudioStreaming transitively pulls two remote `binaryTarget` packages
+      # (ogg/vorbis xcframeworks, ~5.6 MB zipped, ~22 MB unpacked). Their
+      # artifacts are NOT pinned by Package.resolved — it records the manifest
+      # revision and a SHA-256, but the zips themselves are fetched live from
+      # third-party GitHub *release assets* on every cold resolve. And the
+      # `.when(platforms: [.iOS])` gate in Packages/Playback doesn't spare this
+      # job: platform conditions gate linking, not resolution, so SwiftPM
+      # downloads both artifacts here before running suites that link neither.
+      # Caching the shared store therefore buys two things: it drops the
+      # per-run download, and it leaves a warm copy if an upstream release
+      # asset ever disappears.
+      - name: Cache SwiftPM clones and binary artifacts
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/org.swift.swiftpm
+          key: spm-host-${{ steps.toolchain.outputs.id }}-${{ hashFiles('Packages/*/Package.resolved') }}
+          # Prefix fallback: a resolved-file change should still reuse the
+          # unchanged majority of the store rather than re-fetching everything.
+          restore-keys: |
+            spm-host-${{ steps.toolchain.outputs.id }}-
 
       # --disable-xctest: every package test suite is Swift Testing (no
       # `import XCTest` anywhere), but `swift test` still runs a legacy XCTest
@@ -88,9 +116,31 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Select latest Xcode
+        id: toolchain
         run: |
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
           xcodebuild -version
+          echo "id=$(xcodebuild -version | shasum -a 256 | cut -c1-12)" >> "$GITHUB_OUTPUT"
+
+      # Same rationale as the host-tests cache above. Two paths, because Xcode
+      # splits the work: the shared store under ~/Library/Caches holds the
+      # downloaded artifacts, while `-derivedDataPath DerivedData` puts the
+      # per-workspace checkouts and resolved artifact tree under
+      # DerivedData/SourcePackages. Restoring both is what makes the Debug and
+      # Release builds start from a fully warm package graph.
+      #
+      # Scoped to SourcePackages rather than all of DerivedData deliberately:
+      # caching build products across runs would undermine the Pulse symbol
+      # checks below, which need to reflect this commit's actual link result.
+      - name: Cache SwiftPM clones and binary artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/org.swift.swiftpm
+            DerivedData/SourcePackages
+          key: spm-app-${{ steps.toolchain.outputs.id }}-${{ hashFiles('ShoutKit.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: |
+            spm-app-${{ steps.toolchain.outputs.id }}-
 
       # Resolved by UDID at runtime rather than pinned by device name: the
       # Xcode beta runner images rotate which iPhone models and iOS runtimes
