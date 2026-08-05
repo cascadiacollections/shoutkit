@@ -1,11 +1,13 @@
 import DesignSystem
 import FeatureFlags
 import Persistence
+import Playback
 import SwiftUI
 
 /// Settings + About, presented as a sheet from the Listen Now toolbar.
 public struct SettingsView: View {
     @Environment(\.settingsStore) private var settings
+    @Environment(\.playbackController) private var playbackController
     @Environment(\.dismiss) private var dismiss
     private let featureFlags: any FeatureFlagProviding
 
@@ -19,6 +21,9 @@ public struct SettingsView: View {
         NavigationStack {
             Form {
                 privacySection
+                if let playbackController, playbackController.supportsEqualizer {
+                    equalizerSection
+                }
                 // Debug and TestFlight builds only: the catalog is all internal
                 // placeholder flags, so App Store users have nothing actionable here.
                 #if DEBUG || TESTFLIGHT
@@ -92,6 +97,34 @@ public struct SettingsView: View {
                 is denied. \
                 ShoutKit has no analytics, no ads, and no accounts.
                 """)
+            }
+        }
+    }
+
+    /// Only shown when ``PlaybackController/supportsEqualizer`` is true —
+    /// `AVPlayer`-backed engines (the watch companion) have no supported way
+    /// to insert a filter into their render chain, so there is nothing here
+    /// to offer rather than a control that silently does nothing.
+    @ViewBuilder
+    private var equalizerSection: some View {
+        if let settings, let playbackController {
+            Section {
+                Picker(
+                    "Equalizer",
+                    selection: Binding(
+                        get: { EqualizerPreset(rawValue: settings.equalizerPresetRawValue) ?? .normal },
+                        set: { preset in
+                            settings.equalizerPresetRawValue = preset.rawValue
+                            playbackController.setEqualizerPreset(preset)
+                        }
+                    )
+                ) {
+                    ForEach(EqualizerPreset.allCases, id: \.self) { preset in
+                        Text(preset.displayName).tag(preset)
+                    }
+                }
+            } header: {
+                Text("Sound")
             }
         }
     }

@@ -1,5 +1,36 @@
 # Decisions
 
+## 2026-08-05 (equalizer, ported from the Android client's curve math)
+
+- **`AudioStreamingPlaybackEngine`'s July engine swap quietly unlocked an equalizer.** The prior
+  `AVPlayer`-backed engine had no supported way to insert a filter into its render chain, so the only
+  "equalizer" anywhere in the tree was `PlayingIndicator` (an animation). AudioStreaming's `AudioPlayer`
+  is `AVAudioEngine`-backed and exposes `attach(node:)`/`detach(node:)` for exactly this; the sibling
+  Android client (sir-android) already ships an equalizer built the same way, so this ports its band
+  math rather than inventing new curve behavior.
+- **Ported `EqualizerPreset`/`EqualizerCurves` verbatim** from `core/playback` in sir-android: each
+  preset owns its own gain curve — a pure function from normalized band position to a normalized gain
+  fraction — instead of a `switch` living in the engine, and `EqualizerCurves` maps a curve onto a
+  given band count and gain range with **no dependency on any platform audio type**, so it's covered by
+  plain Swift Testing unit tests exercised the same way the Kotlin side is by JUnit. One decision copied
+  verbatim from the Android side: `.normal` has **no curve** (0 dB on every band), not the midpoint of
+  the range — on an asymmetric range the midpoint is not flat, and "Normal" would quietly colour sound.
+- **The attach point lives in `AudioStreamingPlaybackEngine+Equalizer.swift`**, a new file (mirroring the
+  existing `+Session` split for the 400-line `file_length` limit). It creates an `AVAudioUnitEQ`,
+  attaches it via `AudioPlayer.attach(node:)`, and applies `EqualizerCurves`-computed gains — with a
+  conservative `-12...12` dB range rather than the unit's full `-96...24`, since this is a listening-color
+  preset, not a mastering tool, layered on a live stream already at unity gain. Because
+  `handleMediaServicesReset()` rebuilds the whole `AudioPlayer` (and therefore its `AVAudioEngine`) from
+  scratch, the equalizer node is re-attached there too, or it would silently vanish on the next reset.
+- **`RadioPlaybackEngine` grew `supportsEqualizer`/`setEqualizerPreset(_:)` with a default "no EQ"
+  extension** rather than a required, always-implemented pair. `StubRadioPlaybackEngine` and the watch's
+  `WatchRadioPlaybackEngine` (still `AVPlayer`-backed; watchOS has no reason to move off it) get "no EQ"
+  for free instead of stub implementations, and `PlaybackController.supportsEqualizer` lets the settings
+  UI hide the control entirely on those engines rather than show one that does nothing.
+- **Preset choice persists through `SettingsStore`** as a raw `Int` (`EqualizerPreset.rawValue`) rather
+  than the `Playback` package's enum type, keeping `Persistence` free of a `Playback` dependency the way
+  every other stored setting there already is.
+
 ## 2026-08-05 (CI caches the SwiftPM store; the ogg/vorbis artifacts aren't pinned by Package.resolved)
 
 - **Both resolving jobs (`host-tests`, `build`) now cache the SwiftPM store.** Neither had any cache,

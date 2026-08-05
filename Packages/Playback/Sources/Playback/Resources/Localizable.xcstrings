@@ -1,24 +1,16 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "No connection" : {
-
-    },
-    "No internet connection. Check your network and try again." : {
-
-    },
-    "Stream error" : {
-
-    },
-    "The stream stopped unexpectedly. Tap to retry." : {
-
-    },
-    "This station isn't available right now. Try again later." : {
-
-    },
-    "Unavailable" : {
-
-    }
+  "sourceLanguage": "en",
+  "strings": {
+    "No connection": {},
+    "No internet connection. Check your network and try again.": {},
+    "Stream error": {},
+    "The stream stopped unexpectedly. Tap to retry.": {},
+    "This station isn't available right now. Try again later.": {},
+    "Unavailable": {},
+    "Normal": {},
+    "Bass Boost": {},
+    "Vocal": {},
+    "Treble": {}
   },
-  "version" : "1.1"
+  "version": "1.1"
 }

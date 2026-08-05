@@ -69,6 +69,14 @@ enum AppDependencies {
         let controller = PlaybackController(directory: directory)
         let stationConnectionPrewarmer = StationConnectionPrewarmer()
 
+        // Restore the equalizer preset the user last chose. A no-op on engines
+        // that don't support one (see `RadioPlaybackEngine.supportsEqualizer`),
+        // and safe to call even at `.normal` (the persisted default).
+        if let restoredPreset = EqualizerPreset(rawValue: settings.equalizerPresetRawValue) {
+            controller.setEqualizerPreset(restoredPreset)
+        }
+
+
         configureCallbacks(
             for: controller,
             store: store,

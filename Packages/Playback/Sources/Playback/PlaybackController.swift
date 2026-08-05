@@ -82,6 +82,22 @@ public final class PlaybackController {
 
     public var currentStation: Station? { activeStation }
 
+    /// Whether the active ``AudioOutput`` can apply an ``EqualizerPreset``.
+    /// `false` for engines with no supported way to insert a filter into their
+    /// render chain (`AVPlayer`-backed engines, and any ``AudioOutput`` test
+    /// double that isn't also a ``RadioPlaybackEngine``) — settings UI should
+    /// hide the equalizer control entirely rather than show one that does
+    /// nothing.
+    public var supportsEqualizer: Bool {
+        (output as? any RadioPlaybackEngine)?.supportsEqualizer ?? false
+    }
+
+    /// Applies `preset` to the active output's equalizer, if it has one. A
+    /// no-op when ``supportsEqualizer`` is `false`.
+    public func setEqualizerPreset(_ preset: EqualizerPreset) {
+        (output as? any RadioPlaybackEngine)?.setEqualizerPreset(preset)
+    }
+
     // These are `internal` rather than `private` because the wiring lives in a
     // sibling extension file (PlaybackController+Internals.swift); nothing here
     // is part of the public API.
