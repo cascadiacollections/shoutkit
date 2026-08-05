@@ -49,11 +49,14 @@ jobs:
       #
       # The store is worth caching for a second reason. AudioStreaming pulls two
       # remote `binaryTarget` packages (ogg/vorbis xcframeworks, ~5.6 MB zipped,
-      # ~22 MB unpacked), and those artifacts are NOT pinned by
-      # Package.resolved — it records a manifest revision and a SHA-256, but the
-      # zips themselves are fetched live from third-party GitHub *release
-      # assets*. The checksum means a substituted artifact fails verification;
-      # nothing makes the download itself durable. A warm cache is the buffer.
+      # ~22 MB unpacked) whose zips are fetched live from third-party GitHub
+      # *release assets*. Integrity is covered: Package.resolved pins each
+      # package by revision, that revision's manifest carries the binaryTarget
+      # SHA-256, and the download must match it (the checksum is in the pinned
+      # manifest, not in Package.resolved itself — v3 lockfiles record only
+      # revision + version). What nothing covers is *availability* — delete or
+      # re-cut either upstream release and there is no local copy to fall back
+      # on. A warm cache is that copy.
       #
       # And this job does pay that download, despite `.when(platforms: [.iOS])`
       # in Packages/Playback: a platform condition gates the *target* dependency,
@@ -66,7 +69,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/Library/Caches/org.swift.swiftpm
-          key: spm-host-${{ steps.toolchain.outputs.id }}-${{ hashFiles('Packages/*/Package.resolved') }}
+          # `**`, not `*`: four lockfiles live a level down under
+          # Packages/Features/, and a glob that misses them would hand this job
+          # an exact-key hit against a store that no longer matches the graph.
+          # Deliberately a superset of what the seven test steps below resolve —
+          # over-invalidating costs one extra cache save, since restore-keys
+          # still lands a warm store, whereas under-invalidating costs a stale
+          # hit. Asymmetric, so err wide.
+          key: spm-host-${{ steps.toolchain.outputs.id }}-${{ hashFiles('Packages/**/Package.resolved') }}
           # Prefix fallback: a resolved-file change should still reuse the
           # unchanged majority of the store rather than re-fetching everything.
           restore-keys: |

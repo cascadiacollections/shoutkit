@@ -6,12 +6,15 @@
   so every run re-fetched the whole dependency graph — including AudioStreaming's two transitive
   `binaryTarget` packages, the ogg and vorbis xcframeworks, at ~5.6 MB zipped and ~22 MB unpacked
   *per resolving job*.
-- **The reason this is more than a speed fix**: `Package.resolved` pins those two only as far as a
-  manifest revision plus a SHA-256. The artifacts themselves are fetched live from third-party
+- **The reason this is more than a speed fix**: the artifacts are fetched live from third-party
   GitHub *release assets* (`github.com/sbooth/{ogg,vorbis}-binary-xcframework/releases/download/...`)
-  on every cold resolve. The integrity chain is closed — a substituted artifact fails the checksum —
-  but *availability* is underwritten by nothing: delete or re-cut either release and CI breaks with
-  no lockfile copy to fall back on. This sharpens the provenance concession recorded under
+  on every cold resolve. Integrity is covered, by the chain the 2026-07-13 entry already described:
+  `Package.resolved` pins each package by revision, that revision's manifest carries the
+  `binaryTarget` SHA-256, and the downloaded zip must match it. Note the checksum lives in the
+  *pinned manifest*, not in `Package.resolved` — a v3 lockfile records only `revision` and
+  `version`, and `grep -c checksum` over every `Package.resolved` in this repo returns zero. What
+  the chain does *not* underwrite is *availability*: delete or re-cut either release and CI breaks
+  with no local copy to fall back on. This sharpens the provenance concession recorded under
   2026-07-13 (AudioStreaming): we already accepted trusting sbooth's builds; we had also, without
   saying so, accepted depending on them staying downloadable. A warm cache is the cheap half of the
   answer; self-hosted static xcframeworks would be the real one.
