@@ -210,21 +210,22 @@ extension AudioStreamingPlaybackEngine {
             queue: .main
         ) { [weak self] notification in
             guard let rawReason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
-                  let reason = AVAudioSession.RouteChangeReason(rawValue: rawReason),
-                  reason == .oldDeviceUnavailable else {
+                  let reason = AVAudioSession.RouteChangeReason(rawValue: rawReason) else {
                 return
             }
 
             MainActor.assumeIsolated {
-                // Headphones unplugged: pause rather than continue on the speaker.
                 guard let self else { return }
-                // Only when audio was actually running. A disconnect while the
-                // app is idle, paused, or showing a failure has nothing to pause,
-                // and reporting `.paused` anyway rewrote states the route change
-                // had no business touching (a `.failed` became a silent pause,
-                // and a pending reconnect was cancelled by it).
-                guard self.isPlayerActive else { return }
-                self.pause()
+                switch reason {
+                case .oldDeviceUnavailable:
+                    // Headphones unplugged: pause rather than continue on the speaker.
+                    guard self.isPlayerActive else { return }
+                    self.onStatusChange?(.routeLost)
+                case .newDeviceAvailable:
+                    self.onStatusChange?(.routeAvailable)
+                @unknown default:
+                    break
+                }
             }
         })
     }

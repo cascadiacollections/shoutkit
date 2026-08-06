@@ -151,6 +151,8 @@ public final class PlaybackController {
     /// resume automatically when the interruption ends. Armed per interruption
     /// (see ``handleInterruptionBegan(station:)``) — never left set across one.
     @ObservationIgnored var resumeAfterInterruption = false
+    /// Held only when an active route loss paused this controller's playback.
+    @ObservationIgnored var resumeAfterRouteChange = false
 
     /// Whether an interruption that ends *without* the system's resume hint may
     /// still resume playback, which holds only for the window below (see
@@ -210,6 +212,7 @@ public final class PlaybackController {
     }
 
     public func pause() {
+        resumeAfterRouteChange = false
         // A user pause must win over a pending auto-reconnect, or a stream the
         // user just stopped would resurrect itself when the reconnect fires.
         reconnectTimer.cancel()
@@ -289,6 +292,7 @@ public final class PlaybackController {
         reconnectTimer.cancel()
         resumeWatchdogTimer.cancel()
         reconnectAttempts = 0
+        resumeAfterRouteChange = false
         output.stop()
         activeStation = nil
         state = .idle

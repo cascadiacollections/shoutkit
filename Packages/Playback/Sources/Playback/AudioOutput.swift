@@ -15,6 +15,10 @@ public enum AudioStatus: Equatable, Sendable {
     /// session back from whatever the listener started meanwhile. The policy that
     /// weighs the two lives in `PlaybackController.handleInterruptionEnded`.
     case interruptionEnded(shouldResume: Bool, otherAudioIsPlaying: Bool)
+    /// The active audio route disappeared, such as unplugged headphones.
+    case routeLost
+    /// A new audio route became available.
+    case routeAvailable
 }
 
 /// A live "now playing" track update parsed from a stream's ICY metadata.

@@ -12,6 +12,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     private var itemStatusObservation: NSKeyValueObservation?
     private var failedToEndObserver: NSObjectProtocol?
     private var interruptionObserver: NSObjectProtocol?
+    private var routeChangeObserver: NSObjectProtocol?
 
     override init() {
         super.init()
@@ -22,6 +23,9 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         tearDownPlayer()
         if let interruptionObserver {
             NotificationCenter.default.removeObserver(interruptionObserver)
+        }
+        if let routeChangeObserver {
+            NotificationCenter.default.removeObserver(routeChangeObserver)
         }
     }
 
@@ -149,6 +153,11 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     private func observeAudioSessionNotifications() {
         let center = NotificationCenter.default
         let session = AVAudioSession.sharedInstance()
+        observeInterruptions(on: session, with: center)
+        observeRouteChanges(on: session, with: center)
+    }
+
+    private func observeInterruptions(on session: AVAudioSession, with center: NotificationCenter) {
         interruptionObserver = center.addObserver(
             forName: AVAudioSession.interruptionNotification,
             object: session,
@@ -176,6 +185,31 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
                         shouldResume: shouldResume,
                         otherAudioIsPlaying: AVAudioSession.sharedInstance().isOtherAudioPlaying
                     ))
+                @unknown default:
+                    break
+                }
+            }
+        }
+    }
+
+    private func observeRouteChanges(on session: AVAudioSession, with center: NotificationCenter) {
+        routeChangeObserver = center.addObserver(
+            forName: AVAudioSession.routeChangeNotification,
+            object: session,
+            queue: nil
+        ) { [weak self] notification in
+            guard let rawReason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
+                  let reason = AVAudioSession.RouteChangeReason(rawValue: rawReason) else {
+                return
+            }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                switch reason {
+                case .oldDeviceUnavailable:
+                    guard let player = self.player, player.timeControlStatus != .paused else { return }
+                    self.onStatusChange?(.routeLost)
+                case .newDeviceAvailable:
+                    self.onStatusChange?(.routeAvailable)
                 @unknown default:
                     break
                 }

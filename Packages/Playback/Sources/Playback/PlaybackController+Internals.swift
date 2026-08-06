@@ -25,6 +25,7 @@ extension PlaybackController {
         stallCeilingTimer.cancel()
         reconnectTimer.cancel()
         resumeWatchdogTimer.cancel()
+        resumeAfterRouteChange = false
         activeStation = station
         state = .loading(station)
         outputStarted = false
@@ -123,6 +124,7 @@ extension PlaybackController {
             state = .buffering(station)
             scheduleStallCeiling(for: station)
         case .playing:
+            resumeAfterRouteChange = false
             pausedReleaseTimer.cancel()
             stallCeilingTimer.cancel()
             reconnectTimer.cancel()
@@ -165,6 +167,10 @@ extension PlaybackController {
             handleInterruptionBegan(station: station)
         case let .interruptionEnded(shouldResume, otherAudioIsPlaying):
             handleInterruptionEnded(shouldResume: shouldResume, otherAudioIsPlaying: otherAudioIsPlaying)
+        case .routeLost:
+            handleRouteLost()
+        case .routeAvailable:
+            handleRouteAvailable()
         }
     }
 
