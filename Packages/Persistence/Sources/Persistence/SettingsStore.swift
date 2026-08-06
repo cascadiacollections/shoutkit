@@ -15,6 +15,7 @@ public final class SettingsStore {
             "settings.preciseGeoStationLocationEnabled",
             default: false
         )
+        static let equalizerPreset = DefaultsKey<Int>.plist("settings.equalizerPresetRawValue", default: 0)
     }
 
     /// Whether plays are reported to Radio-Browser (station UUID only, per that
@@ -47,6 +48,14 @@ public final class SettingsStore {
         didSet { defaults.set(isPreciseGeoStationLocationEnabled, for: Keys.preciseGeoStationLocation) }
     }
 
+    /// The last equalizer preset applied, stored as `EqualizerPreset.rawValue`
+    /// (an `Int`) rather than the `Playback` package's enum type itself —
+    /// `Persistence` doesn't depend on `Playback`, and this keeps it that way.
+    /// Defaults to `0`, `EqualizerPreset.normal`'s raw value (flat, no EQ).
+    public var equalizerPresetRawValue: Int {
+        didSet { defaults.set(equalizerPresetRawValue, for: Keys.equalizerPreset) }
+    }
+
     @ObservationIgnored private let defaults: UserDefaults
 
     public init(defaults: UserDefaults = .standard) {
@@ -55,5 +64,6 @@ public final class SettingsStore {
         isAlbumArtEnabled = defaults.value(for: Keys.albumArt)
         isDiagnosticsSharingEnabled = defaults.value(for: Keys.diagnosticsSharing)
         isPreciseGeoStationLocationEnabled = defaults.value(for: Keys.preciseGeoStationLocation)
+        equalizerPresetRawValue = defaults.value(for: Keys.equalizerPreset)
     }
 }

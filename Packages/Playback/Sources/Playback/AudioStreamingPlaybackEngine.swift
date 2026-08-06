@@ -45,6 +45,16 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     // deinit is isolated to read this on the main actor without an escape hatch.
     var notificationTokens: [NSObjectProtocol] = []
 
+    /// The attached `AVAudioUnitEQ`, if a preset has been applied — see
+    /// AudioStreamingPlaybackEngine+Equalizer.swift. `nil` until the first
+    /// `setEqualizerPreset(_:)` call, and again immediately after a
+    /// media-services reset until it's rebuilt.
+    var equalizerNode: AVAudioUnitEQ?
+
+    /// The last preset applied, kept so `handleMediaServicesReset()` can
+    /// re-attach and re-apply it to the rebuilt engine.
+    var currentEqualizerPreset: EqualizerPreset = .normal
+
     public init() {
         player.delegate = self
         configureSession()
