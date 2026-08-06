@@ -93,7 +93,7 @@ extension PlaybackController {
                 station: station,
                 track: nowPlaying,
                 isPlaying: false,
-                artworkURL: albumArtURL
+                artwork: .resolved(albumArtURL)
             )
             return
         }

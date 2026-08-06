@@ -237,7 +237,12 @@ public final class PlaybackController {
             tapToAudioTrace?.cancel()
             tapToAudioTrace = nil
             state = .paused(station)
-            nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
+            nowPlayingCenter.update(
+                station: station,
+                track: nowPlaying,
+                isPlaying: false,
+                artwork: .resolved(albumArtURL)
+            )
             schedulePausedRelease()
             return
         }

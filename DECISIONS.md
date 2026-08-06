@@ -1,5 +1,74 @@
 # Decisions
 
+## 2026-08-06 (Bluetooth/AVRCP artwork on the iOS 27 NowPlaying path)
+
+Reported from a Tesla: text metadata and transport controls correct, artwork either frozen or
+still showing the cover of whatever had played in Apple Music before ShoutKit launched. The lock
+screen and CarPlay were fine, which localizes it — the car is an AVRCP client, and AVRCP is the
+one now-playing consumer that pays a real cost per artwork change. It is told the track changed
+and *then* fetches the image over a separate, slow (OBEX/BIP) channel; if the image isn't
+available when it asks, or a second track-changed lands mid-transfer, it keeps the last image it
+managed to fetch. On a fresh launch that image belongs to the previous audio app.
+
+Three changes in July each made sense for the lock screen and together broke that contract. None
+is a bug in isolation, which is why nothing caught it:
+
+- Adopting the iOS 27 `NowPlaying` framework (`MediaSessionNowPlayingCenter`) replaced eager
+  download-and-decode with a lazy async `Artwork` provider. `NowPlayingCenter`, the path it
+  replaced, downloaded and decoded artwork up front and handed `MPMediaItemArtwork` a
+  fully-materialized `UIImage`; the provider only *starts* a download when the system asks.
+- #105 set the artwork request to `.reloadRevalidatingCacheData`, putting a conditional GET in
+  front of every one of those lazy resolutions.
+- Folding the artwork URL into the `RadioContent` id (the fix for the lock screen never showing
+  album art) made every artwork change a content-identity change — and the controller pushes the
+  station's own artwork the instant a new ICY title lands, then album art a lookup later. Two
+  identity changes per song, i.e. two track-changed notifications and two cover-art fetches.
+
+Raising the deployment floor to iOS 27 (#109) meant `NowPlayingCenter` — the path that carries the
+Tesla-specific artwork handling, added when this was first diagnosed — stopped running on device
+entirely. It stays in the tree as a working reference and a one-line fallback, not as dead weight.
+
+- **Artwork is materialized before the identity that carries it is advertised.**
+  `MediaSessionNowPlayingCenter` keeps a bounded (4-entry) dictionary of `ArtworkRepresentation`
+  keyed by source URL. `update(...)` advertises a new artwork URL only once its bytes are resident;
+  until then it keeps advertising what's on screen and fetches in the background, then replays the
+  last push so the identity flips exactly once — with the image already in hand. The `Artwork`
+  provider becomes a memory hand-off in the steady state. The lazy provider is still installed for
+  a URL we don't hold (first play, or a fetch that failed), so the lock screen never regresses.
+- **A fetch that fails marks its URL advertisable anyway.** Otherwise a URL we can't download would
+  pin the previous track's cover on screen for the whole next song — the exact staleness this is
+  meant to remove. The set is cleared on `clear()` and capped at 64 so a long drive on a bad link
+  can't accumulate; dropping it just re-arms the retries.
+- **`NowPlayingPresenting.update()` takes `NowPlayingArtwork`, not `URL?`.** `.resolving` is the new
+  information: the controller knows, at the track boundary, whether a lookup is about to answer.
+  Surfaces that can flip images for free ignore the distinction; the ones that can't hold what they
+  have instead of bouncing through the station favicon. `PlaybackController` sends `.resolving` only
+  when `trackResourcesProvider` is non-nil (album art off → nothing would ever release the hold),
+  and `resolveTrackResources` now pushes its verdict **including a miss**, which is what bounds it.
+  The decision itself lives in `NowPlayingArtworkPolicy` — pure and framework-free, so the host test
+  suite covers it without the NowPlaying framework or MediaPlayer being available.
+- **`.returnCacheDataElseLoad` on this path, reverting #105's revalidation for now-playing artwork
+  only.** Artwork URLs are content-addressed (iTunes serves one `…600x600bb.jpg` per album; station
+  favicons are stable), so a forced revalidation buys freshness nobody can perceive while adding a
+  round-trip in front of a cover-art request. `NowPlayingCenter` keeps `.reloadRevalidatingCacheData`
+  — it fetches once per station switch, not once per surface request — as do the DesignSystem
+  loaders, where #105's reasoning is untouched.
+- **Payloads over 512 KB are re-encoded rather than passed through.** A 3 MB station favicon is a
+  slow Bluetooth transfer for no visible gain. Normalization (also the existing fallback for bytes
+  `ArtworkRepresentation(data:)` rejects) is now 600 px rather than 1024 — it matches what the
+  iTunes lookup asks for and covers the lock-screen tile. Still PNG, not JPEG: favicons routinely
+  carry transparency that JPEG would flatten to black, and typical album art never reaches the
+  threshold anyway.
+- **Not done**: honoring a requested artwork size on this path, the way `NowPlayingCenter` does for
+  strict AVRCP clients. The `NowPlaying` framework owns rendering for downstream consumers and its
+  provider's request parameter is unused here; adding size negotiation on a guess about what the
+  framework does with it would be speculation. Revisit if the fixes above prove insufficient
+  on-device.
+
+**Unverified on-device.** The diagnosis is from the code and the AVRCP contract, not from a car;
+the fix wants a Tesla (or any Bluetooth head unit) with a station that carries ICY metadata,
+watching that artwork changes once per track and lands within a few seconds of the title.
+
 ## 2026-08-05 (equalizer, ported from the Android client's curve math)
 
 - **`AudioStreamingPlaybackEngine`'s July engine swap quietly unlocked an equalizer.** The prior
