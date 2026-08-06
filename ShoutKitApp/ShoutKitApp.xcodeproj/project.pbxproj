@@ -10,6 +10,10 @@
 		000000000000000000000020 /* ShoutKitApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000010 /* ShoutKitApp.swift */; };
 		000000000000000000000021 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000011 /* RootView.swift */; };
 		000000000000000000000022 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000012 /* AppDependencies.swift */; };
+		000000000000000000000110 /* AppDependencies+Networking.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000100 /* AppDependencies+Networking.swift */; };
+		000000000000000000000111 /* AppDependencies+Factories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000101 /* AppDependencies+Factories.swift */; };
+		000000000000000000000112 /* AppDependencies+Callbacks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000102 /* AppDependencies+Callbacks.swift */; };
+		000000000000000000000113 /* AppDependencies+Warmups.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000103 /* AppDependencies+Warmups.swift */; };
 		0000000000000000000000B1 /* GeoStationLocationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000B0 /* GeoStationLocationCoordinator.swift */; };
 		0000000000000000000000B3 /* ShoutKitAudioIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000B2 /* ShoutKitAudioIntents.swift */; };
 		000000000000000000000023 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000014 /* Assets.xcassets */; };
@@ -111,6 +115,10 @@
 		000000000000000000000010 /* ShoutKitApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoutKitApp.swift; sourceTree = "<group>"; };
 		000000000000000000000011 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		000000000000000000000012 /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
+		000000000000000000000100 /* AppDependencies+Networking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDependencies+Networking.swift"; sourceTree = "<group>"; };
+		000000000000000000000101 /* AppDependencies+Factories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDependencies+Factories.swift"; sourceTree = "<group>"; };
+		000000000000000000000102 /* AppDependencies+Callbacks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDependencies+Callbacks.swift"; sourceTree = "<group>"; };
+		000000000000000000000103 /* AppDependencies+Warmups.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDependencies+Warmups.swift"; sourceTree = "<group>"; };
 		0000000000000000000000B0 /* GeoStationLocationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoStationLocationCoordinator.swift; sourceTree = "<group>"; };
 		0000000000000000000000B2 /* ShoutKitAudioIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoutKitAudioIntents.swift; sourceTree = "<group>"; };
 		000000000000000000000013 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -240,6 +248,10 @@
 				000000000000000000000010 /* ShoutKitApp.swift */,
 				000000000000000000000011 /* RootView.swift */,
 				000000000000000000000012 /* AppDependencies.swift */,
+				000000000000000000000100 /* AppDependencies+Networking.swift */,
+				000000000000000000000101 /* AppDependencies+Factories.swift */,
+				000000000000000000000102 /* AppDependencies+Callbacks.swift */,
+				000000000000000000000103 /* AppDependencies+Warmups.swift */,
 				0000000000000000000000A2 /* BackgroundRefreshController.swift */,
 				0000000000000000000000B0 /* GeoStationLocationCoordinator.swift */,
 				0000000000000000000000B2 /* ShoutKitAudioIntents.swift */,
@@ -552,6 +564,10 @@
 				000000000000000000000021 /* RootView.swift in Sources */,
 				000000000000000000000026 /* WelcomeOverlayView.swift in Sources */,
 				000000000000000000000022 /* AppDependencies.swift in Sources */,
+				000000000000000000000110 /* AppDependencies+Networking.swift in Sources */,
+				000000000000000000000111 /* AppDependencies+Factories.swift in Sources */,
+				000000000000000000000112 /* AppDependencies+Callbacks.swift in Sources */,
+				000000000000000000000113 /* AppDependencies+Warmups.swift in Sources */,
 				0000000000000000000000A1 /* BackgroundRefreshController.swift in Sources */,
 				0000000000000000000000B1 /* GeoStationLocationCoordinator.swift in Sources */,
 				0000000000000000000000B3 /* ShoutKitAudioIntents.swift in Sources */,

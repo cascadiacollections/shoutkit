@@ -1,15 +1,9 @@
-import DebugSupport
-import DesignSystem
 import FeatureFlags
-import Foundation
 import NowPlayingActivityKit
 import Persistence
 import Playback
 import RadioDirectory
 import SwiftData
-#if canImport(WatchConnectivity)
-import WatchConnectivity
-#endif
 
 /// Everything the app constructs exactly once and shares between the SwiftUI
 /// scene and App Intents (which run in the same process but outside the view
@@ -41,10 +35,17 @@ struct AppServices {
     let stationLaunchRouter: StationLaunchRouter
 }
 
+// This file is the shared graph and the one call that assembles it. Each step
+// `bootstrap()` delegates to lives in its own extension: the networking install
+// in AppDependencies+Networking.swift, the diagnostics and directory stacks in
+// +Factories.swift, the controller callbacks in +Callbacks.swift, and the
+// post-launch warmups in +Warmups.swift. Splitting along those seams keeps this
+// file under the 400-line `file_length` limit CI enforces via
+// `swiftlint --strict` — the same remedy as the
+// AudioStreamingPlaybackEngine+Session and PlaybackController+Internals splits.
 @MainActor
 enum AppDependencies {
     private(set) static var services: AppServices?
-    private static let watchLastStationSync = PhoneWatchLastStationSync()
 
     /// Idempotent: the app root calls this at launch, and App Intents call it in
     /// `perform()` — whichever runs first constructs the shared graph, so an
@@ -117,279 +118,4 @@ enum AppDependencies {
         Self.services = services
         return services
     }
-
-    /// Debug-only Pulse proxying, the latency-tuned shared session, and the
-    /// shared URL cache sizing. Must run before anything issues a network
-    /// request, since the first touch of `URLSessionHTTPTransport.shared`
-    /// locks the session in (first-write-wins, so in Debug the Pulse session
-    /// installed first holds the slot — it's built from the same tuned
-    /// configuration, so behaviour matches Release either way).
-    private static func installSharedNetworking() {
-        // Size the shared URL cache for RAM-constrained devices: raw bytes
-        // (artwork, directory JSON) belong on disk — cheap, and they survive
-        // relaunch — while the in-memory tier stays small; decoded bitmaps
-        // have their own bounded caches in DesignSystem. Must be set before
-        // any URLSessionConfiguration below is *created*: a configuration
-        // captures the URLCache.shared reference at creation time, so setting
-        // the tuned cache afterwards would leave the shared transport (which
-        // carries all directory and artwork traffic) on the old default cache.
-        URLCache.shared = URLCache(
-            memoryCapacity: 2 * 1024 * 1024,
-            diskCapacity: 64 * 1024 * 1024
-        )
-
-        DebugNetworkInspection.install()
-
-        #if !DEBUG
-        // Fail-fast when offline, responsive-data service type. In Debug,
-        // DebugNetworkInspection.install() above already claimed the slot
-        // with the same tuned configuration plus Pulse's proxy delegate.
-        URLSessionHTTPTransport.installSharedSession(
-            URLSession(configuration: URLSessionHTTPTransport.interactiveConfiguration())
-        )
-        #endif
-    }
-
-    /// Launch-time, fire-and-forget warmups: Spotlight indexing of known
-    /// stations (so Siri can resolve "play ⟨station⟩" from a previous session)
-    /// and the flag-gated network-path prewarm for the user's top stations.
-    private static func scheduleLaunchWarmups(
-        store: LibraryStore,
-        featureFlags: any FeatureFlagProviding,
-        prewarmer: StationConnectionPrewarmer
-    ) {
-        Task {
-            await StationEntityQuery().indexKnownStationsForSpotlight()
-        }
-
-        // Prewarm skips a cold DNS lookup + TLS handshake on the first tap.
-        // A no-op when the user has no snapshotted stations.
-        if featureFlags.isEnabled(FeatureCatalog.prewarmStations) {
-            let prewarmURLs = store.prewarmStreamURLs(limit: 5)
-            if prewarmURLs.isEmpty == false {
-                Task.detached(priority: .utility) {
-                    await prewarmer.prewarm(streamURLs: prewarmURLs)
-                }
-            }
-        }
-    }
-
-    /// Wires the controller's app-layer callbacks: recents + play reporting on
-    /// station change, local listening history on each heard track, and the
-    /// gated album-art / Apple Music resolver. Extracted from `bootstrap()` so
-    /// that method stays focused on constructing the dependency graph.
-    private static func configureCallbacks(
-        for controller: PlaybackController,
-        store: LibraryStore,
-        settings: SettingsStore,
-        featureFlags: any FeatureFlagProviding,
-        playReporter: (any StationPlayReporting)?
-    ) {
-        controller.onStationPlayed = { station in
-            store.logRecent(station)
-            watchLastStationSync.publish(station: station)
-            // Radio-Browser etiquette: report plays so the community directory
-            // can rank popularity. Fire-and-forget; never affects playback.
-            // User-toggleable in Settings (the README privacy story promises it).
-            if settings.isPlayReportingEnabled, let playReporter {
-                Task {
-                    await playReporter.reportPlay(stationID: station.id)
-                }
-            }
-        }
-
-        controller.onTrackHeard = { heard in
-            store.logRecentlyHeardTrack(
-                station: heard.station,
-                title: heard.track.title,
-                artist: heard.track.artist,
-                heardAt: heard.track.receivedAt,
-                appleMusicURL: heard.appleMusicURL
-            )
-        }
-
-        controller.tapToAudioPrewarmEnabledProvider = {
-            featureFlags.isEnabled(FeatureCatalog.prewarmStations)
-        }
-
-        // Best-effort album art + Apple Music link from a single iTunes Search
-        // API hit. Gated here, at the source, so opting out stops the
-        // supplemental network request itself — the toggle lives under Privacy
-        // and must mean what it says. The views also read the setting reactively
-        // (flipping it updates the UI immediately); the lock screen follows on
-        // the next track change.
-        controller.trackResourcesProvider = { track in
-            guard settings.isAlbumArtEnabled else { return .none }
-            let match = await AlbumArtLookup.lookup(artist: track.artist, title: track.title)
-            return TrackResources(artworkURL: match.artworkURL, appleMusicURL: match.appleMusicURL)
-        }
-    }
-
-    /// Constructs the diagnostics service and registers it with Factory.
-    /// Extracted from `bootstrap()` to keep that method within the lint
-    /// body-length budget.
-    private static func makeDiagnosticsService(
-        settings: SettingsStore,
-        featureFlags: any FeatureFlagProviding
-    ) -> DiagnosticsService {
-        let diagnosticsService = DiagnosticsService(
-            featureFlags: featureFlags,
-            settings: settings,
-            payloadStore: makeDiagnosticsPayloadStore()
-        )
-        registerProductionDiagnosticsService(diagnosticsService)
-        return diagnosticsService
-    }
-
-    /// GRDB-backed on-disk store, falling back to an in-memory store (payloads
-    /// lost on relaunch) if the database can't be opened.
-    private static func makeDiagnosticsPayloadStore() -> any DiagnosticsPayloadPersisting {
-        do {
-            return try DiagnosticsPayloadStore()
-        } catch {
-            assertionFailure("""
-            Failed to initialize diagnostics payload store. Falling back to in-memory diagnostics storage, \
-            which will be lost on app restart: \(error)
-            """)
-            print("""
-            Diagnostics payload store init error. Falling back to in-memory \
-            diagnostics storage (lost on app restart): \(error)
-            """)
-            return InMemoryDiagnosticsPayloadStore()
-        }
-    }
-
-    /// The directory stack plus the geo coordinator that keeps its filter in
-    /// sync — grouped in a struct (not a tuple) so each member stays named.
-    private struct DirectoryServices {
-        let directory: any RadioDirectoryProviding
-        let discoveryCache: any DirectoryDiscoveryCaching
-        let playReporter: (any StationPlayReporting)?
-        let geoStationLocationCoordinator: GeoStationLocationCoordinator
-    }
-
-    /// Routes the directory and its snapshot facet through Factory so the view
-    /// models resolve them instead of their being threaded through RootView.
-    private static func registerProductionDirectory(_ services: DirectoryServices) -> any RadioDirectoryProviding {
-        registerProductionRadioDirectory(services.directory)
-        registerProductionDiscoveryCache(services.discoveryCache)
-        return services.directory
-    }
-
-    /// Radio-Browser (free, open source, keyless) is the default discovery
-    /// source. Supplying SHOUTCAST_DEV_KEY in Config/Secrets.xcconfig opts into
-    /// SHOUTcast's own directory instead. Either base is wrapped in
-    /// PreferredRadioDirectory so curated stations (KEXP) always appear first,
-    /// then in CachingRadioDirectory so Listen Now and Browse refreshing at launch
-    /// share one fetch — and so that fetch is written to disk, letting the next
-    /// launch paint stations before (or without) reaching the network.
-    private static func makeDirectory(
-        settings: SettingsStore,
-        featureFlags: any FeatureFlagProviding
-    ) -> DirectoryServices {
-        let geoFilterProvider = MutableRadioBrowserGeoFilterProvider()
-        let geoStationLocationCoordinator = GeoStationLocationCoordinator(
-            settings: settings,
-            featureFlags: featureFlags,
-            geoFilterProvider: geoFilterProvider
-        )
-        // One file serves either branch: snapshots are scoped by source identity.
-        let snapshotStore = FileDirectorySnapshotStore.applicationSupport()
-
-        if let apiKey = shoutcastAPIKey() {
-            let directory = PreferredRadioDirectory(base: ShoutcastDirectoryClient(apiKey: apiKey))
-            let caching = CachingRadioDirectory(
-                base: directory,
-                snapshotStore: snapshotStore,
-                snapshotIdentity: { "shoutcast" }
-            )
-            return DirectoryServices(
-                directory: caching,
-                discoveryCache: caching,
-                playReporter: nil,
-                geoStationLocationCoordinator: geoStationLocationCoordinator
-            )
-        }
-
-        let radioBrowser = RadioBrowserDirectoryClient(geoFilterProvider: geoFilterProvider)
-        let directory = PreferredRadioDirectory(base: radioBrowser)
-        let caching = CachingRadioDirectory(
-            base: directory,
-            snapshotStore: snapshotStore,
-            // Geo-filtered results are only reusable while that filter still applies.
-            snapshotIdentity: {
-                "radio-browser;" + (await geoFilterProvider.currentGeoFilter()?.snapshotIdentity ?? "unfiltered")
-            }
-        )
-        return DirectoryServices(
-            directory: caching,
-            discoveryCache: caching,
-            playReporter: radioBrowser,
-            geoStationLocationCoordinator: geoStationLocationCoordinator
-        )
-    }
-
-    private static func shoutcastAPIKey() -> String? {
-        guard let apiKey = Bundle.main.object(forInfoDictionaryKey: "SHOUTCAST_DEV_KEY") as? String else {
-            return nil
-        }
-
-        let trimmedAPIKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmedAPIKey.isEmpty == false, trimmedAPIKey != "$(SHOUTCAST_DEV_KEY)" else {
-            return nil
-        }
-
-        return trimmedAPIKey
-    }
 }
-
-#if canImport(WatchConnectivity)
-
-private final class PhoneWatchLastStationSync: NSObject, WCSessionDelegate {
-    private enum Keys {
-        static let lastStation = "watchSync.lastStation"
-    }
-
-    private let session: WCSession?
-    private let encoder = JSONEncoder()
-
-    override init() {
-        if WCSession.isSupported() {
-            let session = WCSession.default
-            self.session = session
-        } else {
-            session = nil
-        }
-        super.init()
-        self.session?.delegate = self
-        self.session?.activate()
-    }
-
-    func publish(station: Station) {
-        guard let session,
-              session.activationState == .activated,
-              session.isWatchAppInstalled else { return }
-        guard let encoded = try? encoder.encode(station) else { return }
-        try? session.updateApplicationContext([Keys.lastStation: encoded])
-    }
-
-    func session(
-        _ session: WCSession,
-        activationDidCompleteWith activationState: WCSessionActivationState,
-        error: Error?
-    ) {}
-
-    func sessionDidBecomeInactive(_ session: WCSession) {}
-
-    func sessionDidDeactivate(_ session: WCSession) {
-        session.activate()
-    }
-}
-
-#else
-
-private final class PhoneWatchLastStationSync {
-    func publish(station: Station) {}
-}
-
-#endif
