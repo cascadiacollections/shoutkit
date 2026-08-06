@@ -63,12 +63,7 @@ extension PlaybackController {
                 // Pass the preserved track/art through: on a reconnect the
                 // last-known track must stay on the lock screen while the
                 // stream re-buffers (both are nil on a fresh start anyway).
-                self.nowPlayingCenter.update(
-                    station: station,
-                    track: self.nowPlaying,
-                    isPlaying: true,
-                    artwork: .resolved(self.albumArtURL)
-                )
+                self.pushNowPlaying(for: station, isPlaying: true)
             } catch let error as RadioDirectoryError {
                 guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
                 self.handleResolutionFailure(error, for: station)
@@ -93,15 +88,22 @@ extension PlaybackController {
         let fallback = PlaybackState.failed(playbackError)
         if playbackError.isRetryable == false {
             state = fallback
-            nowPlayingCenter.update(
-                station: station,
-                track: nowPlaying,
-                isPlaying: false,
-                artwork: .resolved(albumArtURL)
-            )
+            pushNowPlaying(for: station, isPlaying: false)
         } else {
             attemptReconnect(for: station, fallback: fallback)
         }
+    }
+
+    /// The ordinary surface push: current track plus whatever artwork has already
+    /// resolved for it. Every caller wants this except the track boundary, which
+    /// is the one place `.resolving` is the honest answer (see `handleTrackInfo`).
+    func pushNowPlaying(for station: Station, isPlaying: Bool) {
+        nowPlayingCenter.update(
+            station: station,
+            track: nowPlaying,
+            isPlaying: isPlaying,
+            artwork: .resolved(albumArtURL)
+        )
     }
 
     func configureOutput() {
@@ -139,12 +141,7 @@ extension PlaybackController {
             state = .playing(station)
             tapToAudioTrace?.completeIfNeeded()
             tapToAudioTrace = nil
-            nowPlayingCenter.update(
-                station: station,
-                track: nowPlaying,
-                isPlaying: true,
-                artwork: .resolved(albumArtURL)
-            )
+            pushNowPlaying(for: station, isPlaying: true)
         case .paused:
             stallCeilingTimer.cancel()
             // A system-initiated pause (headphones unplugged, route change)
@@ -156,12 +153,7 @@ extension PlaybackController {
             tapToAudioTrace?.cancel()
             tapToAudioTrace = nil
             state = .paused(station)
-            nowPlayingCenter.update(
-                station: station,
-                track: nowPlaying,
-                isPlaying: false,
-                artwork: .resolved(albumArtURL)
-            )
+            pushNowPlaying(for: station, isPlaying: false)
             schedulePausedRelease()
         case let .failed(playbackError):
             pausedReleaseTimer.cancel()

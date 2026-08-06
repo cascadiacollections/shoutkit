@@ -69,7 +69,7 @@ extension PlaybackController {
         default:
             break
         }
-        nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artwork: .resolved(albumArtURL))
+        pushNowPlaying(for: station, isPlaying: false)
 
         // Tell the output it is paused too, not just our own state machine. The
         // system silences the audio without informing the streaming engine, and

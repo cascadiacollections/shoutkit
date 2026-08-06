@@ -69,10 +69,15 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
     private var session: MediaSession<SessionState>?
     private let transport: any HTTPTransporting
 
-    /// Materialized artwork keyed by source URL. Small and bounded: a listening
-    /// session cycles through the station's own art plus the current track's, and
-    /// this is retained while backgrounded, which is exactly when jetsam hunts.
-    private var residentArtwork: [URL: ArtworkRepresentation] = [:]
+    /// Materialized artwork bytes keyed by source URL — validated (and normalized
+    /// where needed) so building an `ArtworkRepresentation` from them is local
+    /// work that can't fail on the network. Bytes rather than the representation
+    /// itself because `ArtworkRepresentation` is not `Sendable`, so it can neither
+    /// be cached across isolation nor captured by the provider's `@Sendable`
+    /// closure. Small and bounded: a session cycles through the station's own art
+    /// plus the current track's, and this stays resident while backgrounded, which
+    /// is exactly when jetsam hunts.
+    private var residentArtwork: [URL: Data] = [:]
     private var residentOrder: [URL] = []
 
     /// URLs whose fetch already failed. Treated as advertisable so a URL we can't
@@ -222,14 +227,17 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
     /// notification and the head unit's cover-art request.
     private func artwork(for url: URL?) -> Artwork? {
         guard let url else { return nil }
-        if let resident = residentArtwork[url] {
-            return Artwork(id: url.absoluteString) { @Sendable _ in resident }
+        if let residentData = residentArtwork[url] {
+            return Artwork(id: url.absoluteString) { @Sendable _ in
+                try ArtworkRepresentation(data: residentData)
+            }
         }
         // Not resident yet (first play, or a fetch that failed): keep the lazy
         // provider so the lock screen still gets an image.
         let transport = self.transport
         return Artwork(id: url.absoluteString) { @Sendable _ in
-            try await Self.representation(for: url, transport: transport)
+            let data = try await Self.artworkData(for: url, transport: transport)
+            return try ArtworkRepresentation(data: data)
         }
     }
 
@@ -240,11 +248,11 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
 
         let transport = self.transport
         artworkFetches[url] = Task { [weak self] in
-            let representation = try? await Self.representation(for: url, transport: transport)
+            let data = try? await Self.artworkData(for: url, transport: transport)
             guard Task.isCancelled == false, let self else { return }
             self.artworkFetches[url] = nil
-            if let representation {
-                self.storeResidentArtwork(representation, for: url)
+            if let data {
+                self.storeResidentArtwork(data, for: url)
             } else {
                 // Bounded: a long drive over a bad link must not accumulate every
                 // URL it failed. Dropping the whole set just re-arms the retries.
@@ -261,11 +269,11 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
         }
     }
 
-    private func storeResidentArtwork(_ representation: ArtworkRepresentation, for url: URL) {
+    private func storeResidentArtwork(_ data: Data, for url: URL) {
         if residentArtwork[url] == nil {
             residentOrder.append(url)
         }
-        residentArtwork[url] = representation
+        residentArtwork[url] = data
         while residentOrder.count > Self.residentArtworkCapacity {
             let evicted = residentOrder.removeFirst()
             // Never evict what is on screen; the provider for it is a memory
@@ -278,21 +286,28 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
         }
     }
 
-    private nonisolated static func representation(
+    /// Downloads `url` and returns bytes `ArtworkRepresentation` accepts,
+    /// normalizing when it doesn't or when the payload is oversized. Returns the
+    /// bytes rather than the representation so the result can be cached and handed
+    /// to a `@Sendable` provider closure; rebuilding the representation from
+    /// resident bytes is local work, which is the whole point.
+    private nonisolated static func artworkData(
         for url: URL,
         transport: any HTTPTransporting
-    ) async throws -> ArtworkRepresentation {
+    ) async throws -> Data {
         var request = URLRequest(url: url)
         request.cachePolicy = artworkCachePolicy
         let data = try await transport.data(for: request)
-        if data.count <= maxPassthroughArtworkBytes,
-           let representation = try? ArtworkRepresentation(data: data) {
-            return representation
+        if data.count <= maxPassthroughArtworkBytes, (try? ArtworkRepresentation(data: data)) != nil {
+            return data
         }
         guard let normalized = normalizedArtworkData(from: data) else {
             throw URLError(.cannotDecodeContentData)
         }
-        return try ArtworkRepresentation(data: normalized)
+        // Fail here rather than inside the provider, so a payload we can't turn
+        // into artwork is recorded as unavailable instead of being advertised.
+        _ = try ArtworkRepresentation(data: normalized)
+        return normalized
     }
 
     /// Some remote album-art payloads decode fine in ImageIO but are rejected by
