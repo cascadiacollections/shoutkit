@@ -59,7 +59,7 @@ final class NowPlayingPresenterSpy: NowPlayingPresenting {
     var onToggle: (() -> Void)?
 
     enum Event: Equatable {
-        case update(stationID: String, trackTitle: String?, isPlaying: Bool, artworkURL: URL?)
+        case update(stationID: String, trackTitle: String?, isPlaying: Bool, artwork: NowPlayingArtwork)
         case clear
     }
 
@@ -67,12 +67,21 @@ final class NowPlayingPresenterSpy: NowPlayingPresenting {
 
     var lastUpdate: Event? { events.last(where: { $0 != .clear }) }
 
-    func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool, artworkURL: URL?) {
+    /// Every artwork the controller pushed, in order — the sequence a Bluetooth
+    /// head unit would have to keep up with.
+    var artworkPushes: [NowPlayingArtwork] {
+        events.compactMap { event in
+            guard case let .update(_, _, _, artwork) = event else { return nil }
+            return artwork
+        }
+    }
+
+    func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool, artwork: NowPlayingArtwork) {
         events.append(.update(
             stationID: station.id,
             trackTitle: track?.title,
             isPlaying: isPlaying,
-            artworkURL: artworkURL
+            artwork: artwork
         ))
     }
 

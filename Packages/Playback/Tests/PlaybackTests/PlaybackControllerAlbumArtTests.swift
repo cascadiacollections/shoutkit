@@ -23,7 +23,64 @@ struct PlaybackControllerAlbumArtTests {
 
         #expect(controller.albumArtURL == art)
         #expect(presenter.lastUpdate == .update(
-            stationID: "kexp", trackTitle: "Song", isPlaying: true, artworkURL: art
+            stationID: "kexp", trackTitle: "Song", isPlaying: true, artwork: .resolved(art)
+        ))
+    }
+
+    // A track boundary used to push the station's own artwork as if it were this
+    // track's, then replace it a lookup later. That is two artwork changes per
+    // song; a Bluetooth head unit is told the track changed and re-fetches cover
+    // art over a slow side channel for each one, and commonly finishes neither.
+    // The boundary now says "resolving" and the verdict push is the only change.
+    @Test func trackStartHoldsArtworkUntilTheLookupAnswers() async throws {
+        let output = FakeAudioOutput()
+        let presenter = NowPlayingPresenterSpy()
+        let controller = makeController(stations: [station()], output: output, presenter: presenter)
+        let art = try #require(URL(string: "https://example.com/art/600x600bb.jpg"))
+        controller.trackResourcesProvider = { _ in TrackResources(artworkURL: art) }
+
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        output.emitTrackInfo("Song", "Band")
+        await drainMainQueue()
+
+        #expect(Array(presenter.artworkPushes.suffix(2)) == [.resolving, .resolved(art)])
+    }
+
+    // The hold has to be bounded, or a track the lookup can't match would keep
+    // the previous track's cover on screen for its whole duration.
+    @Test func lookupMissReleasesTheHold() async throws {
+        let output = FakeAudioOutput()
+        let presenter = NowPlayingPresenterSpy()
+        let controller = makeController(stations: [station()], output: output, presenter: presenter)
+        controller.trackResourcesProvider = { _ in .none }
+
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        output.emitTrackInfo("Song", "Band")
+        await drainMainQueue()
+
+        #expect(Array(presenter.artworkPushes.suffix(2)) == [.resolving, .resolved(nil)])
+    }
+
+    // With album art turned off there is no lookup to wait for, so the boundary
+    // must not claim one is running — nothing would ever release the hold.
+    @Test func trackStartWithoutAProviderResolvesImmediately() async {
+        let output = FakeAudioOutput()
+        let presenter = NowPlayingPresenterSpy()
+        let controller = makeController(stations: [station()], output: output, presenter: presenter)
+
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        output.emitTrackInfo("Song", "Band")
+        await drainMainQueue()
+
+        #expect(presenter.artworkPushes.contains(.resolving) == false)
+        #expect(presenter.lastUpdate == .update(
+            stationID: "kexp", trackTitle: "Song", isPlaying: true, artwork: .resolved(nil)
         ))
     }
 

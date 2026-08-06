@@ -63,12 +63,7 @@ extension PlaybackController {
                 // Pass the preserved track/art through: on a reconnect the
                 // last-known track must stay on the lock screen while the
                 // stream re-buffers (both are nil on a fresh start anyway).
-                self.nowPlayingCenter.update(
-                    station: station,
-                    track: self.nowPlaying,
-                    isPlaying: true,
-                    artworkURL: self.albumArtURL
-                )
+                self.pushNowPlaying(for: station, isPlaying: true)
             } catch let error as RadioDirectoryError {
                 guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
                 self.handleResolutionFailure(error, for: station)
@@ -93,10 +88,22 @@ extension PlaybackController {
         let fallback = PlaybackState.failed(playbackError)
         if playbackError.isRetryable == false {
             state = fallback
-            nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
+            pushNowPlaying(for: station, isPlaying: false)
         } else {
             attemptReconnect(for: station, fallback: fallback)
         }
+    }
+
+    /// The ordinary surface push: current track plus whatever artwork has already
+    /// resolved for it. Every caller wants this except the track boundary, which
+    /// is the one place `.resolving` is the honest answer (see `handleTrackInfo`).
+    func pushNowPlaying(for station: Station, isPlaying: Bool) {
+        nowPlayingCenter.update(
+            station: station,
+            track: nowPlaying,
+            isPlaying: isPlaying,
+            artwork: .resolved(albumArtURL)
+        )
     }
 
     func configureOutput() {
@@ -134,7 +141,7 @@ extension PlaybackController {
             state = .playing(station)
             tapToAudioTrace?.completeIfNeeded()
             tapToAudioTrace = nil
-            nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: true, artworkURL: albumArtURL)
+            pushNowPlaying(for: station, isPlaying: true)
         case .paused:
             stallCeilingTimer.cancel()
             // A system-initiated pause (headphones unplugged, route change)
@@ -146,7 +153,7 @@ extension PlaybackController {
             tapToAudioTrace?.cancel()
             tapToAudioTrace = nil
             state = .paused(station)
-            nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
+            pushNowPlaying(for: station, isPlaying: false)
             schedulePausedRelease()
         case let .failed(playbackError):
             pausedReleaseTimer.cancel()
@@ -230,11 +237,18 @@ extension PlaybackController {
         nowPlaying = metadata
         onTrackHeard?(HeardTrack(station: station, track: metadata, appleMusicURL: nil))
 
+        // The title has to reach the system surface now — it's what a listener
+        // (and a head unit) sees change at the track boundary. The artwork answer
+        // is a lookup away, so say so rather than pushing the station favicon as
+        // if it were this track's art: on Bluetooth that would be two artwork
+        // changes per song, and the car loses that race. `resolveTrackResources`
+        // always pushes the verdict, including a miss, so the hold is bounded.
+        let artwork: NowPlayingArtwork = trackResourcesProvider == nil ? .resolved(nil) : .resolving
         nowPlayingCenter.update(
             station: station,
             track: metadata,
             isPlaying: isOutputPlaying,
-            artworkURL: albumArtURL
+            artwork: artwork
         )
 
         resolveTrackResources(for: info)
@@ -259,17 +273,20 @@ extension PlaybackController {
             self.albumArtTask = nil
             self.albumArtURL = resources.artworkURL
             self.appleMusicURL = resources.appleMusicURL
-            if let station = self.activeStation, let metadata = self.nowPlaying {
+            guard let station = self.activeStation else { return }
+            if let metadata = self.nowPlaying {
                 self.onTrackHeard?(
                     HeardTrack(station: station, track: metadata, appleMusicURL: resources.appleMusicURL)
                 )
             }
-            guard let station = self.activeStation, let artworkURL = resources.artworkURL else { return }
+            // Pushed even for a miss: the track-start push left the surface
+            // holding the previous artwork, and only a `.resolved` answer
+            // releases it back to the station's own art.
             self.nowPlayingCenter.update(
                 station: station,
                 track: self.nowPlaying,
                 isPlaying: self.isOutputPlaying,
-                artworkURL: artworkURL
+                artwork: .resolved(resources.artworkURL)
             )
         }
     }
