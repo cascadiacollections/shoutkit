@@ -155,4 +155,41 @@ struct PlaybackInterruptionTests {
         #expect(controller.currentStation?.id == "other")
         #expect(output.resumeCount == 0, "the new station is starting; there is nothing to resume")
     }
+
+    @Test func routeReturningResumesOnlyPlaybackPausedByRouteLoss() async {
+        let output = FakeAudioOutput()
+        let controller = await playing(output: output)
+
+        output.onStatusChange?(.routeLost)
+        #expect(controller.state == .paused(station()))
+        output.onStatusChange?(.routeAvailable)
+
+        #expect(controller.state == .playing(station()))
+        #expect(output.resumeCount == 1)
+    }
+
+    @Test func routeReturningDoesNotResumeAfterExplicitPauseOrStop() async {
+        let output = FakeAudioOutput()
+        let controller = await playing(output: output)
+
+        output.onStatusChange?(.routeLost)
+        controller.pause()
+        output.onStatusChange?(.routeAvailable)
+        #expect(output.resumeCount == 0)
+
+        controller.stop()
+        output.onStatusChange?(.routeAvailable)
+        #expect(output.resumeCount == 0)
+    }
+
+    @Test func startingPlaybackReleasesRouteResumeClaim() async {
+        let output = FakeAudioOutput()
+        let controller = await playing(output: output)
+
+        output.onStatusChange?(.routeLost)
+        controller.resume()
+        output.onStatusChange?(.routeAvailable)
+
+        #expect(output.resumeCount == 1)
+    }
 }
