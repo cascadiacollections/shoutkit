@@ -14,7 +14,8 @@ let package = Package(
     dependencies: [
         .package(path: "../../DesignSystem"),
         .package(path: "../../Persistence"),
-        .package(path: "../../FeatureFlags")
+        .package(path: "../../FeatureFlags"),
+        .package(path: "../../Playback")
     ],
     targets: [
         .target(
@@ -22,7 +23,8 @@ let package = Package(
             dependencies: [
                 "DesignSystem",
                 "Persistence",
-                "FeatureFlags"
+                "FeatureFlags",
+                "Playback"
             ],
             resources: [
                 .copy("Resources/apache-2.0.txt"),

@@ -21,13 +21,15 @@ public protocol NowPlayingPresenting: AnyObject {
     /// Pushes current station + live track metadata to the system surface.
     ///
     /// - Parameters:
-    ///   - station:    The currently playing station.
-    ///   - track:      Live ICY track metadata, if available.
-    ///   - isPlaying:  Whether playback is active.
-    ///   - artworkURL: Optional album art URL to display in preference to the
-    ///                 station's own artwork. Pass `nil` to fall back to the
-    ///                 station URL.
-    func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool, artworkURL: URL?)
+    ///   - station:   The currently playing station.
+    ///   - track:     Live ICY track metadata, if available.
+    ///   - isPlaying: Whether playback is active.
+    ///   - artwork:   What is known about the track's artwork. `.resolved(url)`
+    ///                displays `url` in preference to the station's own artwork
+    ///                (or the station's when `nil`); `.resolving` asks the surface
+    ///                to hold what it is showing until the lookup answers. See
+    ///                ``NowPlayingArtwork``.
+    func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool, artwork: NowPlayingArtwork)
 
     /// Removes the now-playing item from the system surface.
     func clear()
@@ -49,6 +51,9 @@ public final class NowPlayingCenter: NowPlayingPresenting {
     private var artworkTask: Task<Void, Never>?
     private var artworkCacheURL: URL?
     private var cachedArtwork: MPMediaItemArtwork?
+    /// The station whose artwork `artworkCacheURL` belongs to, so a `.resolving`
+    /// push can only hold artwork that is actually this station's.
+    private var presentedStationID: String?
     private let transport: any HTTPTransporting
 
     /// Whether a station is currently active. Written on the main actor, read from
@@ -118,7 +123,7 @@ public final class NowPlayingCenter: NowPlayingPresenting {
     }
 
     /// Pushes current station + live track metadata to the system.
-    public func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool, artworkURL: URL?) {
+    public func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool, artwork: NowPlayingArtwork) {
         hasActiveItem.withLock { $0 = true }
 
         var info: [String: Any] = [:]
@@ -131,8 +136,18 @@ public final class NowPlayingCenter: NowPlayingPresenting {
         info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0
         MPRemoteCommandCenter.shared().changePlaybackPositionCommand.isEnabled = false
 
-        // Prefer album art URL when provided; fall back to the station's own artwork.
-        let targetArtworkURL = artworkURL ?? station.artworkURL
+        // Prefer the track's artwork when resolved; fall back to the station's own.
+        // A `.resolving` push holds whatever this station already shows rather
+        // than flashing back to the station favicon for the length of a lookup.
+        let targetArtworkURL: URL?
+        switch artwork {
+        case let .resolved(url):
+            targetArtworkURL = url ?? station.artworkURL
+        case .resolving:
+            let held = presentedStationID == station.id ? artworkCacheURL : nil
+            targetArtworkURL = held ?? station.artworkURL
+        }
+        presentedStationID = station.id
 
         // Only attach cached artwork if it belongs to the current target URL —
         // otherwise the previous station's art would show on the lock screen.
@@ -150,6 +165,7 @@ public final class NowPlayingCenter: NowPlayingPresenting {
         artworkTask = nil
         artworkCacheURL = nil
         cachedArtwork = nil
+        presentedStationID = nil
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
         MPRemoteCommandCenter.shared().changePlaybackPositionCommand.isEnabled = false
     }

@@ -153,6 +153,17 @@ All notable changes to ShoutKit are documented here. The format follows
   once per URL and shared across the backdrop, hero, and tint views (previously three decodes)
 
 ### Fixed
+- **Album art reaches car stereos over Bluetooth again**: track titles and artists were arriving
+  fine, but the artwork either never changed or stayed on whatever was playing before ShoutKit —
+  an album cover left over from Apple Music, for instance. A car receives cover art on a separate,
+  slow channel *after* it is told the track changed, so it needs the image ready at that moment and
+  it needs to be told once, not twice. ShoutKit was doing neither: it only started downloading
+  artwork when the system asked for it (with a forced network round-trip in front of every
+  request), and it announced a track change twice per song — once with the station's logo the
+  instant a new title arrived, then again with the real cover a moment later. Artwork is now
+  downloaded and held in memory before the track change is announced, and the announcement happens
+  once, with the cover already in hand. The station's own logo still stands in for tracks with no
+  cover art, and lock-screen and CarPlay behaviour is unchanged
 - **Stations that stream over plain http now play**: a misspelled App Transport Security key meant
   the app's cleartext exception was silently ignored, so any station whose stream isn't served over
   https was blocked by iOS before a single byte arrived. A large share of the Radio-Browser and

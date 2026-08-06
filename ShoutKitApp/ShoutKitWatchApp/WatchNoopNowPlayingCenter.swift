@@ -28,7 +28,7 @@ final class WatchNoopNowPlayingCenter: NowPlayingPresenting {
 #endif
     }
 
-    func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool, artworkURL: URL?) {
+    func update(station: Station, track: NowPlayingMetadata?, isPlaying: Bool, artwork: NowPlayingArtwork) {
 #if canImport(MediaPlayer)
         var info: [String: Any] = [:]
         info[MPMediaItemPropertyTitle] = track?.title ?? station.name
