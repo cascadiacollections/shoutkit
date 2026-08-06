@@ -10,6 +10,21 @@ import RadioDirectory
 // than a branch in `handleStatusChange`.
 
 extension PlaybackController {
+    func handleRouteLost() {
+        switch state {
+        case .playing, .buffering:
+            resumeAfterRouteChange = true
+            output.pause()
+        default:
+            break
+        }
+    }
+
+    func handleRouteAvailable() {
+        guard resumeAfterRouteChange else { return }
+        resume()
+    }
+
     func handleInterruptionBegan(station: Station) {
         // A reconnect must not fire mid-interruption: it would try to grab the
         // audio session during the call and clobber the arming below in
@@ -54,7 +69,7 @@ extension PlaybackController {
         default:
             break
         }
-        nowPlayingCenter.update(station: station, track: nowPlaying, isPlaying: false, artworkURL: albumArtURL)
+        pushNowPlaying(for: station, isPlaying: false)
 
         // Tell the output it is paused too, not just our own state machine. The
         // system silences the audio without informing the streaming engine, and

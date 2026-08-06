@@ -35,7 +35,7 @@ struct PlaybackResourceHygieneTests {
         #expect(controller.state == .paused(station()))
         #expect(presenter.events.contains(.clear) == false)
         #expect(presenter.lastUpdate == .update(
-            stationID: "kexp", trackTitle: nil, isPlaying: false, artworkURL: nil
+            stationID: "kexp", trackTitle: nil, isPlaying: false, artwork: .resolved(nil)
         ))
     }
 
@@ -160,7 +160,7 @@ struct PlaybackResourceHygieneTests {
         // Teardown suppresses the player's own status callback, so the
         // controller must have pushed the paused surface itself.
         #expect(presenter.lastUpdate == .update(
-            stationID: "kexp", trackTitle: nil, isPlaying: false, artworkURL: nil
+            stationID: "kexp", trackTitle: nil, isPlaying: false, artwork: .resolved(nil)
         ))
     }
 

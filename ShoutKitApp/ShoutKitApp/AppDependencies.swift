@@ -69,6 +69,10 @@ enum AppDependencies {
         let controller = PlaybackController(directory: directory)
         let stationConnectionPrewarmer = StationConnectionPrewarmer()
 
+        // A no-op on engines that don't support an equalizer (see
+        // `RadioPlaybackEngine.supportsEqualizer`), and safe at `.normal`.
+        controller.restoreEqualizerPreset(rawValue: settings.equalizerPresetRawValue)
+
         configureCallbacks(
             for: controller,
             store: store,

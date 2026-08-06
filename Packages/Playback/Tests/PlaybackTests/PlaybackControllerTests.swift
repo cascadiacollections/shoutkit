@@ -197,7 +197,7 @@ struct PlaybackControllerTests {
         output.onStatusChange?(.playing)
 
         #expect(presenter.lastUpdate == .update(
-            stationID: "kexp", trackTitle: nil, isPlaying: true, artworkURL: nil
+            stationID: "kexp", trackTitle: nil, isPlaying: true, artwork: .resolved(nil)
         ))
     }
 
@@ -212,7 +212,7 @@ struct PlaybackControllerTests {
 
         // The lock screen must reflect the pause even though no player ever started.
         #expect(presenter.lastUpdate == .update(
-            stationID: "kexp", trackTitle: nil, isPlaying: false, artworkURL: nil
+            stationID: "kexp", trackTitle: nil, isPlaying: false, artwork: .resolved(nil)
         ))
     }
 
@@ -227,7 +227,7 @@ struct PlaybackControllerTests {
         output.emitTrackInfo("Song", "Band")
 
         #expect(presenter.lastUpdate == .update(
-            stationID: "kexp", trackTitle: "Song", isPlaying: true, artworkURL: nil
+            stationID: "kexp", trackTitle: "Song", isPlaying: true, artwork: .resolved(nil)
         ))
     }
 
@@ -242,7 +242,7 @@ struct PlaybackControllerTests {
         output.onStatusChange?(.interruptionBegan)
 
         #expect(presenter.lastUpdate == .update(
-            stationID: "kexp", trackTitle: nil, isPlaying: false, artworkURL: nil
+            stationID: "kexp", trackTitle: nil, isPlaying: false, artwork: .resolved(nil)
         ))
         #expect(controller.state == .paused(station()))
     }
