@@ -69,6 +69,38 @@ entirely. It stays in the tree as a working reference and a one-line fallback, n
 the fix wants a Tesla (or any Bluetooth head unit) with a station that carries ICY metadata,
 watching that artwork changes once per track and lands within a few seconds of the title.
 
+## 2026-08-05 (AppDependencies split into four extension files)
+
+- **`AppDependencies.swift` was one line under the limit, which is a tax on the next
+  feature, not a fact about this one.** At 399 lines against the 400-line `file_length`
+  limit (and a `bootstrap()` body near the 50-line `function_body_length` limit), the
+  equalizer port failed `swiftlint --strict` for reasons that had nothing to do with the
+  equalizer, and the fix — moving preset restore into `PlaybackController` — bought back
+  exactly one line. Split preemptively instead: the file is now 121 lines and every seam
+  has room to grow.
+- **The seams are the ones `bootstrap()` already delegates along**, one file each:
+  `+Networking.swift` (the process-wide URL cache / shared session install that must run
+  before anything requests), `+Factories.swift` (the diagnostics and directory stacks —
+  both pick between concrete implementations and register with Factory, so they read
+  better beside each other than apart), `+Callbacks.swift` (the controller's app-layer
+  closures, plus the `PhoneWatchLastStationSync` that one of them feeds), and
+  `+Warmups.swift` (the fire-and-forget Spotlight indexing and connection prewarm).
+  What's left in `AppDependencies.swift` is the shared graph and the one call that
+  assembles it. Same remedy and same `+Extension.swift` convention as the
+  `PlaybackController+Internals`/`+Recovery` and `AudioStreamingPlaybackEngine+Session`
+  splits, no lint-disable.
+- **The helpers became `internal` because Swift's `private` is file-scoped**, so an
+  extension in another file can't reach them. Each new file's header says so, and the
+  members that stay within one file (`makeDiagnosticsPayloadStore`, `shoutcastAPIKey`,
+  `watchLastStationSync`) kept `private`. `DirectoryServices` moved to `+Factories.swift`
+  for the same reason — `bootstrap()` reads its members.
+- **The app target isn't a SwiftPM package**, so each file needed a `PBXFileReference`,
+  a `PBXBuildFile`, a group child, and a Sources entry in `project.pbxproj`, using the
+  fixed zero-padded object IDs that project uses (`…000100`–`…000103` for the file
+  references, `…000110`–`…000113` for the build files). Verified by confirming all four
+  `.o` files land in the target's build directory — a file that fails to register still
+  builds green, it just silently isn't in the binary.
+
 ## 2026-08-05 (equalizer, ported from the Android client's curve math)
 
 - **`AudioStreamingPlaybackEngine`'s July engine swap quietly unlocked an equalizer.** The prior
