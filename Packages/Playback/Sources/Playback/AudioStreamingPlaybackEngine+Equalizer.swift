@@ -31,8 +31,8 @@ extension AudioStreamingPlaybackEngine {
 
     public func setEqualizerPreset(_ preset: EqualizerPreset) {
         currentEqualizerPreset = preset
-        let eq = equalizerNode ?? attachEqualizer()
-        applyGains(for: preset, to: eq)
+        let equalizer = equalizerNode ?? attachEqualizer()
+        applyGains(for: preset, to: equalizer)
     }
 
     /// Creates, attaches, and remembers the equalizer node. Called lazily from
@@ -41,16 +41,16 @@ extension AudioStreamingPlaybackEngine {
     /// `AVAudioEngine` this node lives in along with everything else.
     @discardableResult
     func attachEqualizer() -> AVAudioUnitEQ {
-        let eq = AVAudioUnitEQ(numberOfBands: Self.equalizerBandCount)
-        for (index, band) in eq.bands.enumerated() {
+        let equalizer = AVAudioUnitEQ(numberOfBands: Self.equalizerBandCount)
+        for (index, band) in equalizer.bands.enumerated() {
             band.filterType = .parametric
             band.frequency = Self.equalizerBandFrequencies[index]
             band.bandwidth = 1.0
             band.bypass = false
         }
-        player.attach(node: eq)
-        equalizerNode = eq
-        return eq
+        player.attach(node: equalizer)
+        equalizerNode = equalizer
+        return equalizer
     }
 
     /// Re-attaches the equalizer to the rebuilt player/engine after a
@@ -60,19 +60,19 @@ extension AudioStreamingPlaybackEngine {
     func reattachEqualizerIfNeeded() {
         equalizerNode = nil
         guard currentEqualizerPreset != .normal else { return }
-        let eq = attachEqualizer()
-        applyGains(for: currentEqualizerPreset, to: eq)
+        let equalizer = attachEqualizer()
+        applyGains(for: currentEqualizerPreset, to: equalizer)
     }
 
-    private func applyGains(for preset: EqualizerPreset, to eq: AVAudioUnitEQ) {
+    private func applyGains(for preset: EqualizerPreset, to equalizer: AVAudioUnitEQ) {
         let gains = EqualizerCurves.levels(
             for: preset,
             bandCount: Self.equalizerBandCount,
             minGain: Self.equalizerMinGain,
             maxGain: Self.equalizerMaxGain
         )
-        for (index, gain) in gains.enumerated() where eq.bands.indices.contains(index) {
-            eq.bands[index].gain = gain
+        for (index, gain) in gains.enumerated() where equalizer.bands.indices.contains(index) {
+            equalizer.bands[index].gain = gain
         }
     }
 }

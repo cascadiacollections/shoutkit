@@ -25,18 +25,18 @@ struct EqualizerCurvesTests {
 
     @Test func bassBoostIsNonIncreasingAcrossBands() {
         let result = levels(.bassBoost)
-        for (a, b) in zip(result, result.dropFirst()) {
-            #expect(b <= a)
+        for (lower, higher) in zip(result, result.dropFirst()) {
+            #expect(higher <= lower)
         }
-        #expect(result.first! > result.last!)
+        #expect(result[0] > result[4])
     }
 
     @Test func trebleBoostIsNonDecreasingAcrossBands() {
         let result = levels(.treble)
-        for (a, b) in zip(result, result.dropFirst()) {
-            #expect(b >= a)
+        for (lower, higher) in zip(result, result.dropFirst()) {
+            #expect(higher >= lower)
         }
-        #expect(result.last! > result.first!)
+        #expect(result[4] > result[0])
     }
 
     @Test func vocalPresetPeaksInMidBands() {
@@ -65,7 +65,13 @@ struct EqualizerCurvesTests {
     }
 
     @Test func curveOutputAboveOneClampsToMaxGain() {
-        let result = EqualizerCurves.levels(bandCount: 5, minGain: minGain, maxGain: maxGain, range: 30, curve: { _ in 2 })
+        let result = EqualizerCurves.levels(
+            bandCount: 5,
+            minGain: minGain,
+            maxGain: maxGain,
+            range: 30,
+            curve: { _ in 2 }
+        )
         #expect(result.allSatisfy { $0 == maxGain })
     }
 

@@ -98,6 +98,14 @@ public final class PlaybackController {
         (output as? any RadioPlaybackEngine)?.setEqualizerPreset(preset)
     }
 
+    /// Applies the persisted preset the user last chose, given its stored raw
+    /// value. Ignores a value that no longer maps to a case, which is what a
+    /// preset removed in a later release leaves behind in `UserDefaults`.
+    public func restoreEqualizerPreset(rawValue: Int) {
+        guard let preset = EqualizerPreset(rawValue: rawValue) else { return }
+        setEqualizerPreset(preset)
+    }
+
     // These are `internal` rather than `private` because the wiring lives in a
     // sibling extension file (PlaybackController+Internals.swift); nothing here
     // is part of the public API.
