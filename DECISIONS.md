@@ -62,6 +62,28 @@ they share a shape: the tree was correct and nobody could tell.
   was reviewed and merged, and every check was green — because nothing built it
   and nothing looked inside the product. A target that no job builds and no
   assertion inspects is indistinguishable from one that works.
+
+- **The same CI step found a second defect: the watch app did not compile under
+  Swift 6 strict concurrency at all.** `WatchRadioPlaybackEngine`'s
+  `.AVPlayerItemFailedToPlayToEndTime` observer captured the whole `Notification`
+  into a `Task { @MainActor }` and dereferenced it there. Neither `Notification`
+  nor the `AVPlayerItem` it carries is `Sendable`, so that capture sends
+  non-`Sendable` state across an isolation boundary — `sending 'notification'
+  risks causing data races`, an error under the `complete` setting every target
+  here uses.
+- **Fixed with `queue: .main` + `MainActor.assumeIsolated`**, the same remedy
+  `AudioStreamingPlaybackEngine+Session` already uses, and safe for the same
+  reason: `OperationQueue.main` runs its blocks on the main thread, so the
+  closure body and the isolated block are one synchronous region and nothing is
+  sent anywhere. This callback specifically needs the failed `AVPlayerItem` to
+  compare against the current one, so the extract-Sendable-values-first approach
+  the two audio-session observers in that file use — which is why *they* always
+  compiled — wasn't available.
+- **The KVO observers in the same function were deliberately left alone.** They
+  hop with `Task { @MainActor }` too, but CI flagged only the notification site,
+  and KVO callbacks carry no queue guarantee, so `assumeIsolated` would be
+  unsound there — `Task` is the right tool. Changing them on the suspicion that
+  they look similar would be replacing a compiler's answer with a guess.
 - **SwiftFormat gets a path to enforcement, not enforcement.** The one-time
   reformat needs a real toolchain; a `workflow_dispatch` job runs it on the same
   macOS image that judges the result and can push. `continue-on-error` comes off
