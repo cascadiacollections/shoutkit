@@ -5,14 +5,19 @@ import Testing
 
 struct LibraryListEditingTests {
     @Test func recentDeletionOnlyUsesDisplayedSlice() {
-        let recents = (1...20).map { "station-\($0)" }
+        let recents = [
+            "a", "b", "c", "d", "e",
+            "f", "g", "h", "i", "j",
+            "k", "l", "m", "n", "o",
+            "p", "q", "r", "s", "t"
+        ]
 
         let stationIDs = LibraryListEditing.stationIDsForRecentDeletion(
             recentStationIDsNewestFirst: recents,
             offsets: IndexSet([0, 14, 15])
         )
 
-        #expect(stationIDs == ["station-1", "station-15"])
+        #expect(stationIDs == ["a", "o"])
     }
 
     @Test func favoriteDeletionResolvesOffsetsInDisplayOrder() {
