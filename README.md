@@ -105,10 +105,11 @@ SHOUTCAST_DEV_KEY = your_key_here
   `DesignSystem`'s artwork pipeline and Live Activity artwork staging so decoded images never
   exceed the pixel size their surface actually needs.
 - `Packages/Features/*`: one package per tab surface.
-- `Packages/BrowseFeatureCore`, `SearchFeatureCore`, `PlayerFeatureCore`: the platform-free
-  half of those surfaces — view-model logic and decision rules, split out because the feature
-  packages depend on `DesignSystem`, whose UIKit-only sources don't build for the mac host, so
-  nothing inside them can be reached by `swift test`. This is where their tests live.
+- `Packages/BrowseFeatureCore`, `SearchFeatureCore`, `PlayerFeatureCore`,
+  `LibraryFeatureCore`, `SettingsFeatureCore`: the platform-free half of those surfaces —
+  view-model logic and decision rules, split out because the feature packages depend on
+  `DesignSystem`, whose UIKit-only sources don't build for the mac host, so nothing inside them
+  can be reached by `swift test`. This is where their tests live.
 
 Dependency wiring across these packages goes through [Factory](https://github.com/hmlongco/Factory)
 (`Container`-based DI) rather than direct instantiation, so tests and previews can substitute fakes

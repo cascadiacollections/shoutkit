@@ -2,6 +2,7 @@ import DesignSystem
 import FeatureFlags
 import Persistence
 import Playback
+import SettingsFeatureCore
 import SwiftUI
 
 /// Settings + About, presented as a sheet from the Listen Now toolbar.
@@ -47,7 +48,9 @@ public struct SettingsView: View {
     @ViewBuilder
     private var privacySection: some View {
         if let settings {
-            let isGeoStationsEnabled = featureFlags.isEnabled(FeatureCatalog.geoStations)
+            let showsPreciseLocationToggle = SettingsPresentation.shouldShowPreciseGeoLocationToggle(
+                isGeoStationsEnabled: featureFlags.isEnabled(FeatureCatalog.geoStations)
+            )
 
             Section {
                 Toggle(
@@ -71,7 +74,7 @@ public struct SettingsView: View {
                         set: { settings.isDiagnosticsSharingEnabled = $0 }
                     )
                 )
-                if isGeoStationsEnabled {
+                if showsPreciseLocationToggle {
                     Toggle(
                         "Use Precise Location for Geo Stations",
                         isOn: Binding(
@@ -108,11 +111,16 @@ public struct SettingsView: View {
     @ViewBuilder
     private var equalizerSection: some View {
         if let settings, let playbackController {
+            let selectedRawValue = SettingsPresentation.resolvedEqualizerPresetRawValue(
+                storedRawValue: settings.equalizerPresetRawValue,
+                availablePresetRawValues: EqualizerPreset.allCases.map(\.rawValue),
+                fallbackRawValue: EqualizerPreset.normal.rawValue
+            )
             Section {
                 Picker(
                     "Equalizer",
                     selection: Binding(
-                        get: { EqualizerPreset(rawValue: settings.equalizerPresetRawValue) ?? .normal },
+                        get: { EqualizerPreset(rawValue: selectedRawValue) ?? .normal },
                         set: { preset in
                             settings.equalizerPresetRawValue = preset.rawValue
                             playbackController.setEqualizerPreset(preset)
