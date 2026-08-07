@@ -1,5 +1,24 @@
 # Decisions
 
+## 2026-08-07 (Search filters over Radio-Browser)
+
+- Added a dedicated `StationSearchFilters` model (bitrate min/max, tag, country
+  code) and threaded it through `RadioDirectoryProviding` as explicit filtered
+  overloads for both name search and genre browsing. Existing call sites stay
+  source-compatible through default protocol implementations, while
+  `RadioBrowserDirectoryClient` overrides to send native API params
+  (`bitrateMin`/`bitrateMax`/`tagList`/`countrycode`) on the same endpoints the
+  app already uses.
+- Filter state is transient UI state on `SearchViewModel` (not persisted) and
+  composes with both free-text queries and genre chips, matching the search
+  surface contract established in the 2026-08-04 UX pass.
+- Empty-search results now surface active filter context and include an explicit
+  "Clear Filters" action to recover quickly from over-constrained queries.
+- Missing metadata is treated as "unknown", not an automatic failure: local
+  filter evaluation only excludes stations that positively fail the selected
+  bounds (e.g. known bitrate below the minimum), to avoid collapsing discovery
+  on sparse community data.
+
 ## 2026-08-07 (the codec dependency leaves Playback; CI starts measuring itself)
 
 Three gaps that were gaps because nothing reported them, closed together because
