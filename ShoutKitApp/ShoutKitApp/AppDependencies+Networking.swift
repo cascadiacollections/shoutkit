@@ -1,14 +1,30 @@
 import DebugSupport
 import Foundation
+import PlaybackEngineAudioStreaming
 import RadioDirectory
 
-// The process-wide networking install `bootstrap()` performs before anything
-// else in the graph exists: shared URL cache sizing, Debug-only Pulse proxying,
-// and the latency-tuned shared session. Split out of AppDependencies.swift for
-// the 400-line `file_length` limit CI enforces via `swiftlint --strict`, the
-// same remedy as the AudioStreamingPlaybackEngine+Session split.
+// The process-wide installs `bootstrap()` performs before anything else in the
+// graph exists: shared URL cache sizing, Debug-only Pulse proxying, the
+// latency-tuned shared session, and the production playback engine's Factory
+// registration. Split out of AppDependencies.swift for the 400-line
+// `file_length` limit CI enforces via `swiftlint --strict`, the same remedy as
+// the AudioStreamingPlaybackEngine+Session split.
 
 extension AppDependencies {
+    /// The two registrations that must be in place before any of the graph is
+    /// constructed. Grouped because they share that contract, not because they
+    /// share a subject — and because `bootstrap()`'s body sits against the
+    /// 50-line `function_body_length` limit, so each new process-wide install
+    /// belongs here rather than as another line up there.
+    static func installProcessWideServices() {
+        installSharedNetworking()
+        // `PlaybackController`'s production init resolves its engine through
+        // Factory, and `Playback` ships only the stub — the concrete engine
+        // lives in the iOS-only PlaybackEngineAudioStreaming package (#122).
+        // Miss this and the app builds, launches, and plays silence.
+        registerProductionPlaybackEngine()
+    }
+
     /// Debug-only Pulse proxying, the latency-tuned shared session, and the
     /// shared URL cache sizing. Must run before anything issues a network
     /// request, since the first touch of `URLSessionHTTPTransport.shared`

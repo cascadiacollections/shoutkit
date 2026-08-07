@@ -2,7 +2,6 @@ import FeatureFlags
 import NowPlayingActivityKit
 import Persistence
 import Playback
-import PlaybackEngineAudioStreaming
 import RadioDirectory
 import SwiftData
 
@@ -58,12 +57,7 @@ enum AppDependencies {
             return services
         }
 
-        installSharedNetworking()
-        // Before the `PlaybackController(directory:)` below, which resolves the
-        // engine through Factory: `Playback` ships only the stub, so without
-        // this the app would build, launch, and play nothing. Same
-        // run-before-anything contract as `installSharedNetworking()`.
-        registerProductionPlaybackEngine()
+        installProcessWideServices()
 
         let container = ShoutKitModelContainer.makeContainer()
         let isPersistentStoreAvailable = ShoutKitModelContainer.isPersistentStoreAvailable
@@ -88,25 +82,8 @@ enum AppDependencies {
             playReporter: directoryServices.playReporter
         )
 
-        // Lock screen / Dynamic Island Live Activity follows playback by
-        // observing the controller's @Observable state directly.
-        // Live Activity is off by default (see FeatureCatalog.liveActivity): its
-        // artwork can lag the current track and it adds little over the system
-        // Now Playing surface. Only follow playback when the flag is on; otherwise
-        // dismiss any activity left over from a launch when it was enabled.
-        let activityCoordinator = NowPlayingActivityCoordinator()
-        if featureFlags.isEnabled(FeatureCatalog.liveActivity) {
-            activityCoordinator.observe(controller)
-        } else {
-            activityCoordinator.endAnyExistingActivities()
-        }
-
-        // Sleep timer pauses (not stops) playback so the mini-player survives
-        // and resuming in the morning is one tap.
-        let sleepTimer = SleepTimer()
-        sleepTimer.onFire = { [weak controller] in
-            controller?.pause()
-        }
+        let activityCoordinator = makeActivityCoordinator(for: controller, featureFlags: featureFlags)
+        let sleepTimer = makeSleepTimer(for: controller)
 
         let services = AppServices(
             container: container,
