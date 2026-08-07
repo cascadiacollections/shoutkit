@@ -30,6 +30,7 @@
 		000000000000000000000067 /* LibraryFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000057 /* LibraryFeature */; };
 		000000000000000000000068 /* NowPlayingActivityKit in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000058 /* NowPlayingActivityKit */; };
 		000000000000000000000069 /* NowPlayingActivityCore in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000059 /* NowPlayingActivityCore */; };
+		00000000000000000000006A /* PlaybackEngineAudioStreaming in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005C /* PlaybackEngineAudioStreaming */; };
 		0000000000000000000000C0 /* NowPlayingActivityCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0000000000000000000000CA /* NowPlayingActivityCore */; };
 		0000000000000000000000C1 /* QuickPlayWidgetPublisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000D0 /* QuickPlayWidgetPublisher.swift */; };
 		0000000000000000000000C2 /* QuickPlayWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000D1 /* QuickPlayWidget.swift */; };
@@ -168,6 +169,7 @@
 				000000000000000000000060 /* DesignSystem in Frameworks */,
 				000000000000000000000061 /* RadioDirectory in Frameworks */,
 				000000000000000000000062 /* Playback in Frameworks */,
+				00000000000000000000006A /* PlaybackEngineAudioStreaming in Frameworks */,
 				000000000000000000000063 /* Persistence in Frameworks */,
 				000000000000000000000064 /* BrowseFeature in Frameworks */,
 				000000000000000000000065 /* PlayerFeature in Frameworks */,
@@ -363,6 +365,7 @@
 				000000000000000000000050 /* DesignSystem */,
 				000000000000000000000051 /* RadioDirectory */,
 				000000000000000000000052 /* Playback */,
+				00000000000000000000005C /* PlaybackEngineAudioStreaming */,
 				000000000000000000000053 /* Persistence */,
 				000000000000000000000054 /* BrowseFeature */,
 				000000000000000000000055 /* PlayerFeature */,
@@ -504,6 +507,7 @@
 				000000000000000000000047 /* XCLocalSwiftPackageReference "LibraryFeature" */,
 				000000000000000000000049 /* XCLocalSwiftPackageReference "SettingsFeature" */,
 				00000000000000000000004A /* XCLocalSwiftPackageReference "DebugSupport" */,
+				00000000000000000000004B /* XCLocalSwiftPackageReference "PlaybackEngineAudioStreaming" */,
 				000000000000000000000048 /* XCLocalSwiftPackageReference "LiveActivity" */,
 			);
 			productRefGroup = 000000000000000000000004 /* Products */;
@@ -1072,6 +1076,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/DebugSupport;
 		};
+		00000000000000000000004B /* XCLocalSwiftPackageReference "PlaybackEngineAudioStreaming" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/PlaybackEngineAudioStreaming;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1134,6 +1142,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 000000000000000000000049 /* XCLocalSwiftPackageReference "SettingsFeature" */;
 			productName = SettingsFeature;
+		};
+		00000000000000000000005C /* PlaybackEngineAudioStreaming */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 00000000000000000000004B /* XCLocalSwiftPackageReference "PlaybackEngineAudioStreaming" */;
+			productName = PlaybackEngineAudioStreaming;
 		};
 		00000000000000000000005B /* DebugSupport */ = {
 			isa = XCSwiftPackageProductDependency;

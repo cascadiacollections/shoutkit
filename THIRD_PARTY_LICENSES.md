@@ -14,9 +14,9 @@ it ships in the binary, add its license text to the in-app Licenses screen
 | swift-collections | 1.6.0+ (`from: "1.6.0"`) | Apache-2.0 (with Runtime Library Exception) | DesignSystem — `OrderedDictionary` backs the Now Playing artwork store's bounded FIFO cache | <https://github.com/apple/swift-collections> |
 | swift-numerics | 1.1.1 (transitive via swift-algorithms) | Apache-2.0 (with Runtime Library Exception) | Transitive only — `RealModule` dependency of swift-algorithms; no direct ShoutKit use | <https://github.com/apple/swift-numerics> |
 | Factory | 3.3.1 (`exact: "3.3.1"`) | MIT | RadioDirectory, Playback, BrowseFeature, SearchFeature — `Container`-based dependency injection for the station directory client and the playback engine | <https://github.com/hmlongco/Factory> |
-| AudioStreaming | 1.4.4 (`exact: "1.4.4"`) | MIT | Playback — `AudioStreamingPlaybackEngine`, the `AVAudioEngine`-backed production playback engine (iOS only) | <https://github.com/dimitris-c/AudioStreaming> |
-| ogg-binary-xcframework | 0.1.2 (transitive via AudioStreaming) | BSD (Xiph.org) | Playback — libogg, linked by AudioStreaming's Ogg Vorbis codec support | <https://github.com/sbooth/ogg-binary-xcframework> |
-| vorbis-binary-xcframework | 0.1.2 (transitive via AudioStreaming) | BSD (Xiph.org) | Playback — libvorbis, linked by AudioStreaming's Ogg Vorbis codec support | <https://github.com/sbooth/vorbis-binary-xcframework> |
+| AudioStreaming | 1.4.4 (`exact: "1.4.4"`) | MIT | PlaybackEngineAudioStreaming — `AudioStreamingPlaybackEngine`, the `AVAudioEngine`-backed production playback engine (iOS only) | <https://github.com/dimitris-c/AudioStreaming> |
+| ogg-binary-xcframework | 0.1.2 (transitive via AudioStreaming) | BSD (Xiph.org) | PlaybackEngineAudioStreaming — libogg, linked by AudioStreaming's Ogg Vorbis codec support | <https://github.com/sbooth/ogg-binary-xcframework> |
+| vorbis-binary-xcframework | 0.1.2 (transitive via AudioStreaming) | BSD (Xiph.org) | PlaybackEngineAudioStreaming — libvorbis, linked by AudioStreaming's Ogg Vorbis codec support | <https://github.com/sbooth/vorbis-binary-xcframework> |
 
 ## Development-only tools
 

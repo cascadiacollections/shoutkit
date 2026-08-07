@@ -47,24 +47,13 @@ jobs:
       # This job resolves seven package graphs, and caching the store they all
       # share cuts that to one cold resolve per toolchain/lockfile pair.
       #
-      # The store is worth caching for a second reason. AudioStreaming pulls two
-      # remote `binaryTarget` packages (ogg/vorbis xcframeworks, ~5.6 MB zipped,
-      # ~22 MB unpacked) whose zips are fetched live from third-party GitHub
-      # *release assets*. Integrity is covered: Package.resolved pins each
-      # package by revision, that revision's manifest carries the binaryTarget
-      # SHA-256, and the download must match it (the checksum is in the pinned
-      # manifest, not in Package.resolved itself — v3 lockfiles record only
-      # revision + version). What nothing covers is *availability* — delete or
-      # re-cut either upstream release and there is no local copy to fall back
-      # on. A warm cache is that copy.
-      #
-      # And this job does pay that download, despite `.when(platforms: [.iOS])`
-      # in Packages/Playback: a platform condition gates the *target* dependency,
-      # not resolution, so the artifacts are fetched here and simply never
-      # linked. Observed, not just inferred — the cold run on PR #127 logged
-      # `Downloading binary artifact .../vorbis.xcframework.zip` (and ogg)
-      # during the *Playback* `swift test` step, which links neither. See
-      # DECISIONS.md 2026-08-05.
+      # The AudioStreaming/ogg/vorbis download this comment used to describe is
+      # gone from this job: the engine moved to Packages/PlaybackEngineAudioStreaming,
+      # which is iOS-only and linked by the app target alone, so no package
+      # resolved here declares AudioStreaming at all (#122). The guard step after
+      # the Playback tests is what keeps it that way. The `build` job still pays
+      # the download, and its cache comment still carries the availability
+      # rationale — see DECISIONS.md 2026-08-05.
       - name: Cache SwiftPM clones and binary artifacts
         uses: actions/cache@v4
         with:
@@ -95,6 +84,32 @@ jobs:
       - name: Playback tests
         working-directory: Packages/Playback
         run: swift test --disable-xctest --enable-code-coverage
+
+      # Regression guard for #122. Before the engine moved out, resolving
+      # Packages/Playback downloaded the ogg and vorbis xcframeworks — SwiftPM
+      # enumerates binary artifacts with no platform filtering, so the
+      # `.when(platforms: [.iOS])` condition on the target dependency stopped
+      # them being linked but never being fetched. Re-declaring AudioStreaming
+      # anywhere in this package's graph would silently bring ~5.6 MB of codec
+      # zips back into a suite that links neither, and nothing else here would
+      # notice. Checks the workspace artifact tree rather than the shared store,
+      # which is restored from cache and can legitimately hold artifacts a
+      # different job downloaded.
+      - name: Assert Playback resolves no binary artifacts
+        run: |
+          set -uo pipefail
+          ARTIFACTS="Packages/Playback/.build/artifacts"
+          if [ ! -d "$ARTIFACTS" ]; then
+            echo "No artifact directory under Packages/Playback/.build — nothing was downloaded."
+            exit 0
+          fi
+          FOUND="$(find "$ARTIFACTS" -maxdepth 2 -mindepth 1 || true)"
+          if [ -n "$FOUND" ]; then
+            echo "::error::Packages/Playback resolved binary artifacts again — see issue #122."
+            echo "$FOUND"
+            exit 1
+          fi
+          echo "Artifact directory exists but is empty."
 
       - name: Persistence tests
         working-directory: Packages/Persistence

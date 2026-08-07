@@ -2,6 +2,7 @@ import FeatureFlags
 import NowPlayingActivityKit
 import Persistence
 import Playback
+import PlaybackEngineAudioStreaming
 import RadioDirectory
 import SwiftData
 
@@ -58,6 +59,11 @@ enum AppDependencies {
         }
 
         installSharedNetworking()
+        // Before the `PlaybackController(directory:)` below, which resolves the
+        // engine through Factory: `Playback` ships only the stub, so without
+        // this the app would build, launch, and play nothing. Same
+        // run-before-anything contract as `installSharedNetworking()`.
+        registerProductionPlaybackEngine()
 
         let container = ShoutKitModelContainer.makeContainer()
         let isPersistentStoreAvailable = ShoutKitModelContainer.isPersistentStoreAvailable

@@ -2,8 +2,13 @@ import Foundation
 
 /// Abstraction over the streaming engine backing ``PlaybackController``'s
 /// ``AudioOutput``, resolved via Factory so the concrete backend can be swapped
-/// (AVPlayer today, an AudioStreaming-backed engine in a future phase) without
-/// touching call sites.
+/// without touching call sites.
+///
+/// No implementation of this protocol ships in this package: the production
+/// engine is `AudioStreamingPlaybackEngine` in the iOS-only
+/// `PlaybackEngineAudioStreaming` package, and the watch app supplies its own
+/// `AVPlayer`-backed one. That is the seam that keeps `Playback` free of a codec
+/// dependency (#122).
 ///
 /// ``supportsEqualizer``/``setEqualizerPreset(_:)`` default to "no EQ" so an
 /// engine that can't insert a filter into its render chain (``StubRadioPlaybackEngine``,
@@ -13,7 +18,7 @@ import Foundation
 public protocol RadioPlaybackEngine: AudioOutput {
     /// Whether this engine can apply an ``EqualizerPreset``. `AVPlayer` has no
     /// supported way to insert a filter into its render chain; only an
-    /// `AVAudioEngine`-backed engine (``AudioStreamingPlaybackEngine``) can.
+    /// `AVAudioEngine`-backed engine (`AudioStreamingPlaybackEngine`) can.
     var supportsEqualizer: Bool { get }
 
     /// Applies `preset`'s gain curve to this engine's equalizer, if any.

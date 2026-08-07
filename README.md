@@ -84,12 +84,19 @@ SHOUTCAST_DEV_KEY = your_key_here
 - `Packages/RadioDirectory`: domain models, the `RadioDirectoryProviding` boundary, the
   Radio-Browser JSON client (default), the SHOUTcast XML client (optional, key-gated), and the
   curated/bundled directories.
-- `Packages/Playback`: `PlaybackController` (app-wide observable playback state) driving an
-  `AudioStreamingPlaybackEngine` (AVAudioEngine-backed, via the MIT-licensed
-  [AudioStreaming](https://github.com/dimitris-c/AudioStreaming) library) with ICY metadata and
-  audio-session interruption/route-change handling, plus a `NowPlayingPresenting` bridge that
-  targets either `MPNowPlayingInfoCenter`/`MPRemoteCommandCenter` (iOS 26) or the iOS 27
-  `NowPlaying`/`MediaSession` framework, selected at runtime.
+- `Packages/Playback`: `PlaybackController` (app-wide observable playback state), the
+  `RadioPlaybackEngine` seam it drives, ICY metadata parsing, the sleep timer, and a
+  `NowPlayingPresenting` bridge that targets either
+  `MPNowPlayingInfoCenter`/`MPRemoteCommandCenter` (iOS 26) or the iOS 27
+  `NowPlaying`/`MediaSession` framework, selected at runtime. Ships no engine itself, which is
+  what keeps it free of a codec dependency.
+- `Packages/PlaybackEngineAudioStreaming`: the production `RadioPlaybackEngine` —
+  `AudioStreamingPlaybackEngine`, AVAudioEngine-backed via the MIT-licensed
+  [AudioStreaming](https://github.com/dimitris-c/AudioStreaming) library — with audio-session
+  ownership (interruptions, route changes, media-services reset) and the equalizer attach point.
+  iOS-only and linked by the app target alone: AudioStreaming pulls the ogg/vorbis xcframeworks,
+  which have no watchOS slice, and SwiftPM fetches binary artifacts regardless of platform
+  conditions. The watch app supplies its own `AVPlayer`-backed engine.
 - `Packages/Persistence`: SwiftData models and `LibraryStore` for favorites and recents.
 - `Packages/LiveActivity`: Live Activity attributes and the `NowPlayingActivityCoordinator`
   driving the lock screen / Dynamic Island now-playing surface, including staging downsampled
@@ -164,7 +171,7 @@ codesign workaround.
 | Component | License |
 |---|---|
 | App target (`ShoutKitApp`, incl. the debug-only `DebugSupport` package), feature packages (`Packages/Features/*`), `Packages/LiveActivity`, `Packages/ImageIODownsample` | [GPL-3.0](LICENSE) |
-| `Packages/RadioDirectory`, `Packages/Playback`, `Packages/Persistence`, `Packages/DesignSystem` | [MIT](Packages/RadioDirectory/LICENSE) (per-package `LICENSE` files) |
+| `Packages/RadioDirectory`, `Packages/Playback`, `Packages/PlaybackEngineAudioStreaming`, `Packages/Persistence`, `Packages/DesignSystem` | [MIT](Packages/RadioDirectory/LICENSE) (per-package `LICENSE` files) |
 
 The reusable infrastructure packages are MIT so they can be adopted anywhere; the app itself is
 GPL-3.0 so distributed forks must remain open source. The **ShoutKit name and branding are not
