@@ -1,5 +1,95 @@
 # Decisions
 
+## 2026-08-07 (the codec dependency leaves Playback; CI starts measuring itself)
+
+Three gaps that were gaps because nothing reported them, closed together because
+they share a shape: the tree was correct and nobody could tell.
+
+- **`AudioStreamingPlaybackEngine` moves to `Packages/PlaybackEngineAudioStreaming`,
+  an iOS-only package only the app target links (#122).** The 2026-08-05 entry
+  established that `condition: .when(platforms: [.iOS])` gates linking, not
+  resolution — every `swift test` in `Packages/Playback` downloaded the ogg and
+  vorbis xcframeworks to run a suite that links neither, and any adopter of the
+  MIT-licensed `Playback` inherited the whole C codec stack. Expressing the
+  boundary as *who links the package* fixes both and is harder to undo by
+  accident than a target-dependency condition. Same shape as `DebugSupport`,
+  which keeps Pulse out of the reusable packages.
+- **The coupling was already narrow enough to make this a move, not a rewrite.**
+  Two files imported AudioStreaming; everything else went through the
+  `RadioPlaybackEngine` seam. The one genuine tangle was
+  `PlaybackFailure.classify`, which is `internal` — so `PlaybackError` grew a
+  public `classifying(_:)` rather than `PlaybackFailure` becoming public. The
+  classification table belongs beside the cases it produces, and exporting a
+  second error type to adopters buys nothing.
+- **`Container.radioPlaybackEngine` now defaults to `StubRadioPlaybackEngine`
+  everywhere**, with `registerProductionPlaybackEngine()` — a free function, the
+  `registerProductionRadioDirectory` pattern — called from `bootstrap()` before
+  the first `PlaybackController(directory:)`. The failure mode if that ordering
+  is ever broken is silence rather than a crash, so the contract is stated at
+  both ends: in the registration function and on the convenience `init`.
+- **The new package stays MIT, like the code it came from.** It implements a
+  public MIT protocol and is reusable infrastructure; `DebugSupport` is GPL
+  because it is app-side glue, which this is not. Relicensing already-published
+  MIT code would also be a decision worth more than a file move.
+- **A CI step now asserts `Packages/Playback` resolves no binary artifacts.**
+  Re-declaring AudioStreaming in that graph would silently restore the download
+  and nothing else would notice — the original problem was invisible for months
+  for exactly that reason. Checks the workspace artifact tree, not the shared
+  store, which is cache-restored and can hold artifacts another job fetched.
+- **Coverage is collected and published, with no gate.** `ShoutKit.xctestplan`
+  had empty `defaultOptions` and the host `swift test` runs passed no flag, so
+  nothing anywhere measured coverage. Both now do, reported per package and per
+  iOS target into the run summary. Deliberately no threshold: a gate on a tree
+  that has never measured buys tests for whatever is cheapest to cover.
+- **The watch app is compiled by CI for the first time.** `ShoutKitWatchApp` is
+  a separate top-level target — not in `ShoutKit`'s dependencies, not in its
+  Embed Foundation Extensions phase — and had no shared scheme, so ~670 lines
+  could break with every check green. The widget extension *was* already
+  covered; `ShoutKit` does depend on and embed `ShoutKitWidgets`.
+- **Confirmed against a real build: the watch app does not ship with the phone
+  app.** The suspicion came from `project.pbxproj` — no `Embed Watch Content`
+  phase anywhere, and `ShoutKitWatchApp` absent from `ShoutKit`'s dependencies —
+  and rather than act on a reading of the project file, CI was made to print
+  what the built bundle contains. It reports no `Watch/` payload in
+  `ShoutKit.app`. So the watchOS companion recorded on 2026-07-16 and advertised
+  in `README.md` has never installed alongside the app, on any build anyone has
+  made. Tracked as a P1 in `docs/ROADMAP.md`; the fix needs Xcode, because
+  hand-editing an embed phase into a shipping app target is how you get a bundle
+  that builds green and fails validation. The check stays a warning until the
+  embed exists, then becomes a hard failure.
+
+  Worth noting how long this hid: the watch app compiled fine locally, its code
+  was reviewed and merged, and every check was green — because nothing built it
+  and nothing looked inside the product. A target that no job builds and no
+  assertion inspects is indistinguishable from one that works.
+
+- **The same CI step found a second defect: the watch app did not compile under
+  Swift 6 strict concurrency at all.** `WatchRadioPlaybackEngine`'s
+  `.AVPlayerItemFailedToPlayToEndTime` observer captured the whole `Notification`
+  into a `Task { @MainActor }` and dereferenced it there. Neither `Notification`
+  nor the `AVPlayerItem` it carries is `Sendable`, so that capture sends
+  non-`Sendable` state across an isolation boundary — `sending 'notification'
+  risks causing data races`, an error under the `complete` setting every target
+  here uses.
+- **Fixed with `queue: .main` + `MainActor.assumeIsolated`**, the same remedy
+  `AudioStreamingPlaybackEngine+Session` already uses, and safe for the same
+  reason: `OperationQueue.main` runs its blocks on the main thread, so the
+  closure body and the isolated block are one synchronous region and nothing is
+  sent anywhere. This callback specifically needs the failed `AVPlayerItem` to
+  compare against the current one, so the extract-Sendable-values-first approach
+  the two audio-session observers in that file use — which is why *they* always
+  compiled — wasn't available.
+- **The KVO observers in the same function were deliberately left alone.** They
+  hop with `Task { @MainActor }` too, but CI flagged only the notification site,
+  and KVO callbacks carry no queue guarantee, so `assumeIsolated` would be
+  unsound there — `Task` is the right tool. Changing them on the suspicion that
+  they look similar would be replacing a compiler's answer with a guess.
+- **SwiftFormat gets a path to enforcement, not enforcement.** The one-time
+  reformat needs a real toolchain; a `workflow_dispatch` job runs it on the same
+  macOS image that judges the result and can push. `continue-on-error` comes off
+  with the reformat, not before it, and the resulting SHA goes in the new
+  `.git-blame-ignore-revs`.
+
 ## 2026-08-06 (Bluetooth/AVRCP artwork on the iOS 27 NowPlaying path)
 
 Reported from a Tesla: text metadata and transport controls correct, artwork either frozen or

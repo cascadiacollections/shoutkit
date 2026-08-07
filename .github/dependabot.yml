@@ -27,6 +27,10 @@ updates:
       - "/Packages/DesignSystem"
       - "/Packages/LiveActivity"
       - "/Packages/Playback"
+      # The only manifest that declares AudioStreaming, since #122 moved the
+      # engine out of Playback. Missing from this list, its `exact: "1.4.4"` pin
+      # would simply never be offered a bump.
+      - "/Packages/PlaybackEngineAudioStreaming"
       - "/Packages/Persistence"
       - "/Packages/DebugSupport"
       - "/Packages/FeatureFlags"

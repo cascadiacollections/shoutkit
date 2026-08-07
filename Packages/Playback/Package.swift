@@ -16,11 +16,25 @@ let package = Package(
     products: [
         .library(name: "Playback", targets: ["Playback"])
     ],
+    // No AudioStreaming here, deliberately. The concrete engine lives in
+    // Packages/PlaybackEngineAudioStreaming, which only the iOS app target
+    // links; this package keeps the `RadioPlaybackEngine` seam and nothing that
+    // implements it against a codec (#122).
+    //
+    // The previous arrangement declared AudioStreaming here with
+    // `condition: .when(platforms: [.iOS])` on the target dependency, and a
+    // comment claiming the mac host job therefore "never has to fetch or link
+    // it." *Link* was right; *fetch* was not. A platform condition applies to a
+    // target dependency — `.package(url:)` takes no condition, SwiftPM has no
+    // such API — so the repo was cloned and its manifest read unconditionally,
+    // and binary artifacts are then enumerated with no platform filtering at
+    // all. Every `swift test` here downloaded the ogg and vorbis xcframeworks
+    // (~5.6 MB zipped) to run a suite that links neither; the cold CI run on
+    // PR #127 logged exactly that. See DECISIONS.md 2026-08-05 and issue #126.
     dependencies: [
         .package(path: "../ImageIODownsample"),
         .package(path: "../RadioDirectory"),
-        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2"),
-        .package(url: "https://github.com/dimitris-c/AudioStreaming.git", exact: "1.4.4")
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2")
     ],
     targets: [
         .target(
@@ -28,11 +42,7 @@ let package = Package(
             dependencies: [
                 "ImageIODownsample",
                 "RadioDirectory",
-                .product(name: "FactoryKit", package: "Factory"),
-                // iOS-only: mirrors the canImport(UIKit) gate on the concrete
-                // AVPlayer/AudioStreaming-backed production types, so the mac
-                // host test job never has to fetch or link it.
-                .product(name: "AudioStreaming", package: "AudioStreaming", condition: .when(platforms: [.iOS]))
+                .product(name: "FactoryKit", package: "Factory")
             ],
             resources: [.process("Resources/Localizable.xcstrings")]
         ),

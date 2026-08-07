@@ -4,9 +4,15 @@ import Foundation
 import RadioDirectory
 
 public extension PlaybackController {
-    /// Production wiring: the Factory-resolved playback engine (AudioStreaming-
-    /// backed by default; see ``Container/radioPlaybackEngine``) and the
-    /// OS-selected system now-playing center (see ``makeSystemNowPlayingCenter``).
+    /// Production wiring: the Factory-resolved playback engine (see
+    /// ``Container/radioPlaybackEngine``) and the OS-selected system now-playing
+    /// center (see ``makeSystemNowPlayingCenter``).
+    ///
+    /// The engine resolves to ``StubRadioPlaybackEngine`` unless something has
+    /// registered over it, so an app using this initializer must call
+    /// `registerProductionPlaybackEngine()` from `PlaybackEngineAudioStreaming`
+    /// first — `AppDependencies.bootstrap()` does, before constructing the
+    /// controller.
     convenience init(directory: any RadioDirectoryProviding) {
         self.init(
             directory: directory,

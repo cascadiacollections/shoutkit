@@ -85,17 +85,34 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
                 self.handleItemStatus(item.status, item: item)
             }
         }
+        // `queue: .main` + `MainActor.assumeIsolated`, rather than `queue: nil` and
+        // a `Task { @MainActor }`. This callback needs the failed `AVPlayerItem`
+        // itself to compare against the current one, and neither `Notification`
+        // nor `AVPlayerItem` is `Sendable` — capturing either into a task sends it
+        // across an isolation boundary, which is the data race Swift 6 refuses to
+        // compile (`sending 'notification' risks causing data races`).
+        //
+        // Main-queue delivery makes the closure body and the isolated block one
+        // synchronous region, so nothing is sent anywhere. Same remedy as
+        // AudioStreamingPlaybackEngine+Session's audio-session observers, and safe
+        // for the same reason: `OperationQueue.main` runs its blocks on the main
+        // thread, which is what `assumeIsolated` requires.
+        //
+        // The two audio-session observers below keep `queue: nil` + `Task`: they
+        // only ever send `UInt`/`Bool`/enum values read off the notification in the
+        // closure body, so they never had this problem.
         failedToEndObserver = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemFailedToPlayToEndTime,
             object: item,
-            queue: nil
+            queue: .main
         ) { [weak self] notification in
-            Task { @MainActor [weak self] in
+            let failedItem = notification.object as? AVPlayerItem
+            let reportedError = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
+            MainActor.assumeIsolated {
                 guard let self,
-                      let failedItem = notification.object as? AVPlayerItem,
+                      let failedItem,
                       self.player?.currentItem === failedItem else { return }
-                let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
-                let message = error?.localizedDescription
+                let message = reportedError?.localizedDescription
                     ?? failedItem.error?.localizedDescription
                     ?? "The stream stopped unexpectedly."
                 self.onStatusChange?(.failed(.streamFailed(message)))

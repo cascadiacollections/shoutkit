@@ -1,12 +1,14 @@
-#if canImport(UIKit) && !os(watchOS)
 import AudioStreaming
 import AVFoundation
 import Foundation
 import os
+import Playback
 
-/// ``RadioPlaybackEngine`` backed by AudioStreaming's `AudioPlayer`
-/// (`AVAudioEngine`), registered as the production ``Container/radioPlaybackEngine``
-/// default. AudioStreaming doesn't touch `AVAudioSession` itself, so this type owns
+/// `RadioPlaybackEngine` backed by AudioStreaming's `AudioPlayer`
+/// (`AVAudioEngine`), registered over the `Container.radioPlaybackEngine` stub
+/// default by `registerProductionPlaybackEngine()`.
+///
+/// AudioStreaming doesn't touch `AVAudioSession` itself, so this type owns
 /// the session outright; everything session-shaped (configuration, activation,
 /// teardown, and the OS-disruption notifications) lives one file over, in
 /// AudioStreamingPlaybackEngine+Session.swift. Members that file drives are
@@ -189,9 +191,11 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         }
     }
 
-    /// Maps an AudioStreaming error to the app's typed `PlaybackError`, reusing
-    /// `PlaybackFailure`'s URL-error classification for the one case
-    /// (`.networkError(.failure)`) that wraps a real `NSError`.
+    /// Maps an AudioStreaming error to the app's typed `PlaybackError`. Unwraps
+    /// the one case (`.networkError(.failure)`) that carries a real `NSError`
+    /// first, since that is the only shape `PlaybackError.classifying` can read a
+    /// `URLError` code out of; everything else is classified on its
+    /// `localizedDescription`.
     private static func classify(_ error: AudioPlayerError) -> PlaybackError {
         let candidate: any Error
         if case let .networkError(.failure(underlying)) = error {
@@ -199,14 +203,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         } else {
             candidate = error
         }
-        switch PlaybackFailure.classify(playerError: candidate, itemError: nil) {
-        case .noInternet:
-            return .noInternet
-        case let .stationNotAvailable(errorCode: code):
-            return .stationNotAvailable(errorCode: code)
-        case let .playback(message):
-            return .streamFailed(message)
-        }
+        return PlaybackError.classifying(candidate)
     }
 }
 
@@ -275,5 +272,3 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
         }
     }
 }
-
-#endif

@@ -1,8 +1,8 @@
-#if canImport(UIKit) && !os(watchOS)
 import AudioStreaming
 import AVFoundation
 import Foundation
 import os
+import Playback
 
 // `AudioStreamingPlaybackEngine`'s ownership of `AVAudioSession`: configuration,
 // activation (and the retries an OS disruption makes necessary), teardown, and
@@ -274,5 +274,3 @@ extension AudioStreamingPlaybackEngine {
         reportFailure(.streamFailed("Audio services restarted."))
     }
 }
-
-#endif

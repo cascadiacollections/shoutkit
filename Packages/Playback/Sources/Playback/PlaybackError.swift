@@ -60,6 +60,26 @@ public enum PlaybackError: Error, Equatable, LocalizedError, Sendable {
         }
     }
 
+    /// Maps an arbitrary underlying error — typically one an audio engine raised
+    /// — onto a typed case, using the same URL-error classification the
+    /// `AVPlayer` path applies.
+    ///
+    /// Public because the concrete engine now lives in its own package
+    /// (`PlaybackEngineAudioStreaming`, see #122) while the classification table
+    /// belongs here, beside the cases it produces. `PlaybackFailure` itself stays
+    /// internal: it is a lookup table, not API, and exporting it would put a
+    /// second public error type in front of adopters for no gain.
+    public static func classifying(_ error: any Error) -> PlaybackError {
+        switch PlaybackFailure.classify(playerError: error, itemError: nil) {
+        case .noInternet:
+            return .noInternet
+        case let .stationNotAvailable(errorCode: code):
+            return .stationNotAvailable(errorCode: code)
+        case let .playback(message):
+            return .streamFailed(message)
+        }
+    }
+
     /// Whether the bounded auto-reconnect should retry this failure. Mirrors
     /// `RadioDirectoryError.isRetryable` for `.directory`; a mid-play stream
     /// failure or a lost internet connection is treated as transient.

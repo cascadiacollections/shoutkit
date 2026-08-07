@@ -1,6 +1,7 @@
 import DesignSystem
 import Persistence
 import Playback
+import PlayerFeatureCore
 import RadioDirectory
 import SwiftUI
 
@@ -17,6 +18,13 @@ public struct NowPlayingView: View {
     /// Control tint elected from the artwork palette so the transport
     /// controls sit in the same color world as the ambient backdrop.
     @State private var artworkAccent: Color?
+
+    /// The play/pause button grows with Dynamic Type instead of staying at a
+    /// fixed 76 pt. It is the primary control on this screen, and a listener who
+    /// has turned text up has usually turned it up because targets at the
+    /// default size are hard to hit. `.largeTitle` rather than `.body` so it
+    /// scales at the rate of the display text it sits under, not body copy.
+    @ScaledMetric(relativeTo: .largeTitle) private var playPauseDiameter: CGFloat = 76
 
     public init() {}
 
@@ -130,6 +138,11 @@ public struct NowPlayingView: View {
                     .contentTransition(.opacity)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            // One element, not two. Split, VoiceOver stops on the station name
+            // and again on the track, and the rotor treats them as unrelated
+            // headings — but they are one statement ("KEXP, Song — Artist"), and
+            // the second line is meaningless without the first.
+            .accessibilityElement(children: .combine)
 
             overflowMenu(playback: playback)
         }
@@ -202,8 +215,8 @@ public struct NowPlayingView: View {
                 playback.togglePlayPause()
             } label: {
                 playPauseIcon(playback)
-                    .font(.system(size: 34, weight: .bold))
-                    .frame(width: 76, height: 76)
+                    .font(.system(size: playPauseDiameter * 0.45, weight: .bold))
+                    .frame(width: playPauseDiameter, height: playPauseDiameter)
             }
             .buttonStyle(.glassProminent)
             .buttonBorderShape(.circle)
@@ -234,45 +247,76 @@ public struct NowPlayingView: View {
     @ViewBuilder
     private var sleepTimerButton: some View {
         if let sleepTimer {
-            Menu {
-                if sleepTimer.isActive {
-                    Button("Cancel Timer", systemImage: "moon.zzz", role: .destructive) {
-                        sleepTimer.cancel()
-                    }
+            if sleepTimer.isActive {
+                // The countdown text and the VoiceOver value now share one
+                // clock, so they can't disagree. Mounted only while the timer
+                // runs: a 1 Hz TimelineView behind a static moon glyph is a
+                // wakeup a second for nothing, which is the same class of
+                // background waste the 2026-08-03 power review removed.
+                TimelineView(.periodic(from: .now, by: 1)) { timeline in
+                    sleepTimerMenu(sleepTimer, asOf: timeline.date)
                 }
-                ForEach([15, 30, 45, 60], id: \.self) { minutes in
-                    Button("\(minutes) minutes") {
-                        sleepTimer.start(duration: TimeInterval(minutes * 60))
-                    }
-                }
-            } label: {
-                sleepTimerLabel(sleepTimer)
-                    .frame(minWidth: 44, minHeight: 44)
+            } else {
+                sleepTimerMenu(sleepTimer, asOf: .now)
             }
-            .buttonStyle(.glass)
-            // Capsule, not circle: the running timer's label carries a countdown
-            // and has to be allowed to grow.
-            .buttonBorderShape(.capsule)
-            .accessibilityLabel(sleepTimer.isActive ? "Sleep timer running" : "Sleep timer")
         } else {
             Color.clear.frame(width: 44, height: 44)
         }
     }
 
-    @ViewBuilder
-    private func sleepTimerLabel(_ sleepTimer: SleepTimer) -> some View {
-        if sleepTimer.isActive {
-            // Live countdown derived from fireDate; the model never ticks.
-            TimelineView(.periodic(from: .now, by: 1)) { timeline in
-                HStack(spacing: 4) {
-                    Image(systemName: "moon.zzz.fill")
-                    if let remaining = sleepTimer.remaining(asOf: timeline.date) {
-                        Text(Duration.seconds(remaining).formatted(.time(pattern: .minuteSecond)))
-                            .font(.footnote.monospacedDigit())
-                    }
+    private func sleepTimerMenu(_ sleepTimer: SleepTimer, asOf date: Date) -> some View {
+        Menu {
+            if sleepTimer.isActive {
+                Button("Cancel Timer", systemImage: "moon.zzz", role: .destructive) {
+                    sleepTimer.cancel()
                 }
-                .foregroundStyle(.tint)
             }
+            ForEach([15, 30, 45, 60], id: \.self) { minutes in
+                Button("\(minutes) minutes") {
+                    sleepTimer.start(duration: TimeInterval(minutes * 60))
+                }
+            }
+        } label: {
+            sleepTimerLabel(sleepTimer, asOf: date)
+                .frame(minWidth: 44, minHeight: 44)
+        }
+        .buttonStyle(.glass)
+        // Capsule, not circle: the running timer's label carries a countdown
+        // and has to be allowed to grow.
+        .buttonBorderShape(.capsule)
+        .accessibilityLabel(sleepTimer.isActive ? "Sleep timer running" : "Sleep timer")
+        .accessibilityValue(sleepTimerValue(sleepTimer, asOf: date))
+    }
+
+    /// How much of the sleep timer is left, for VoiceOver. Until this existed the
+    /// remaining time was on screen and nowhere else — the button announced
+    /// "sleep timer running" and stopped, so the one number that matters was
+    /// available only to people who could read the countdown.
+    ///
+    /// Minute-granular, and rounded up, on purpose. The visible label ticks every
+    /// second; an accessibility value that did the same would make VoiceOver
+    /// re-announce a focused button once a second, which is worse than saying
+    /// nothing. Rounding up also stops it reporting "0 minutes" while audio is
+    /// still playing.
+    private func sleepTimerValue(_ sleepTimer: SleepTimer, asOf date: Date) -> Text {
+        guard let remaining = sleepTimer.remaining(asOf: date) else {
+            // Not localized because it is never spoken: an empty value is
+            // omitted by VoiceOver, which is what an idle timer should read as.
+            return Text(verbatim: "")
+        }
+        let minutes = max(1, Int((remaining / 60).rounded(.up)))
+        return Text("\(minutes) minutes remaining")
+    }
+
+    @ViewBuilder
+    private func sleepTimerLabel(_ sleepTimer: SleepTimer, asOf date: Date) -> some View {
+        if let remaining = sleepTimer.remaining(asOf: date) {
+            HStack(spacing: 4) {
+                Image(systemName: "moon.zzz.fill")
+                Text(Duration.seconds(remaining).formatted(.time(pattern: .minuteSecond)))
+                    .font(.footnote.monospacedDigit())
+            }
+            .foregroundStyle(.tint)
         } else {
             Image(systemName: "moon.zzz")
                 .foregroundStyle(.secondary)

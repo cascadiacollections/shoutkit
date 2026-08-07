@@ -1,7 +1,7 @@
-#if canImport(UIKit) && !os(watchOS)
 import AudioStreaming
 import AVFoundation
 import Foundation
+import Playback
 
 // The equalizer attach point on AudioStreaming's `AVAudioEngine`-backed node
 // graph. AudioStreaming's `AudioPlayer.attach(node:)` inserts a custom
@@ -76,5 +76,3 @@ extension AudioStreamingPlaybackEngine {
         }
     }
 }
-
-#endif

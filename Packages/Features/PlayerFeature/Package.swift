@@ -15,6 +15,7 @@ let package = Package(
         .package(path: "../../DesignSystem"),
         .package(path: "../../Playback"),
         .package(path: "../../Persistence"),
+        .package(path: "../../PlayerFeatureCore"),
         .package(path: "../../RadioDirectory")
     ],
     targets: [
@@ -24,6 +25,7 @@ let package = Package(
                 "DesignSystem",
                 "Playback",
                 "Persistence",
+                "PlayerFeatureCore",
                 "RadioDirectory"
             ],
             resources: [.process("Resources/Localizable.xcstrings")],

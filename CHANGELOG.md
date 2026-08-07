@@ -7,6 +7,16 @@ All notable changes to ShoutKit are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- **VoiceOver now reads the sleep timer's remaining time.** The button announced only that a
+  timer was running — the countdown was on screen and nowhere else, so the number that matters
+  was available only if you could read it. It now says how long is left, to the nearest minute
+  (updating it every second would make VoiceOver talk over itself)
+- **The play/pause button grows with your text size.** It was pinned to one size no matter how
+  large you set text. It's the main control on the Now Playing screen, and if you've turned text
+  up, the buttons were probably hard to hit too
+- **Station and track are announced together.** VoiceOver used to stop on the station name, then
+  again on the track — on both the Now Playing screen and the mini-player. They're one thought,
+  and the second half means nothing on its own
 - **Three tabs instead of four**: Browse showed the same popular stations as Listen Now — as a row
   of cards and then again as a list right underneath — and offered the same genre chips as Search.
   Listen Now now carries the full station list under a **More Stations** heading (the stations that
