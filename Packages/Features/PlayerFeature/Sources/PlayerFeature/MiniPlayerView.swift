@@ -85,6 +85,11 @@ public struct MiniPlayerView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
+            // Read as one statement. The second line is the track, the
+            // connecting state, or an error message — none of which mean
+            // anything announced on its own, several rotor stops away from the
+            // station they belong to.
+            .accessibilityElement(children: .combine)
 
             Spacer(minLength: ShoutKitSpacing.small)
 

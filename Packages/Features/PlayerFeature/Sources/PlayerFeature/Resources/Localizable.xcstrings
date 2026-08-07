@@ -4,6 +4,9 @@
     "%lld minutes" : {
 
     },
+    "%lld minutes remaining" : {
+
+    },
     "Add favorite" : {
 
     },
