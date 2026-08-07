@@ -60,10 +60,10 @@ The sprint this document scheduled twice and skipped twice. Landing in PR #138.
 - [x] **Accessibility, first real pass** — the sleep timer announces its remaining time
       (it previously announced only that it was running), the transport button scales with
       Dynamic Type, and station/track read as one VoiceOver element on both player surfaces.
-- [ ] **Make SwiftFormat blocking.** The mechanism landed — a `workflow_dispatch` Reformat
+- [ ] **Make SwiftFormat blocking** (#142). The mechanism landed — a `workflow_dispatch` Reformat
       job plus `.git-blame-ignore-revs` — but the one-time run has not been done. Dispatch
       it, review the diff, drop `continue-on-error` from `ci.yml`, record the SHA.
-- [ ] **The watch app does not ship with the phone app. Fix the embed.** This started as a
+- [ ] **The watch app does not ship with the phone app. Fix the embed** (#141). This started as a
       suspicion from reading `project.pbxproj` — no `Embed Watch Content` phase, and
       `ShoutKitWatchApp` absent from `ShoutKit`'s dependencies — and the CI step added to
       check it has now confirmed it against a real build: `ShoutKit.app` has no `Watch/`
@@ -73,14 +73,15 @@ The sprint this document scheduled twice and skipped twice. Landing in PR #138.
       by hand-editing the pbxproj is how you get a target that builds green and produces a
       bundle the App Store rejects. Once it is embedded, turn the CI warning into a hard
       failure so it can't regress.
-- [ ] **Audit the `try?` sites.** ~36 across package `Sources` and the app target. This has
+- [ ] **Audit the `try?` sites** (#143). 42 across package `Sources` and the app targets — 32
+      and 10. This has
       been gated on "Swift 6.4's unhandled-error warning" for two sprints — but the
       manifests are *already* `swift-tools-version: 6.4`, so **check whether the gate is
       still real before deferring again.** If the warning exists, turn it on. If it doesn't,
       write down what is actually being waited for.
-- [ ] Extract cores for `LibraryFeature` and `SettingsFeature`, as `PlayerFeatureCore` did
+- [ ] Extract cores for `LibraryFeature` and `SettingsFeature` (#144), as `PlayerFeatureCore` did
       for the player. Both still have zero tests.
-- [ ] `StationCard` is a fixed 150 pt wide while its labels scale with Dynamic Type. Fixing
+- [ ] `StationCard` is a fixed 150 pt wide while its labels scale with Dynamic Type (#145). Fixing
       it moves every adaptive grid that lays cards out, so it needs a simulator, not a diff.
 
 **Exit criteria:** coverage published for every package; the watch target's build is a
@@ -95,8 +96,8 @@ Unchanged from the previous baseline; none of it has started.
       Ship a bundled loop first — on-device ML nature-sound generation is a stretch goal,
       not a v1 requirement. Off by default behind a Settings toggle until it is proven not
       to false-trigger on non-Triton/iHeart stations.
-- [ ] Favorites export/import — plain JSON via the Share sheet. No account, no server.
-- [ ] Search filters (bitrate, tag/genre, country) over Radio-Browser's existing query params.
+- [ ] Favorites export/import (#150) — plain JSON via the Share sheet. No account, no server.
+- [ ] Search filters (#151) — bitrate, tag/genre, country, over Radio-Browser's existing query params.
 
 **Exit criteria:** the ad-break feature doesn't false-trigger across the top 20 Radio-Browser
 stations by listener count; crash-free ≥ 99.5%; no open P0/P1 for a week.
@@ -110,7 +111,7 @@ in `ListenNowView`.
 
 That is not a backlog, it is unshipped inventory, and it costs something to carry: every one
 of them is code that has to keep compiling, keep passing tests, and keep being reasoned
-about during refactors. Each needs a decision — **promote or delete**:
+about during refactors. Each needs a decision — **promote or delete** (#146):
 
 - `recommendations` — "More Like This" from local play history
 - `geoStations` — region-filtered discovery
@@ -131,7 +132,7 @@ Everything gating a public listing that isn't distribution mechanics.
 - [ ] The checked-in codesign script (`xattr -cr` + ad-hoc `codesign` + `swift test
       --skip-build`) so the headless-test workaround is one command instead of tribal
       knowledge in `CONTRIBUTING.md`. Still genuinely open — there is no `*.sh` in the repo.
-- [ ] Cold-launch and memory baselines captured per build, as an ongoing regression check.
+- [ ] Cold-launch and memory baselines captured per build (#148), as an ongoing regression check.
 - [ ] Release-process doc: tagging, `GIT_COMMIT_SHA` stamping, release-note generation.
       There are still **zero git tags**, and `release.yml` is tag-triggered.
 
@@ -145,13 +146,20 @@ Everything gating a public listing that isn't distribution mechanics.
   bundled-loop v1 proves the feature earns its complexity.
 - Home Screen widget variants beyond quick-play (recents, currently playing).
 - Genre auto-tagging for unlabeled stations.
-- On-device AVRCP verification of the 2026-08-06 Bluetooth artwork fix. Diagnosed from the
-  code and the AVRCP contract, never tested in a car. Needs hardware, not a commit.
+- On-device AVRCP verification of the 2026-08-06 Bluetooth artwork fix (#147). Diagnosed from
+  the code and the AVRCP contract, never tested in a car. Needs hardware, not a commit.
+- Resizable-iPhone-app contexts — iPhone Mirroring and iPhone-app-on-iPad (#149), the other
+  item that moved out of 0.3.0. Needs hardware too.
 
 ## How to use this doc
 
 - Re-baseline at the start of every sprint against actual feedback — this is a proposal,
   not a schedule anyone external depends on.
+- **Every open item here carries its issue number.** Keep it that way: an item that exists
+  only in this file is one nobody can be assigned, and one whose completion nothing records —
+  which is how CarPlay stayed in the backlog for two sprints after it shipped. If a new item
+  is concrete enough to work on, file it and put the number here; if it isn't, it belongs in
+  the backlog section rather than as a checkbox.
 - When a sprint graduates from "next" to "now," give it a `docs/releases/X.Y.md` with the
   same checkbox/exit-criteria structure, and trim this doc to a pointer at it.
 - **Anything that slips a sprint without movement should be interrogated, not silently
