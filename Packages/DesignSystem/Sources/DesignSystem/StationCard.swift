@@ -6,7 +6,7 @@ import SwiftUI
 public struct StationCard: View {
     private let station: Station
     private let phase: StationPlaybackPhase
-    private let width: CGFloat
+    @ScaledMetric(relativeTo: .headline) private var width: CGFloat
     private let onTap: () -> Void
 
     public init(
@@ -17,7 +17,7 @@ public struct StationCard: View {
     ) {
         self.station = station
         self.phase = phase
-        self.width = width
+        _width = ScaledMetric(wrappedValue: width, relativeTo: .headline)
         self.onTap = onTap
     }
 
