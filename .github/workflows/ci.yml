@@ -55,7 +55,7 @@ jobs:
       # the download, and its cache comment still carries the availability
       # rationale — see DECISIONS.md 2026-08-05.
       - name: Cache SwiftPM clones and binary artifacts
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/Library/Caches/org.swift.swiftpm
           # `**`, not `*`: four lockfiles live a level down under
@@ -196,7 +196,7 @@ jobs:
       # caching build products across runs would undermine the Pulse symbol
       # checks below, which need to reflect this commit's actual link result.
       - name: Cache SwiftPM clones and binary artifacts
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/Library/Caches/org.swift.swiftpm
