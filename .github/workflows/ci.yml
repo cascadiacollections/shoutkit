@@ -90,23 +90,23 @@ jobs:
       # Drop the flag once a stable Xcode 27 lands on the runner image.
       - name: RadioDirectory tests
         working-directory: Packages/RadioDirectory
-        run: swift test --disable-xctest
+        run: swift test --disable-xctest --enable-code-coverage
 
       - name: Playback tests
         working-directory: Packages/Playback
-        run: swift test --disable-xctest
+        run: swift test --disable-xctest --enable-code-coverage
 
       - name: Persistence tests
         working-directory: Packages/Persistence
-        run: swift test --disable-xctest
+        run: swift test --disable-xctest --enable-code-coverage
 
       - name: ImageIODownsample tests
         working-directory: Packages/ImageIODownsample
-        run: swift test --disable-xctest
+        run: swift test --disable-xctest --enable-code-coverage
 
       - name: FeatureFlags tests
         working-directory: Packages/FeatureFlags
-        run: swift test --disable-xctest
+        run: swift test --disable-xctest --enable-code-coverage
 
       # BrowseFeatureCore/SearchFeatureCore hold the Browse/Search view-model
       # logic split out of BrowseFeature/SearchFeature specifically so it can
@@ -114,21 +114,47 @@ jobs:
       # UIKit-only sources don't build for the mac host at all.
       - name: BrowseFeatureCore tests
         working-directory: Packages/BrowseFeatureCore
-        run: swift test --disable-xctest
+        run: swift test --disable-xctest --enable-code-coverage
 
       - name: SearchFeatureCore tests
         working-directory: Packages/SearchFeatureCore
-        run: swift test --disable-xctest
+        run: swift test --disable-xctest --enable-code-coverage
+
+      # Baseline only — deliberately no threshold, no gate, and no third-party
+      # uploader. The tree has never measured coverage, and a gate imposed on
+      # an unmeasured tree buys tests for whatever is easiest to cover rather
+      # than whatever matters. Publish the number first; decide what to do
+      # about it once there's a trend to read (docs/ROADMAP.md).
+      #
+      # `if: always()` so a failing suite still reports what it did cover —
+      # that's exactly when the number is interesting.
+      #
+      # Reads the llvm-cov JSON that SwiftPM exports next to the profdata,
+      # located by `find` rather than by path: the codecov directory sits under
+      # a build-triple segment (`.build/arm64-apple-macosx/debug/codecov/`) that
+      # differs between this runner and a contributor's machine, and
+      # `--show-codecov-path` would mean invoking swift an eighth through
+      # fourteenth time just to print it.
+      - name: Coverage baseline
+        if: always()
+        run: |
+          set -uo pipefail
+          python3 .github/scripts/coverage_summary.py \
+            Packages/RadioDirectory Packages/Playback Packages/Persistence \
+            Packages/ImageIODownsample Packages/FeatureFlags \
+            Packages/BrowseFeatureCore Packages/SearchFeatureCore \
+            >> "$GITHUB_STEP_SUMMARY"
 
   build:
-    name: Test + build app (iOS Simulator)
+    name: Test + build app (iOS Simulator, watchOS)
     runs-on: xcode-27
     # Debug + Release builds share one DerivedData root (package resolution
     # and unchanged modules are reused across the pair), but building the app
     # twice still roughly doubles this job's time versus the single-config
     # baseline. The Debug half now runs the test plan rather than a bare
-    # build, which adds the simulator boot and the test run on top.
-    timeout-minutes: 60
+    # build, which adds the simulator boot and the test run on top, and the
+    # watch app is a third compile of the shared packages for a third platform.
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v7
 
@@ -212,6 +238,7 @@ jobs:
           xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
             -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
             -derivedDataPath DerivedData \
+            -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" test 2>&1 | tee build.log
 
@@ -247,6 +274,24 @@ jobs:
       # entirely #if DEBUG-gated dependency simply doesn't get pulled into a
       # Release binary — verify both sides of that contract by symbol-checking
       # each configuration's build product directly, rather than trusting it.
+      # The counterpart to the host job's coverage baseline, and the only place
+      # the iOS-only code can be measured at all: DesignSystem,
+      # NowPlayingActivityCore and the app target never run on the mac host.
+      # Baseline only, same as there — reported, never gated. Enabled by
+      # `codeCoverage` in ShoutKit.xctestplan rather than a flag here, so a
+      # local Cmd+U run produces the same data.
+      - name: Coverage baseline (iOS targets)
+        if: always()
+        run: |
+          set -uo pipefail
+          if [ ! -d TestResults.xcresult ]; then
+            echo "No result bundle — the test step did not get far enough to produce one."
+            exit 0
+          fi
+          xcrun xccov view --report --json TestResults.xcresult \
+            | python3 .github/scripts/xccov_summary.py \
+            >> "$GITHUB_STEP_SUMMARY"
+
       - name: Verify Pulse symbols are present in the Debug build
         run: |
           APP_BINARY="DerivedData/Build/Products/Debug-iphonesimulator/ShoutKit.app/ShoutKit"
@@ -274,6 +319,52 @@ jobs:
         if: failure()
         run: |
           grep -E "(error|fatal error): " build-release.log | sort -u | head -10 | sed 's/^/::error::/' || true
+
+      # The watch app is a separate top-level target, not an extension embedded
+      # in ShoutKit: it is absent from ShoutKit's `dependencies` and from its
+      # Embed Foundation Extensions phase (which carries ShoutKitWidgets.appex
+      # and nothing else). So the ShoutKit scheme never compiles it, and until
+      # this step the watch app and its complication — ~670 lines across
+      # ShoutKitWatchApp and ShoutKitWatchWidgets — could break without any
+      # check going red. Built via its own shared scheme, added alongside this.
+      #
+      # `generic/platform=watchOS Simulator`: this is a compile check, not a
+      # test run, so it needs no booted device and no runtime lookup.
+      - name: Build watch app (Debug)
+        run: |
+          set -o pipefail
+          xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKitWatchApp \
+            -destination 'generic/platform=watchOS Simulator' \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tee build-watch.log
+
+      - name: Emit watch compile errors as annotations
+        if: failure()
+        run: |
+          grep -E "[^ /]+\.(swift|h|m|mm):[0-9]+:[0-9]+: (error|fatal error): |^error: " build-watch.log \
+            | sort -u | head -20 | sed 's/^/::error::/' || true
+
+      # Diagnostic, deliberately non-failing. Nothing in project.pbxproj embeds
+      # ShoutKitWatchApp.app into ShoutKit.app — there is no Embed Watch Content
+      # copy phase — which reads as though the watch companion never installs
+      # alongside the phone app. That is a claim about a shipping product made
+      # from the project file alone, so this step reports what the built bundle
+      # actually contains rather than asserting an answer. Turn it into a hard
+      # check (or fix the embed) once the output has been read once.
+      - name: Report whether the watch app is embedded in the phone app
+        if: always()
+        run: |
+          APP="DerivedData/Build/Products/Debug-iphonesimulator/ShoutKit.app"
+          if [ ! -d "$APP" ]; then
+            echo "No Debug app bundle to inspect."
+            exit 0
+          fi
+          if [ -d "$APP/Watch" ]; then
+            echo "Watch payload present: $(ls "$APP/Watch")"
+          else
+            echo "::warning::No Watch/ payload in ShoutKit.app — the watchOS companion is not embedded in the phone app. See docs/ROADMAP.md."
+          fi
 
       - name: Report Pulse symbol status in the Release build
         run: |
