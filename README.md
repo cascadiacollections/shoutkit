@@ -105,6 +105,10 @@ SHOUTCAST_DEV_KEY = your_key_here
   `DesignSystem`'s artwork pipeline and Live Activity artwork staging so decoded images never
   exceed the pixel size their surface actually needs.
 - `Packages/Features/*`: one package per tab surface.
+- `Packages/BrowseFeatureCore`, `SearchFeatureCore`, `PlayerFeatureCore`: the platform-free
+  half of those surfaces — view-model logic and decision rules, split out because the feature
+  packages depend on `DesignSystem`, whose UIKit-only sources don't build for the mac host, so
+  nothing inside them can be reached by `swift test`. This is where their tests live.
 
 Dependency wiring across these packages goes through [Factory](https://github.com/hmlongco/Factory)
 (`Container`-based DI) rather than direct instantiation, so tests and previews can substitute fakes
@@ -173,8 +177,12 @@ codesign workaround.
 
 | Component | License |
 |---|---|
-| App target (`ShoutKitApp`, incl. the debug-only `DebugSupport` package), feature packages (`Packages/Features/*`), `Packages/LiveActivity`, `Packages/ImageIODownsample` | [GPL-3.0](LICENSE) |
-| `Packages/RadioDirectory`, `Packages/Playback`, `Packages/PlaybackEngineAudioStreaming`, `Packages/Persistence`, `Packages/DesignSystem` | [MIT](Packages/RadioDirectory/LICENSE) (per-package `LICENSE` files) |
+| App target (`ShoutKitApp`, incl. the debug-only `DebugSupport` package), feature packages (`Packages/Features/*` and their `*FeatureCore` counterparts), `Packages/LiveActivity`, `Packages/ImageIODownsample` | [GPL-3.0](LICENSE) |
+| `Packages/RadioDirectory`, `Packages/Playback`, `Packages/PlaybackEngineAudioStreaming`, `Packages/Persistence`, `Packages/DesignSystem`, `Packages/FeatureFlags` | [MIT](Packages/RadioDirectory/LICENSE) (per-package `LICENSE` files) |
+
+The rule, if you're adding a package: a per-package `LICENSE` file makes it MIT and means it
+must stay adoptable — no app-specific or heavyweight dependencies. Everything else inherits
+GPL-3.0 from the root `LICENSE`.
 
 The reusable infrastructure packages are MIT so they can be adopted anywhere; the app itself is
 GPL-3.0 so distributed forks must remain open source. The **ShoutKit name and branding are not
