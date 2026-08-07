@@ -157,10 +157,13 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
 
     private func activateAudioSession(completion: @escaping @MainActor () -> Void) {
         let session = AVAudioSession.sharedInstance()
+        // Best effort: long-form policy improves behavior but playback can still
+        // proceed with the session's prior category.
         try? session.setCategory(.playback, mode: .default, policy: .longFormAudio)
         // Ordinary system alerts duck this stream instead of interrupting it, so a
         // notification can't pause the watch's audio (and leave it paused when iOS
         // omits the resume hint). Genuine interruptions still arrive normally.
+        // Best effort: this preference is advisory and unsupported on some routes.
         try? session.setPrefersNoInterruptionsFromSystemAlerts(true)
         session.activate(options: []) { _, _ in
             Task { @MainActor in completion() }
@@ -235,6 +238,8 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     }
 
     private func deactivateAudioSession() {
+        // Best effort: deactivation can legitimately fail during interruption
+        // races and should not block local teardown.
         try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
     }
 }

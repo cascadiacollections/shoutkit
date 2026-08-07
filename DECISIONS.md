@@ -1,5 +1,29 @@
 # Decisions
 
+## 2026-08-07 (`try?` audit: gate rechecked before deferring)
+
+Issue #143 had been rolling forward behind "wait for Swift 6.4's unhandled-error
+warning in `Task` closures", but every manifest was already at
+`swift-tools-version: 6.4`, so repeating that gate was information-free.
+
+- **Rechecked the gate explicitly.** A probe closure (`Task { try await … }`)
+  typechecked on the current toolchains without an unhandled-error warning, so
+  there is currently no warning to turn on in this tree.
+- **Recorded a concrete arrival check instead of a vague wait.** The command
+  `swiftc -typecheck -warnings-as-errors /tmp/task-unhandled-error-probe.swift`
+  is the trigger: when that probe starts failing, the compiler has gained the
+  diagnostic and the audit can switch from manual reasoning to compiler-driven
+  enumeration.
+- **Audited existing non-test `try?` call sites for intent.** The remaining
+  sites are intentional best-effort paths (cache/file hygiene, advisory audio
+  session tuning, non-blocking handoff/suggestions, cancellation-tolerant
+  sleeps, optional artwork fetches) rather than user-facing hard failures.
+- **Made ambiguous sites explicit in code.** The app/watch sync and shortcuts
+  fallback paths, watch audio-session setup/teardown, defaults codable
+  fallback, and media-session primary request now state their best-effort
+  intent next to the `try?`, so an unexplained `try?` regains signal as a
+  likely oversight.
+
 ## 2026-08-07 (the codec dependency leaves Playback; CI starts measuring itself)
 
 Three gaps that were gaps because nothing reported them, closed together because

@@ -126,7 +126,9 @@ private final class PhoneWatchLastStationSync: NSObject, WCSessionDelegate {
         guard let session,
               session.activationState == .activated,
               session.isWatchAppInstalled else { return }
+        // Best effort: watch handoff should never block local playback state.
         guard let encoded = try? encoder.encode(station) else { return }
+        // Best effort: WCSession will deliver a newer context on the next play.
         try? session.updateApplicationContext([Keys.lastStation: encoded])
     }
 

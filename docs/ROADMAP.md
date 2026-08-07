@@ -73,12 +73,14 @@ The sprint this document scheduled twice and skipped twice. Landing in PR #138.
       by hand-editing the pbxproj is how you get a target that builds green and produces a
       bundle the App Store rejects. Once it is embedded, turn the CI warning into a hard
       failure so it can't regress.
-- [ ] **Audit the `try?` sites** (#143). 42 across package `Sources` and the app targets — 32
-      and 10. This has
-      been gated on "Swift 6.4's unhandled-error warning" for two sprints — but the
-      manifests are *already* `swift-tools-version: 6.4`, so **check whether the gate is
-      still real before deferring again.** If the warning exists, turn it on. If it doesn't,
-      write down what is actually being waited for.
+- [x] **Audit the `try?` sites** (#143). Re-checked the gate first: on the current
+      `xcode-27` toolchain, a probe with `Task { try await … }` still emits no
+      unhandled-error diagnostic, so there is nothing to enable yet. Keep this
+      probe command (against a file that contains an unhandled `Task { try await … }`)
+      handy to detect when it lands:
+      `swiftc -typecheck -warnings-as-errors /tmp/task-unhandled-error-probe.swift`.
+      The audited call sites left as `try?` are now explicitly marked best-effort
+      where the intent was ambiguous.
 - [ ] Extract cores for `LibraryFeature` and `SettingsFeature` (#144), as `PlayerFeatureCore` did
       for the player. Both still have zero tests.
 - [ ] `StationCard` is a fixed 150 pt wide while its labels scale with Dynamic Type (#145). Fixing
