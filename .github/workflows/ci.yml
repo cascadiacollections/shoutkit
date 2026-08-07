@@ -135,6 +135,10 @@ jobs:
         working-directory: Packages/SearchFeatureCore
         run: swift test --disable-xctest --enable-code-coverage
 
+      - name: PlayerFeatureCore tests
+        working-directory: Packages/PlayerFeatureCore
+        run: swift test --disable-xctest --enable-code-coverage
+
       # Baseline only — deliberately no threshold, no gate, and no third-party
       # uploader. The tree has never measured coverage, and a gate imposed on
       # an unmeasured tree buys tests for whatever is easiest to cover rather
@@ -158,7 +162,8 @@ jobs:
             Packages/RadioDirectory Packages/Playback Packages/Persistence \
             Packages/ImageIODownsample Packages/FeatureFlags \
             Packages/BrowseFeatureCore Packages/SearchFeatureCore \
-            >> "$GITHUB_STEP_SUMMARY"
+            Packages/PlayerFeatureCore \
+            | tee -a "$GITHUB_STEP_SUMMARY"
 
   build:
     name: Test + build app (iOS Simulator, watchOS)
@@ -303,9 +308,14 @@ jobs:
             echo "No result bundle — the test step did not get far enough to produce one."
             exit 0
           fi
+          # tee rather than plain redirect: a step summary is not readable from
+          # the Checks API, and this job's failures are often diagnosed from the
+          # API alone (same reason the annotation steps above exist). An empty
+          # profdata still "succeeds", so the numbers need to be somewhere a
+          # human or an agent can actually read them.
           xcrun xccov view --report --json TestResults.xcresult \
             | python3 .github/scripts/xccov_summary.py \
-            >> "$GITHUB_STEP_SUMMARY"
+            | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Verify Pulse symbols are present in the Debug build
         run: |

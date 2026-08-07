@@ -1,35 +1,27 @@
 import Foundation
 import Persistence
 import Playback
+import PlayerFeatureCore
 import RadioDirectory
 
-/// The artwork URL to display: album art when the feature is enabled and a
-/// URL has been resolved, otherwise the station's own artwork. Shared by the
-/// mini player and Now Playing so the two surfaces can never disagree.
-struct EffectiveArtworkSelection: Equatable {
-    let primaryURL: URL?
-    let fallbackURL: URL?
-}
-
+/// Adapter from the app's concrete observable types to the pure selection rule
+/// in `PlayerFeatureCore`.
+///
+/// The split exists so the rule can be tested: this package depends on
+/// DesignSystem, whose UIKit-only sources don't build for the mac host at all,
+/// so nothing here can be reached by `swift test`. Same shape as
+/// BrowseFeature/BrowseFeatureCore.
+///
+/// Keep this a translation and nothing more — a decision that lands here is a
+/// decision that can't be tested.
 func effectiveArtworkSelection(
     settings: SettingsStore?,
     playback: PlaybackController?,
     station: Station?
 ) -> EffectiveArtworkSelection {
-    if settings?.isAlbumArtEnabled == true, let albumArt = playback?.albumArtURL {
-        return EffectiveArtworkSelection(primaryURL: albumArt, fallbackURL: station?.artworkURL)
-    }
-    return EffectiveArtworkSelection(primaryURL: station?.artworkURL, fallbackURL: nil)
-}
-
-func effectiveArtworkURL(
-    settings: SettingsStore?,
-    playback: PlaybackController?,
-    station: Station?
-) -> URL? {
-    effectiveArtworkSelection(
-        settings: settings,
-        playback: playback,
-        station: station
-    ).primaryURL
+    EffectiveArtwork.selection(
+        isAlbumArtEnabled: settings?.isAlbumArtEnabled == true,
+        albumArtURL: playback?.albumArtURL,
+        stationArtworkURL: station?.artworkURL
+    )
 }
