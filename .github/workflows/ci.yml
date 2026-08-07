@@ -308,13 +308,21 @@ jobs:
             echo "No result bundle — the test step did not get far enough to produce one."
             exit 0
           fi
+          # A baseline reporter must never be the reason a run is red. When the
+          # test step fails, the bundle exists but holds no coverage report and
+          # `xccov` exits non-zero — reporting that as a second failure buries
+          # the real one, which is what it did the first time this ran.
+          if ! xcrun xccov view --report --json TestResults.xcresult > coverage.json 2> coverage.err; then
+            echo "No coverage report in the result bundle — the test run did not complete:"
+            cat coverage.err
+            exit 0
+          fi
           # tee rather than plain redirect: a step summary is not readable from
           # the Checks API, and this job's failures are often diagnosed from the
           # API alone (same reason the annotation steps above exist). An empty
           # profdata still "succeeds", so the numbers need to be somewhere a
           # human or an agent can actually read them.
-          xcrun xccov view --report --json TestResults.xcresult \
-            | python3 .github/scripts/xccov_summary.py \
+          python3 .github/scripts/xccov_summary.py < coverage.json \
             | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Verify Pulse symbols are present in the Debug build
@@ -364,9 +372,13 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build 2>&1 | tee build-watch.log
 
+      # Guarded on the log existing: an earlier step failing means this one runs
+      # against a file the watch build never got as far as writing, and `grep:
+      # No such file` in the log of a failed run is one more thing to read past.
       - name: Emit watch compile errors as annotations
         if: failure()
         run: |
+          [ -f build-watch.log ] || exit 0
           grep -E "[^ /]+\.(swift|h|m|mm):[0-9]+:[0-9]+: (error|fatal error): |^error: " build-watch.log \
             | sort -u | head -20 | sed 's/^/::error::/' || true
 

@@ -6,126 +6,157 @@ rather than replaces, the per-release plans in `docs/releases/*.md` — those st
 detailed, checkbox-level source of truth for a release in flight; this document is the
 zoomed-out sequencing across releases, revisited every sprint as scope shifts.
 
-Status snapshot at time of writing: 0.2.0 (first TestFlight beta) is in progress; 0.3.0
-(`docs/releases/0.3.0.md`, iOS 27 adoption) is planned and partially underway. Everything
-below 0.3.0 is a proposal, not a commitment — re-baseline each sprint against beta feedback,
-since that's the whole point of a beta.
+**Status snapshot (2026-08-07).** 0.3.0 is done — see `docs/releases/0.3.0.md`, closed out
+with two items moved here rather than shipped. Everything below is a proposal, not a
+commitment.
 
-## Now — Sprint 1–2 (finish 0.3.0)
+This document was re-baselined on 2026-08-07 after drifting about a release behind the
+tree. It had CarPlay deferred (it shipped), it listed two CI gaps that `ci.yml` had already
+closed, and it predated the watchOS app, the equalizer, on-disk station caching, the power
+review, and the UX consolidation pass. `DECISIONS.md` stayed current throughout and is the
+better record of what happened; this file is only useful if it says what is *next*, so the
+practice that matters is the last bullet of "How to use this doc."
 
-Closing out `docs/releases/0.3.0.md`. Feature and engineering interleave here because the
-NowPlaying framework work *is* the engineering lift this release is about.
+## Shipped since the last re-baseline
 
-**Feature**
-- [x] `MediaSessionNowPlayingCenter` (iOS 27 `NowPlaying`/`RadioContent`) verified on-device;
-      legacy `MPNowPlayingInfoCenter` path kept as the iOS 26 fallback
-- [x] App Intents entity schemas for favorited stations (Spotlight semantic search)
-- [x] Home-screen quick-play widget (App-Intents-configured favorite station)
-- [x] Reorderable Favorites (iOS 27 list-reordering API)
+Recorded here once so the next reader doesn't have to reconstruct it from `git log`. Detail
+for each is in `DECISIONS.md` under its date.
 
-**Engineering**
-- [x] Lazy-subview prefetch on browse/search station lists
-- [x] Typed throws for playback failures (`AudioStatus.failed(String)` → typed error)
-- [ ] Audit `Task { try? … }` call sites once Swift 6.4's unhandled-error warning lands
-- [ ] iOS 27 QA checklist (Dynamic Island landscape, resizable-iPhone-app contexts,
-      `AsyncImage` HTTP caching, cold-launch re-baseline)
+- **CarPlay** — `CPListTemplate` (favorites + recents) over `CPNowPlayingTemplate`, on the
+  existing `PlaybackController`, with the `com.apple.developer.carplay-audio` entitlement
+  declared. This was "backlog, blocked on the entitlement" here for two sprints after it
+  had already shipped.
+- **watchOS companion** — native now-playing and recents, plus a "Play Last" complication,
+  with its own minimal service graph and `AVPlayer`-backed engine.
+- **Equalizer** — preset curves ported from the Android client's band math, attached to
+  AudioStreaming's `AVAudioEngine` node graph.
+- **Stations on disk** — a JSON snapshot painted at launch, so a cold start shows stations
+  instead of a spinner, with a six-hour stability window.
+- **Power review** — speculative artwork prefetch and launch prewarming now stop under Low
+  Power Mode, Low Data Mode, and on cellular.
+- **UX consolidation** — four tabs to three, genre chips that browse a genre rather than
+  search for its name, and a transport row where each control means one thing.
+- **Playback hardening** — OS interruptions and audio-session loss, bounded reconnect with a
+  capped backoff, mirror rotation in the directory transport, and the Bluetooth/AVRCP
+  artwork fix.
+- **CI** — the Playback suite and the app test plan both run (this doc claimed they didn't),
+  and the SwiftPM store is cached.
 
-**Exit criteria:** MediaSession path verified with zero regressions vs. legacy; Siri resolves
-a favorited station by semantic search; beta 1 crash-free ≥ 99.5% maintained.
+## Now — engineering hardening
 
-## Next — Sprint 3 (0.4.0: beta-2 feature round)
+The sprint this document scheduled twice and skipped twice. Landing in PR #138.
 
-Beta 1's own exit criteria named these as beta-2 candidates; issue #4 (ambient sound on ad
-detection) slots in alongside them as the headline feature — it's the first "smart" feature
-in an otherwise deliberately dumb-pipe player, so scope it tightly.
+- [x] **Code coverage collected and published.** Nothing measured coverage anywhere: the
+      test plan had `codeCoverage` off and the host `swift test` runs passed no flag.
+      Baseline only — no threshold, no gate, no third-party uploader. A gate on a tree that
+      has never measured buys tests for whatever is cheapest to cover.
+- [x] **The watchOS target compiles in CI.** It is a separate top-level target with no
+      shared scheme, so ~670 lines could break with every check green. (The *widget*
+      extension was already covered — `ShoutKit` depends on and embeds it.)
+- [x] **`Packages/PlaybackEngineAudioStreaming`** — the codec dependency leaves the
+      MIT-licensed `Playback` package (#122), with a CI step asserting it stays gone.
+      Closes #123 and #126 with it.
+- [x] **`PlayerFeatureCore`** — the artwork selection rule is host-testable and tested.
+- [x] **Accessibility, first real pass** — the sleep timer announces its remaining time
+      (it previously announced only that it was running), the transport button scales with
+      Dynamic Type, and station/track read as one VoiceOver element on both player surfaces.
+- [ ] **Make SwiftFormat blocking.** The mechanism landed — a `workflow_dispatch` Reformat
+      job plus `.git-blame-ignore-revs` — but the one-time run has not been done. Dispatch
+      it, review the diff, drop `continue-on-error` from `ci.yml`, record the SHA.
+- [ ] **The watch app does not ship with the phone app. Fix the embed.** This started as a
+      suspicion from reading `project.pbxproj` — no `Embed Watch Content` phase, and
+      `ShoutKitWatchApp` absent from `ShoutKit`'s dependencies — and the CI step added to
+      check it has now confirmed it against a real build: `ShoutKit.app` has no `Watch/`
+      payload. So the watchOS companion that `README.md` advertises, and that
+      `DECISIONS.md` recorded on 2026-07-16, has never installed alongside the app.
+      **This is a P1, not a chore**, and it needs someone with Xcode: adding an embed phase
+      by hand-editing the pbxproj is how you get a target that builds green and produces a
+      bundle the App Store rejects. Once it is embedded, turn the CI warning into a hard
+      failure so it can't regress.
+- [ ] **Audit the `try?` sites.** ~36 across package `Sources` and the app target. This has
+      been gated on "Swift 6.4's unhandled-error warning" for two sprints — but the
+      manifests are *already* `swift-tools-version: 6.4`, so **check whether the gate is
+      still real before deferring again.** If the warning exists, turn it on. If it doesn't,
+      write down what is actually being waited for.
+- [ ] Extract cores for `LibraryFeature` and `SettingsFeature`, as `PlayerFeatureCore` did
+      for the player. Both still have zero tests.
+- [ ] `StationCard` is a fixed 150 pt wide while its labels scale with Dynamic Type. Fixing
+      it moves every adaptive grid that lays cards out, so it needs a simulator, not a diff.
 
-**Feature**
-- [ ] **Ambient playback on ad detection** (#4): reuse the existing ICY ad-break marker
-      detection (`Spot Block Start/End`, already suppressed from displayed titles per the
-      0.2.0 metadata-parsing work) as the trigger. Ship a bundled/generated ambient loop
-      first (on-device ML nature-sound generation is a real stretch goal, not a v1
-      requirement — track separately if it survives scoping); auto-resume the station feed
-      when the break ends or the marker stream goes stale. Off by default behind a Settings
-      toggle until it's proven not to false-trigger on non-Triton/iHeart stations.
-- [ ] Favorites export/import (plain JSON via the Share sheet — no account, no server,
-      consistent with the zero-accounts privacy story)
-- [ ] Search filters (bitrate, tag/genre, country) on top of Radio-Browser's existing query
-      params
-- [ ] CarPlay stays in the backlog for now: triage says a minimal
-      `CPListTemplate` + `CPNowPlayingTemplate` scene can sit on today's
-      `PlaybackController`, but implementation should wait until the CarPlay
-      audio entitlement is actually present and the iOS 27 `MediaSession` path
-      is the production default
+**Exit criteria:** coverage published for every package; the watch target's build is a
+required check; the format check blocks; the watch-embed question answered either way.
 
-**Engineering**
-- [ ] Make the headless-test CodeSign workaround (`xattr -cr` + ad-hoc `codesign` +
-      `swift test --skip-build`, currently manual per DECISIONS.md) a checked-in script so
-      it's one command instead of tribal knowledge, and wire it into CI for RadioDirectory/
-      Persistence
-- [ ] Get Playback's iOS-only tests (currently `build-for-testing` only, run manually via
-      Cmd+U) into an automated simulator test job — this is the biggest gap in the current
-      CI (`ci.yml` builds the app but never runs Playback's test target)
+## Next — 0.4.0 feature round
 
-**Exit criteria:** ad-break ambient feature doesn't false-trigger across a sample of the top
-20 Radio-Browser stations by listener count; beta 2 crash-free ≥ 99.5%; no open P0/P1 for a
-week.
+Unchanged from the previous baseline; none of it has started.
 
-## Then — Sprint 4 (engineering hardening)
+- [ ] **Ambient playback on ad detection** (#4). Reuse the existing ICY ad-break markers
+      (`Spot Block Start/End`, already suppressed from displayed titles) as the trigger.
+      Ship a bundled loop first — on-device ML nature-sound generation is a stretch goal,
+      not a v1 requirement. Off by default behind a Settings toggle until it is proven not
+      to false-trigger on non-Triton/iHeart stations.
+- [ ] Favorites export/import — plain JSON via the Share sheet. No account, no server.
+- [ ] Search filters (bitrate, tag/genre, country) over Radio-Browser's existing query params.
 
-A sprint with no headline feature, deliberately — 0.2.0 and 0.3.0 both stacked feature work
-on top of infra debt (manual UI test runs, no coverage signal, no perf baseline). Pull it
-forward before public release rather than after.
+**Exit criteria:** the ad-break feature doesn't false-trigger across the top 20 Radio-Browser
+stations by listener count; crash-free ≥ 99.5%; no open P0/P1 for a week.
 
-- [ ] CI: add a coverage job (`swift test --enable-code-coverage`) and publish a baseline;
-      no gate yet, just visibility
-- [ ] CI: cold-launch and memory baseline captured per-build (ties into the 0.3.0 QA
-      checklist's "30% faster launch" claim, but as an ongoing regression check, not a
-      one-time verification)
-- [ ] Accessibility audit pass beyond the ad-hoc fixes already shipped (VoiceOver rotor
-      order, Dynamic Type XXL on every surface including Settings/About, Reduce Motion on
-      the sleep-timer countdown and Live Activity transitions)
-- [ ] Dependabot backlog triage (`.github/dependabot.yml` is configured; confirm nothing's
-      been silently ignored)
-- [ ] Revisit `disabled_rules`/`opt_in_rules` in `.swiftlint.yml` — anything from the 0.2.0
-      "ship it" era worth re-enabling now that the tree is lint-clean under `--strict`
+## Then — decide about the dark features
 
-## Later — Sprint 5 (public release readiness)
+Five features are built, wired, and tested, and sit at `internalOnly` /
+`defaultEnabled: false` in `FeatureCatalog` — no user outside a Debug build has ever seen
+them. `RecommendationService` alone is 193 lines with 127 lines of tests and a live call site
+in `ListenNowView`.
 
-Everything gating a move from TestFlight to the public App Store listing.
+That is not a backlog, it is unshipped inventory, and it costs something to carry: every one
+of them is code that has to keep compiling, keep passing tests, and keep being reasoned
+about during refactors. Each needs a decision — **promote or delete**:
 
-**Feature**
-- [ ] Professional app icon (0.2.0 shipped a programmatic Core Graphics placeholder,
-      explicitly flagged in DECISIONS.md as swap-before-public-release)
-- [ ] Community translations beyond English (String Catalog infra shipped in 0.2.0;
-      this is populating it)
-- [ ] CarPlay templates shipped once the entitlement + `MediaSession` gates above clear
+- `recommendations` — "More Like This" from local play history
+- `geoStations` — region-filtered discovery
+- `prewarmStations` — launch-time DNS/TLS warming of top stations
+- `liveActivity` — off with a stated reason (artwork can lag the track); the reason is
+  fixable or it is a decision to delete
+- `diagnostics` — local MetricKit collection, opt-in; arguably correct as internal-only
+  forever, but say so
 
-**Engineering**
-- [ ] App Store Connect listing: screenshots, privacy questionnaire, description —
-      mirrors `PrivacyInfo.xcprivacy` (zero collection) in the actual store copy
-- [ ] Release-process doc: tagging, `GIT_COMMIT_SHA` stamping, GitHub release notes
-      generation — currently manual per release, worth a checklist or script once it's
-      done three times
+## Later — release readiness
+
+Everything gating a public listing that isn't distribution mechanics.
+
+- [ ] Professional app icon — 0.2.0 shipped a programmatic Core Graphics placeholder,
+      flagged in `DECISIONS.md` as swap-before-public-release.
+- [ ] Community translations beyond English. String Catalog infra shipped in 0.2.0; this is
+      populating it.
+- [ ] The checked-in codesign script (`xattr -cr` + ad-hoc `codesign` + `swift test
+      --skip-build`) so the headless-test workaround is one command instead of tribal
+      knowledge in `CONTRIBUTING.md`. Still genuinely open — there is no `*.sh` in the repo.
+- [ ] Cold-launch and memory baselines captured per build, as an ongoing regression check.
+- [ ] Release-process doc: tagging, `GIT_COMMIT_SHA` stamping, release-note generation.
+      There are still **zero git tags**, and `release.yml` is tag-triggered.
 
 ## Backlog (unscheduled, revisit each sprint)
 
-- On-device ambient-noise generation for the ad-detection feature (Apple's local ML model,
-  if/when a stable API exists) — only after the bundled-loop v1 proves the feature earns
-  its complexity
-- Home Screen widget variants beyond quick-play (recents, currently-playing)
-- Genre auto-tagging for unlabeled stations (explicitly deferred in 0.3.0's "not doing" list
-  pending a concrete use case)
-- Minimal CarPlay scene (favorites/recents station list + system now-playing template), once the
-  entitlement is live and `PlaybackController`'s iOS 27 now-playing path graduates from parity
-  prove-out to the production default
+- Self-hosted static libogg/libvorbis xcframeworks (#124). Parked on its own
+  recommendation: AudioStreaming hardcodes `exact: "0.1.2"` on the sbooth packages, so this
+  needs a fork or SwiftPM substitution scoped first, and the rest is moot until that is
+  answered. Revisit if app size or the provenance concession actually bites.
+- On-device ambient-noise generation for the ad-detection feature, only after the
+  bundled-loop v1 proves the feature earns its complexity.
+- Home Screen widget variants beyond quick-play (recents, currently playing).
+- Genre auto-tagging for unlabeled stations.
+- On-device AVRCP verification of the 2026-08-06 Bluetooth artwork fix. Diagnosed from the
+  code and the AVRCP contract, never tested in a car. Needs hardware, not a commit.
 
 ## How to use this doc
 
-- Re-baseline at the start of every sprint against actual beta/TestFlight feedback — this is
-  a proposal, not a schedule external parties are depending on
-- When a sprint here graduates from "next" to "now," give it its own
-  `docs/releases/X.Y.md` with the same checkbox/exit-criteria structure as 0.2.0/0.3.0, and
-  trim this doc back to a one-line pointer at it (see how 0.3.0 already promoted the
-  quick-play widget and reorderable favorites out of a backlog note)
-- Anything that slips a full sprint without movement should be interrogated, not silently
-  rolled forward — either it's blocked (say why) or it's not actually a priority (cut it)
+- Re-baseline at the start of every sprint against actual feedback — this is a proposal,
+  not a schedule anyone external depends on.
+- When a sprint graduates from "next" to "now," give it a `docs/releases/X.Y.md` with the
+  same checkbox/exit-criteria structure, and trim this doc to a pointer at it.
+- **Anything that slips a sprint without movement should be interrogated, not silently
+  rolled forward** — either it's blocked (say why, and say what would unblock it) or it
+  isn't actually a priority (cut it). This rule already existed and was not followed: the
+  CarPlay entry rolled forward for two sprints after CarPlay shipped, and the `try?` audit
+  rolled forward twice behind a gate nobody re-checked. A checkbox that moves between
+  sprints untouched is the signal, not the noise.

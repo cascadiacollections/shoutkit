@@ -131,9 +131,12 @@ from a previous session. `shoutkit://station?...` deep links open the phone app 
 promos, notifications, and other launch entry points; the app also publishes an `NSUserActivity`
 for the current station so Handoff can resume it on another signed-in device; and long-pressing
 Now Playing artwork
-surfaces a "View in Apple Music" link when a track match is found. Later milestones will add a
-Home Screen quick-play widget and CarPlay — the latter is architecturally scoped but deliberately
-deferred (see [`docs/ROADMAP.md`](docs/ROADMAP.md)).
+surfaces a "View in Apple Music" link when a track match is found. A small/medium Home Screen
+widget plays a chosen favorite in one tap, and **CarPlay** ships as a `CPListTemplate` of
+favorites and recents over `CPNowPlayingTemplate`, driven by the same `PlaybackController` (the
+`com.apple.developer.carplay-audio` entitlement is declared in
+`ShoutKitApp/ShoutKitApp.entitlements`). What's still ahead is in
+[`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Privacy
 

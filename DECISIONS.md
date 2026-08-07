@@ -46,13 +46,22 @@ they share a shape: the tree was correct and nobody could tell.
   Embed Foundation Extensions phase — and had no shared scheme, so ~670 lines
   could break with every check green. The widget extension *was* already
   covered; `ShoutKit` does depend on and embed `ShoutKitWidgets`.
-- **Open question, reported rather than answered: nothing embeds the watch app
-  into the phone app.** There is no `Embed Watch Content` phase anywhere in
-  `project.pbxproj`, which reads as though the watchOS companion never installs
-  alongside ShoutKit. That is a claim about a shipping product drawn from the
-  project file alone, so CI now prints what the built bundle actually contains
-  and warns if there is no `Watch/` payload. Adding an embed phase to a shipping
-  app target on an inference is the wrong order of operations.
+- **Confirmed against a real build: the watch app does not ship with the phone
+  app.** The suspicion came from `project.pbxproj` — no `Embed Watch Content`
+  phase anywhere, and `ShoutKitWatchApp` absent from `ShoutKit`'s dependencies —
+  and rather than act on a reading of the project file, CI was made to print
+  what the built bundle contains. It reports no `Watch/` payload in
+  `ShoutKit.app`. So the watchOS companion recorded on 2026-07-16 and advertised
+  in `README.md` has never installed alongside the app, on any build anyone has
+  made. Tracked as a P1 in `docs/ROADMAP.md`; the fix needs Xcode, because
+  hand-editing an embed phase into a shipping app target is how you get a bundle
+  that builds green and fails validation. The check stays a warning until the
+  embed exists, then becomes a hard failure.
+
+  Worth noting how long this hid: the watch app compiled fine locally, its code
+  was reviewed and merged, and every check was green — because nothing built it
+  and nothing looked inside the product. A target that no job builds and no
+  assertion inspects is indistinguishable from one that works.
 - **SwiftFormat gets a path to enforcement, not enforcement.** The one-time
   reformat needs a real toolchain; a `workflow_dispatch` job runs it on the same
   macOS image that judges the result and can push. `continue-on-error` comes off
