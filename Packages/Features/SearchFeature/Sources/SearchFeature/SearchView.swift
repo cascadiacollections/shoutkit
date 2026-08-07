@@ -50,7 +50,7 @@ public struct SearchView: View {
                 Button {
                     isFilterSheetPresented = true
                 } label: {
-                    Image(systemName: viewModel.filters.isActive
+                    Image(systemName: viewModel.filters.normalized.isActive
                         ? "line.3.horizontal.decrease.circle.fill"
                         : "line.3.horizontal.decrease.circle")
                 }
@@ -130,14 +130,19 @@ public struct SearchView: View {
 
     @ViewBuilder
     private var emptyStateView: some View {
-        if viewModel.filters.isActive {
+        if viewModel.filters.normalized.isActive {
             ContentUnavailableView {
                 Label(
                     String(localized: "No matching stations", bundle: .module),
                     systemImage: "line.3.horizontal.decrease.circle"
                 )
             } description: {
-                Text("Active filters: \(activeFilterSummary)")
+                Text(
+                    String(
+                        format: String(localized: "Active filters: %@", bundle: .module),
+                        activeFilterSummary
+                    )
+                )
             } actions: {
                 Button(String(localized: "Clear Filters", bundle: .module)) {
                     viewModel.clearFilters()
@@ -149,18 +154,39 @@ public struct SearchView: View {
     }
 
     private var activeFilterSummary: String {
+        let filters = viewModel.filters.normalized
         var parts: [String] = []
-        if let bitrateMin = viewModel.filters.bitrateMin {
-            parts.append("≥ \(bitrateMin) kbps")
+        if let bitrateMin = filters.bitrateMin {
+            parts.append(
+                String(
+                    format: String(localized: "%d kbps or higher", bundle: .module),
+                    bitrateMin
+                )
+            )
         }
-        if let bitrateMax = viewModel.filters.bitrateMax {
-            parts.append("≤ \(bitrateMax) kbps")
+        if let bitrateMax = filters.bitrateMax {
+            parts.append(
+                String(
+                    format: String(localized: "%d kbps or lower", bundle: .module),
+                    bitrateMax
+                )
+            )
         }
-        if let tag = viewModel.filters.tag {
-            parts.append("tag: \(tag)")
+        if let tag = filters.tag {
+            parts.append(
+                String(
+                    format: String(localized: "Tag: %@", bundle: .module),
+                    tag
+                )
+            )
         }
-        if let countryCode = viewModel.filters.countryCode {
-            parts.append("country: \(countryCode)")
+        if let countryCode = filters.countryCode {
+            parts.append(
+                String(
+                    format: String(localized: "Country: %@", bundle: .module),
+                    countryCode
+                )
+            )
         }
         return parts.joined(separator: ", ")
     }
@@ -248,7 +274,7 @@ private struct SearchFilterSheet: View {
             .navigationTitle(String(localized: "Search Filters", bundle: .module))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    if filters.isActive {
+                    if filters.normalized.isActive {
                         Button(String(localized: "Clear Filters", bundle: .module)) {
                             onClear()
                         }
@@ -280,14 +306,20 @@ private struct SearchFilterSheet: View {
     private var tagBinding: Binding<String> {
         Binding(
             get: { filters.tag ?? "" },
-            set: { filters.tag = $0 }
+            set: { newValue in
+                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                filters.tag = trimmed.isEmpty ? nil : newValue
+            }
         )
     }
 
     private var countryCodeBinding: Binding<String> {
         Binding(
             get: { filters.countryCode ?? "" },
-            set: { filters.countryCode = $0 }
+            set: { newValue in
+                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                filters.countryCode = trimmed.isEmpty ? nil : newValue
+            }
         )
     }
 }

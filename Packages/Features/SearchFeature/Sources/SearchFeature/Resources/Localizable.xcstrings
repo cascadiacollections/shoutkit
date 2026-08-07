@@ -4,6 +4,9 @@
     "Browse by Genre" : {
 
     },
+    "Active filters: %@" : {
+
+    },
     "Bitrate" : {
 
     },
@@ -13,6 +16,9 @@
     "Country Code" : {
 
     },
+    "Country: %@" : {
+
+    },
     "Couldn't Load Genres" : {
 
     },
@@ -20,6 +26,12 @@
 
     },
     "Find your sound" : {
+
+    },
+    "%d kbps or higher" : {
+
+    },
+    "%d kbps or lower" : {
 
     },
     "Maximum Bitrate" : {
@@ -47,6 +59,9 @@
 
     },
     "Tag" : {
+
+    },
+    "Tag: %@" : {
 
     },
     "Any" : {

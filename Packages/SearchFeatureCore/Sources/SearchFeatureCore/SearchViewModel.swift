@@ -61,13 +61,6 @@ public final class SearchViewModel {
     public var filters: StationSearchFilters = .none {
         didSet {
             guard filters != oldValue else { return }
-
-            let normalizedFilters = filters.normalized
-            if normalizedFilters != filters {
-                filters = normalizedFilters
-                return
-            }
-
             rerunCurrentQueryForFilterChange()
         }
     }
@@ -184,23 +177,29 @@ public final class SearchViewModel {
     /// what's *named* like the query. Same phase either way — two different
     /// questions with the same shape of answer.
     private func fetchStations(matching query: String) async throws(RadioDirectoryError) -> [Station] {
+        let normalizedFilters = filters.normalized
         if let activeGenreQuery, activeGenreQuery == query {
             return try await directory.stations(
                 inGenre: activeGenreQuery,
                 limit: Configuration.resultLimit,
-                filters: filters
+                filters: normalizedFilters
             )
         }
         return try await directory.searchStations(
             matching: query,
             limit: Configuration.resultLimit,
-            filters: filters
+            filters: normalizedFilters
         )
     }
 
     private func rerunCurrentQueryForFilterChange() {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmedQuery.isEmpty == false else { return }
-        runSearch(trimmedQuery)
+        if trimmedQuery.isEmpty == false {
+            runSearch(trimmedQuery)
+            return
+        }
+        if let activeGenreQuery {
+            runSearch(activeGenreQuery)
+        }
     }
 }
