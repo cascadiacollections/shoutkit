@@ -1,0 +1,16 @@
+# Commits that changed formatting only, and would otherwise sit on top of every
+# `git blame` line they touched.
+#
+# Enable locally with:
+#
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# GitHub's blame view reads this file automatically — no configuration needed.
+#
+# Add a full 40-character SHA per line, with a comment saying what it was.
+# Nothing but pure reformats belongs here: a commit listed here becomes
+# invisible to blame, so anything that changed behavior must never be added.
+
+# (No reformat commit yet — the one-time `swiftformat` run lands via the
+# Reformat workflow, and its SHA goes here in the same PR that drops
+# `continue-on-error` from the format check in ci.yml.)

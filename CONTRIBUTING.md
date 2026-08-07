@@ -90,7 +90,14 @@ swift test --skip-build
   install that version locally (e.g. `mise use swiftlint@0.65.0`) so your results match CI. CI also
   runs `swiftformat --lint` (currently non-blocking — the tree isn't fully conformant yet, see
   `DECISIONS.md`) — run `swiftformat ShoutKitApp Packages` locally before pushing to help close
-  that gap.
+  that gap. Without a local toolchain, run the **Reformat** workflow
+  (`.github/workflows/format.yml`) from the Actions tab instead; it runs the same command on a
+  macOS runner and can push the result to your branch.
+- **Formatting-only commits belong in `.git-blame-ignore-revs`.** A whole-tree reformat would
+  otherwise sit on top of every line it touched in `git blame`. GitHub honors the file
+  automatically; locally, run `git config blame.ignoreRevsFile .git-blame-ignore-revs` once.
+  Only pure reformats go in it — a listed commit becomes invisible to blame, so anything that
+  changed behavior must stay out.
 - Directory errors are typed (`throws(RadioDirectoryError)`); user-facing failures should carry
   the error, not a bare `String`.
 

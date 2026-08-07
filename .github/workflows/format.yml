@@ -1,0 +1,90 @@
+name: Reformat
+
+# On-demand `swiftformat` run that pushes its own result.
+#
+# Why a workflow rather than "just run swiftformat": the format check in ci.yml
+# is `continue-on-error: true` because 58 of 90 files fail `--lint`, and closing
+# that needs a byte-exact run from a real toolchain. Not every contributor —
+# and no Linux environment at all — has one, so the reformat is done by the same
+# pinned-ish macOS toolchain that judges it. Run it, review the diff on the
+# branch, then drop `continue-on-error` from ci.yml in the same PR and record
+# the resulting SHA in .git-blame-ignore-revs.
+#
+# Manual only. This is not a bot that reformats behind your back: a formatter
+# that rewrites code without a human asking is how a merge conflict appears in
+# someone else's open PR.
+
+on:
+  workflow_dispatch:
+    inputs:
+      push:
+        description: "Push the reformat to the branch (otherwise only report the diff)"
+        type: boolean
+        default: false
+
+# The only workflow here that writes to the repo, and only when explicitly asked.
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reformat:
+    name: Run SwiftFormat
+    runs-on: xcode-27
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The default token's push is fine here; a PAT would be needed only to
+          # retrigger CI on the pushed commit, which is not the point — CI runs
+          # on the PR that flips continue-on-error.
+          persist-credentials: true
+
+      - name: Install SwiftFormat
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+        run: |
+          brew install swiftformat
+          swiftformat --version
+
+      # Same paths as the ci.yml check, so this run and that check cannot
+      # disagree about what is in scope.
+      - name: Reformat
+        run: swiftformat ShoutKitApp Packages
+
+      - name: Summarize the diff
+        run: |
+          set -uo pipefail
+          if git diff --quiet; then
+            echo "Tree is already formatted — nothing to do." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          {
+            echo "### Files reformatted"
+            echo
+            echo '```'
+            git diff --stat
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit and push
+        if: inputs.push
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "Nothing to push."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Reformat with SwiftFormat
+
+          Mechanical \`swiftformat ShoutKitApp Packages\` run against the
+          checked-in .swiftformat config. No behavior change — add this SHA to
+          .git-blame-ignore-revs."
+          git push origin "HEAD:${GITHUB_REF_NAME}"
