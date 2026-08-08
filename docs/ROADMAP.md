@@ -79,8 +79,8 @@ The sprint this document scheduled twice and skipped twice. Landing in PR #138.
       manifests are *already* `swift-tools-version: 6.4`, so **check whether the gate is
       still real before deferring again.** If the warning exists, turn it on. If it doesn't,
       write down what is actually being waited for.
-- [ ] Extract cores for `LibraryFeature` and `SettingsFeature` (#144), as `PlayerFeatureCore` did
-      for the player. Both still have zero tests.
+- [x] Extracted `LibraryFeatureCore` and `SettingsFeatureCore` (#144), as `PlayerFeatureCore` did
+      for the player. Both now run host-test suites in CI.
 - [ ] `StationCard` is a fixed 150 pt wide while its labels scale with Dynamic Type (#145). Fixing
       it moves every adaptive grid that lays cards out, so it needs a simulator, not a diff.
 

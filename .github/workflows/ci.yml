@@ -123,10 +123,8 @@ jobs:
         working-directory: Packages/FeatureFlags
         run: swift test --disable-xctest --enable-code-coverage
 
-      # BrowseFeatureCore/SearchFeatureCore hold the Browse/Search view-model
-      # logic split out of BrowseFeature/SearchFeature specifically so it can
-      # run here: those two feature packages depend on DesignSystem, whose
-      # UIKit-only sources don't build for the mac host at all.
+      # FeatureCore packages hold logic split out of feature packages that depend
+      # on DesignSystem, whose UIKit-only sources don't build for the mac host.
       - name: BrowseFeatureCore tests
         working-directory: Packages/BrowseFeatureCore
         run: swift test --disable-xctest --enable-code-coverage
@@ -137,6 +135,14 @@ jobs:
 
       - name: PlayerFeatureCore tests
         working-directory: Packages/PlayerFeatureCore
+        run: swift test --disable-xctest --enable-code-coverage
+
+      - name: LibraryFeatureCore tests
+        working-directory: Packages/LibraryFeatureCore
+        run: swift test --disable-xctest --enable-code-coverage
+
+      - name: SettingsFeatureCore tests
+        working-directory: Packages/SettingsFeatureCore
         run: swift test --disable-xctest --enable-code-coverage
 
       # Baseline only — deliberately no threshold, no gate, and no third-party
@@ -162,7 +168,8 @@ jobs:
             Packages/RadioDirectory Packages/Playback Packages/Persistence \
             Packages/ImageIODownsample Packages/FeatureFlags \
             Packages/BrowseFeatureCore Packages/SearchFeatureCore \
-            Packages/PlayerFeatureCore \
+            Packages/PlayerFeatureCore Packages/LibraryFeatureCore \
+            Packages/SettingsFeatureCore \
             | tee -a "$GITHUB_STEP_SUMMARY"
 
   build:

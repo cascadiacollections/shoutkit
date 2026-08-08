@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-08-07 (extracting LibraryFeatureCore + SettingsFeatureCore for host-test coverage)
+
+Two feature packages still had zero host-test reachability because both import `DesignSystem`,
+whose UIKit-only sources do not build on the mac host. This leaves any logic in those packages
+invisible to CI's fast `swift test` path — the exact gap already closed for browse/search/player.
+
+- **Added `LibraryFeatureCore` and moved list-editing decisions there.** `LibraryView` now adapts
+  live query models to plain station-ID arrays and delegates deletion offset resolution to
+  `LibraryFeatureCore`. That keeps SwiftUI/SwiftData in the feature package while making the
+  offset/limit behavior (the off-by-one-prone part) testable by host.
+- **Added `SettingsFeatureCore` and moved pure settings presentation rules there.** The settings
+  surface now delegates equalizer raw-value fallback and precise-location-toggle visibility to
+  plain value-in/value-out functions, with `SettingsView` left as the adapter from
+  `SettingsStore`/`EqualizerPreset`/feature flags.
+- **Both new Core packages are wired into `host-tests` and the package coverage baseline list.**
+  This keeps the extraction from becoming "tests that run only locally" and preserves the same
+  CI contract the earlier core packages follow.
+- **No default main-actor isolation in the new Core packages.** Like `PlayerFeatureCore`, both are
+  pure helpers with no observable state and no UI work.
+
 ## 2026-08-07 (Search filters over Radio-Browser)
 
 - Added a dedicated `StationSearchFilters` model (bitrate min/max, tag, country
