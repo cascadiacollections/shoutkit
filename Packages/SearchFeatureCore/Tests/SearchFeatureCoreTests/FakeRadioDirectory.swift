@@ -12,11 +12,13 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
 
     private(set) var searchCallCount = 0
     private(set) var searchedQueries: [String] = []
+    private(set) var searchedFilters: [StationSearchFilters] = []
     /// Genres asked for through the dedicated genre query. Tracked separately
     /// from `searchedQueries` because the whole point of the genre path is that
     /// it is *not* a name search — the protocol's default implementation would
     /// silently make it one.
     private(set) var genreStationQueries: [String] = []
+    private(set) var genreStationFilters: [StationSearchFilters] = []
 
     func setGenresResult(_ result: Result<[Genre], RadioDirectoryError>) {
         genresResult = result
@@ -42,8 +44,17 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
     }
 
     func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        try await searchStations(matching: query, limit: limit, filters: .none)
+    }
+
+    func searchStations(
+        matching query: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ) async throws(RadioDirectoryError) -> [Station] {
         searchCallCount += 1
         searchedQueries.append(query)
+        searchedFilters.append(filters)
         if searchDelay > .zero {
             try? await Task.sleep(for: searchDelay)
         }
@@ -54,7 +65,16 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
     }
 
     func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        try await stations(inGenre: genre, limit: limit, filters: .none)
+    }
+
+    func stations(
+        inGenre genre: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ) async throws(RadioDirectoryError) -> [Station] {
         genreStationQueries.append(genre)
+        genreStationFilters.append(filters)
         if searchDelay > .zero {
             try? await Task.sleep(for: searchDelay)
         }

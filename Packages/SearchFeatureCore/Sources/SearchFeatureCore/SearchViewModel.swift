@@ -58,6 +58,12 @@ public final class SearchViewModel {
     public private(set) var phase: SearchPhase = .idle
     public private(set) var genres: [Genre] = []
     public private(set) var genreLoadError: RadioDirectoryError?
+    public var filters: StationSearchFilters = .none {
+        didSet {
+            guard filters != oldValue else { return }
+            rerunCurrentQueryForFilterChange()
+        }
+    }
     /// The genre chip whose stations are on screen, if the current results came
     /// from a chip rather than from typing. Drives the chip's selected state and
     /// picks the genre query over the name search below.
@@ -142,6 +148,10 @@ public final class SearchViewModel {
         runSearch(trimmed)
     }
 
+    public func clearFilters() {
+        filters = .none
+    }
+
     private func runSearch(_ query: String) {
         searchTask?.cancel()
         // Only show the spinner once the debounce actually fires; setting it
@@ -167,9 +177,29 @@ public final class SearchViewModel {
     /// what's *named* like the query. Same phase either way — two different
     /// questions with the same shape of answer.
     private func fetchStations(matching query: String) async throws(RadioDirectoryError) -> [Station] {
+        let normalizedFilters = filters.normalized
         if let activeGenreQuery, activeGenreQuery == query {
-            return try await directory.stations(inGenre: activeGenreQuery, limit: Configuration.resultLimit)
+            return try await directory.stations(
+                inGenre: activeGenreQuery,
+                limit: Configuration.resultLimit,
+                filters: normalizedFilters
+            )
         }
-        return try await directory.searchStations(matching: query, limit: Configuration.resultLimit)
+        return try await directory.searchStations(
+            matching: query,
+            limit: Configuration.resultLimit,
+            filters: normalizedFilters
+        )
+    }
+
+    private func rerunCurrentQueryForFilterChange() {
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedQuery.isEmpty == false {
+            runSearch(trimmedQuery)
+            return
+        }
+        if let activeGenreQuery {
+            runSearch(activeGenreQuery)
+        }
     }
 }

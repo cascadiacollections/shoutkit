@@ -232,6 +232,47 @@ struct SearchViewModelTests {
         #expect(callCount == 0)
     }
 
+    @Test func activeFiltersArePassedToNameSearches() async {
+        let directory = FakeRadioDirectory()
+        await directory.setSearchStationsResult(.success([.fixture(id: "a", name: "Station A")]))
+        let viewModel = SearchViewModel(directory: directory)
+        viewModel.filters = StationSearchFilters(bitrateMin: 128, tag: "jazz", countryCode: "us")
+
+        viewModel.query = "kexp"
+        await waitUntil { viewModel.phase != .idle && viewModel.phase != .searching }
+
+        let filters = await directory.searchedFilters
+        #expect(filters == [StationSearchFilters(bitrateMin: 128, tag: "jazz", countryCode: "US")])
+    }
+
+    @Test func activeFiltersArePassedToGenreSearches() async {
+        let directory = FakeRadioDirectory()
+        await directory.setSearchStationsResult(.success([.fixture(id: "a", name: "Blue Note")]))
+        let viewModel = SearchViewModel(directory: directory)
+        viewModel.filters = StationSearchFilters(bitrateMax: 192, tag: "live")
+
+        viewModel.selectGenre(Genre(name: "Jazz"))
+        await waitUntil { viewModel.phase != .idle && viewModel.phase != .searching }
+
+        let filters = await directory.genreStationFilters
+        #expect(filters == [StationSearchFilters(bitrateMax: 192, tag: "live")])
+    }
+
+    @Test func changingFiltersRerunsTheCurrentSearchQuery() async {
+        let directory = FakeRadioDirectory()
+        await directory.setSearchStationsResult(.success([.fixture(id: "a", name: "Station A")]))
+        let viewModel = SearchViewModel(directory: directory)
+
+        viewModel.query = "jazz"
+        await waitUntil { viewModel.phase != .idle && viewModel.phase != .searching }
+
+        viewModel.filters = StationSearchFilters(bitrateMin: 128)
+        await waitUntilAsync { await directory.searchCallCount == 2 }
+
+        let queries = await directory.searchedQueries
+        #expect(queries == ["jazz", "jazz"])
+    }
+
     @Test func loadGenresPopulatesGenresOnSuccess() async {
         let directory = FakeRadioDirectory()
         await directory.setGenresResult(.success([Genre(name: "Jazz"), Genre(name: "Rock")]))
