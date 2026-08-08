@@ -78,10 +78,19 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     }
 
     public func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        try await searchStations(matching: query, limit: limit, filters: .none)
+    }
+
+    public func searchStations(
+        matching query: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ) async throws(RadioDirectoryError) -> [Station] {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmedQuery.isEmpty == false else {
             return []
         }
+        let normalizedFilters = filters.normalized
 
         let stations = try await requestStations(
             path: "/json/stations/search",
@@ -91,29 +100,45 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
                 URLQueryItem(name: "hidebroken", value: "true"),
                 URLQueryItem(name: "order", value: "clickcount"),
                 URLQueryItem(name: "reverse", value: "true")
-            ]
+            ] + normalizedFilters.radioBrowserQueryItems(),
+            allowGeoFallback: normalizedFilters.countryCode == nil
         )
-        return Array(stations.prefix(limit))
+        return Array(normalizedFilters.apply(to: stations).prefix(limit))
     }
 
     public func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        try await stations(inGenre: genre, limit: limit, filters: .none)
+    }
+
+    public func stations(
+        inGenre genre: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ) async throws(RadioDirectoryError) -> [Station] {
         let trimmedGenre = genre.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmedGenre.isEmpty == false else {
             return []
         }
+        let normalizedFilters = filters.normalized
 
         // Radio-Browser tags are stored lowercase; `genres()` capitalizes for display.
+        let tagList = [trimmedGenre, normalizedFilters.tag]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+            .filter { $0.isEmpty == false }
+            .joined(separator: ",")
+
         let stations = try await requestStations(
             path: "/json/stations/search",
             queryItems: [
-                URLQueryItem(name: "tag", value: trimmedGenre.lowercased()),
+                URLQueryItem(name: "tagList", value: tagList),
                 URLQueryItem(name: "limit", value: String(max(limit, 1))),
                 URLQueryItem(name: "hidebroken", value: "true"),
                 URLQueryItem(name: "order", value: "clickcount"),
                 URLQueryItem(name: "reverse", value: "true")
-            ]
+            ] + normalizedFilters.radioBrowserQueryItems(excludingTag: true),
+            allowGeoFallback: normalizedFilters.countryCode == nil
         )
-        return Array(stations.prefix(limit))
+        return Array(normalizedFilters.apply(to: stations).prefix(limit))
     }
 
     public func station(id: String) async throws(RadioDirectoryError) -> Station? {
@@ -257,9 +282,10 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
 
     private func requestStations(
         path: String,
-        queryItems: [URLQueryItem]
+        queryItems: [URLQueryItem],
+        allowGeoFallback: Bool = true
     ) async throws(RadioDirectoryError) -> [Station] {
-        let geoFilter = await geoFilterProvider?.currentGeoFilter()
+        let geoFilter = allowGeoFallback ? await geoFilterProvider?.currentGeoFilter() : nil
         let geoFilterQueryItemSets = geoFilter.map { $0.queryItemSets } ?? [[]]
         let lastGeoFilterIndex = geoFilterQueryItemSets.count - 1
 
@@ -357,6 +383,27 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     }
 }
 // swiftlint:enable type_body_length
+
+private extension StationSearchFilters {
+    func radioBrowserQueryItems(excludingTag: Bool = false) -> [URLQueryItem] {
+        var queryItems: [URLQueryItem] = []
+
+        if let bitrateMin {
+            queryItems.append(URLQueryItem(name: "bitrateMin", value: String(bitrateMin)))
+        }
+        if let bitrateMax {
+            queryItems.append(URLQueryItem(name: "bitrateMax", value: String(bitrateMax)))
+        }
+        if excludingTag == false, let tag {
+            queryItems.append(URLQueryItem(name: "tagList", value: tag.lowercased()))
+        }
+        if let countryCode {
+            queryItems.append(URLQueryItem(name: "countrycode", value: countryCode))
+        }
+
+        return queryItems
+    }
+}
 
 // MARK: - Wire types
 
