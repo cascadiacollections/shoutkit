@@ -24,6 +24,17 @@ jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
     runs-on: ${{ matrix.runner }}
+    # The Swift analysis does not run on pull requests. It was, by a wide
+    # margin, the most expensive thing in this repository: CodeQL's tracing
+    # turns the ~4-minute Release build into a ~27-minute one, so the job billed
+    # ~30 macOS larger-runner minutes *per push to every branch* — more than the
+    # entire CI workflow beside it. Scanning on `main` plus the weekly cron
+    # keeps the alert database current and still catches anything that lands;
+    # what it gives up is per-PR alert annotations, and a repository of this
+    # size does not merge fast enough for that delay to matter. The `actions`
+    # analysis is unaffected — it needs no build, runs on a free ubuntu runner,
+    # and stays on PRs where workflow changes are actually reviewed.
+    if: matrix.language != 'swift' || github.event_name != 'pull_request'
     timeout-minutes: ${{ matrix.language == 'swift' && 45 || 15 }}
     strategy:
       fail-fast: false
@@ -51,6 +62,22 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
+
+      # This job used to cold-resolve the whole workspace graph every run —
+      # including the AudioStreaming ogg/vorbis xcframework download that
+      # ci.yml's `build` job caches — on the most expensive runner in the repo.
+      # Same key space as ci.yml so the two warm each other's store rather than
+      # each paying its own resolve.
+      - name: Cache SwiftPM clones and binary artifacts
+        if: matrix.language == 'swift'
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/Library/Caches/org.swift.swiftpm
+            DerivedData/SourcePackages
+          key: spm-app-codeql-${{ hashFiles('ShoutKit.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: |
+            spm-app-codeql-
 
       # Mirrors ci.yml: select the newest Xcode and build the app for the iOS
       # Simulator so CodeQL can trace the Swift compilation. Keep the xcodebuild

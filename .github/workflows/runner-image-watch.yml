@@ -1,0 +1,115 @@
+name: Runner image watch
+
+# Watches for the one change that takes this repository's Actions bill to zero.
+#
+# ShoutKit is public, so GitHub's standard hosted runners — `ubuntu-latest`,
+# `macos-26`, and friends — are free. The `xcode-27` label the mac jobs use is a
+# *larger runner*, and larger runners are billed on public repos like any other.
+# Everything in ci.yml's job graph is shaped around minimising minutes on that
+# label; none of it would be necessary if the free `macos-26` image shipped an
+# Xcode new enough to build the tree (swift-tools-version 6.4, iOS 27 SDK — see
+# DECISIONS.md 2026-07-13).
+#
+# As of 2026-08 it does not: `macos-26` tops out at Xcode 26.6. That will change
+# on someone else's schedule, silently, in a README this repo does not watch —
+# which is exactly the kind of fact that goes unnoticed for months while the
+# meter runs. So: check weekly, and open an issue the week it flips.
+#
+# Costs nothing to run (ubuntu, ~15 seconds).
+
+on:
+  schedule:
+    # Mondays, shortly after the CodeQL cron.
+    - cron: "30 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: runner-image-watch
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check macos-26 for Xcode 27
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Look for Xcode 27 on the free macOS image
+        id: check
+        run: |
+          set -euo pipefail
+          README="https://raw.githubusercontent.com/actions/runner-images/main/images/macos/macos-26-arm64-Readme.md"
+          curl -fsSL "$README" -o readme.md
+
+          # The image README lists Xcode versions in a markdown table, one per
+          # row, e.g. "| 26.6 (default) | 17F113 |". Match a major version of 27
+          # or above at the start of a cell so a future Xcode 28 also trips this
+          # rather than silently reading as "not 27".
+          if grep -qE '^\| *(2[7-9]|[3-9][0-9])\.' readme.md; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "Xcode versions now on the free macos-26 image:"
+              grep -E '^\| *[0-9]+\.' readme.md || true
+            } > versions.txt
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Still no Xcode 27 on macos-26 — the xcode-27 larger runner is still required."
+          fi
+
+      - name: Summarize
+        run: |
+          if [ "${{ steps.check.outputs.found }}" = "true" ]; then
+            {
+              echo "### Xcode 27+ is available on the free \`macos-26\` image"
+              echo
+              echo '```'
+              cat versions.txt
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No Xcode 27 on \`macos-26\` yet — still paying for \`xcode-27\`." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # Opened once, not once a week: a weekly duplicate is how a useful alert
+      # becomes noise that gets muted. Re-opens only if the previous one was
+      # closed without the migration happening, which is the case where a
+      # reminder is actually wanted again.
+      - name: Open a migration issue
+        if: steps.check.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: "CI: move the mac jobs off the billed `xcode-27` runner"
+        run: |
+          set -euo pipefail
+          EXISTING="$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number // empty')"
+          if [ -n "$EXISTING" ]; then
+            echo "Issue #$EXISTING is already open — nothing to do."
+            exit 0
+          fi
+          {
+            echo "The free \`macos-26\` runner image now ships an Xcode new enough to build this tree:"
+            echo
+            echo '```'
+            cat versions.txt
+            echo '```'
+            echo
+            echo "ShoutKit is a public repository, so standard hosted runners are free while the"
+            echo "\`xcode-27\` larger-runner label is billed. Swapping \`runs-on: xcode-27\` for"
+            echo "\`runs-on: macos-26\` in \`.github/workflows/ci.yml\` and \`.github/workflows/codeql.yml\`"
+            echo "should take the Actions bill for this repo to approximately zero."
+            echo
+            echo "Worth doing in the same pass, since they only exist to ration billed minutes:"
+            echo
+            echo "- Put the Swift CodeQL analysis back on \`pull_request\`."
+            echo "- Fold \`release-checks\` back into \`build\` so Release and watchOS compile per PR."
+            echo "- Drop the draft-PR gate on \`build\`."
+            echo
+            echo "Verify the toolchain actually satisfies the manifests before removing the"
+            echo "\`xcode-27\` jobs — \`swift --version\` on the image needs to report 6.4 or newer."
+            echo
+            echo "_Filed automatically by \`.github/workflows/runner-image-watch.yml\`._"
+          } > body.md
+          gh issue create --title "$TITLE" --body-file body.md
