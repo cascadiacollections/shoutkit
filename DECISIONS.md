@@ -1,5 +1,42 @@
 # Decisions
 
+## 2026-08-12 (CodeQL becomes a scheduled scan; the matrix `if` that broke it)
+
+Two things, one of which was a self-inflicted outage.
+
+**The bug.** The 2026-08-11 entry below describes excluding the Swift analysis from pull
+requests with a job-level `if: matrix.language != 'swift' || …`. That expression is invalid:
+`jobs.<job_id>.if` is evaluated *before* the matrix is expanded, so the `matrix` context is
+not available to it — only `github`, `needs`, `vars`, and `inputs` are. A workflow that
+references an unavailable context there does not skip the job, it fails to load: zero jobs,
+an instant red X, and a run titled `.github/workflows/codeql.yml` instead of `CodeQL`,
+because there is no parsed workflow to take a name from. CodeQL ran **not at all** —
+neither language — from 21285a9 until this fix.
+
+The reason it survived review is worth recording, because the tell was there. On the PR the
+Swift check simply wasn't in the check-run list, which is exactly what a working exclusion
+looks like; it was read as confirmation rather than checked. The run titled by file path,
+one click away, said otherwise. **A check that is absent and a check that is skipped look
+identical from the check list and mean opposite things** — `conclusion: skipped` in the
+jobs API distinguishes them, and that is the thing to look at.
+
+Note the neighbouring `timeout-minutes: ${{ matrix.language == 'swift' && 45 || 15 }}` was
+fine and had worked for months: `matrix` *is* available there. Context availability is
+per-key, not per-file, so "it works two lines up" proves nothing.
+
+The fix drops the matrix entirely for two explicit jobs — `analyze-actions` and
+`analyze-swift`. Each condition then sits in a context that can see it, and the workflow
+reads as what it is: two unrelated analyses that never shared anything but a `steps:` block.
+
+**The schedule.** With that corrected, the Swift analysis moved further than the original
+change took it: from "every push and PR" to **scheduled runs only** (the existing Monday
+cron, plus `workflow_dispatch`). One run per week is ~30 billed macOS minutes in total
+rather than ~30 per push. A Swift finding now surfaces up to a week late instead of on the
+PR — acceptable for an app with no server, no accounts, and no credential handling, where
+the CodeQL Swift pack has never produced a finding. `analyze-actions` is unchanged and still
+runs on every push and PR: it needs no build and runs free on ubuntu, so there is nothing to
+save by moving it and real value in keeping workflow changes reviewed where they are made.
+
 ## 2026-08-11 (CI is rationed against one billed runner label)
 
 Actions spend had become the largest cost of running this project, and measuring it before

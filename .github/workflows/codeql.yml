@@ -6,9 +6,14 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    # Weekly full scan so newly-published queries run against unchanged code
-    # (Monday 07:00 UTC). Push/PR runs only cover what a change touches.
+    # Monday 07:00 UTC. This is now the *only* trigger that runs the Swift
+    # analysis (see `analyze-swift`), not just a backstop for newly-published
+    # queries — so a regression is caught within a week rather than at the push
+    # that introduced it.
     - cron: "0 7 * * 1"
+  # On-demand full scan, for when a week is too long to wait — a security fix
+  # landing, or a dependency bump worth scanning before release.
+  workflow_dispatch:
 
 # CodeQL needs to write analysis results back as code-scanning alerts; it reads
 # the checked-out code and (for the Swift build) resolves package dependencies.
@@ -21,37 +26,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  analyze:
-    name: Analyze (${{ matrix.language }})
-    runs-on: ${{ matrix.runner }}
-    # The Swift analysis does not run on pull requests. It was, by a wide
-    # margin, the most expensive thing in this repository: CodeQL's tracing
-    # turns the ~4-minute Release build into a ~27-minute one, so the job billed
-    # ~30 macOS larger-runner minutes *per push to every branch* — more than the
-    # entire CI workflow beside it. Scanning on `main` plus the weekly cron
-    # keeps the alert database current and still catches anything that lands;
-    # what it gives up is per-PR alert annotations, and a repository of this
-    # size does not merge fast enough for that delay to matter. The `actions`
-    # analysis is unaffected — it needs no build, runs on a free ubuntu runner,
-    # and stays on PRs where workflow changes are actually reviewed.
-    if: matrix.language != 'swift' || github.event_name != 'pull_request'
-    timeout-minutes: ${{ matrix.language == 'swift' && 45 || 15 }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # Swift needs a real compile, so it runs on the same Xcode 27 image as
-          # CI and reuses CI's exact build invocation (see ci.yml "Build app").
-          - language: swift
-            runner: xcode-27
-            build-mode: manual
-          # Workflow/action scanning — no build. This replaces the `actions`
-          # coverage that GitHub's default CodeQL setup provided; default setup
-          # must be turned OFF for this advanced workflow to run at all (the two
-          # can't coexist — see the repo's Code security settings).
-          - language: actions
-            runner: ubuntu-latest
-            build-mode: none
+  # Two explicit jobs rather than one matrixed job. The matrix version could not
+  # express "skip Swift on pull requests": `jobs.<id>.if` is evaluated before a
+  # matrix is expanded, so the `matrix` context is not available to it (only
+  # `github`, `needs`, `vars`, and `inputs` are) and a workflow referencing it
+  # there fails to load entirely — zero jobs, an instant red X, and the run named
+  # after the file path instead of the workflow. Splitting the jobs puts each
+  # condition in a context that can actually see it.
+  #
+  # Note `matrix` *is* legal in `timeout-minutes`, which is why the old ternary
+  # there worked; the context-availability rules differ per key.
+
+  # Workflow/action scanning — no build, free ubuntu runner. This replaces the
+  # `actions` coverage that GitHub's default CodeQL setup provided; default setup
+  # must be turned OFF for this advanced workflow to run at all (the two can't
+  # coexist — see the repo's Code security settings). Runs everywhere, including
+  # pull requests, where workflow changes are actually reviewed.
+  analyze-actions:
+    name: Analyze (actions)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
@@ -60,8 +54,46 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4.37.6
         with:
-          languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.build-mode }}
+          languages: actions
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4.37.6
+        with:
+          category: "/language:actions"
+
+  # Swift needs a real compile, so it runs on the same Xcode 27 image as CI and
+  # reuses CI's exact build invocation (see ci.yml "Build app").
+  #
+  # **Scheduled runs only.** This was by a wide margin the most expensive thing
+  # in the repository: CodeQL's tracing turns the ~4-minute Release build into a
+  # ~27-minute one, so at one run per push it billed ~30 macOS larger-runner
+  # minutes *per push to every branch* — more than the entire CI workflow beside
+  # it. Once a week is ~30 billed minutes total instead of ~30 per push, which
+  # is the difference between this being the largest line item and being a
+  # rounding error.
+  #
+  # What that costs: a Swift finding now surfaces up to a week after the commit
+  # that introduced it, rather than on the PR. Acceptable for an app with no
+  # server, no accounts, and no credential handling — the CodeQL Swift pack has
+  # never produced a finding here — and `workflow_dispatch` is the escape hatch
+  # when a week is too long. Revisit if the threat model changes, or for free if
+  # the runner does (see runner-image-watch.yml).
+  analyze-swift:
+    name: Analyze (swift)
+    runs-on: xcode-27
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4.37.6
+        with:
+          languages: swift
+          build-mode: manual
 
       # This job used to cold-resolve the whole workspace graph every run —
       # including the AudioStreaming ogg/vorbis xcframework download that
@@ -69,7 +101,6 @@ jobs:
       # Same key space as ci.yml so the two warm each other's store rather than
       # each paying its own resolve.
       - name: Cache SwiftPM clones and binary artifacts
-        if: matrix.language == 'swift'
         uses: actions/cache@v6
         with:
           path: |
@@ -83,7 +114,6 @@ jobs:
       # Simulator so CodeQL can trace the Swift compilation. Keep the xcodebuild
       # flags in sync with the CI build job.
       - name: Build app (Swift)
-        if: matrix.language == 'swift'
         run: |
           set -o pipefail
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
@@ -97,4 +127,4 @@ jobs:
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4.37.6
         with:
-          category: "/language:${{ matrix.language }}"
+          category: "/language:swift"
