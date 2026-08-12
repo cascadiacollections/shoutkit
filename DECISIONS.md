@@ -1,5 +1,64 @@
 # Decisions
 
+## 2026-08-12 (tvOS MVP: the watch app is the blueprint, and AVPlayer is the engine)
+
+ShoutKit gets a fourth platform. `ShoutKitTVApp` is a top-level target — five files, three
+linked packages (`RadioDirectory`, `Playback`, `Persistence`), bundle id
+`com.cascadiacollections.shoutkit.tv`, tvOS 26.0 floor.
+
+**The blueprint is `ShoutKitWatchApp`, not `ShoutKitApp`.** The watch app is the working
+precedent for a second platform reusing the shared packages with its own minimal service
+graph: it calls `PlaybackController`'s *designated* initializer with every collaborator
+explicit and bypasses Factory entirely, so it never touches
+`registerProductionPlaybackEngine()`. `TVAppDependencies` copies that exactly. The phone app's
+`Features/*` and `DesignSystem` are deliberately **not** linked — the focus engine changes the
+whole layout model, so a touch-idiom view hierarchy would have to be fought rather than reused,
+and the watch established that skipping them is viable. `LiveActivity` (ActivityKit, iOS-only)
+and `DebugSupport` (Pulse) stay off for the reasons they are separate packages at all.
+
+A new platform only has to implement `AudioOutput` — four methods and two callbacks —
+because `PlaybackController` itself is portable (Foundation + Observation + RadioDirectory).
+`RadioPlaybackEngine`'s equalizer members have defaults, so an AVPlayer engine inherits
+"no EQ" for free.
+
+**AVPlayer over AudioStreaming, and the ICY cost.** Checked at the exact tags in
+`Package.resolved`, tvOS *is* supported by the whole streaming chain — AudioStreaming 1.4.4
+declares `.tvOS(.v16)`, and both the ogg and vorbis xcframeworks declare `.tvOS(.v15)`. So
+unlike watchOS, which genuinely has no slice, `PlaybackEngineAudioStreaming` **could** ship
+here. It is deferred to v2 anyway: AVPlayer is the established doctrine (2026-07-16), it is
+proven twice in this repo, and it keeps binary-artifact resolution off an unproven platform.
+
+The price is paid knowingly and is worth restating because it is user-visible: **the AVPlayer
+engine emits no ICY metadata**, so the TV shows station name, genre, and artwork but never the
+current track. On a 10-foot display that absence is more noticeable than on a watch. If live
+track titles turn out to be must-have, the fix is switching to AudioStreaming, not patching
+around it — the dependency chain already supports it.
+
+`TVNowPlayingCenter` is a *real* `NowPlayingPresenting`, unlike the watch's no-op: tvOS shows
+artwork, so the station favicon is fetched and attached. It is a separate type from
+`Playback`'s `NowPlayingCenter` (now `os(iOS)`-gated, see below) because that one carries the
+lock-screen contract and a Bluetooth/AVRCP artwork-resizing path with no meaning on a TV.
+
+**Two things that build green while being broken**, both now checked rather than trusted:
+
+1. A source file missing its `project.pbxproj` registration compiles green and silently isn't
+   in the binary. Verified by confirming all five `.o` files land in the build directory.
+2. **actool reports a malformed layered app icon and still exits zero.** The first build of
+   this target printed `** BUILD SUCCEEDED **` alongside `The image stack "App Icon" must have
+   at least 2 layers with applicable content` — a green build with an icon that would fail at
+   install or App Store validation. CI now greps the tvOS build log for asset-catalog errors
+   and fails on them, because the compiler's exit code will not.
+
+The tvOS build sits in `release-checks` (push-to-main and `workflow_dispatch` only), not on
+every PR: `xcode-27` is a billed larger runner and that job was just restructured to cut spend
+~70%. Same accepted trade as the Release and watchOS compiles it joins — tvOS breakage surfaces
+on `main` rather than on the PR, in exchange for not paying for a third compile per push.
+
+Signing note for anyone reproducing this: `generic/platform=tvOS` fails with "your team has no
+devices from which to generate a provisioning profile". A tvOS profile requires a *registered*
+Apple TV, so the first build must target a paired device by `id=` — that registers it and mints
+the profile. CI therefore builds tvOS with `CODE_SIGNING_ALLOWED=NO`.
+
 ## 2026-08-12 (platform gates say what they mean: `os(iOS)`, not "UIKit and not watch")
 
 Two `#if` gates in `Packages/Playback` were spelled `canImport(UIKit) && !os(watchOS)` and

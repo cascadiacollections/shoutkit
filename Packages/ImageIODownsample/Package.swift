@@ -6,6 +6,7 @@ let package = Package(
     name: "ImageIODownsample",
     platforms: [
         .iOS(.v26),
+        .tvOS(.v26),
         .watchOS(.v26),
         .macOS(.v15)
     ],

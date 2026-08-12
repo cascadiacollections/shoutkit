@@ -60,6 +60,15 @@
 		D43AAC581B5812399D25D827 /* WatchRadioPlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C61FAF4CF10B67D240EFD1F /* WatchRadioPlaybackEngine.swift */; };
 		000000000000000000000095 /* ShoutKitCarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000094 /* ShoutKitCarPlaySceneDelegate.swift */; };
 		0000000000000000000000A1 /* BackgroundRefreshController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A2 /* BackgroundRefreshController.swift */; };
+		7C0FE00000000000000000A1 /* ShoutKitTVApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000B1 /* ShoutKitTVApp.swift */; };
+		7C0FE00000000000000000A2 /* TVAppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000B2 /* TVAppDependencies.swift */; };
+		7C0FE00000000000000000A3 /* TVNowPlayingCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000B3 /* TVNowPlayingCenter.swift */; };
+		7C0FE00000000000000000A4 /* TVRadioPlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000B4 /* TVRadioPlaybackEngine.swift */; };
+		7C0FE00000000000000000A5 /* TVRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000B5 /* TVRootView.swift */; };
+		7C0FE00000000000000000A6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000B7 /* Assets.xcassets */; };
+		7C0FE00000000000000000A7 /* RadioDirectory in Frameworks */ = {isa = PBXBuildFile; productRef = 7C0FE00000000000000000D1 /* RadioDirectory */; };
+		7C0FE00000000000000000A8 /* Playback in Frameworks */ = {isa = PBXBuildFile; productRef = 7C0FE00000000000000000D2 /* Playback */; };
+		7C0FE00000000000000000A9 /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = 7C0FE00000000000000000D3 /* Persistence */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -159,6 +168,14 @@
 		DA8362D31F84827046BAEF74 /* ShoutKitWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShoutKitWatchApp.swift; sourceTree = "<group>"; };
 		000000000000000000000094 /* ShoutKitCarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoutKitCarPlaySceneDelegate.swift; sourceTree = "<group>"; };
 		0000000000000000000000A2 /* BackgroundRefreshController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefreshController.swift; sourceTree = "<group>"; };
+		7C0FE00000000000000000B1 /* ShoutKitTVApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShoutKitTVApp.swift; sourceTree = "<group>"; };
+		7C0FE00000000000000000B2 /* TVAppDependencies.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TVAppDependencies.swift; sourceTree = "<group>"; };
+		7C0FE00000000000000000B3 /* TVNowPlayingCenter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TVNowPlayingCenter.swift; sourceTree = "<group>"; };
+		7C0FE00000000000000000B4 /* TVRadioPlaybackEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TVRadioPlaybackEngine.swift; sourceTree = "<group>"; };
+		7C0FE00000000000000000B5 /* TVRootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TVRootView.swift; sourceTree = "<group>"; };
+		7C0FE00000000000000000B6 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7C0FE00000000000000000B7 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		7C0FE00000000000000000B8 /* ShoutKitTVApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShoutKitTVApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -214,6 +231,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7C0FE00000000000000000C4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7C0FE00000000000000000A7 /* RadioDirectory in Frameworks */,
+				7C0FE00000000000000000A8 /* Playback in Frameworks */,
+				7C0FE00000000000000000A9 /* Persistence in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -229,6 +256,7 @@
 				04CAAC3EA79D10542025D07C /* ShoutKitWatchShared */,
 				FDCA08F1A81EA89B4162FCA7 /* ShoutKitWatchApp */,
 				9C7B7DC836C5443BAF108187 /* ShoutKitWatchWidgets */,
+				7C0FE00000000000000000C1 /* ShoutKitTVApp */,
 			);
 			sourceTree = "<group>";
 		};
@@ -240,6 +268,7 @@
 				000000000000000000000070 /* ShoutKitWidgets.appex */,
 				1F9BBE8DA0AFDC04C965EF42 /* ShoutKitWatchApp.app */,
 				2CF7489050D38CAD0C9BCAD5 /* ShoutKitWatchWidgets.appex */,
+				7C0FE00000000000000000B8 /* ShoutKitTVApp.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -341,6 +370,20 @@
 				4C18DB35ABB3A91A0D192E75 /* Assets.xcassets */,
 			);
 			path = ShoutKitWatchApp;
+			sourceTree = "<group>";
+		};
+		7C0FE00000000000000000C1 /* ShoutKitTVApp */ = {
+			isa = PBXGroup;
+			children = (
+				7C0FE00000000000000000B1 /* ShoutKitTVApp.swift */,
+				7C0FE00000000000000000B2 /* TVAppDependencies.swift */,
+				7C0FE00000000000000000B3 /* TVNowPlayingCenter.swift */,
+				7C0FE00000000000000000B4 /* TVRadioPlaybackEngine.swift */,
+				7C0FE00000000000000000B5 /* TVRootView.swift */,
+				7C0FE00000000000000000B6 /* Info.plist */,
+				7C0FE00000000000000000B7 /* Assets.xcassets */,
+			);
+			path = ShoutKitTVApp;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -458,6 +501,28 @@
 			productReference = 0000000000000000000000E1 /* ShoutKitTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		7C0FE00000000000000000C2 /* ShoutKitTVApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7C0FE00000000000000000C8 /* Build configuration list for PBXNativeTarget "ShoutKitTVApp" */;
+			buildPhases = (
+				7C0FE00000000000000000C3 /* Sources */,
+				7C0FE00000000000000000C4 /* Frameworks */,
+				7C0FE00000000000000000C5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ShoutKitTVApp;
+			packageProductDependencies = (
+				7C0FE00000000000000000D1 /* RadioDirectory */,
+				7C0FE00000000000000000D2 /* Playback */,
+				7C0FE00000000000000000D3 /* Persistence */,
+			);
+			productName = ShoutKitTVApp;
+			productReference = 7C0FE00000000000000000B8 /* ShoutKitTVApp.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -519,6 +584,7 @@
 				000000000000000000000075 /* ShoutKitWidgets */,
 				3A593819EC2EC0E4966C890C /* ShoutKitWatchApp */,
 				DA0B84EF0EC6D1665CAD9441 /* ShoutKitWatchWidgets */,
+				7C0FE00000000000000000C2 /* ShoutKitTVApp */,
 			);
 		};
 /* End PBXProject section */
@@ -554,6 +620,14 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7C0FE00000000000000000C5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7C0FE00000000000000000A6 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -621,6 +695,18 @@
 			files = (
 				0000000000000000000000ED /* IntentSupportTests.swift in Sources */,
 				0000000000000000000000EE /* AppIntentsPathwayTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7C0FE00000000000000000C3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7C0FE00000000000000000A1 /* ShoutKitTVApp.swift in Sources */,
+				7C0FE00000000000000000A2 /* TVAppDependencies.swift in Sources */,
+				7C0FE00000000000000000A3 /* TVNowPlayingCenter.swift in Sources */,
+				7C0FE00000000000000000A4 /* TVRadioPlaybackEngine.swift in Sources */,
+				7C0FE00000000000000000A5 /* TVRootView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -972,6 +1058,47 @@
 			};
 			name = Release;
 		};
+		7C0FE00000000000000000C6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9L45FNA7XM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShoutKitTVApp/Info.plist;
+				MARKETING_VERSION = 0.3.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cascadiacollections.shoutkit.tv;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SKIP_INSTALL = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		7C0FE00000000000000000C7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9L45FNA7XM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShoutKitTVApp/Info.plist;
+				MARKETING_VERSION = 0.3.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cascadiacollections.shoutkit.tv;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SKIP_INSTALL = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 26.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1025,6 +1152,15 @@
 			buildConfigurations = (
 				0000000000000000000000E3 /* Debug */,
 				0000000000000000000000E4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7C0FE00000000000000000C8 /* Build configuration list for PBXNativeTarget "ShoutKitTVApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7C0FE00000000000000000C6 /* Debug */,
+				7C0FE00000000000000000C7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -1167,6 +1303,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 000000000000000000000042 /* XCLocalSwiftPackageReference "Playback" */;
 			productName = Playback;
+		};
+		7C0FE00000000000000000D1 /* RadioDirectory */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000041 /* XCLocalSwiftPackageReference "RadioDirectory" */;
+			productName = RadioDirectory;
+		};
+		7C0FE00000000000000000D2 /* Playback */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000042 /* XCLocalSwiftPackageReference "Playback" */;
+			productName = Playback;
+		};
+		7C0FE00000000000000000D3 /* Persistence */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000043 /* XCLocalSwiftPackageReference "Persistence" */;
+			productName = Persistence;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
