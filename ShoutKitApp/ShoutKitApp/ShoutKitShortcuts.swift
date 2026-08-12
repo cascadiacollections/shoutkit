@@ -15,14 +15,17 @@ private let shortcutsLogger = Logger(subsystem: "ShoutKit.App", category: "Short
 /// play without a directory round-trip, mirroring how Persistence snapshots
 /// stations for the same reason.
 ///
-/// `@AppEntity(schema: .audio.liveRadioStation)` registers ShoutKit as a system
-/// radio-content provider under `AppSchema.audio` (iOS 27+): Siri can route a
-/// bare "play ⟨station⟩ radio" utterance here on the strength of the schema
-/// alone, without the app name being spoken, unlike the plain `AppEntity`
-/// conformance this replaces. Raising the deployment floor to iOS 27 for this
-/// was previously deferred (see DECISIONS.md, 2026-07-06) — revisited here.
-@AppEntity(schema: .audio.liveRadioStation)
-struct StationEntity: Sendable {
+/// Deliberately a **plain** `AppEntity`, not `@AppEntity(schema: .audio.…)`.
+/// The schema macro's generated conformance is `@available(iOS 27, *)` on the
+/// type itself, and this type must build at the iOS 26 floor: it is a plain
+/// `@Parameter` on ``PlayStationIntent``, which backs the `AppShortcut` phrases
+/// and is reached from `AppDependencies.bootstrap()`. Marking it iOS 27-only
+/// cascades through all of that.
+///
+/// The schema conformance lives on ``LiveRadioStationEntity`` below instead —
+/// see the comment there for how the two divide the work.
+struct StationEntity: AppEntity, Sendable {
+    static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Station")
     static let defaultQuery = StationEntityQuery()
 
     let id: String
@@ -32,7 +35,8 @@ struct StationEntity: Sendable {
     let streamURLString: String?
 
     /// The schema's canonical display name (distinct from `name`, which the rest
-    /// of the app/entity query code already uses).
+    /// of the app/entity query code already uses). Kept here as well as on
+    /// ``LiveRadioStationEntity`` so the two stay trivially convertible.
     var title: String { name }
     /// The network/broadcaster behind the stream (e.g. "NPR"). ShoutKit doesn't
     /// track this separately from the station itself.
@@ -76,6 +80,91 @@ struct StationEntity: Sendable {
     }
 }
 
+// MARK: - AppSchema.audio registration (iOS 27+)
+
+/// The schema-conforming twin of ``StationEntity``.
+///
+/// `@AppEntity(schema: .audio.liveRadioStation)` is what registers ShoutKit as a
+/// system *radio content provider*: with it, Siri can route a bare "play
+/// ⟨station⟩ radio" utterance here on the strength of the schema alone, without
+/// the app name being spoken. Plain `AppEntity` + `IndexedEntity` only lets Siri
+/// look a station up *once it already knows to ask ShoutKit* (see DECISIONS.md,
+/// 2026-07-15).
+///
+/// It exists as a separate type purely because the macro's generated conformance
+/// is `@available(iOS 27, *)`, which ``StationEntity`` cannot be — that type is a
+/// plain `@Parameter` on ``PlayStationIntent`` and has to build at the iOS 26
+/// floor. So the two split the job: `StationEntity` carries the app-name-explicit
+/// path that works everywhere, and this carries the app-name-free path that
+/// activates on iOS 27. Both project the same `Station`, and this one converts
+/// back through ``stationEntity`` so no playback code is duplicated.
+@available(iOS 27, *)
+@AppEntity(schema: .audio.liveRadioStation)
+struct LiveRadioStationEntity: Sendable {
+    static let defaultQuery = LiveRadioStationEntityQuery()
+
+    let id: String
+    let name: String
+    let genre: String
+    let artworkURLString: String?
+    let streamURLString: String?
+
+    /// The schema's canonical display name.
+    var title: String { name }
+    /// The network/broadcaster behind the stream (e.g. "NPR"). ShoutKit doesn't
+    /// track this separately from the station itself.
+    var providerName: String? { nil }
+
+    var displayRepresentation: DisplayRepresentation {
+        DisplayRepresentation(title: "\(name)", subtitle: "\(genre)")
+    }
+
+    init(_ entity: StationEntity) {
+        id = entity.id
+        name = entity.name
+        genre = entity.genre
+        artworkURLString = entity.artworkURLString
+        streamURLString = entity.streamURLString
+    }
+
+    /// Converts back to the ungated type so the intents can reuse the existing
+    /// `Station` projection rather than duplicating it.
+    var stationEntity: StationEntity {
+        StationEntity(
+            id: id,
+            name: name,
+            genre: genre,
+            artworkURLString: artworkURLString,
+            streamURLString: streamURLString
+        )
+    }
+
+    var station: Station { stationEntity.station }
+}
+
+/// Delegates wholesale to ``StationEntityQuery`` and maps the result, so the
+/// favorites/curated/recents/cache resolution order is defined in exactly one
+/// place regardless of which entity type Siri asked for.
+@available(iOS 27, *)
+struct LiveRadioStationEntityQuery: EntityQuery, EntityStringQuery {
+    private let base = StationEntityQuery()
+
+    @MainActor
+    func entities(for identifiers: [String]) async throws -> [LiveRadioStationEntity] {
+        try await base.entities(for: identifiers).map(LiveRadioStationEntity.init)
+    }
+
+    @MainActor
+    func suggestedEntities() async throws -> [LiveRadioStationEntity] {
+        try await base.suggestedEntities().map(LiveRadioStationEntity.init)
+    }
+
+    @MainActor
+    func entities(matching string: String) async throws -> [LiveRadioStationEntity] {
+        try await base.entities(matching: string).map(LiveRadioStationEntity.init)
+    }
+}
+
 // MARK: - Spotlight / semantic-index discoverability
 
 /// Lets Siri and system search resolve a station by name/genre even before the
@@ -87,6 +176,17 @@ extension StationEntity: IndexedEntity {
         set.contentDescription = genre
         set.keywords = [name, genre]
         return set
+    }
+}
+
+/// The schema entity needs its own index entry: the app-name-free "play
+/// ⟨station⟩ radio" route resolves `audioEntity` against the index for *that*
+/// type, so indexing only ``StationEntity`` would register the schema and then
+/// give Siri nothing to match against.
+@available(iOS 27, *)
+extension LiveRadioStationEntity: IndexedEntity {
+    var attributeSet: CSSearchableItemAttributeSet {
+        stationEntity.attributeSet
     }
 }
 
@@ -184,6 +284,22 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
                 try await CSSearchableIndex.default().indexAppEntities(entities)
             } catch {
                 Self.logger.error("Failed to index Siri stations in Spotlight: \(error, privacy: .public)")
+            }
+
+            // Separate call rather than one combined index: `indexAppEntities`
+            // is generic over a single entity type, and the schema type only
+            // exists on iOS 27. A failure here costs the app-name-free route
+            // only — the explicit "on ShoutKit" phrases still resolve from the
+            // index above — so it is logged and swallowed like its sibling.
+            if #available(iOS 27, *) {
+                do {
+                    try await CSSearchableIndex.default()
+                        .indexAppEntities(entities.map(LiveRadioStationEntity.init))
+                } catch {
+                    Self.logger.error(
+                        "Failed to index Siri radio-schema stations in Spotlight: \(error, privacy: .public)"
+                    )
+                }
             }
         }
         ShoutKitShortcuts.updateAppShortcutParameters()

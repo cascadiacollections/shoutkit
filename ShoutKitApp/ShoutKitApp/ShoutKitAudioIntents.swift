@@ -4,23 +4,33 @@ import OSLog
 
 private let audioIntentsLogger = Logger(subsystem: "ShoutKit.App", category: "AudioIntents")
 
-// MARK: - AppSchema.audio intents
+// MARK: - AppSchema.audio intents (iOS 27+)
+
+// Everything in this section is `@available(iOS 27, *)`. The `AppSchema.audio`
+// macros generate conformances annotated iOS 27-only, so the types carrying them
+// cannot build at the app's iOS 26 floor. They are gated rather than deleted
+// because this is the app-name-free Siri route ("play KEXP radio", no "on
+// ShoutKit") that the schema exists to provide — it simply activates only where
+// the schema does. `PlayStationIntent` below is the ungated counterpart that
+// works on every supported OS. See DECISIONS.md 2026-08-12.
 
 /// The `.audio.playAudio` schema's `audioEntity` parameter accepts a fixed
 /// menu of content kinds shared across every app that adopts it (songs,
 /// albums, podcasts, live radio, …); a `@UnionValue` enum is how a single app
 /// opts into just the cases it actually plays. ShoutKit only ever plays a
-/// `StationEntity`.
+/// `LiveRadioStationEntity`.
+@available(iOS 27, *)
 @UnionValue
 enum AudioItem {
-    case liveRadioStation(StationEntity)
+    case liveRadioStation(LiveRadioStationEntity)
 }
 
+@available(iOS 27, *)
 private extension AudioItem {
     var stationEntity: StationEntity {
         switch self {
         case let .liveRadioStation(entity):
-            entity
+            entity.stationEntity
         }
     }
 }
@@ -55,6 +65,7 @@ struct PlayStationIntent: AudioPlaybackIntent {
 /// it resolves the target station's concrete stream endpoint, then asks
 /// `StationConnectionPrewarmer` to warm that host's DNS/TCP/TLS path before the
 /// later `playAudio` dispatch opens the real socket.
+@available(iOS 27, *)
 @AppIntent(schema: .audio.warmupAudioQueue)
 struct WarmupRadioAudioQueueIntent {
     var audioEntity: AudioItem
@@ -81,17 +92,19 @@ struct WarmupRadioAudioQueueIntent {
 }
 
 /// `@AppIntent(schema: .audio.playAudio)` registers ShoutKit as a system
-/// "play audio" handler for `StationEntity` content. Unlike `PlayStationIntent`
+/// "play audio" handler for radio content. Unlike `PlayStationIntent`
 /// above, this one is never referenced by an `AppShortcut` phrase — its whole
 /// purpose is passive registration, so the system's own "Play Audio" Siri
 /// domain can dispatch a bare "play ⟨station⟩ radio" utterance straight to
-/// `audioEntity`'s resolution (backed by `StationEntity`'s Spotlight index),
+/// `audioEntity`'s resolution (backed by `LiveRadioStationEntity`'s Spotlight
+/// index — see `indexKnownStationsForSpotlight()`),
 /// without the app name being spoken and without ShoutKit training a custom
 /// phrase for it. `queueLocation`, `warmupAudioQueueResult`, and
 /// `playbackAttributes` are schema-required bookkeeping for apps with a real
 /// play queue; ShoutKit has none (station switches are immediate replacement,
 /// not enqueueing), and the warmup hook prewarms the socket without needing any
 /// payload from its result.
+@available(iOS 27, *)
 @AppIntent(schema: .audio.playAudio)
 struct PlayRadioAudioIntent {
     static let title: LocalizedStringResource = "Play Radio"
@@ -117,6 +130,7 @@ struct PlayRadioAudioIntent {
 /// looping). ShoutKit's immediate single-station playback has none of these,
 /// so the enum exists only to satisfy the schema — `perform()` always passes
 /// an empty set.
+@available(iOS 27, *)
 @AppEnum(schema: .audio.playbackAttributes)
 enum PlaybackAttributes: String {
     case none
@@ -133,6 +147,7 @@ enum PlaybackAttributes: String {
 /// `.audio.queueInsertionLocation`: where in a play queue new audio should
 /// land. ShoutKit has no queue — playing a station always replaces whatever
 /// was playing — so `now` (immediate playback) is the only case that applies.
+@available(iOS 27, *)
 @AppEnum(schema: .audio.queueInsertionLocation)
 enum QueueInsertionLocation: String {
     case now
@@ -149,6 +164,7 @@ enum QueueInsertionLocation: String {
 /// `.audio.warmupAudioQueueResult`: marker value returned from
 /// `WarmupRadioAudioQueueIntent`, which resolves and prewarms the target
 /// station's stream host before Siri dispatches `PlayRadioAudioIntent`.
+@available(iOS 27, *)
 @AppEntity(schema: .audio.warmupAudioQueueResult)
 struct WarmupAudioQueueResult: TransientAppEntity, Sendable {
     init() {}

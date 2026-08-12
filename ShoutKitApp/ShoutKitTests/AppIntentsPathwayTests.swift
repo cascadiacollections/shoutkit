@@ -20,9 +20,13 @@ import Testing
 /// adjust the string to the identifier Xcode's App Intents metadata assigns to
 /// `StationEntity`.
 ///
-/// No `@available` guard is needed — the app's deployment target is iOS 27, so
-/// `AppIntentsTesting` is always available (and Swift Testing's macros reject an
-/// `@available` annotation on the suite anyway).
+/// The suite carries no `@available` guard, and Swift Testing's macros reject
+/// one on a suite anyway. That was safe when the deployment floor was iOS 27;
+/// since the floor dropped to iOS 26 (DECISIONS.md 2026-08-12) it rests on
+/// `AppIntentsTesting` being available at the floor rather than on the floor
+/// itself. If this stops compiling, that assumption is what broke — move the
+/// `IntentDefinitions` call into an `if #available(iOS 27, *)` inside the test
+/// body, which the macros do allow.
 @Suite struct AppIntentsPathwayTests {
     /// The `StationEntity` query must surface stations even before the user has
     /// favorited or played anything — the curated `PreferredStations` seed the
