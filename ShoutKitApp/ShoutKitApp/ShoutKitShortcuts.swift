@@ -114,6 +114,8 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
                 continue
             }
 
+            // Best effort: unresolved IDs are skipped so one directory failure
+            // doesn't block other valid entities in the same request.
             guard let station = try? await services.directory.station(id: id) else { continue }
             let fallback = StationEntity(station: station)
             IntentStationCache.remember([fallback])
@@ -131,6 +133,8 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
     @MainActor
     func entities(matching string: String) async throws -> [StationEntity] {
         let services = AppDependencies.bootstrap()
+        // Best effort: returning an empty suggestion list is preferable to
+        // failing the Shortcuts picker for transient network errors.
         let stations = (try? await services.directory.searchStations(matching: string, limit: 10)) ?? []
         let entities = stations.map(StationEntity.init(station:))
         // Remember search results so a shortcut saved against one still resolves
@@ -146,6 +150,8 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
         let services = AppDependencies.bootstrap()
         let context = services.container.mainContext
 
+        // Best effort: shortcuts can still resolve curated/cache stations when a
+        // store read fails.
         let favorites = (try? context.fetch(
             FetchDescriptor<FavoriteStation>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
         )) ?? []

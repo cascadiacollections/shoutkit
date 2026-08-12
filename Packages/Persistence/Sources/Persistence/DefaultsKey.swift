@@ -49,12 +49,16 @@ public extension DefaultsKey where Value: Codable {
             name: name,
             defaultValue: defaultValue,
             read: { defaults in
+                // Best effort: malformed or old payloads fall back to the
+                // declared default rather than poisoning preference reads.
                 guard let data = defaults.data(forKey: name),
                       let decoded = try? JSONDecoder().decode(Value.self, from: data)
                 else { return defaultValue }
                 return decoded
             },
             write: { defaults, value in
+                // Best effort: if encoding fails, leave the prior value in place
+                // instead of writing a partial or invalid payload.
                 guard let data = try? JSONEncoder().encode(value) else { return }
                 defaults.set(data, forKey: name)
             }

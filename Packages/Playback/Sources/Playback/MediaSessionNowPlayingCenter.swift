@@ -206,6 +206,8 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
         state.playbackSnapshot = MediaPlaybackSnapshot(state: push.isPlaying ? .playing() : .paused)
 
         if push.isPlaying, let session, session.isApplicationPrimary == false {
+            // Best effort: becoming primary improves command routing, but playback
+            // remains functional if the system declines this request.
             Task { try? await session.requestToBecomeApplicationPrimary() }
         }
     }

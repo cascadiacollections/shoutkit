@@ -97,6 +97,8 @@ private final class WatchLastStationSync: NSObject, WCSessionDelegate {
 
     func syncedStation() -> Station? {
         guard let data = defaults.data(forKey: Keys.lastStation) else { return nil }
+        // Best effort: an old/corrupt payload should simply clear the watch-side
+        // fallback and let normal station discovery continue.
         return try? decoder.decode(Station.self, from: data)
     }
 
