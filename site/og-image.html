@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>ShoutKit social card source</title>
+  <!--
+    Source for og-image.png. Not linked from the site; kept here so the card can
+    be regenerated without a design tool. Render at exactly 1200x630, e.g.:
+
+      chrome --headless --disable-gpu --hide-scrollbars \
+        --force-device-scale-factor=1 --window-size=1200,630 \
+        --screenshot=site/og-image.png file://$PWD/site/og-image.html
+
+    Note: some Chrome builds reserve part of the window for browser UI and
+    letterbox the shot. If the bottom of the card is cut off, render with
+    Chromium's `headless_shell`, which sizes the viewport exactly.
+  -->
+  <style>
+    * { box-sizing: border-box; margin: 0; }
+    html, body { width: 1200px; height: 630px; overflow: hidden; background: #4A1B4E; }
+    body {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 62px 76px;
+      color: #FFF6EA;
+      font-family: "Liberation Sans", Arial, Helvetica, sans-serif;
+      background:
+        radial-gradient(120% 95% at 50% 122%, #FFD37A 0%, #FF9A3C 26%, #F0532B 52%, #A32856 78%, #4A1B4E 100%);
+    }
+    .top { display: flex; align-items: center; gap: 18px; }
+    .top svg { width: 62px; height: 62px; border-radius: 16px; display: block; }
+    .top span { font-size: 40px; font-weight: 700; letter-spacing: -0.5px; }
+    h1 {
+      font-size: 84px;
+      font-weight: 700;
+      line-height: 1.02;
+      letter-spacing: -2.2px;
+      max-width: 15ch;
+      text-shadow: 0 3px 26px rgba(74, 27, 78, 0.4);
+    }
+    p {
+      margin-top: 20px;
+      font-size: 29px;
+      line-height: 1.4;
+      max-width: 30ch;
+      color: rgba(255, 246, 234, 0.95);
+    }
+    .chips { display: flex; gap: 12px; flex-wrap: wrap; }
+    .chips b {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 2.4px;
+      text-transform: uppercase;
+      padding: 11px 22px;
+      border-radius: 999px;
+      border: 2px solid rgba(255, 246, 234, 0.42);
+      background: rgba(30, 8, 20, 0.26);
+    }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect width="100" height="100" rx="22" fill="#F0532B" />
+      <circle cx="50" cy="50" r="19" fill="#FFC24B" />
+      <g fill="none" stroke="#FFF3E4" stroke-width="6" stroke-linecap="round">
+        <path d="M50 10v8" /><path d="M50 82v8" /><path d="M10 50h8" /><path d="M82 50h8" />
+        <path d="M22 22l6 6" /><path d="M72 72l6 6" /><path d="M78 22l-6 6" /><path d="M28 72l-6 6" />
+      </g>
+    </svg>
+    <span>ShoutKit</span>
+  </div>
+
+  <div>
+    <h1>Every station under the sun.</h1>
+    <p>Free, open-source internet radio for iPhone, iPad, Watch &amp; CarPlay.</p>
+  </div>
+
+  <div class="chips">
+    <b>No ads</b>
+    <b>No accounts</b>
+    <b>No tracking</b>
+    <b>MIT + GPL-3.0</b>
+  </div>
+</body>
+</html>
