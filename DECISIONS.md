@@ -36,6 +36,45 @@ No behaviour changes on any shipping platform: iOS and Mac Catalyst are inside `
 watchOS was excluded before and after. Verified locally — `swiftlint --strict` clean, the
 `Playback` host suite, the iOS Simulator build, and the watchOS compile check all green.
 
+## 2026-08-12 (the marketing page gets a face, and an og-image that isn't a guess)
+
+The `site/` one-pager was a competent dark/indigo template. It said the right things but looked
+like every other developer landing page, and it was missing the parts that make a page findable:
+no canonical URL, no `og:image`, no structured data, no `robots.txt`, no sitemap. A social share
+rendered as a bare text link.
+
+The rewrite is a warm, low-sun palette — sand ground, sunset gradient, teal for links — with the
+boldness spent in exactly one place: a sunset panel that keeps its own colours in *both* themes,
+so the accent never washes out on a light ground. Everything else reads from tokens defined three
+times (bare `:root`, `prefers-color-scheme` guarded by `:not([data-theme="light"])`, and an
+explicit `[data-theme="dark"]` stamp), which is what makes an unstamped "system" viewer resolve
+correctly. The recurring structural device is a tuning-dial rule, because the subject is a radio.
+
+**No webfont, deliberately.** The obvious move for a warmer page is a display face from a font
+CDN. A page whose central claim is "this app tracks nothing" should not open a connection to
+Google on load, so the type is built from `ui-rounded` / `ui-sans-serif` / `ui-mono` system
+stacks. The page is still one file with zero subresources, which is also the fastest thing it
+could possibly be.
+
+**The social card is generated, not hand-drawn.** `site/og-image.html` renders to
+`site/og-image.png` with a headless Chromium screenshot at 1200×630, so the card can be
+regenerated after a copy change without a design tool. One trap worth recording: full Chrome
+reserves part of `--window-size` for browser UI and letterboxes the shot — the bottom of the card
+came out clipped and the difference is invisible until you look at the PNG. Chromium's
+`headless_shell` sizes the viewport exactly. The command and the caveat are in a comment at the
+top of the generator.
+
+SEO additions are the ordinary set, and they are ordinary on purpose: canonical, `og:`/`twitter:`
+tags pointing at the generated card, a JSON-LD `@graph` (`WebSite`, `SoftwareApplication`,
+`FAQPage`), `robots.txt`, `sitemap.xml`, one `<h1>`, semantic landmarks, and a skip link. The
+FAQ copy and the JSON-LD `FAQPage` are written from the same answers — if one changes, both have
+to, which is the cost of having them at all.
+
+Content moved toward the free-software story the project actually has: the two-licence split and
+*why* it exists, a three-command build, where to contribute, and credit to Radio-Browser as the
+upstream that makes keyless discovery possible. No App Store link, because there isn't one — the
+primary CTA is the source.
+
 ## 2026-08-12 (the deployment floor drops to iOS 26)
 
 Minimum iOS/iPadOS and watchOS go from 27.0 to **26.0**. iOS 27 is still in beta; requiring it
