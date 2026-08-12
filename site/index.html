@@ -3,354 +3,938 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShoutKit — Native iOS internet radio, privacy-first &amp; open source</title>
-  <meta name="description" content="ShoutKit is a native iOS 26 SwiftUI internet-radio client with a Liquid Glass player, keyless station discovery via Radio-Browser, live ICY metadata, Siri support, and zero tracking. Free and open source." />
-  <meta name="theme-color" content="#0b0d12" />
+  <title>ShoutKit — free, open-source internet radio for iPhone, iPad, Watch &amp; CarPlay</title>
+  <meta name="description" content="ShoutKit is a native SwiftUI internet radio app for iOS 26. Keyless station discovery via Radio-Browser, a Liquid Glass player with live track metadata, Siri, CarPlay and Apple Watch — no ads, no accounts, no tracking. Free and open source." />
+  <link rel="canonical" href="https://cascadiacollections.github.io/shoutkit/" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" content="#FFF3E4" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#150F0C" media="(prefers-color-scheme: dark)" />
 
   <!-- Open Graph / social -->
-  <meta property="og:title" content="ShoutKit — Native iOS internet radio" />
-  <meta property="og:description" content="A privacy-first, open-source internet-radio client for iOS 26. Liquid Glass player, keyless discovery, live track metadata, Siri &amp; Shortcuts." />
+  <meta property="og:site_name" content="ShoutKit" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:title" content="ShoutKit — free, open-source internet radio for iPhone" />
+  <meta property="og:description" content="A native SwiftUI radio app for iOS 26: keyless discovery, live track metadata, Siri, CarPlay and Apple Watch. No ads, no accounts, no tracking." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://cascadiacollections.github.io/shoutkit/" />
+  <meta property="og:image" content="https://cascadiacollections.github.io/shoutkit/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="ShoutKit — every station under the sun. Free and open-source internet radio for iPhone." />
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="ShoutKit — free, open-source internet radio for iPhone" />
+  <meta name="twitter:description" content="A native SwiftUI radio app for iOS 26. No ads, no accounts, no tracking. MIT packages, GPL-3.0 app." />
+  <meta name="twitter:image" content="https://cascadiacollections.github.io/shoutkit/og-image.png" />
 
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%236c8cff'/%3E%3Cg fill='none' stroke='white' stroke-width='7' stroke-linecap='round'%3E%3Cpath d='M50 30v40'/%3E%3Cpath d='M35 38v24'/%3E%3Cpath d='M65 38v24'/%3E%3Cpath d='M22 46v8'/%3E%3Cpath d='M78 46v8'/%3E%3C/g%3E%3C/svg%3E" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23F0532B'/%3E%3Ccircle cx='50' cy='50' r='19' fill='%23FFC24B'/%3E%3Cg fill='none' stroke='%23FFF3E4' stroke-width='6' stroke-linecap='round'%3E%3Cpath d='M50 10v8'/%3E%3Cpath d='M50 82v8'/%3E%3Cpath d='M10 50h8'/%3E%3Cpath d='M82 50h8'/%3E%3Cpath d='M22 22l6 6'/%3E%3Cpath d='M72 72l6 6'/%3E%3Cpath d='M78 22l-6 6'/%3E%3Cpath d='M28 72l-6 6'/%3E%3C/g%3E%3C/svg%3E" />
 
   <style>
+    /* ── Tokens ───────────────────────────────────────────────────────────
+       Light is the base palette; dark redefines only these values, once for
+       the OS preference and once for an explicit theme stamp. Components
+       always read tokens, never raw colours, so both themes stay in sync. */
     :root {
-      --bg: #0b0d12;
-      --bg-soft: #12151d;
-      --card: #161a24;
-      --border: #262c3a;
-      --text: #e8ebf2;
-      --muted: #9aa3b7;
-      --accent: #6c8cff;
-      --accent-2: #a06cff;
-      --radius: 16px;
-      --max: 1080px;
+      --sand:        #FFF3E4;
+      --sand-deep:   #FBE7D0;
+      --surface:     #FFFBF4;
+      --border:      #F0D8BC;
+      --border-firm: #E3C29E;
+      --ink:         #2B1A12;
+      --muted:       #7A6355;
+      --sunset:      #D6431E;
+      --sunset-soft: #F0532B;
+      --amber:       #E08A00;
+      --sea:         #0F6F77;
+      --shadow:      0 1px 2px rgba(74, 38, 18, 0.05), 0 8px 24px -12px rgba(74, 38, 18, 0.22);
+
+      --font-display: ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN",
+                      "Segoe UI Variable Display", system-ui, sans-serif;
+      --font-body:    ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                      Roboto, Helvetica, Arial, sans-serif;
+      --font-mono:    ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas,
+                      "Liberation Mono", monospace;
+
+      --wrap: 1080px;
+      --radius: 18px;
     }
 
-    * { box-sizing: border-box; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --sand:        #150F0C;
+        --sand-deep:   #1A120E;
+        --surface:     #211812;
+        --border:      #382720;
+        --border-firm: #4C352A;
+        --ink:         #F8EADB;
+        --muted:       #B49C89;
+        --sunset:      #FF8155;
+        --sunset-soft: #FF7A4D;
+        --amber:       #FFC24B;
+        --sea:         #5BD3DB;
+        --shadow:      0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --sand:        #150F0C;
+      --sand-deep:   #1A120E;
+      --surface:     #211812;
+      --border:      #382720;
+      --border-firm: #4C352A;
+      --ink:         #F8EADB;
+      --muted:       #B49C89;
+      --sunset:      #FF8155;
+      --sunset-soft: #FF7A4D;
+      --amber:       #FFC24B;
+      --sea:         #5BD3DB;
+      --shadow:      0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+    }
+
+    /* ── Base ─────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; }
 
     html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+    }
 
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
+      background: var(--sand);
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 1rem;
+      line-height: 1.65;
       -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
     }
 
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
+    h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; letter-spacing: -0.02em; }
 
-    .wrap { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
+    a { color: var(--sea); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+    a:hover { text-decoration-color: currentColor; }
 
-    /* Header */
-    header {
+    :focus-visible {
+      outline: 2px solid var(--sunset);
+      outline-offset: 3px;
+      border-radius: 6px;
+    }
+
+    code, kbd { font-family: var(--font-mono); font-size: 0.92em; }
+
+    .wrap { max-width: var(--wrap); margin-inline: auto; padding-inline: 24px; }
+
+    .skip {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      background: var(--surface);
+      color: var(--ink);
+      padding: 12px 18px;
+      border-radius: 0 0 12px 0;
+      z-index: 99;
+    }
+    .skip:focus { left: 0; }
+
+    /* The dial: a ruled frequency scale, the page's recurring structural
+       device. It separates sections the way a tuning scale separates bands. */
+    .dial {
+      height: 22px;
+      background-image:
+        repeating-linear-gradient(to right, var(--border-firm) 0 1px, transparent 1px 14px),
+        repeating-linear-gradient(to right, var(--border-firm) 0 1px, transparent 1px 70px);
+      background-size: 100% 8px, 100% 15px;
+      background-position: left bottom, left bottom;
+      background-repeat: repeat-x;
+      opacity: 0.75;
+    }
+
+    .kicker {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    /* ── Header ───────────────────────────────────────────────────────── */
+    .site-header {
       position: sticky;
       top: 0;
-      z-index: 10;
-      background: rgba(11, 13, 18, 0.72);
-      backdrop-filter: saturate(180%) blur(16px);
-      -webkit-backdrop-filter: saturate(180%) blur(16px);
+      z-index: 20;
+      background: color-mix(in srgb, var(--sand) 82%, transparent);
+      backdrop-filter: saturate(160%) blur(14px);
+      -webkit-backdrop-filter: saturate(160%) blur(14px);
       border-bottom: 1px solid var(--border);
     }
     .nav {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      height: 62px;
+      gap: 16px;
+      min-height: 64px;
     }
-    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.15rem; color: var(--text); }
-    .brand:hover { text-decoration: none; }
-    .logo { width: 30px; height: 30px; border-radius: 8px; display: block; }
-    .nav-links { display: flex; gap: 24px; align-items: center; }
-    .nav-links a { color: var(--muted); font-size: 0.95rem; font-weight: 500; }
-    .nav-links a:hover { color: var(--text); text-decoration: none; }
-    @media (max-width: 640px) { .nav-links a.hide-sm { display: none; } }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.18rem;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .brand svg { width: 30px; height: 30px; display: block; border-radius: 9px; }
+    .nav-links { display: flex; align-items: center; gap: 22px; }
+    .nav-links a {
+      color: var(--muted);
+      font-size: 0.94rem;
+      font-weight: 550;
+      text-decoration: none;
+    }
+    .nav-links a:hover { color: var(--ink); }
+    .nav-links a.nav-cta {
+      color: var(--ink);
+      border: 1px solid var(--border-firm);
+      background: var(--surface);
+      border-radius: 999px;
+      padding: 7px 15px;
+    }
+    @media (max-width: 680px) { .nav-links .opt { display: none; } }
 
-    /* Hero */
-    .hero {
+    /* ── Hero ─────────────────────────────────────────────────────────
+       The one place the page raises its voice: a sunset panel that keeps
+       its own colours in both themes, so the accent never washes out. */
+    .hero { padding: 40px 0 0; }
+    .sunset {
       position: relative;
       overflow: hidden;
-      padding: 96px 0 72px;
-      text-align: center;
+      border-radius: 28px;
+      padding: clamp(44px, 7vw, 84px) clamp(24px, 5vw, 64px) clamp(52px, 7vw, 76px);
+      color: #FFF6EA;
       background:
-        radial-gradient(60% 60% at 50% 0%, rgba(108, 140, 255, 0.18), transparent 70%),
-        radial-gradient(40% 50% at 85% 20%, rgba(160, 108, 255, 0.14), transparent 70%);
+        radial-gradient(120% 90% at 50% 118%, #FFD37A 0%, #FF9A3C 26%, #F0532B 52%, #A32856 78%, #4A1B4E 100%);
+      box-shadow: var(--shadow);
+      isolation: isolate;
     }
+    /* Low sun: a soft disc sitting on the horizon line of the panel. */
+    .sunset::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: -190px;
+      width: 420px;
+      height: 420px;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 244, 214, 0.92) 0%, rgba(255, 214, 130, 0.5) 45%, transparent 70%);
+      z-index: -1;
+    }
+    .sunset > * { position: relative; }
+
     .eyebrow {
-      display: inline-block;
-      font-size: 0.8rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--accent);
-      font-weight: 600;
-      border: 1px solid var(--border);
-      background: var(--bg-soft);
-      padding: 6px 14px;
-      border-radius: 999px;
-      margin-bottom: 24px;
-    }
-    .hero h1 {
-      font-size: clamp(2.2rem, 6vw, 3.6rem);
-      line-height: 1.08;
-      margin: 0 0 18px;
-      letter-spacing: -0.02em;
-      background: linear-gradient(180deg, #ffffff, #b9c2da);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
-    .hero p.lead {
-      font-size: clamp(1.05rem, 2.5vw, 1.3rem);
-      color: var(--muted);
-      max-width: 680px;
-      margin: 0 auto 32px;
-    }
-    .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-    .btn {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 13px 24px;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 1rem;
-      border: 1px solid transparent;
-      transition: transform 0.12s ease, background 0.2s ease;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      background: rgba(30, 8, 20, 0.28);
+      border: 1px solid rgba(255, 246, 234, 0.28);
+      padding: 6px 14px;
+      border-radius: 999px;
+      margin: 0 0 22px;
     }
-    .btn:hover { text-decoration: none; transform: translateY(-1px); }
-    .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; }
-    .btn-secondary { background: var(--card); color: var(--text); border-color: var(--border); }
+    .hero h1 {
+      font-size: clamp(2.5rem, 7.2vw, 4.4rem);
+      line-height: 1.02;
+      font-weight: 800;
+      margin: 0 0 20px;
+      max-width: 15ch;
+      text-shadow: 0 2px 20px rgba(74, 27, 78, 0.35);
+    }
+    /* Below the fold width the 15ch measure strands single words, so let the
+       headline use the full column instead. */
+    @media (max-width: 700px) {
+      .hero h1 { max-width: none; text-wrap: pretty; }
+    }
+    .lead {
+      font-size: clamp(1.06rem, 2.2vw, 1.28rem);
+      max-width: 60ch;
+      margin: 0 0 32px;
+      color: rgba(255, 246, 234, 0.94);
+    }
+    .lead strong { color: #FFF6EA; font-weight: 650; }
 
-    /* Sections */
-    section { padding: 72px 0; }
-    .section-head { text-align: center; max-width: 640px; margin: 0 auto 48px; }
-    .section-head h2 { font-size: clamp(1.7rem, 4vw, 2.3rem); margin: 0 0 12px; letter-spacing: -0.02em; }
-    .section-head p { color: var(--muted); margin: 0; font-size: 1.05rem; }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 13px 22px;
+      border-radius: 999px;
+      font-weight: 650;
+      font-size: 1rem;
+      text-decoration: none;
+      border: 1px solid transparent;
+      transition: transform 0.14s ease, background-color 0.2s ease, border-color 0.2s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary { background: #FFF6EA; color: #7A1F0E; }
+    .btn-primary:hover { background: #fff; }
+    .btn-ghost {
+      background: rgba(30, 8, 20, 0.22);
+      color: #FFF6EA;
+      border-color: rgba(255, 246, 234, 0.4);
+    }
+    .btn-ghost:hover { background: rgba(30, 8, 20, 0.34); }
 
-    /* Feature grid */
+    /* Equalizer: five bars that drift like a signal meter. */
+    .meter { display: inline-flex; align-items: flex-end; gap: 3px; height: 15px; }
+    .meter span {
+      width: 3px;
+      background: currentColor;
+      border-radius: 2px;
+      animation: bounce 1.5s ease-in-out infinite;
+    }
+    .meter span:nth-child(1) { height: 40%; animation-delay: -0.9s; }
+    .meter span:nth-child(2) { height: 85%; animation-delay: -0.4s; }
+    .meter span:nth-child(3) { height: 60%; animation-delay: -1.2s; }
+    .meter span:nth-child(4) { height: 100%; animation-delay: -0.7s; }
+    .meter span:nth-child(5) { height: 50%; animation-delay: -0.2s; }
+    @keyframes bounce {
+      0%, 100% { transform: scaleY(0.45); }
+      50%      { transform: scaleY(1); }
+    }
+
+    /* ── Ticker of guarantees ─────────────────────────────────────────── */
+    .facts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 28px;
+      justify-content: center;
+      padding: 26px 0;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .facts span { display: inline-flex; align-items: center; gap: 9px; }
+    .facts span::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--amber);
+    }
+
+    /* ── Sections ─────────────────────────────────────────────────────── */
+    section { padding: 76px 0; }
+    section.band { background: var(--sand-deep); border-block: 1px solid var(--border); }
+
+    .section-head { max-width: 62ch; margin: 0 0 40px; }
+    .section-head.mid { margin-inline: auto; text-align: center; }
+    .section-head h2 {
+      font-size: clamp(1.75rem, 3.8vw, 2.5rem);
+      margin: 10px 0 12px;
+      font-weight: 800;
+    }
+    .section-head p { color: var(--muted); margin: 0; font-size: 1.06rem; }
+
+    /* ── Feature groups ───────────────────────────────────────────────── */
+    .group { margin-bottom: 44px; }
+    .group:last-child { margin-bottom: 0; }
+    .group-label {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .group-label h3 {
+      font-size: 1rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--sunset);
+      margin: 0;
+      white-space: nowrap;
+    }
+    .group-label .rule { flex: 1; height: 1px; background: var(--border-firm); }
+
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(auto-fit, minmax(266px, 1fr));
+      gap: 18px;
     }
     .card {
-      background: var(--card);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+    .card:hover { border-color: var(--border-firm); transform: translateY(-2px); }
+    .card .tag {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .card h4 { font-family: var(--font-display); font-size: 1.14rem; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+    .card p { margin: 0; color: var(--muted); font-size: 0.97rem; }
+    .card code { color: var(--sunset); background: color-mix(in srgb, var(--sunset) 10%, transparent); padding: 1px 5px; border-radius: 5px; }
+
+    /* ── Privacy ──────────────────────────────────────────────────────── */
+    .checks { display: grid; gap: 12px; max-width: 760px; margin-inline: auto; list-style: none; padding: 0; }
+    .checks li {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 20px;
+    }
+    .checks svg { flex: 0 0 auto; width: 20px; height: 20px; margin-top: 3px; color: var(--sea); }
+    .checks strong { font-weight: 650; }
+    .checks p { margin: 2px 0 0; color: var(--muted); font-size: 0.97rem; }
+
+    /* ── Source / licence ─────────────────────────────────────────────── */
+    .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 22px; }
+    .panel {
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 26px;
-      transition: border-color 0.2s ease, transform 0.2s ease;
     }
-    .card:hover { border-color: #3a4258; transform: translateY(-2px); }
-    .card .icon {
-      width: 44px; height: 44px;
-      display: grid; place-items: center;
+    .panel h3 { font-size: 1.2rem; margin: 0 0 10px; font-weight: 700; }
+    .panel p { color: var(--muted); margin: 0 0 14px; font-size: 0.97rem; }
+    .panel p:last-child, .panel ul:last-child { margin-bottom: 0; }
+    .licences { display: grid; gap: 10px; list-style: none; margin: 0 0 16px; padding: 0; }
+    .licences li {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 4px 12px;
+      align-items: baseline;
+      border-bottom: 1px dashed var(--border-firm);
+      padding-bottom: 10px;
+    }
+    .licences li:last-child { border-bottom: 0; padding-bottom: 0; }
+    .licences .spdx {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--sunset);
+      border: 1px solid color-mix(in srgb, var(--sunset) 40%, transparent);
+      background: color-mix(in srgb, var(--sunset) 9%, transparent);
+      border-radius: 6px;
+      padding: 2px 8px;
+      white-space: nowrap;
+    }
+    .licences .what { color: var(--muted); font-size: 0.95rem; }
+
+    pre {
+      margin: 0;
+      background: color-mix(in srgb, var(--ink) 6%, var(--sand));
+      border: 1px solid var(--border);
       border-radius: 12px;
-      background: rgba(108, 140, 255, 0.12);
-      margin-bottom: 16px;
-      font-size: 1.4rem;
+      padding: 16px 18px;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      line-height: 1.8;
+      color: var(--ink);
     }
-    .card h3 { margin: 0 0 8px; font-size: 1.15rem; }
-    .card p { margin: 0; color: var(--muted); font-size: 0.96rem; }
+    pre .c { color: var(--muted); }
 
-    /* Alt background band */
-    .band { background: var(--bg-soft); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .linklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+    .linklist a { font-weight: 550; text-decoration: none; }
+    .linklist a:hover { text-decoration: underline; }
+    .linklist span { color: var(--muted); font-size: 0.93rem; }
 
-    /* Privacy list */
-    .privacy-list { max-width: 720px; margin: 0 auto; display: grid; gap: 14px; }
-    .privacy-item {
-      display: flex; gap: 14px; align-items: flex-start;
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 12px; padding: 18px 20px;
+    /* ── Spec strip ───────────────────────────────────────────────────── */
+    .specs {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
     }
-    .privacy-item .check { color: #4ade80; font-weight: 700; flex-shrink: 0; }
-    .privacy-item strong { color: var(--text); }
-    .privacy-item span.desc { color: var(--muted); }
-
-    /* Code / requirements */
-    .req-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; max-width: 760px; margin: 0 auto; }
-    .req {
-      text-align: center; background: var(--card); border: 1px solid var(--border);
-      border-radius: 12px; padding: 24px 16px;
+    .specs div { background: var(--surface); padding: 22px 18px; text-align: center; }
+    .specs dt { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+    .specs dd {
+      margin: 6px 0 0;
+      font-family: var(--font-display);
+      font-size: 1.32rem;
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.01em;
     }
-    .req .big { font-size: 1.5rem; font-weight: 700; color: var(--text); }
-    .req .small { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
 
-    /* Footer */
-    footer { border-top: 1px solid var(--border); padding: 48px 0; color: var(--muted); font-size: 0.9rem; }
-    .footer-inner { display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center; }
-    .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
-    .footer-links a { color: var(--muted); }
-    .footer-links a:hover { color: var(--text); }
-    .footnote { margin-top: 20px; font-size: 0.82rem; color: #6b7488; max-width: 720px; }
+    /* ── FAQ ──────────────────────────────────────────────────────────── */
+    .faq { max-width: 760px; margin-inline: auto; display: grid; gap: 10px; }
+    details {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 4px 20px;
+    }
+    details[open] { border-color: var(--border-firm); }
+    summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 15px 28px 15px 0;
+      font-weight: 650;
+      font-size: 1.02rem;
+      position: relative;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::after {
+      content: "+";
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      font-family: var(--font-mono);
+      font-size: 1.25rem;
+      color: var(--sunset);
+    }
+    details[open] summary::after { content: "–"; }
+    details p { margin: 0 0 16px; color: var(--muted); font-size: 0.98rem; }
+
+    /* ── Footer ───────────────────────────────────────────────────────── */
+    footer { border-top: 1px solid var(--border); padding: 44px 0 56px; color: var(--muted); font-size: 0.92rem; }
+    .footer-inner { display: flex; flex-wrap: wrap; gap: 16px 28px; justify-content: space-between; align-items: center; }
+    .footer-links { display: flex; flex-wrap: wrap; gap: 20px; }
+    .footer-links a { color: var(--muted); text-decoration: none; }
+    .footer-links a:hover { color: var(--ink); text-decoration: underline; }
+    .footnote { margin: 22px 0 0; font-size: 0.84rem; max-width: 74ch; }
   </style>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://cascadiacollections.github.io/shoutkit/#website",
+        "url": "https://cascadiacollections.github.io/shoutkit/",
+        "name": "ShoutKit",
+        "description": "Free, open-source internet radio for iPhone, iPad, Apple Watch and CarPlay.",
+        "inLanguage": "en-US"
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://cascadiacollections.github.io/shoutkit/#app",
+        "name": "ShoutKit",
+        "applicationCategory": "MultimediaApplication",
+        "applicationSubCategory": "Internet radio player",
+        "operatingSystem": "iOS 26.0 or later, iPadOS 26.0 or later, watchOS 26.0 or later",
+        "url": "https://cascadiacollections.github.io/shoutkit/",
+        "downloadUrl": "https://github.com/cascadiacollections/shoutkit",
+        "image": "https://cascadiacollections.github.io/shoutkit/og-image.png",
+        "description": "A native SwiftUI internet radio client with keyless station discovery via Radio-Browser, a Liquid Glass player with live ICY track metadata, Siri and Shortcuts, CarPlay, and an Apple Watch app. No ads, no accounts, no tracking.",
+        "isAccessibleForFree": true,
+        "license": "https://github.com/cascadiacollections/shoutkit/blob/main/LICENSE",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "author": { "@type": "Organization", "name": "Cascadia Collections", "url": "https://github.com/cascadiacollections" }
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://cascadiacollections.github.io/shoutkit/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Does ShoutKit cost anything?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. ShoutKit is free software with no paywalls, no subscriptions and no in-app purchases. Every feature works whether or not you support the project." }
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need an API key or an account?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. Station discovery works out of the box through the Radio-Browser community directory, which needs no key. There is no ShoutKit account to create — favorites and recents are stored locally on your device." }
+          },
+          {
+            "@type": "Question",
+            "name": "What data does ShoutKit collect?",
+            "acceptedAnswer": { "@type": "Answer", "text": "None. The privacy manifest declares no collected data types and no tracking. Network traffic is limited to public directory queries, the station streams you play, and the anonymous play reports the community directory uses to rank station popularity." }
+          },
+          {
+            "@type": "Question",
+            "name": "Which devices does ShoutKit run on?",
+            "acceptedAnswer": { "@type": "Answer", "text": "iPhone and iPad on iOS or iPadOS 26 and later, Apple Watch on watchOS 26 and later, plus CarPlay and a Home Screen widget." }
+          },
+          {
+            "@type": "Question",
+            "name": "How is ShoutKit licensed?",
+            "acceptedAnswer": { "@type": "Answer", "text": "The app is GPL-3.0. The reusable infrastructure packages are MIT-licensed so they can be adopted in any project, including closed-source ones." }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I build ShoutKit myself?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. Clone the repository, open ShoutKit.xcworkspace in Xcode 27, and build the ShoutKit scheme. No API keys or secrets are needed for the default configuration." }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
-  <header>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
     <div class="wrap nav">
       <a class="brand" href="#top">
-        <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect width="100" height="100" rx="22" fill="#6c8cff"/>
-          <g fill="none" stroke="white" stroke-width="7" stroke-linecap="round">
-            <path d="M50 30v40"/><path d="M35 38v24"/><path d="M65 38v24"/>
-            <path d="M22 46v8"/><path d="M78 46v8"/>
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+          <rect width="100" height="100" rx="22" fill="#F0532B" />
+          <circle cx="50" cy="50" r="19" fill="#FFC24B" />
+          <g fill="none" stroke="#FFF3E4" stroke-width="6" stroke-linecap="round">
+            <path d="M50 10v8" /><path d="M50 82v8" /><path d="M10 50h8" /><path d="M82 50h8" />
+            <path d="M22 22l6 6" /><path d="M72 72l6 6" /><path d="M78 22l-6 6" /><path d="M28 72l-6 6" />
           </g>
         </svg>
         ShoutKit
       </a>
-      <nav class="nav-links">
-        <a href="#features" class="hide-sm">Features</a>
-        <a href="#privacy" class="hide-sm">Privacy</a>
-        <a href="https://github.com/cascadiacollections/shoutkit">GitHub</a>
+      <nav class="nav-links" aria-label="Primary">
+        <a class="opt" href="#features">Features</a>
+        <a class="opt" href="#privacy">Privacy</a>
+        <a class="opt" href="#source">Source</a>
+        <a class="opt" href="#faq">FAQ</a>
+        <a class="nav-cta" href="https://github.com/cascadiacollections/shoutkit">GitHub</a>
       </nav>
     </div>
   </header>
 
-  <main id="top">
-    <!-- Hero -->
-    <div class="hero">
+  <main id="main">
+    <div id="top" class="hero">
       <div class="wrap">
-        <span class="eyebrow">Open source · iOS 26 · SwiftUI</span>
-        <h1>Internet radio,<br />done natively.</h1>
-        <p class="lead">
-          ShoutKit is a native iOS internet-radio client with an Apple Music–style Liquid Glass
-          player, keyless station discovery, and live track metadata — with zero tracking and
-          zero accounts.
-        </p>
-        <div class="cta-row">
-          <a class="btn btn-primary" href="https://github.com/cascadiacollections/shoutkit">
-            View on GitHub
-          </a>
-          <a class="btn btn-secondary" href="#features">Explore features</a>
+        <div class="sunset">
+          <p class="eyebrow">
+            <span class="meter" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></span>
+            Open source · iOS 26 · SwiftUI
+          </p>
+          <h1>Every station under the sun.</h1>
+          <p class="lead">
+            ShoutKit is a <strong>native internet radio app</strong> for iPhone, iPad, Apple Watch and
+            CarPlay. Thousands of live stations, a Liquid Glass player that shows the track that's
+            playing right now, and Siri to start it — <strong>no ads, no accounts, no tracking,
+            no API keys</strong>. Free and open source, forever.
+          </p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="https://github.com/cascadiacollections/shoutkit">
+              Get the source
+            </a>
+            <a class="btn btn-ghost" href="#features">See what it does</a>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Features -->
+    <div class="wrap">
+      <p class="facts">
+        <span>No ads</span>
+        <span>No accounts</span>
+        <span>No analytics</span>
+        <span>No paywalls</span>
+        <span>MIT + GPL-3.0</span>
+      </p>
+    </div>
+    <div class="dial" aria-hidden="true"></div>
+
     <section id="features">
       <div class="wrap">
         <div class="section-head">
-          <h2>Everything you'd expect, natively built</h2>
-          <p>A modern SwiftUI app that feels at home on iOS — not a web wrapper.</p>
+          <p class="kicker">What it does</p>
+          <h2>Built the way an Apple app should be.</h2>
+          <p>
+            Pure SwiftUI, Swift 6, and the system frameworks — not a web view in a jacket.
+            Everything below ships in the app today.
+          </p>
         </div>
-        <div class="grid">
-          <div class="card">
-            <div class="icon">🎛️</div>
-            <h3>Liquid Glass player</h3>
-            <p>A persistent mini-player docked above the tab bar, plus a full-screen Now Playing surface with live ICY track metadata.</p>
+
+        <div class="group">
+          <div class="group-label">
+            <h3>The player</h3>
+            <span class="rule" aria-hidden="true"></span>
           </div>
-          <div class="card">
-            <div class="icon">🌐</div>
-            <h3>Keyless discovery</h3>
-            <p>Real station discovery out of the box via Radio-Browser's community directory — search, genres, and popular stations with no API key.</p>
+          <div class="grid">
+            <article class="card">
+              <p class="tag">Now Playing</p>
+              <h4>A Liquid Glass player</h4>
+              <p>A mini-player docked above the tab bar follows you everywhere, and expands into a full-screen Now Playing surface with live ICY track metadata.</p>
+            </article>
+            <article class="card">
+              <p class="tag">Artwork</p>
+              <h4>Album art, resolved live</h4>
+              <p>Now Playing looks up artwork for the track on air and links straight to the matching song in Apple Music. On by default; one Settings toggle turns it off.</p>
+            </article>
+            <article class="card">
+              <p class="tag">Sound</p>
+              <h4>Equalizer &amp; sleep timer</h4>
+              <p>Preset EQ curves to colour the sound how you like it, and a sleep timer that pauses rather than stops — so resuming in the morning is one tap.</p>
+            </article>
           </div>
-          <div class="card">
-            <div class="icon">🔒</div>
-            <h3>Lock screen &amp; Control Center</h3>
-            <p>Full remote controls and now-playing info on the lock screen and in Control Center, with a Dynamic Island Live Activity.</p>
+        </div>
+
+        <div class="group">
+          <div class="group-label">
+            <h3>The directory</h3>
+            <span class="rule" aria-hidden="true"></span>
           </div>
-          <div class="card">
-            <div class="icon">🗣️</div>
-            <h3>Siri, Shortcuts &amp; Spotlight</h3>
-            <p>"Play KEXP on ShoutKit." App Intents power headless background playback — no app foregrounding required — and favorited or recently-played stations are indexed in Spotlight for semantic search.</p>
+          <div class="grid">
+            <article class="card">
+              <p class="tag">Discovery</p>
+              <h4>Keyless, from first launch</h4>
+              <p>Real stations out of the box via the Radio-Browser community directory — search, genres and popular stations, with no API key to register for.</p>
+            </article>
+            <article class="card">
+              <p class="tag">Offline</p>
+              <h4>Stations without the wait</h4>
+              <p>Discovery results are cached on device, so a launch paints stations immediately instead of a spinner — and keeps showing them when the network drops.</p>
+            </article>
+            <article class="card">
+              <p class="tag">Library</p>
+              <h4>Favorites &amp; recents</h4>
+              <p>Backed by SwiftData and stored locally. Drag favorites into any order you like; recents remember where you left off.</p>
+            </article>
           </div>
-          <div class="card">
-            <div class="icon">⭐</div>
-            <h3>Favorites &amp; recents</h3>
-            <p>Your favorites and listening history are backed by SwiftData and stored locally on your device. Drag to reorder favorites into any arrangement you like.</p>
+        </div>
+
+        <div class="group">
+          <div class="group-label">
+            <h3>Everywhere you listen</h3>
+            <span class="rule" aria-hidden="true"></span>
           </div>
-          <div class="card">
-            <div class="icon">🎵</div>
-            <h3>Album art &amp; Apple Music</h3>
-            <p>Now Playing resolves album artwork from ICY track metadata and links straight to the matching song in Apple Music — on by default, one Settings toggle turns it off.</p>
-          </div>
-          <div class="card">
-            <div class="icon">📱</div>
-            <h3>Built for iPad</h3>
-            <p>An adaptive sidebar and multi-column station grids make ShoutKit feel native in full-screen iPad, Split View, and Stage Manager — not a stretched-out iPhone layout.</p>
-          </div>
-          <div class="card">
-            <div class="icon">🚗</div>
-            <h3>CarPlay</h3>
-            <p>Your favorites and recent stations on the car's screen, with the system now-playing controls — driven by the same playback engine as the phone, so what's playing stays in sync.</p>
-          </div>
-          <div class="card">
-            <div class="icon">⌚️</div>
-            <h3>Apple Watch</h3>
-            <p>A native watch app for now playing and recent stations, plus a one-tap "Play Last" complication that starts your last station straight from the watch face.</p>
-          </div>
-          <div class="card">
-            <div class="icon">🎛️</div>
-            <h3>Equalizer &amp; sleep timer</h3>
-            <p>Preset EQ curves to colour the sound how you like it, and a sleep timer that pauses rather than stops — so resuming in the morning is one tap.</p>
-          </div>
-          <div class="card">
-            <div class="icon">🔗</div>
-            <h3>Deep links &amp; widgets</h3>
-            <p>A Home Screen widget plays a chosen favorite in one tap, and <code>shoutkit://station?…</code> deep links open the app straight to a station.</p>
+          <div class="grid">
+            <article class="card">
+              <p class="tag">Siri · Shortcuts · Spotlight</p>
+              <h4>“Play KEXP on ShoutKit”</h4>
+              <p>App Intents start playback in the background without foregrounding the app, and your favorites and recents are indexed in Spotlight.</p>
+            </article>
+            <article class="card">
+              <p class="tag">Lock Screen</p>
+              <h4>Controls where you expect them</h4>
+              <p>Full remote controls and now-playing info on the Lock Screen and in Control Center, plus a Dynamic Island Live Activity.</p>
+            </article>
+            <article class="card">
+              <p class="tag">CarPlay</p>
+              <h4>Favorites on the dashboard</h4>
+              <p>Your favorites and recent stations on the car's screen, driven by the same playback engine as the phone — so what's playing stays in sync.</p>
+            </article>
+            <article class="card">
+              <p class="tag">Apple Watch</p>
+              <h4>A real watch app</h4>
+              <p>Native now-playing and recent stations on the wrist, with a one-tap “Play Last” complication that starts your last station from the watch face.</p>
+            </article>
+            <article class="card">
+              <p class="tag">iPad</p>
+              <h4>Not a stretched iPhone</h4>
+              <p>An adaptive sidebar and multi-column station grids that hold up in full screen, Split View and Stage Manager.</p>
+            </article>
+            <article class="card">
+              <p class="tag">Home Screen</p>
+              <h4>Widgets &amp; deep links</h4>
+              <p>A widget plays a chosen favorite in one tap, and <code>shoutkit://station?…</code> links open the app straight to a station.</p>
+            </article>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Privacy -->
     <section id="privacy" class="band">
       <div class="wrap">
-        <div class="section-head">
-          <h2>Private by design</h2>
-          <p>ShoutKit collects nothing and tracks nothing. No analytics, no ads, no accounts.</p>
+        <div class="section-head mid">
+          <p class="kicker">Privacy</p>
+          <h2>It collects nothing. Really nothing.</h2>
+          <p>Not a compromise between free and funded — there is no business model here to feed.</p>
         </div>
-        <div class="privacy-list">
-          <div class="privacy-item">
-            <span class="check">✓</span>
-            <div><strong>Zero data collection.</strong> <span class="desc">The privacy manifest declares no collected data types and no tracking.</span></div>
-          </div>
-          <div class="privacy-item">
-            <span class="check">✓</span>
-            <div><strong>No paywalls.</strong> <span class="desc">Everything works whether or not you support the project.</span></div>
-          </div>
-          <div class="privacy-item">
-            <span class="check">✓</span>
-            <div><strong>Local storage only.</strong> <span class="desc">Favorites and recents live in a local SwiftData store — never uploaded.</span></div>
-          </div>
-          <div class="privacy-item">
-            <span class="check">✓</span>
-            <div><strong>Minimal network traffic.</strong> <span class="desc">Only public directory queries, station streams, and anonymous play reports the community directory uses to rank popularity.</span></div>
-          </div>
-        </div>
+        <ul class="checks">
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+            <div>
+              <strong>Zero data collection.</strong>
+              <p>The App Store privacy manifest declares no collected data types and no tracking domains.</p>
+            </div>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+            <div>
+              <strong>Nothing leaves the device.</strong>
+              <p>Favorites and recents live in a local SwiftData store. There is no sync service, because there is no server.</p>
+            </div>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+            <div>
+              <strong>Minimal network traffic.</strong>
+              <p>Public directory queries, the station streams you choose, and the anonymous play reports the community directory uses to rank popularity. That's the list.</p>
+            </div>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+            <div>
+              <strong>This page, too.</strong>
+              <p>No fonts from a CDN, no analytics script, no cookies — one HTML file and nothing else. You can read all of it.</p>
+            </div>
+          </li>
+        </ul>
       </div>
     </section>
 
-    <!-- Built with -->
-    <section id="built">
+    <section id="source">
       <div class="wrap">
         <div class="section-head">
-          <h2>Built on modern Apple foundations</h2>
-          <p>Swift 6 strict concurrency, a clean package architecture, and current SDKs.</p>
+          <p class="kicker">Free software</p>
+          <h2>Yours to read, build and fork.</h2>
+          <p>
+            The app is copyleft so it stays free for everyone who gets it. The infrastructure
+            underneath is permissive, so you can lift it into your own project.
+          </p>
         </div>
-        <div class="req-grid">
-          <div class="req"><div class="big">iOS 26+</div><div class="small">Deployment target</div></div>
-          <div class="req"><div class="big">SwiftUI</div><div class="small">Observation &amp; SwiftData</div></div>
-          <div class="req"><div class="big">Swift 6</div><div class="small">Strict concurrency</div></div>
-          <div class="req"><div class="big">MIT + GPL</div><div class="small">Open source</div></div>
+        <div class="split">
+          <div class="panel">
+            <h3>Two licences, on purpose</h3>
+            <ul class="licences">
+              <li>
+                <span class="spdx">GPL-3.0</span>
+                <span class="what">The ShoutKit app — improvements stay free.</span>
+              </li>
+              <li>
+                <span class="spdx">MIT</span>
+                <span class="what">The reusable packages: playback, directory, design system. Adopt them anywhere, including in closed source.</span>
+              </li>
+            </ul>
+            <p>
+              Reusable packages deliberately take no app-specific or heavyweight dependencies, so
+              dropping one into your project doesn't drag ShoutKit along with it.
+            </p>
+            <p>
+              <a href="https://github.com/cascadiacollections/shoutkit/blob/main/LICENSE">Read the licence</a> ·
+              <a href="https://github.com/cascadiacollections/shoutkit/blob/main/THIRD_PARTY_LICENSES.md">Third-party notices</a>
+            </p>
+          </div>
+
+          <div class="panel">
+            <h3>Build it in three commands</h3>
+            <p>No keys, no secrets, no service to sign up for. Xcode 27 and a Mac.</p>
+<pre><code>git clone https://github.com/cascadiacollections/shoutkit.git
+cd shoutkit
+open ShoutKit.xcworkspace <span class="c"># then ⌘R</span></code></pre>
+            <p style="margin-top:14px;">
+              Prefer the terminal? <code>swift test --disable-xctest</code> runs the package suites
+              on a Mac host without booting a simulator.
+            </p>
+          </div>
+
+          <div class="panel">
+            <h3>Come help</h3>
+            <p>Issues, docs, translations, station fixes — all welcome, no CLA to sign.</p>
+            <ul class="linklist">
+              <li><a href="https://github.com/cascadiacollections/shoutkit/issues">Open issues</a><br /><span>Pick something up, or tell us what's broken.</span></li>
+              <li><a href="https://github.com/cascadiacollections/shoutkit/blob/main/CONTRIBUTING.md">Contributing guide</a><br /><span>How to build, test, localize and sign off.</span></li>
+              <li><a href="https://github.com/cascadiacollections/shoutkit/blob/main/DECISIONS.md">Decision log</a><br /><span>Why the code is the way it is, newest first.</span></li>
+              <li><a href="https://github.com/cascadiacollections/shoutkit/blob/main/SECURITY.md">Security policy</a><br /><span>How to report something quietly.</span></li>
+            </ul>
+          </div>
+
+          <div class="panel">
+            <h3>Standing on free software</h3>
+            <p>
+              Station data comes from <a href="https://www.radio-browser.info">Radio-Browser</a>, a
+              free community directory with an open API and no key requirement. ShoutKit sends a
+              descriptive User-Agent and reports plays back so the directory's popularity ranking
+              keeps working — the same etiquette any good client follows.
+            </p>
+            <p>
+              If you like the app, the directory is the part worth supporting too.
+            </p>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Open source CTA -->
     <section class="band">
-      <div class="wrap section-head" style="margin-bottom:0;">
-        <h2>Free software, built in the open</h2>
-        <p>The reusable infrastructure packages are MIT-licensed so they can be adopted anywhere;
-          the app itself is GPL-3.0. Contributions welcome.</p>
-        <div class="cta-row" style="margin-top:28px;">
-          <a class="btn btn-primary" href="https://github.com/cascadiacollections/shoutkit">Star on GitHub</a>
-          <a class="btn btn-secondary" href="https://github.com/cascadiacollections/shoutkit/blob/main/CONTRIBUTING.md">Contributing guide</a>
+      <div class="wrap">
+        <div class="section-head mid">
+          <p class="kicker">Under the hood</p>
+          <h2>Modern Apple foundations, no shortcuts.</h2>
+        </div>
+        <dl class="specs">
+          <div><dt>Deployment target</dt><dd>iOS 26+</dd></div>
+          <div><dt>Interface</dt><dd>SwiftUI</dd></div>
+          <div><dt>Concurrency</dt><dd>Swift 6</dd></div>
+          <div><dt>Storage</dt><dd>SwiftData</dd></div>
+          <div><dt>Licensing</dt><dd>MIT + GPL</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section id="faq">
+      <div class="wrap">
+        <div class="section-head mid">
+          <p class="kicker">Questions</p>
+          <h2>The things people ask first.</h2>
+        </div>
+        <div class="faq">
+          <details>
+            <summary>Does ShoutKit cost anything?</summary>
+            <p>No. It's free software with no paywalls, no subscriptions and no in-app purchases. Every feature works whether or not you support the project.</p>
+          </details>
+          <details>
+            <summary>Do I need an API key or an account?</summary>
+            <p>Neither. Discovery works from first launch through the Radio-Browser community directory, which needs no key, and there's no ShoutKit account to create — your favorites and recents are stored on your device.</p>
+          </details>
+          <details>
+            <summary>What data does it collect?</summary>
+            <p>None. The privacy manifest declares no collected data types and no tracking. Network traffic is limited to public directory queries, the station streams you play, and the anonymous play reports the directory uses to rank popularity.</p>
+          </details>
+          <details>
+            <summary>Which devices does it run on?</summary>
+            <p>iPhone and iPad on iOS or iPadOS 26 and later, and Apple Watch on watchOS 26 and later — plus CarPlay, a Home Screen widget, and a watch face complication.</p>
+          </details>
+          <details>
+            <summary>Can I add a station that isn't listed?</summary>
+            <p>Stations come from the Radio-Browser community directory, so anything added there shows up in ShoutKit — the directory is editable by anyone. A handful of curated stations are bundled so the app is never empty.</p>
+          </details>
+          <details>
+            <summary>Can I build it myself?</summary>
+            <p>Yes, and it's the intended way to get it today. Clone the repository, open <code>ShoutKit.xcworkspace</code> in Xcode 27, and run the ShoutKit scheme — the default configuration needs no secrets.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <div class="dial" aria-hidden="true"></div>
+    <section>
+      <div class="wrap">
+        <div class="sunset" style="text-align:center;">
+          <h2 style="font-size:clamp(1.8rem,4.4vw,2.7rem);font-weight:800;margin:0 0 14px;">
+            Find a station you'd never have found.
+          </h2>
+          <p class="lead" style="margin-inline:auto;">
+            Clone it, build it, break it, send a patch. It's yours as much as anyone's.
+          </p>
+          <div class="cta-row" style="justify-content:center;">
+            <a class="btn btn-primary" href="https://github.com/cascadiacollections/shoutkit">Star on GitHub</a>
+            <a class="btn btn-ghost" href="https://github.com/cascadiacollections/shoutkit/blob/main/CONTRIBUTING.md">Contributing guide</a>
+          </div>
         </div>
       </div>
     </section>
@@ -359,17 +943,18 @@
   <footer>
     <div class="wrap">
       <div class="footer-inner">
-        <div>© <span id="year">2026</span> Cascadia Collections · ShoutKit</div>
-        <div class="footer-links">
+        <p style="margin:0;">© <span id="year">2026</span> Cascadia Collections · ShoutKit</p>
+        <nav class="footer-links" aria-label="Footer">
           <a href="https://github.com/cascadiacollections/shoutkit">GitHub</a>
           <a href="https://github.com/cascadiacollections/shoutkit/blob/main/README.md">Docs</a>
-          <a href="https://github.com/cascadiacollections/shoutkit/blob/main/LICENSE">License</a>
+          <a href="https://github.com/cascadiacollections/shoutkit/blob/main/CHANGELOG.md">Changelog</a>
+          <a href="https://github.com/cascadiacollections/shoutkit/blob/main/LICENSE">Licence</a>
           <a href="https://github.com/cascadiacollections/shoutkit/blob/main/SECURITY.md">Security</a>
-        </div>
+        </nav>
       </div>
       <p class="footnote">
-        ShoutKit is not affiliated with or endorsed by Apple, KEXP, Radio-Browser, or SHOUTcast.
-        The ShoutKit name and branding are not covered by the code licenses.
+        ShoutKit is not affiliated with or endorsed by Apple, KEXP, Radio-Browser or SHOUTcast.
+        The ShoutKit name and branding are not covered by the code licences.
         Station discovery is powered by the <a href="https://www.radio-browser.info">Radio-Browser</a>
         community directory.
       </p>
