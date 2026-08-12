@@ -1,6 +1,6 @@
 # ShoutKit
 
-ShoutKit is a native SwiftUI internet-radio client for iOS and iPadOS 27+. It ships with real,
+ShoutKit is a native SwiftUI internet-radio client for iOS and iPadOS 26+. It ships with real,
 keyless station discovery out of the box via [Radio-Browser](https://www.radio-browser.info) — a
 free, open-source community radio directory — plus an Apple Music-style persistent player: a Liquid
 Glass mini-player docked above the tab bar, a full-screen Now Playing surface with live ICY track
@@ -10,9 +10,10 @@ browsing surfaces flow into adaptive multi-column layouts, including Split View 
 
 ## Requirements
 
-- Xcode 27 with the iOS 27 SDK
+- Xcode 27 with the iOS 27 SDK (to build — the MediaSession path needs the iOS 27 SDK
+  to compile, even though it only runs on iOS 27 devices)
 - Swift 6 strict concurrency
-- iOS / iPadOS 27.0+ deployment target
+- iOS / iPadOS 26.0+ deployment target
 
 If your active developer directory points at Command Line Tools, build with:
 

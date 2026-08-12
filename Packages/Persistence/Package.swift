@@ -5,8 +5,8 @@ import PackageDescription
 let package = Package(
     name: "Persistence",
     platforms: [
-        .iOS(.v27),
-        .watchOS(.v27),
+        .iOS(.v26),
+        .watchOS(.v26),
         // Declared so the pure-SwiftData test suite can run on the mac host
         // (`swift test`); the app product itself remains iOS-only. Pinned to
         // v26 because DiagnosticsService uses the Observation `Observations`

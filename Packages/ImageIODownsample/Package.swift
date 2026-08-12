@@ -5,8 +5,8 @@ import PackageDescription
 let package = Package(
     name: "ImageIODownsample",
     platforms: [
-        .iOS(.v27),
-        .watchOS(.v27),
+        .iOS(.v26),
+        .watchOS(.v26),
         .macOS(.v15)
     ],
     products: [

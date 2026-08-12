@@ -1,5 +1,45 @@
 # Decisions
 
+## 2026-08-12 (the deployment floor drops to iOS 26)
+
+Minimum iOS/iPadOS and watchOS go from 27.0 to **26.0**. iOS 27 is still in beta; requiring it
+meant the shipping app could only be installed by people running a beta OS, which is not a
+supportable position for a public release. iOS 26 is the current shipping release and becomes
+N-1 when 27 goes GA.
+
+Devices already on the iOS 27 beta are unaffected, and this is worth being explicit about
+because it is the part people get backwards: a *lower* deployment target does not drop newer
+systems. iOS 27 runs an iOS 26-targeted build exactly as before, and the iOS 27-only code path
+still activates there at runtime. The floor is a minimum, not a target.
+
+**The surprise: nothing had to be back-ported.** The expectation going in was that lowering the
+floor would mean an availability-gating pass. It did not — the repository contains exactly two
+availability annotations, and both already gate the only iOS 27-only API in the tree:
+
+- `Packages/Playback/Sources/Playback/MediaSessionNowPlayingCenter.swift:28` —
+  `@available(iOS 27, macOS 27, *)` on the type.
+- `Packages/Playback/Sources/Playback/PlaybackControllerPlatform.swift:39` —
+  `if #available(iOS 27, *)` selecting it, with `NowPlayingCenter` (the
+  `MPNowPlayingInfoCenter`/`MPRemoteCommandCenter` bridge) as the unconditional fallback.
+
+That selection was built in the 2026-07-13 pass *because* MediaSession was a first-beta
+framework worth being able to back out of. The iOS 26 path was therefore written, wired, and
+kept working the whole time — the floor was simply set higher than any code required. So this
+change is version numbers, not behaviour: 17 `Package.swift` manifests, 8 build settings in
+`project.pbxproj`, and the two `.xcconfig` files.
+
+The `.xcconfig` pair is the trap worth recording. `ShoutKitApp/Config/Debug.xcconfig` and
+`Release.xcconfig` each set `IPHONEOS_DEPLOYMENT_TARGET`, and they are the app target's
+`baseConfigurationReference`, so they *override* the project-level value in `project.pbxproj`.
+Editing only the pbxproj — which is where you would look — leaves the app itself on the old
+floor while every package moves, and nothing fails to build to tell you.
+
+What did **not** change: the toolchain. The manifests are still `swift-tools-version: 6.4` and
+the MediaSession path still needs the iOS 27 SDK to compile, so Xcode 27 and the billed
+`xcode-27` runner remain required. Deployment target and toolchain are independent, and
+lowering one does not lower the other — see the 2026-08-11 CI entry for why that distinction
+has money attached to it.
+
 ## 2026-08-12 (RadioBrowserDirectoryClient splits; `main` is lint-clean again)
 
 `RadioBrowserDirectoryClient.swift` went 398 → 445 lines when the search filters landed in

@@ -13,7 +13,7 @@ import PackageDescription
 let package = Package(
     name: "PlayerFeatureCore",
     platforms: [
-        .iOS(.v27),
+        .iOS(.v26),
         // Declared so the suite can run on the mac host (`swift test`), same
         // pattern as BrowseFeatureCore/SearchFeatureCore.
         .macOS(.v15)

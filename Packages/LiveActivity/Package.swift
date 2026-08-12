@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "LiveActivity",
     platforms: [
-        .iOS(.v27)
+        .iOS(.v26)
     ],
     products: [
         // Attributes only — linked by BOTH the app and the widget extension.
