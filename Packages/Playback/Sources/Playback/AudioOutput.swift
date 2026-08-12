@@ -12,9 +12,14 @@ public enum AudioStatus: Equatable, Sendable {
     /// Deliberately *not* `.failed`: a live stream the server drops looks the
     /// same to a player but means something different, and conflating the two
     /// is what made a finished broadcast restart itself through the controller's
-    /// auto-reconnect. Only an engine that can tell "played all of it" from
-    /// "the bytes stopped arriving" — see `AudioStreamingPlaybackEngine`, which
-    /// has the duration/progress pair to compare — should report this.
+    /// auto-reconnect. So report this only when the ending is genuinely the
+    /// content running out, and keep reporting `.failed` when it can't be told
+    /// apart. Each engine has its own evidence for that:
+    /// `AudioStreamingPlaybackEngine` compares how far it played against the
+    /// entry's duration, which live audio doesn't have at all; the `AVPlayer`
+    /// engines take it from `AVPlayerItemDidPlayToEndTime`, which a dropped
+    /// stream never reaches — that arrives as
+    /// `AVPlayerItemFailedToPlayToEndTime` instead.
     case endOfStream
     /// The system interrupted playback (phone call, Siri, another app took focus).
     case interruptionBegan
