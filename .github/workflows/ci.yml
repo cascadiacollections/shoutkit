@@ -556,7 +556,7 @@ jobs:
       - name: Fail on asset-catalog errors in the tvOS build
         run: |
           [ -f build-tv.log ] || exit 0
-          if grep -E "^.*(imagestack|brandassets|app icon|App Icon).*: error: " build-tv.log; then
+          if grep -qE "^.*(imagestack|brandassets|app icon|App Icon).*: error: " build-tv.log; then
             grep -E "^.*(imagestack|brandassets|app icon|App Icon).*: error: " build-tv.log \
               | sort -u | head -10 | sed 's/^/::error::/'
             echo "::error::tvOS asset catalog reported an error; actool exits 0 on these, so this step is the gate."

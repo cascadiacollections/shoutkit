@@ -97,11 +97,19 @@ final class TVNowPlayingCenter: NowPlayingPresenting {
         artworkTask = Task { [weak self] in
             var request = URLRequest(url: url)
             request.cachePolicy = .reloadRevalidatingCacheData
-            guard let (data, _) = try? await URLSession.shared.data(for: request),
-                  let image = UIImage(data: data) else {
+            guard let (data, _) = try? await URLSession.shared.data(for: request) else {
                 // Forget the failed URL so the next update retries it — a transient
                 // error at play start must not leave the surface artless for the
                 // whole session.
+                self?.resetArtworkCache(ifStill: url)
+                return
+            }
+
+            // Decode off the main actor: `UIImage(data:)` on a large TV-sized image
+            // can hitch the focus engine and Now Playing updates.
+            guard let image = await Task.detached(priority: .utility, operation: {
+                UIImage(data: data)
+            }).value else {
                 self?.resetArtworkCache(ifStill: url)
                 return
             }
