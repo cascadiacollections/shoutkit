@@ -4,10 +4,46 @@
     "Browse by Genre" : {
 
     },
+    "Active filters: %@" : {
+
+    },
+    "Bitrate" : {
+
+    },
+    "Clear Filters" : {
+
+    },
+    "Country Code" : {
+
+    },
+    "Country: %@" : {
+
+    },
     "Couldn't Load Genres" : {
 
     },
+    "Done" : {
+
+    },
     "Find your sound" : {
+
+    },
+    "%d kbps or higher" : {
+
+    },
+    "%d kbps or lower" : {
+
+    },
+    "Maximum Bitrate" : {
+
+    },
+    "Minimum Bitrate" : {
+
+    },
+    "No matching stations" : {
+
+    },
+    "Search Filters" : {
 
     },
     "Search Unavailable" : {
@@ -20,6 +56,15 @@
 
     },
     "Stations, genres" : {
+
+    },
+    "Tag" : {
+
+    },
+    "Tag: %@" : {
+
+    },
+    "Any" : {
 
     }
   },

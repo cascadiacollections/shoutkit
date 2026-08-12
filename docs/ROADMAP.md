@@ -138,6 +138,48 @@ Everything gating a public listing that isn't distribution mechanics.
 - [ ] Release-process doc: tagging, `GIT_COMMIT_SHA` stamping, release-note generation.
       There are still **zero git tags**, and `release.yml` is tag-triggered.
 
+## Next — get off the billed macOS runner
+
+CI spend is currently the largest line item in running this project, and all of it comes
+from one label. ShoutKit is public, so GitHub's *standard* hosted runners are free;
+`xcode-27` is a **larger runner**, and larger runners are billed on public repos like any
+other. The 2026-08-11 pass rationed minutes on that label (see `DECISIONS.md`) and bought
+roughly a 70% cut, but rationing is not the fix — getting off the label is. Two routes, and
+they are not exclusive:
+
+- [ ] **Wait for the free image.** The cheapest possible outcome: when the free `macos-26`
+      image ships an Xcode that satisfies `swift-tools-version 6.4` and the iOS 27 SDK,
+      swapping `runs-on` takes the bill to approximately zero and every rationing measure
+      below can be reverted. `.github/workflows/runner-image-watch.yml` checks weekly and
+      files an issue when it lands — the point of automating it is that this is otherwise
+      exactly the kind of fact that goes unnoticed for months while the meter runs.
+- [ ] **Self-hosted runner on the Mac mini.** Fixes the cost permanently and is *faster*
+      than hosted, for a reason that has nothing to do with the hardware: a persistent
+      `DerivedData` makes the app build incremental. The 14-minute cold `build` job is
+      dominated by compiling unchanged code, and the honest estimate for a warm incremental
+      run is low single-digit minutes. Order the work as:
+      1. One runner, registered to this repo, **`main`-push jobs only**. That is the
+         highest-value and lowest-risk slice: no untrusted code, and it covers
+         `release-checks` plus the Swift CodeQL analysis, which is the single most expensive
+         job in the repo (~30 minutes per run).
+      2. Then PR jobs, **same-repo branches only** — gate on
+         `github.event.pull_request.head.repo.full_name == github.repository` and leave fork
+         PRs on hosted runners.
+      3. Fork PRs stay hosted, permanently, unless step 4 happens.
+      4. Only if fork PRs must move: ephemeral VM-per-job (Tart/Lume or similar) with
+         `--ephemeral`, never a bare runner on the host.
+
+      The step-2 gate is not optional caution. GitHub's own guidance is that self-hosted
+      runners should not be used with public repositories, because a fork PR runs arbitrary
+      code on your machine and a non-ephemeral runner keeps state between jobs — that is a
+      home-network machine executing anything a stranger opens a PR with. Everything else
+      here is operational and manageable: keep the mini awake (`caffeinate`, sleep
+      disabled), install the runner as a launchd service so it survives reboot, budget disk
+      for multiple Xcode betas, and label it so a workflow can ask for the toolchain it
+      needs rather than "some Mac". Worth pricing the electricity and the mini's downtime
+      against the hosted bill before committing — at current spend the payback is fast, but
+      it stops being fast if the runner needs babysitting.
+
 ## Backlog (unscheduled, revisit each sprint)
 
 - Self-hosted static libogg/libvorbis xcframeworks (#124). Parked on its own

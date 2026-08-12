@@ -5,9 +5,19 @@ public protocol RadioDirectoryProviding: Sendable {
     func genres() async throws(RadioDirectoryError) -> [Genre]
     func topStations(limit: Int) async throws(RadioDirectoryError) -> [Station]
     func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station]
+    func searchStations(
+        matching query: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ) async throws(RadioDirectoryError) -> [Station]
     /// Stations belonging to a genre/tag, ordered by popularity where the
     /// directory supports it. Distinct from `searchStations`, which matches names.
     func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station]
+    func stations(
+        inGenre genre: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ) async throws(RadioDirectoryError) -> [Station]
     /// Looks up a station by identifier for consumers (like App Intents) that
     /// need to rehydrate a previously saved entity id.
     func station(id: String) async throws(RadioDirectoryError) -> Station?
@@ -15,10 +25,28 @@ public protocol RadioDirectoryProviding: Sendable {
 }
 
 public extension RadioDirectoryProviding {
+    func searchStations(
+        matching query: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ) async throws(RadioDirectoryError) -> [Station] {
+        let stations = try await searchStations(matching: query, limit: limit)
+        return Array(filters.normalized.apply(to: stations).prefix(limit))
+    }
+
     /// Fallback for directories without a dedicated genre query: a plain search,
     /// which for the simple directories here also matches the genre field.
     func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
         try await searchStations(matching: genre, limit: limit)
+    }
+
+    func stations(
+        inGenre genre: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ) async throws(RadioDirectoryError) -> [Station] {
+        let stations = try await stations(inGenre: genre, limit: limit)
+        return Array(filters.normalized.apply(to: stations).prefix(limit))
     }
 
     func station(id: String) async throws(RadioDirectoryError) -> Station? {
@@ -78,6 +106,14 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
     }
 
     public func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        try await searchStations(matching: query, limit: limit, filters: .none)
+    }
+
+    public func searchStations(
+        matching query: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ) async throws(RadioDirectoryError) -> [Station] {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmedQuery.isEmpty == false else {
             return []
@@ -87,22 +123,32 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
             station.name.localizedStandardContains(trimmedQuery)
                 || station.genre.localizedStandardContains(trimmedQuery)
         }
+        .filter(filters.normalized.matches)
 
         let baseLimit = max(limit - preferredMatches.count, 0)
-        let stations = try await base.searchStations(matching: query, limit: baseLimit)
+        let stations = try await base.searchStations(matching: query, limit: baseLimit, filters: filters)
         return Array((preferredMatches + stations).uniqued { $0.name.lowercased() }.prefix(limit))
     }
 
     public func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        try await stations(inGenre: genre, limit: limit, filters: .none)
+    }
+
+    public func stations(
+        inGenre genre: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ) async throws(RadioDirectoryError) -> [Station] {
         // Forward to the base's real genre query (the protocol default would
         // degrade this into a name search), layering matching preferred stations
         // on top as everywhere else.
         let preferredMatches = preferredStations.filter { station in
             station.genre.localizedCaseInsensitiveContains(genre)
         }
+        .filter(filters.normalized.matches)
 
         let baseLimit = max(limit - preferredMatches.count, 0)
-        let stations = try await base.stations(inGenre: genre, limit: baseLimit)
+        let stations = try await base.stations(inGenre: genre, limit: baseLimit, filters: filters)
         return Array((preferredMatches + stations).uniqued { $0.name.lowercased() }.prefix(limit))
     }
 

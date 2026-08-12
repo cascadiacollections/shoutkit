@@ -1,5 +1,76 @@
 # Decisions
 
+## 2026-08-11 (CI is rationed against one billed runner label)
+
+Actions spend had become the largest cost of running this project, and measuring it before
+changing anything located the whole of it in one place: the `xcode-27` label. ShoutKit is
+public, so GitHub's standard hosted runners — `ubuntu-latest`, `macos-26` — are free.
+`xcode-27` is a *larger runner*, and larger runners are billed on public repositories too.
+Every mac job in the repo was on it.
+
+Measured per push, from the API rather than from estimate (billing rounds each job up to
+the minute):
+
+| Job | Wall clock | Billed |
+|---|---|---|
+| CodeQL `Analyze (swift)` | 29m | 30 |
+| CI `build` | 14m03s | 15 |
+| CI `host-tests` | 3m28s | 4 |
+| CI `lint` | 14s | 1 |
+| | | **50 mac-minutes per push** |
+
+The surprise was CodeQL, not CI. Its Swift analysis ran on every push *and* every pull
+request, and CodeQL's build tracing turns the 4-minute Release build into a 27-minute one —
+so the security scan cost more than the entire CI workflow beside it, on a UIKit radio app
+where it has never produced a finding. It now runs on `main` and on the existing weekly
+cron. That keeps the alert database current and gives up only per-PR alert annotations,
+which is a fair trade at this merge rate. The `actions` analysis is untouched: it needs no
+build, runs free on ubuntu, and stays on PRs.
+
+The rest is three rules, applied in `ci.yml`:
+
+- **Nothing expensive starts until `lint` passes.** Lint is ~15 seconds of work and it was
+  running *beside* the mac jobs rather than in front of them. Run 31275068736 is the case
+  that settled it: lint went red 7 seconds in, and `build` carried on for another 14 minutes
+  on a tree that could not merge. `needs: lint` costs ~30s of added latency on green runs
+  and stops that entirely.
+- **Draft PRs get the cheap signal, not the expensive one.** `host-tests` (~4 min, eight
+  packages) runs on drafts; the ~15-minute simulator job waits for `ready_for_review`. The
+  branch names in the run history are almost all agent-authored, and those push many times
+  per PR — which is where the minutes were actually going. `ready_for_review` had to be
+  added to the trigger's `types` for this to work at all; without it, marking a draft ready
+  fires no event and the skipped job never runs.
+- **Compile-only checks move to `main`.** Release config and the watch app are ~5.5 of that
+  job's 14 minutes and neither runs a test, so they split into `release-checks`, gated to
+  push and `workflow_dispatch`.
+
+That last one is a real regression in signal and is worth naming as such rather than
+burying: a change that builds Debug-for-iOS but breaks Release or watchOS now goes red on
+`main` instead of on the PR that caused it. Accepted because the failure mode is narrow
+(Release-only breakage is nearly always `#if DEBUG` drift; watch breakage is nearly always a
+shared-package API change), because it always surfaces as a compile error rather than as
+something subtle, and because it is cheap to fix forward — whereas checking it on every push
+was not cheap at all.
+
+Net: a PR push goes from ~50 billed mac-minutes to ~5 (draft) or ~20 (ready), while `main`
+keeps full coverage including CodeQL. Two smaller things landed with it — the CodeQL Swift
+job had no SwiftPM cache at all and cold-resolved the workspace including the AudioStreaming
+codec download every run, and `build`'s 75-minute timeout meant a wedged simulator could
+bill 75 minutes for nothing (now 30, against an observed 8-9).
+
+Explicitly *not* done: moving `lint` to a free ubuntu runner. SwiftLint has a Linux build,
+but not full rule parity — the SourceKit-backed rules behave differently — and this job is
+now the gate the other three trust. A gate that means something slightly different from what
+contributors run locally is worse than a gate that costs one minute. Revisit if parity
+closes.
+
+None of this is the actual fix, which is to stop paying for the label: either the free
+`macos-26` image gains a new enough Xcode, or the work moves to a self-hosted Mac mini.
+`runner-image-watch.yml` is a weekly ubuntu job that watches for the former and files an
+issue when it happens, because the alternative is nobody noticing for months while the meter
+runs. `docs/ROADMAP.md` carries the sequencing for the latter, including the constraint that
+matters most: a self-hosted runner on a public repo must not accept fork PRs.
+
 ## 2026-08-07 (`try?` audit: gate rechecked before deferring)
 
 Issue #143 had been rolling forward behind "wait for Swift 6.4's unhandled-error
@@ -23,6 +94,25 @@ warning in `Task` closures", but every manifest was already at
   fallback, and media-session primary request now state their best-effort
   intent next to the `try?`, so an unexplained `try?` regains signal as a
   likely oversight.
+
+## 2026-08-07 (Search filters over Radio-Browser)
+
+- Added a dedicated `StationSearchFilters` model (bitrate min/max, tag, country
+  code) and threaded it through `RadioDirectoryProviding` as explicit filtered
+  overloads for both name search and genre browsing. Existing call sites stay
+  source-compatible through default protocol implementations, while
+  `RadioBrowserDirectoryClient` overrides to send native API params
+  (`bitrateMin`/`bitrateMax`/`tagList`/`countrycode`) on the same endpoints the
+  app already uses.
+- Filter state is transient UI state on `SearchViewModel` (not persisted) and
+  composes with both free-text queries and genre chips, matching the search
+  surface contract established in the 2026-08-04 UX pass.
+- Empty-search results now surface active filter context and include an explicit
+  "Clear Filters" action to recover quickly from over-constrained queries.
+- Missing metadata is treated as "unknown", not an automatic failure: local
+  filter evaluation only excludes stations that positively fail the selected
+  bounds (e.g. known bitrate below the minimum), to avoid collapsing discovery
+  on sparse community data.
 
 ## 2026-08-07 (the codec dependency leaves Playback; CI starts measuring itself)
 
