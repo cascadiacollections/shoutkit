@@ -1,5 +1,65 @@
 # Decisions
 
+## 2026-08-12 (a finished broadcast is not a dropped stream: `.endOfStream`, and looping as opt-in)
+
+Stations that broadcast a **fixed-length programme** — NPR's hourly newscast is the reported
+case — played through and then started over, up to four times, before the app gave up. The
+stream itself was fine; the bug was in what "the stream stopped" was taken to mean.
+
+`AudioStreamingPlaybackEngine` reported end-of-stream as `.failed(.streamFailed(…))`, which was
+right for the case it was written for (2026-05-14: a live stream the server closes stops the
+player with no error, and swallowing it left a dead stream showing as playing). The controller
+does the sensible thing with a retryable failure and calls `attemptReconnect`, and a reconnect
+for live radio is a fresh `startPlayback` — so a *finite* programme was rejoined from the top
+once per attempt in the budget. The reconnect wasn't misbehaving; it was being handed the wrong
+verdict.
+
+**The fix is a third verdict, not a tuned reconnect.** `AudioStatus.endOfStream` sits alongside
+`.failed`, and `PlaybackController.handleEndOfStream` parks the station as `.paused` with the
+player torn down — the lock screen and mini-player stay put, and play replays the programme
+through the existing `outputStarted == false` restart path. Same shape as the stall ceiling's
+give-up (2026-05-27), and for the same reason: reaching the end of a broadcast is not a user
+error, so a `.failed` screen would be a lie.
+
+**Only the engine can tell the two endings apart, and only from one callback.** AudioStreaming's
+`.stopped` transition carries nothing that distinguishes them; the pair that does is
+`audioPlayerDidFinishPlaying`'s `progress`/`duration`. `duration` is `0` for live audio (it can
+only be derived from a known content length), so an endless stream never qualifies however it
+ends, and a finite one truncated mid-download doesn't either — its duration is the whole
+programme's while its progress is where the bytes stopped, which is a genuine drop worth
+reconnecting for. The tolerance around the comparison (3s or 2%, whichever is larger) is there
+because both numbers come from an estimated bitrate and rarely agree exactly; a strict compare
+would reinstate the bug on any file whose estimate ran long.
+
+**The ordering that made this awkward, from reading AudioStreaming 1.4.4:** the `.stopped` state
+change is dispatched to the main queue from inside `processSource()`, and `didFinishPlaying` is
+dispatched *after* it, from the same source-queue block. So the stop always arrives first, with
+no way to classify it yet. Rather than decide wrongly, `handleUnexpectedStop` leaves the stop
+unattributed for a 250 ms grace period; `reportEndOfStream()` cancels that task if the finish
+callback claims the ending, and otherwise it becomes the retryable failure it always was. The
+cost is 250 ms of added latency before a reconnect for a genuinely dropped stream, which is
+inside the backoff's own first delay. This is a grace period, not a poll — it only has to
+outlast a main-queue hop, and both re-checks (`didRequestStop`, `player.state`) still run when
+it fires.
+
+**Looping is opt-in, and off by default.** `SettingsStore.isStreamLoopingEnabled` (Settings →
+Playback → "Loop Finished Broadcasts") flips the ending from "stop" to "start over". Default off:
+a broadcast with an end means to end, and repeating it is a listener's choice, not a player's
+guess. The controller reads it through `isStreamLoopingEnabledProvider` at each ending rather
+than capturing it at `play()`, so flipping the toggle applies to the programme already playing —
+and `Playback` keeps knowing nothing about `Persistence`, same seam as
+`tapToAudioPrewarmEnabledProvider` and `trackResourcesProvider`. The loop restart is an
+*internal* restart (`isReconnect: true`): the resolved endpoint is reused and `onStationPlayed`
+stays silent, so a loop can't log one listening session as many recents or many Radio-Browser
+play reports.
+
+**The AVPlayer engines get the same signal.** watchOS and tvOS reported a finished item as a
+plain `.paused` (a stop with `currentItem` still set), which happened to look right and was
+indistinguishable from a user pause — so it could never be looped. Both now observe
+`AVPlayerItemDidPlayToEndTime` and report `.endOfStream`; a live stream on those engines drops
+through `AVPlayerItemFailedToPlayToEndTime` instead, which stays a failure. Neither app has a
+settings surface, so both take the default and stop, exactly as they did before.
+
 ## 2026-08-12 (tvOS MVP: the watch app is the blueprint, and AVPlayer is the engine)
 
 ShoutKit gets a fourth platform. `ShoutKitTVApp` is a top-level target — five files, three

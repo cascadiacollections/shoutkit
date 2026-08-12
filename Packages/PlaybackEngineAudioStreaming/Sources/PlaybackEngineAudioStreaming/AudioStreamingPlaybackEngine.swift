@@ -43,6 +43,23 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     /// controller sees spends another of its bounded reconnect attempts.
     private var hasReportedFailure = false
 
+    /// One end-of-stream report per stream, for the same reason, and doubling as
+    /// the "this stop is accounted for" flag ``handleUnexpectedStop()`` reads.
+    private var hasReportedEndOfStream = false
+
+    /// The pending classification of a stop we haven't attributed yet — see
+    /// ``handleUnexpectedStop()`` for why the decision waits.
+    private var stopClassificationTask: Task<Void, Never>?
+
+    /// How long a `.stopped` transition may stay unattributed while the
+    /// end-of-playback callback that would claim it is still in flight. Both
+    /// callbacks are dispatched to the main queue from the same block of
+    /// AudioStreaming's source queue, one immediately after the other, so this
+    /// only has to outlast a main-queue hop; it is a grace period, not a poll
+    /// interval. The cost when nothing claims the stop is this much added
+    /// latency before the controller's reconnect starts.
+    private static let stopClassificationGrace = Duration.milliseconds(250)
+
     // Block-based notification observers are not auto-removed on dealloc, so
     // deinit is isolated to read this on the main actor without an escape hatch.
     var notificationTokens: [NSObjectProtocol] = []
@@ -66,6 +83,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     isolated deinit {
         sessionDeactivationTask?.cancel()
         sessionActivationTask?.cancel()
+        stopClassificationTask?.cancel()
         for token in notificationTokens {
             NotificationCenter.default.removeObserver(token)
         }
@@ -76,6 +94,8 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         currentURL = url
         didRequestStop = false
         hasReportedFailure = false
+        hasReportedEndOfStream = false
+        stopClassificationTask?.cancel()
         withActiveSession { [weak self] in
             // A newer start (or a stop) supersedes this one; the pending
             // activation is cancelled for those, and this is the belt to that
@@ -114,6 +134,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
 
     public func stop() {
         didRequestStop = true
+        stopClassificationTask?.cancel()
         cancelPendingSessionActivation()
         sessionDeactivationTask?.cancel()
         player.stop()
@@ -128,6 +149,8 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         guard let currentURL else { return }
         didRequestStop = false
         hasReportedFailure = false
+        hasReportedEndOfStream = false
+        stopClassificationTask?.cancel()
         // `play(url:)` doesn't always change the player's public state (it is
         // already `.bufferring` when a stalled stream is rejoined), so the
         // transition out of paused has to be reported here or the controller
@@ -137,10 +160,21 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     }
 
     /// AudioStreaming's end-of-stream path stops the player without raising an
-    /// error, which for live radio means the server closed the connection.
-    /// Swallowing it left the controller showing a dead stream as playing — and,
-    /// once paused, holding a player that would never resume. Surface it as a
-    /// retryable failure so the bounded auto-reconnect takes over.
+    /// error. For live radio that means the server closed the connection —
+    /// swallowing it left the controller showing a dead stream as playing and,
+    /// once paused, holding a player that would never resume. For a station that
+    /// broadcasts a *finite* programme it means the opposite: the programme
+    /// finished, exactly as it should.
+    ///
+    /// Nothing in this callback separates the two. The pair that does — the
+    /// played-to duration and the content's own duration — arrives with
+    /// `audioPlayerDidFinishPlaying`, which AudioStreaming dispatches to the main
+    /// queue *after* this state change (`processSource()` is what stopped the
+    /// player, and only then is the finish callback enqueued). So the stop is
+    /// left unattributed for one grace period: if the finish callback claims it
+    /// as a completed programme, ``reportEndOfStream()`` cancels this task;
+    /// otherwise it becomes the retryable failure it has always been, and the
+    /// bounded auto-reconnect takes over.
     private func handleUnexpectedStop() {
         guard didRequestStop == false else { return }
         // State changes are delivered asynchronously on the main queue, so the
@@ -151,13 +185,52 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         // `audioPlayerUnexpectedError` with a classified reason; let that one
         // through rather than pre-empting it with a generic message.
         guard player.stopReason != .error else { return }
-        reportFailure(.streamFailed("The stream ended unexpectedly."))
+        guard hasReportedEndOfStream == false else { return }
+
+        stopClassificationTask?.cancel()
+        stopClassificationTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: Self.stopClassificationGrace)
+            guard Task.isCancelled == false, let self else { return }
+            // Re-check rather than trust the snapshot: a `stop()` or a fresh
+            // `start()` during the grace period means this stop is no longer
+            // anyone's business.
+            guard self.didRequestStop == false, self.player.state == .stopped else { return }
+            self.reportFailure(.streamFailed("The stream ended unexpectedly."))
+        }
     }
 
     func reportFailure(_ error: PlaybackError) {
-        guard hasReportedFailure == false else { return }
+        guard hasReportedFailure == false, hasReportedEndOfStream == false else { return }
         hasReportedFailure = true
+        stopClassificationTask?.cancel()
         onStatusChange?(.failed(error))
+    }
+
+    /// The stream played through to the end of its content. Claims the pending
+    /// stop classification so the same ending isn't also reported as a failure.
+    private func reportEndOfStream() {
+        guard hasReportedEndOfStream == false, hasReportedFailure == false else { return }
+        hasReportedEndOfStream = true
+        stopClassificationTask?.cancel()
+        onStatusChange?(.endOfStream)
+    }
+
+    /// Whether a finished entry played all the way to the end of its content.
+    ///
+    /// `duration` is `0` for live audio — AudioStreaming can only derive it from
+    /// a known content length — so an endless stream never qualifies however it
+    /// ends. A finite one whose bytes stopped arriving early doesn't either: its
+    /// duration is the whole programme's while its progress is where the
+    /// download died, and that is a drop worth reconnecting for.
+    ///
+    /// The tolerance is there because both numbers come from an estimated
+    /// bitrate and rarely land on the same value; treating a two-second shortfall
+    /// as a truncated download would put the reported bug straight back.
+    /// `nonisolated` because the delegate callback that asks is, and this is
+    /// arithmetic on two `Double`s — nothing to isolate.
+    nonisolated static func playedToEndOfContent(progress: Double, duration: Double) -> Bool {
+        guard duration > 0 else { return false }
+        return progress >= duration - max(3, duration * 0.02)
     }
 
     /// Hops to the main actor, then drops the callback unless `player` is still
@@ -236,13 +309,23 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
         }
     }
 
+    /// The only callback carrying what separates "this programme finished" from
+    /// "this live stream dropped" — see ``playedToEndOfContent(progress:duration:)``.
+    /// Anything else is left to the `.stopped` path, which reports it as the
+    /// retryable failure it is.
     public nonisolated func audioPlayerDidFinishPlaying(
         player: AudioPlayer,
         entryId: AudioEntryId,
         stopReason: AudioPlayerStopReason,
         progress: Double,
         duration: Double
-    ) {}
+    ) {
+        guard stopReason == .eof,
+              Self.playedToEndOfContent(progress: progress, duration: duration) else { return }
+        executeOnMainActor(for: player) {
+            self.reportEndOfStream()
+        }
+    }
 
     public nonisolated func audioPlayerUnexpectedError(player: AudioPlayer, error: AudioPlayerError) {
         executeOnMainActor(for: player) {

@@ -80,6 +80,17 @@ public final class PlaybackController {
     @ObservationIgnored public var trackResourcesProvider: (@MainActor (AudioTrackInfo) async -> TrackResources)?
     @ObservationIgnored public var tapToAudioPrewarmEnabledProvider: (@MainActor () -> Bool) = { false }
 
+    /// Whether a stream that plays through to the end of its content should
+    /// start over instead of stopping. Read at the moment the stream ends, so
+    /// flipping the setting takes effect on the next end-of-stream rather than
+    /// only on the next station choice.
+    ///
+    /// Defaults to "no" — a station that broadcasts a fixed-length programme
+    /// (NPR's hourly newscast is the reported case) should play once and stop,
+    /// the way every other player treats it. Looping is what the listener asks
+    /// for by opting in, not what a finished broadcast does on its own.
+    @ObservationIgnored public var isStreamLoopingEnabledProvider: (@MainActor () -> Bool) = { false }
+
     public var currentStation: Station? { activeStation }
 
     /// Whether the active ``AudioOutput`` can apply an ``EqualizerPreset``.

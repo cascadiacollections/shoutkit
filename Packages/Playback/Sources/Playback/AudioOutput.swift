@@ -6,6 +6,16 @@ public enum AudioStatus: Equatable, Sendable {
     case playing
     case paused
     case failed(PlaybackError)
+    /// The stream reached the natural end of its content — a finite programme
+    /// (a newscast, a recorded show) played through to its last byte.
+    ///
+    /// Deliberately *not* `.failed`: a live stream the server drops looks the
+    /// same to a player but means something different, and conflating the two
+    /// is what made a finished broadcast restart itself through the controller's
+    /// auto-reconnect. Only an engine that can tell "played all of it" from
+    /// "the bytes stopped arriving" — see `AudioStreamingPlaybackEngine`, which
+    /// has the duration/progress pair to compare — should report this.
+    case endOfStream
     /// The system interrupted playback (phone call, Siri, another app took focus).
     case interruptionBegan
     /// The interruption ended. `shouldResume` reflects the system's hint, which
