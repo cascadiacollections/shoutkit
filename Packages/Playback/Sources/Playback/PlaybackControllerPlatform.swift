@@ -36,7 +36,10 @@ public extension PlaybackController {
     /// the legacy path.
     static func makeSystemNowPlayingCenter() -> any NowPlayingPresenting {
         #if canImport(NowPlaying)
-        if #available(iOS 27, *) {
+        // `watchOS 27` must be named here too — this package builds for watchOS,
+        // and a bare `*` would let the check pass at the watchOS 26 floor and
+        // then fail to compile against the watchOS 27-only MediaSession symbols.
+        if #available(iOS 27, watchOS 27, *) {
             return MediaSessionNowPlayingCenter()
         }
         #endif
