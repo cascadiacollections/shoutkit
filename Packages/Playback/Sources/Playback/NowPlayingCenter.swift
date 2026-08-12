@@ -35,7 +35,13 @@ public protocol NowPlayingPresenting: AnyObject {
     func clear()
 }
 
-#if canImport(UIKit) && !os(watchOS)
+// `os(iOS)`, not `canImport(UIKit) && !os(watchOS)`: this type is genuinely
+// iOS-specific (`UIImage`/`UIGraphicsImageRenderer` artwork, lock-screen and
+// Control Center transport), and the UIKit spelling would also drag it onto tvOS
+// and visionOS, which want their own now-playing surface. ``NowPlayingPresenting``
+// above stays ungated, so a new platform implements the protocol rather than
+// inheriting this implementation.
+#if os(iOS)
 
 /// Bridges playback to the system Now Playing info center and remote command center
 /// (lock screen + Control Center). Commands are forwarded to the supplied closures.

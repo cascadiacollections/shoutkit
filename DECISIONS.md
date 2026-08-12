@@ -1,5 +1,41 @@
 # Decisions
 
+## 2026-08-12 (platform gates say what they mean: `os(iOS)`, not "UIKit and not watch")
+
+Two `#if` gates in `Packages/Playback` were spelled `canImport(UIKit) && !os(watchOS)` and
+meant `os(iOS)`. Both are now `os(iOS)`:
+
+- `PlaybackControllerPlatform.swift:1` — the `PlaybackController.init(directory:)` convenience
+  initializer plus `makeSystemNowPlayingCenter()`.
+- `NowPlayingCenter.swift:38` — the `MPNowPlayingInfoCenter` bridge.
+
+The UIKit spelling is true on **tvOS and visionOS as well as iOS**, and the difference is not
+cosmetic. `init(directory:)` resolves the engine through `Container.shared.radioPlaybackEngine()`,
+which is `StubRadioPlaybackEngine` until `registerProductionPlaybackEngine()` runs. Any future
+UIKit platform target would therefore have silently inherited an initializer that compiles,
+links, launches, and **plays silence** — the exact failure `CLAUDE.md` calls out for engine
+registration ordering, arriving by inheritance rather than by a missed call. `NowPlayingCenter`
+would likewise have come along with its `UIImage`/`UIGraphicsImageRenderer` artwork path onto a
+platform wanting its own now-playing surface.
+
+The seam that makes narrowing safe already existed: `NowPlayingPresenting` is ungated, and the
+watch app is the working precedent for a second platform calling `PlaybackController`'s
+*designated* initializer with explicit collaborators and bypassing Factory entirely
+(`WatchAppDependencies.swift`). **A new platform should have to write its wiring, not inherit
+iOS's.** These gates now enforce that rather than leaving it to whoever notices.
+
+Availability wildcards were tightened in the same pass, for the reason recorded below on
+2026-08-12: a bare `*` means "available from *this* platform's deployment target", so it is
+correct only by coincidence and goes wrong the moment a platform exists at a floor beneath what
+the symbols require. That already cost a broken watch build once. Both `NowPlaying` sites now
+name tvOS explicitly — `MediaSessionNowPlayingCenter`'s `@available` (gated only on
+`canImport(NowPlaying)`, so it compiles on any platform that has the framework) and the
+`#available` check that selects it.
+
+No behaviour changes on any shipping platform: iOS and Mac Catalyst are inside `os(iOS)`, and
+watchOS was excluded before and after. Verified locally — `swiftlint --strict` clean, the
+`Playback` host suite, the iOS Simulator build, and the watchOS compile check all green.
+
 ## 2026-08-12 (the marketing page gets a face, and an og-image that isn't a guess)
 
 The `site/` one-pager was a competent dark/indigo template. It said the right things but looked

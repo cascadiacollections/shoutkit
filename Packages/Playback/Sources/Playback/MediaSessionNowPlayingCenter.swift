@@ -26,13 +26,17 @@ import RadioDirectory
 /// Selected at runtime by ``PlaybackController``'s production initializer;
 /// iOS 26 devices keep the legacy `MediaPlayer` path.
 ///
-/// `watchOS 27` is named explicitly rather than left to the `*` wildcard. While
+/// Every platform is named explicitly rather than left to the `*` wildcard. While
 /// the watchOS floor was 27 the wildcard was equivalent — it means "available
 /// from this platform's deployment target", and that target was 27. Dropping the
 /// floor to 26 (DECISIONS.md 2026-08-12) made the two differ: the wildcard then
 /// claimed availability from watchOS 26, while every `NowPlaying` symbol this
 /// type touches is watchOS 27+, and the watch build failed with six errors.
-@available(iOS 27, macOS 27, watchOS 27, *)
+///
+/// `tvOS 27` is named for the same reason, pre-emptively: this file is gated only on
+/// `canImport(NowPlaying)`, so it compiles on any platform that has the framework,
+/// and a tvOS floor of 26 would reproduce the watchOS failure exactly.
+@available(iOS 27, macOS 27, tvOS 27, watchOS 27, *)
 @MainActor
 public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
     public var onPlay: (() -> Void)?
