@@ -1,5 +1,36 @@
 # Decisions
 
+## 2026-08-12 (RadioBrowserDirectoryClient splits; `main` is lint-clean again)
+
+`RadioBrowserDirectoryClient.swift` went 398 → 445 lines when the search filters landed in
+#157, crossing SwiftLint's 400-line `file_length` limit that `--strict` promotes to an
+error. `main` had been lint-red since that merge, and once `lint` became a gate (2026-08-11)
+that one violation was skipping every test job in the repository — no host tests, no
+simulator run, no `release-checks`, on any branch.
+
+Split along three seams rather than suppressed, per the standing house rule:
+
+- **`+Mapping`** — the five `static` DTO→`Station` translators. The cleanest of the three:
+  no actor state, no I/O, already `static`, and it was the largest single block in the type.
+- **`+Filters`** — `StationSearchFilters.radioBrowserQueryItems`, the query-parameter
+  encoding added by #157. `private` became internal now that it no longer shares a file with
+  its only caller.
+- **`RadioBrowserWireTypes`** — the `Decodable` wire structs, which were never part of the
+  client at all, only adjacent to it.
+
+The client drops 445 → 306 lines. The load-bearing detail is that this also let the
+`// swiftlint:disable type_body_length` at the top of the file go: the actor body was 288
+effective lines, over the 250 warning threshold, and moving `+Mapping` out takes it to 231.
+That matters in both directions — had the split landed while leaving the disable in place,
+`superfluous_disable_command` would have failed `--strict` just as surely as the original
+violation did. A suppression that stops being necessary is itself a lint error here, so
+splitting and un-suppressing are one change, not two.
+
+Worth noting for the next person who hits this: the limits are not on raw line count.
+`file_length` counts every line, `type_body_length` counts only non-blank non-comment lines
+inside the braces. This file is comment-dense, which is why it could be 445 raw lines with a
+288-line body, and why "shorten the file" and "shorten the type" are different jobs.
+
 ## 2026-08-12 (CodeQL becomes a scheduled scan; the matrix `if` that broke it)
 
 Two things, one of which was a self-inflicted outage.

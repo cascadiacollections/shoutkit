@@ -7,7 +7,6 @@ public protocol StationPlayReporting: Sendable {
     func reportPlay(stationID: String) async
 }
 
-// swiftlint:disable type_body_length
 /// Directory client for Radio-Browser (radio-browser.info) — a free, open-source,
 /// keyless community radio directory. Unlike SHOUTcast, responses are JSON and
 /// station objects carry a directly playable `url_resolved`, so no PLS/M3U
@@ -191,83 +190,6 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         _ = try? await request(path: "/json/url/\(stationID)", queryItems: [])
     }
 
-    // MARK: - Mapping
-
-    static func station(from dto: RadioBrowserStation) -> Station? {
-        let name = dto.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let normalizedName = StationNameFormatter.normalize(name)
-        guard normalizedName.isEmpty == false, dto.stationuuid.isEmpty == false else {
-            return nil
-        }
-
-        // `url_resolved` is the directly playable stream; fall back to `url`.
-        let rawStream = [dto.urlResolved, dto.url]
-            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .first { $0.isEmpty == false }
-        guard let rawStream, let streamURL = URL(string: rawStream) else {
-            return nil
-        }
-
-        return Station(
-            id: dto.stationuuid,
-            name: normalizedName,
-            genre: genre(from: dto),
-            tags: tags(from: dto),
-            country: normalizedValue(dto.country),
-            codec: normalizedValue(dto.codec),
-            language: normalizedValue(dto.language),
-            listenerCount: 0,
-            bitrate: (dto.bitrate ?? 0) > 0 ? dto.bitrate : nil,
-            clickTrend: dto.clicktrend,
-            votes: dto.votes,
-            artworkURL: artworkURL(from: dto.favicon),
-            preferredStreamURL: streamURL
-        )
-    }
-
-    static func genre(from dto: RadioBrowserStation) -> String {
-        let firstTag = dto.tags?
-            .split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .first { $0.isEmpty == false }
-
-        if let firstTag {
-            return firstTag.capitalized
-        }
-
-        let country = dto.country?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return country.isEmpty ? "Radio" : country
-    }
-
-    static func tags(from dto: RadioBrowserStation) -> [String]? {
-        Station.tags(fromCSV: dto.tags)
-    }
-
-    static func normalizedValue(_ value: String?) -> String? {
-        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return trimmed.isEmpty ? nil : trimmed
-    }
-
-    /// Favicons are frequently plain http://, which ATS blocks for image loads
-    /// (the app's ATS exception covers AV media only). Upgrading to https is a
-    /// best-effort heuristic — if the host doesn't support it, the artwork
-    /// placeholder shows instead.
-    static func artworkURL(from favicon: String?) -> URL? {
-        let trimmed = favicon?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard trimmed.isEmpty == false, var components = URLComponents(string: trimmed) else {
-            return nil
-        }
-
-        if components.scheme?.caseInsensitiveCompare("http") == .orderedSame {
-            components.scheme = "https"
-            // `http://host:8080` → `https://host` rather than preserving an
-            // arbitrary cleartext port that is unlikely to serve TLS.
-            components.port = nil
-        }
-
-        return components.url
-    }
-
     // MARK: - Transport
 
     private func decode<T: Decodable>(_ type: T.Type, from data: Data) throws(RadioDirectoryError) -> T {
@@ -381,65 +303,4 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
 
         return .transport(error.localizedDescription)
     }
-}
-// swiftlint:enable type_body_length
-
-private extension StationSearchFilters {
-    func radioBrowserQueryItems(excludingTag: Bool = false) -> [URLQueryItem] {
-        var queryItems: [URLQueryItem] = []
-
-        if let bitrateMin {
-            queryItems.append(URLQueryItem(name: "bitrateMin", value: String(bitrateMin)))
-        }
-        if let bitrateMax {
-            queryItems.append(URLQueryItem(name: "bitrateMax", value: String(bitrateMax)))
-        }
-        if excludingTag == false, let tag {
-            queryItems.append(URLQueryItem(name: "tagList", value: tag.lowercased()))
-        }
-        if let countryCode {
-            queryItems.append(URLQueryItem(name: "countrycode", value: countryCode))
-        }
-
-        return queryItems
-    }
-}
-
-// MARK: - Wire types
-
-struct RadioBrowserStation: Decodable {
-    let stationuuid: String
-    let name: String?
-    let url: String?
-    let urlResolved: String?
-    let favicon: String?
-    let tags: String?
-    let country: String?
-    let codec: String?
-    let language: String?
-    let bitrate: Int?
-    let clickcount: Int?
-    let clicktrend: Int?
-    let votes: Int?
-
-    enum CodingKeys: String, CodingKey {
-        case stationuuid
-        case name
-        case url
-        case urlResolved = "url_resolved"
-        case favicon
-        case tags
-        case country
-        case codec
-        case language
-        case bitrate
-        case clickcount
-        case clicktrend
-        case votes
-    }
-}
-
-struct RadioBrowserTag: Decodable {
-    let name: String
-    let stationcount: Int?
 }
