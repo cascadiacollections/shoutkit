@@ -28,7 +28,7 @@ import PackageDescription
 let package = Package(
     name: "PlaybackEngineAudioStreaming",
     platforms: [
-        .iOS(.v27)
+        .iOS(.v26)
     ],
     products: [
         .library(name: "PlaybackEngineAudioStreaming", targets: ["PlaybackEngineAudioStreaming"])

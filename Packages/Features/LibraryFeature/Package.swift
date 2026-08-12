@@ -6,7 +6,7 @@ let package = Package(
     name: "LibraryFeature",
     defaultLocalization: "en",
     platforms: [
-        .iOS(.v27)
+        .iOS(.v26)
     ],
     products: [
         .library(name: "LibraryFeature", targets: ["LibraryFeature"])
