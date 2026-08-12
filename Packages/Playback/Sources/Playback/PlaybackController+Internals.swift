@@ -170,6 +170,8 @@ extension PlaybackController {
             outputStarted = false
             // A mid-play failure is usually transient; retry before giving up.
             attemptReconnect(for: station, fallback: .failed(playbackError))
+        case .endOfStream:
+            handleEndOfStream(for: station)
         case .interruptionBegan:
             handleInterruptionBegan(station: station)
         case let .interruptionEnded(shouldResume, otherAudioIsPlaying):

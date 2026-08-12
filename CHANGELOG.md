@@ -6,6 +6,15 @@ All notable changes to ShoutKit are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- **Stations that broadcast a fixed-length programme no longer repeat themselves.** A station
+  like NPR's hourly newscast played through to the end and then started over — several times,
+  before stopping with an error. The app treated the end of a broadcast the same way it treats a
+  live stream dropping, because to a player those look identical. It can tell them apart now: a
+  programme that finishes stops, and the play button replays it. If you *want* it to start over,
+  Settings → Playback → **Loop Finished Broadcasts** does that; it's off by default, and it has
+  no effect on continuous stations, which never end on their own
+
 ### Changed
 - **VoiceOver now reads the sleep timer's remaining time.** The button announced only that a
   timer was running — the countdown was on screen and nowhere else, so the number that matters

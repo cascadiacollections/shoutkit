@@ -26,6 +26,7 @@ final class TVRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     private var timeControlObservation: NSKeyValueObservation?
     private var itemStatusObservation: NSKeyValueObservation?
     private var failedToEndObserver: NSObjectProtocol?
+    private var playedToEndObserver: NSObjectProtocol?
     private var interruptionObserver: NSObjectProtocol?
     private var routeChangeObserver: NSObjectProtocol?
 
@@ -97,6 +98,32 @@ final class TVRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
             }
         }
         observeFailureToPlayToEnd(of: item)
+        observePlaythroughToEnd(of: item)
+    }
+
+    /// A finite programme (a newscast, a recorded show) reaching its last frame.
+    /// `AVPlayer` reports it as a plain stop, indistinguishable from a user
+    /// pause, so the controller could neither stop cleanly nor offer to loop it.
+    /// Reporting `.endOfStream` gives the ending its own name and leaves that
+    /// choice where the setting lives. A live stream never reaches this
+    /// notification; it drops, which is `AVPlayerItemFailedToPlayToEndTime`.
+    /// `queue: .main` + `MainActor.assumeIsolated` for the same
+    /// `AVPlayerItem`-isn't-`Sendable` reason spelled out on
+    /// ``observeFailureToPlayToEnd(of:)`` below.
+    private func observePlaythroughToEnd(of item: AVPlayerItem) {
+        playedToEndObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: item,
+            queue: .main
+        ) { [weak self] notification in
+            let endedItem = notification.object as? AVPlayerItem
+            MainActor.assumeIsolated {
+                guard let self,
+                      let endedItem,
+                      self.player?.currentItem === endedItem else { return }
+                self.onStatusChange?(.endOfStream)
+            }
+        }
     }
 
     // `queue: .main` + `MainActor.assumeIsolated`, rather than `queue: nil` and a
@@ -156,6 +183,10 @@ final class TVRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         if let failedToEndObserver {
             NotificationCenter.default.removeObserver(failedToEndObserver)
             self.failedToEndObserver = nil
+        }
+        if let playedToEndObserver {
+            NotificationCenter.default.removeObserver(playedToEndObserver)
+            self.playedToEndObserver = nil
         }
         player?.replaceCurrentItem(with: nil)
         player = nil

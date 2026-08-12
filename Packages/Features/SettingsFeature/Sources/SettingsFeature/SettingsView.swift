@@ -20,6 +20,7 @@ public struct SettingsView: View {
     public var body: some View {
         NavigationStack {
             Form {
+                playbackSection
                 privacySection
                 if let playbackController, playbackController.supportsEqualizer {
                     equalizerSection
@@ -43,6 +44,34 @@ public struct SettingsView: View {
     }
 
     // MARK: - Sections
+
+    /// The one playback behaviour a listener has to be able to choose, because
+    /// either answer is wrong for half the stations: a continuous live stream
+    /// never ends, while a station that broadcasts a fixed-length programme does.
+    /// Off by default — a finished broadcast stops, the way every other player
+    /// treats it.
+    @ViewBuilder
+    private var playbackSection: some View {
+        if let settings {
+            Section {
+                Toggle(
+                    "Loop Finished Broadcasts",
+                    isOn: Binding(
+                        get: { settings.isStreamLoopingEnabled },
+                        set: { settings.isStreamLoopingEnabled = $0 }
+                    )
+                )
+            } header: {
+                Text("Playback")
+            } footer: {
+                Text("""
+                Most stations stream continuously and never end, so this changes nothing for \
+                them. A station that broadcasts a fixed-length programme — an hourly newscast, \
+                say — stops when it reaches the end; turn this on to have it start over instead.
+                """)
+            }
+        }
+    }
 
     @ViewBuilder
     private var privacySection: some View {

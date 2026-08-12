@@ -55,6 +55,12 @@ extension AppDependencies {
             featureFlags.isEnabled(FeatureCatalog.prewarmStations)
         }
 
+        // Read at each end-of-stream rather than captured, so flipping the
+        // toggle applies to the programme already playing.
+        controller.isStreamLoopingEnabledProvider = {
+            settings.isStreamLoopingEnabled
+        }
+
         // Best-effort album art + Apple Music link from a single iTunes Search
         // API hit. Gated here, at the source, so opting out stops the
         // supplemental network request itself — the toggle lives under Privacy

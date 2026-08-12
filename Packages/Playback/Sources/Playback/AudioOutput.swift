@@ -6,6 +6,21 @@ public enum AudioStatus: Equatable, Sendable {
     case playing
     case paused
     case failed(PlaybackError)
+    /// The stream reached the natural end of its content — a finite programme
+    /// (a newscast, a recorded show) played through to its last byte.
+    ///
+    /// Deliberately *not* `.failed`: a live stream the server drops looks the
+    /// same to a player but means something different, and conflating the two
+    /// is what made a finished broadcast restart itself through the controller's
+    /// auto-reconnect. So report this only when the ending is genuinely the
+    /// content running out, and keep reporting `.failed` when it can't be told
+    /// apart. Each engine has its own evidence for that:
+    /// `AudioStreamingPlaybackEngine` compares how far it played against the
+    /// entry's duration, which live audio doesn't have at all; the `AVPlayer`
+    /// engines take it from `AVPlayerItemDidPlayToEndTime`, which a dropped
+    /// stream never reaches — that arrives as
+    /// `AVPlayerItemFailedToPlayToEndTime` instead.
+    case endOfStream
     /// The system interrupted playback (phone call, Siri, another app took focus).
     case interruptionBegan
     /// The interruption ended. `shouldResume` reflects the system's hint, which
