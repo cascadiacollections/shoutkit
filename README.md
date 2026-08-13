@@ -133,8 +133,8 @@ recents surface plus a one-tap "Play Last" complication that deep-links into wat
 ships embedded in the phone app's bundle. **Apple TV** (`ShoutKitTVApp`, tvOS 26+) is a separate
 submission with its own bundle id: Recent and Popular station shelves built for the Siri Remote,
 over the same `AudioStreamingPlaybackEngine` the phone uses, so live ICY track titles appear on
-the big screen too.
-App Intents power Siri/Shortcuts with headless background playback (no app foregrounding);
+the big screen too. App Intents power Siri/Shortcuts with headless background playback (no app
+foregrounding);
 `StationEntity` also conforms to `IndexedEntity` so favorited, curated, and recently-played
 stations land in Spotlight's semantic index, letting Siri resolve "play ⟨station⟩" for a station
 from a previous session. `shoutkit://station?...` deep links open the phone app to a station for
