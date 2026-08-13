@@ -46,17 +46,32 @@ rediscovered:
    stays*, and it is a separate decision from this one — it needs someone to confirm the
    OSLog output is actually what gets read during a debugging session, which is a claim about
    practice, not code.
-2. **`geoStations` is not cleanly deletable, contrary to the roadmap's framing of all five as
-   equivalent.** Region identity is threaded into the *shipping* caching layer —
-   `CachingRadioDirectory.swift:195` and `DirectoryDiscoverySnapshot.swift:40` stamp and
-   invalidate snapshots by region for every user today. Only the 173-line
-   `GeoStationLocationCoordinator` and the flag are dark. Whoever takes the rest of #146
-   should scope that item as "delete the opt-in precise-location path," not "delete geo."
+2. **Three of the five are not cleanly deletable, contrary to the roadmap's framing of all
+   five as equivalent** — and the general lesson is that **a line count next to a flag is not
+   a deletion estimate**. What a flag gates is routinely smaller than the code it names,
+   because the code gets reused by something that ships:
 
-Related: `liveActivity`'s blast radius is likewise smaller than "delete the package."
-`NowPlayingActivityCore` is linked by the **shipped** quick-play Home Screen widget
-(`QuickPlayWidget.swift:34` uses `QuickPlayFavoritesStore`), so deleting the Live Activity
-feature removes `NowPlayingLiveActivity.swift` and the artwork store while the package stays.
+   - **`geoStations`** — region identity is threaded into the *shipping* caching layer
+     (`CachingRadioDirectory.swift:195`, `DirectoryDiscoverySnapshot.swift:40`), stamping and
+     invalidating snapshots by region for every user today. Only the 173-line
+     `GeoStationLocationCoordinator` and the flag are dark. Scope it as "delete the opt-in
+     precise-location path," not "delete geo."
+   - **`prewarmStations`** — `StationConnectionPrewarmer` (133 lines) is called by
+     `WarmupRadioAudioQueueIntent` (`ShoutKitAudioIntents.swift:82`), a shipping App Intent
+     with **no flag gate**, so deleting the flag leaves the prewarmer in place and still used.
+     `LibraryStore+Prewarm.swift` (123 lines) is mostly not prewarm either —
+     `rankedStations(limit:)` drives CarPlay (`ShoutKitCarPlaySceneDelegate.swift:106`),
+     alongside `favoriteStations()`, `mostRecentStation()`, and `refreshStreamURLSnapshot()`.
+     The dark surface is the flag, the launch-warmup block, `prewarmStreamURLs(limit:)`, and
+     the `tapToAudioPrewarmEnabledProvider` wiring, which only labels a log line in
+     `TapToAudioLatencyTrace`.
+   - **`liveActivity`** — `NowPlayingActivityCore` is linked by the shipped quick-play Home
+     Screen widget (`QuickPlayWidget.swift:34` uses `QuickPlayFavoritesStore`), so deleting
+     the feature removes `NowPlayingLiveActivity.swift` and the artwork store while the
+     package stays.
+
+   That leaves **`recommendations` as the only one of the five that is cleanly deletable**:
+   one call site, self-contained in `RadioDirectory`.
 
 ## 2026-08-12 (tvOS takes the iOS engine: `AudioStreamingPlaybackEngine` replaces AVPlayer, and the TV gets track titles)
 
