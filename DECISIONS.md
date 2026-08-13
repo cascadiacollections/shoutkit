@@ -71,6 +71,35 @@ it actually proves:
 The link check is the one that mattered: a `binaryTarget` whose zip lacked the slice would have
 failed here, after resolution reported success.
 
+**And a third thing that builds green while being broken, found by running it.** Every check above
+passed and the app still died at launch, on the device and in the simulator alike:
+
+```
+Termination Reason: DYLD, Code 1, Library missing
+Library not loaded: @rpath/ogg.framework/ogg
+  tried: '…/ShoutKitTVApp.app/ogg.framework/ogg' (no such file)
+```
+
+The frameworks were embedded correctly at `.app/Frameworks/`. What was missing was the *runpath*:
+the hand-written tvOS target had no `LD_RUNPATH_SEARCH_PATHS`, so its only rpath entries were
+`@loader_path` and a build-directory path, and dyld looked for `ogg.framework` beside the
+executable rather than in `Frameworks/`. Note what the failing path says — it is not "cannot find
+the library" in the abstract, it is "looked in the wrong directory."
+
+This is a latent defect the MVP could not have surfaced. Xcode adds
+`@executable_path/Frameworks` when *it* creates an app target; this one was assembled by hand in
+`project.pbxproj`, and every dependency it linked was a static SwiftPM library, so the missing
+setting cost nothing. Linking this package introduced the target's first *dynamic* frameworks and
+the omission became fatal immediately. Both the Debug and Release configurations now carry the
+setting, matching `ShoutKitApp`'s.
+
+**The lesson for the checklist is that the existing checks were all static.** `.o` files, `otool -L`,
+`vtool`, `nm`, and a green compile together prove the binary was *built* right; not one of them
+runs it, and dyld failures live entirely in the gap between linking and launching. The tvOS job in
+`release-checks` compiles and would have stayed green. A launch check — install to a booted tvOS
+simulator and confirm the process is still alive a few seconds later — is the cheap check that
+would have caught this, and it is the one worth adding when this target next gets CI attention.
+
 **The cost side, stated plainly.** The tvOS app is now heavier than the AVPlayer version — it pulls
 the C codec stack and its own `AVAudioEngine` graph where before it used the system player — and it
 picks up a dependency chain that can break on a tvOS-specific slice regression upstream. The tvOS
