@@ -4,6 +4,12 @@ All notable changes to ShoutKit are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org).
 
+> **0.1.0 through 0.3.0 were internal milestones, not releases.** None was ever tagged, and
+> no build from them reached a user — the repo had zero git tags until `v0.4.0`. Their
+> sections are kept as the development record. `v0.4.0` is the first real release; see
+> `docs/RELEASING.md` for how one is cut and `DECISIONS.md` (2026-08-13) for why the
+> numbering continues rather than restarting at 1.0.0.
+
 ## [Unreleased]
 
 ### Fixed
@@ -272,7 +278,7 @@ All notable changes to ShoutKit are documented here. The format follows
 - Resuming after a stream failure (or after pausing while a station was still loading) no longer
   re-logs the station to recents and re-reports the play to Radio-Browser
 
-## [0.2.0] — in progress (first TestFlight beta)
+## [0.2.0] — milestone, never released (planned as the first TestFlight beta)
 
 ### Added
 - **Sleep timer** in Now Playing (15/30/45/60 minutes) with a live countdown; pauses playback
@@ -322,7 +328,7 @@ All notable changes to ShoutKit are documented here. The format follows
   timed-metadata group
 - ICY titles with an empty artist (`" - Title"`) no longer parse the separator into the title
 
-## [0.1.0] — 2026-06-25
+## [0.1.0] — milestone, never released (dated 2026-06-25)
 
 ### Added
 - Initial scaffold: iOS 26 SwiftUI app shell, modular Swift packages, SHOUTcast directory

@@ -6,9 +6,15 @@ rather than replaces, the per-release plans in `docs/releases/*.md` — those st
 detailed, checkbox-level source of truth for a release in flight; this document is the
 zoomed-out sequencing across releases, revisited every sprint as scope shifts.
 
-**Status snapshot (2026-08-07).** 0.3.0 is done — see `docs/releases/0.3.0.md`, closed out
-with two items moved here rather than shipped. Everything below is a proposal, not a
-commitment.
+**Status snapshot (2026-08-13).** Everything below is a proposal, not a commitment.
+
+**The thing this document did not say, and should have: nothing has ever been released.**
+0.1.0, 0.2.0, and 0.3.0 all have changelog sections and release plans, and the repo had
+**zero git tags** — `release.yml` is tag-triggered and had never run once. CarPlay, the
+watchOS companion, tvOS, widgets, the equalizer, offline caching, iPadOS layouts, and the
+accessibility pass have all been built and none of them has reached a user. A roadmap that
+sequences the next feature round while the distribution path is untested is measuring the
+wrong thing. `v0.4.0` is the first real release; see `docs/RELEASING.md`.
 
 This document was re-baselined on 2026-08-07 after drifting about a release behind the
 tree. It had CarPlay deferred (it shipped), it listed two CI gaps that `ci.yml` had already
@@ -97,7 +103,10 @@ required check; the format check blocks; the watch-embed question answered eithe
 
 ## Next — 0.4.0 feature round
 
-Unchanged from the previous baseline; none of it has started.
+**"None of it has started" was wrong when written and is corrected here** — search filters
+shipped in #157 and issue #151 is closed. That is the third time this document has listed
+completed work as pending (CarPlay for two sprints, then the `try?` audit, now this), which
+is why the last bullet of "How to use this doc" exists.
 
 - [ ] **Ambient playback on ad detection** (#4). Reuse the existing ICY ad-break markers
       (`Spot Block Start/End`, already suppressed from displayed titles) as the trigger.
@@ -105,7 +114,9 @@ Unchanged from the previous baseline; none of it has started.
       not a v1 requirement. Off by default behind a Settings toggle until it is proven not
       to false-trigger on non-Triton/iHeart stations.
 - [ ] Favorites export/import (#150) — plain JSON via the Share sheet. No account, no server.
-- [ ] Search filters (#151) — bitrate, tag/genre, country, over Radio-Browser's existing query params.
+- [x] Search filters (#151) — bitrate, tag/genre, country, over Radio-Browser's existing query
+      params. **Shipped in #157**; `StationSearchFilters.swift`,
+      `RadioBrowserDirectoryClient+Filters.swift`, and three test files are in the tree.
 
 **Exit criteria:** the ad-break feature doesn't false-trigger across the top 20 Radio-Browser
 stations by listener count; crash-free ≥ 99.5%; no open P0/P1 for a week.
@@ -129,10 +140,30 @@ about during refactors. Each needs a decision — **promote or delete** (#146):
 - `diagnostics` — local MetricKit collection, opt-in; arguably correct as internal-only
   forever, but say so
 
-## Later — release readiness
+## Now — release readiness
 
-Everything gating a public listing that isn't distribution mechanics.
+Everything gating a public listing that isn't distribution mechanics. **Moved from "Later" to
+"Now" on 2026-08-13**, on the argument that a feature round added to software nobody can
+install is the wrong next move: this section is what converts the work already done into
+something a user receives.
 
+- [x] Release-process doc — `docs/RELEASING.md`, written 2026-08-13. Documents what a release
+      currently *is* (a draft GitHub Release from a CHANGELOG section — no signing, no
+      TestFlight, no App Store upload, because no Apple secrets are configured) and what is
+      still missing.
+- [x] Version numbering reconciled. Four sources disagreed: `CHANGELOG.md` had no `[0.3.0]`
+      section at all, `docs/releases/0.3.0.md` said 0.3.0 shipped, this file agreed, and the
+      project read `MARKETING_VERSION = 0.2.0`. Worse, the *targets* disagreed with each
+      other — phone app at `0.2.0`, watch and tvOS at `0.3.0`, which fails App Store
+      validation for an embedded watch app. All twelve sites now read `0.4.0`.
+- [ ] **Cut `v0.4.0`.** The changelog cut-over and the tag, per `docs/RELEASING.md`. Blocked
+      only on the in-flight PRs that still write to `[Unreleased]`.
+- [ ] Build-number (`CURRENT_PROJECT_VERSION`) handling. It is `1` everywhere and has never
+      been incremented; TestFlight rejects a duplicate build number for a given version, so
+      this bites on the *second* upload of a version, not the first.
+- [ ] A CI check that the pushed tag matches `MARKETING_VERSION`. Nothing currently catches
+      `v0.5.0` tagged against a tree reading `0.4.0`, and this repo's habit is to assert the
+      things it believes (Pulse symbols, the watch payload) rather than trust them.
 - [ ] Professional app icon — 0.2.0 shipped a programmatic Core Graphics placeholder,
       flagged in `DECISIONS.md` as swap-before-public-release.
 - [ ] Community translations beyond English. String Catalog infra shipped in 0.2.0; this is
@@ -141,8 +172,8 @@ Everything gating a public listing that isn't distribution mechanics.
       --skip-build`) so the headless-test workaround is one command instead of tribal
       knowledge in `CONTRIBUTING.md`. Still genuinely open — there is no `*.sh` in the repo.
 - [ ] Cold-launch and memory baselines captured per build (#148), as an ongoing regression check.
-- [ ] Release-process doc: tagging, `GIT_COMMIT_SHA` stamping, release-note generation.
-      There are still **zero git tags**, and `release.yml` is tag-triggered.
+- [ ] `GIT_COMMIT_SHA` stamping verified against a real tagged build (the mechanism shipped in
+      0.2.0; it has never been exercised by an actual release).
 
 ## Next — get off the billed macOS runner
 
