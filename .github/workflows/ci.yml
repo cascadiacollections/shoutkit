@@ -418,29 +418,42 @@ jobs:
           fi
           echo "Confirmed: Pulse symbols are present in the Debug binary."
 
-      # Diagnostic, deliberately non-failing. Nothing in project.pbxproj embeds
-      # ShoutKitWatchApp.app into ShoutKit.app — there is no Embed Watch Content
-      # copy phase — which reads as though the watch companion never installs
-      # alongside the phone app. That is a claim about a shipping product made
-      # from the project file alone, so this step reports what the built bundle
-      # actually contains rather than asserting an answer. Turn it into a hard
-      # check (or fix the embed) once the output has been read once.
+      # Hard check, and it was a warning until 2026-08-12 because until then it
+      # was failing: there was no Embed Watch Content copy phase, so the watchOS
+      # companion that README advertises never installed alongside the phone app.
+      # The embed now exists; this asserts it stays. Nothing else in CI would
+      # notice its removal — the watch target compiles from its own scheme in
+      # `release-checks` whether or not anything embeds the product.
+      #
+      # Inspects the built bundle rather than grepping project.pbxproj on
+      # purpose: the copy phase can be present and still produce no payload (a
+      # wrong dstPath puts it somewhere the installer ignores), and the original
+      # bug was found precisely because a claim read off the project file was
+      # checked against a real build.
       #
       # Lives here rather than beside the watch build in `release-checks`: it
       # inspects the *phone* app's Debug bundle, which is this job's product.
-      - name: Report whether the watch app is embedded in the phone app
-        if: always()
+      - name: Check the watch app is embedded in the phone app
         run: |
           APP="DerivedData/Build/Products/Debug-iphonesimulator/ShoutKit.app"
           if [ ! -d "$APP" ]; then
-            echo "No Debug app bundle to inspect."
-            exit 0
+            echo "::error::No Debug app bundle at $APP to inspect."
+            exit 1
           fi
-          if [ -d "$APP/Watch" ]; then
-            echo "Watch payload present: $(ls "$APP/Watch")"
-          else
-            echo "::warning::No Watch/ payload in ShoutKit.app — the watchOS companion is not embedded in the phone app. See docs/ROADMAP.md."
+          WATCH_APP="$APP/Watch/ShoutKitWatchApp.app"
+          if [ ! -d "$WATCH_APP" ]; then
+            echo "::error::No Watch/ShoutKitWatchApp.app payload in ShoutKit.app — the watchOS companion is not embedded in the phone app. Check the Embed Watch Content copy phase on the ShoutKit target."
+            exit 1
           fi
+          # The companion key is what makes the payload installable rather than
+          # merely present; a standalone watch app copied into Watch/ is the
+          # shape this bug originally had.
+          COMPANION=$(/usr/libexec/PlistBuddy -c "Print :WKCompanionAppBundleIdentifier" "$WATCH_APP/Info.plist" 2>/dev/null || true)
+          if [ "$COMPANION" != "com.cascadiacollections.shoutkit" ]; then
+            echo "::error::Embedded watch app's WKCompanionAppBundleIdentifier is '${COMPANION:-<missing>}', expected com.cascadiacollections.shoutkit."
+            exit 1
+          fi
+          echo "Confirmed: watch companion embedded at Watch/ShoutKitWatchApp.app, companion id $COMPANION."
 
   # Release-configuration and watchOS compiles, split out of `build` and off the
   # per-push path. Both are compile-only — neither runs a test — and together

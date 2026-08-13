@@ -46,6 +46,63 @@ for file-timestamp and disk-space APIs across every package and app target found
 `setResourceValues(isExcludedFromBackup:)` in `DirectoryDiscoverySnapshot`, which is not a
 required-reason category. The declaration is accurate as written.
 
+## 2026-08-12 (the watch app ships: a companion key, an embed phase, and the warning becomes a check)
+
+The watchOS companion recorded here on 2026-07-16, advertised in `README.md`, and compiled by
+CI since PR #138 has **never installed on anyone's watch**. It built, it passed, and it was
+not in the product. `ShoutKit.app` had no `Watch/` payload; `ShoutKitWatchApp` was a sibling
+top-level target reachable only from its own scheme.
+
+**The root cause was one missing Info.plist key, not the missing copy phase.**
+`ShoutKitWatchApp/Info.plist` declared `WKApplication` and stopped there, which describes a
+*standalone* watch app — one distributed on its own, with no phone app to attach to. The
+bundle id was already `com.cascadiacollections.shoutkit.watch`, a correct suffix of the phone's
+`com.cascadiacollections.shoutkit` (`Config/{Debug,Release}.xcconfig`), so the intent was
+plainly a companion; nothing ever told the installer that. `WKCompanionAppBundleIdentifier` is
+now set. It is hardcoded rather than derived because `PRODUCT_BUNDLE_IDENTIFIER` inside the
+watch target's own plist would expand to the *watch's* id; `Beta.xcconfig` only adds
+`OTHER_SWIFT_FLAGS`, so there is no configuration in which the phone id differs.
+
+The embed itself is the ordinary five objects added to `project.pbxproj` by hand — a
+`PBXBuildFile` for `ShoutKitWatchApp.app`, a `PBXContainerItemProxy` and `PBXTargetDependency`
+so the watch target builds first, and a `PBXCopyFilesBuildPhase` with
+`dstSubfolderSpec = 16` / `dstPath = "$(CONTENTS_FOLDER_PATH)/Watch"`, wired into `ShoutKit`'s
+`buildPhases` and `dependencies`.
+
+**Hand-editing the pbxproj is the thing `CLAUDE.md` warns about, so the edit was checked
+against a real build rather than trusted.** `xcodebuild … -destination id=<iPhone 17>` now
+produces `ShoutKit.app/Watch/ShoutKitWatchApp.app`, whose Mach-O reports
+`platform WATCHOSSIMULATOR / minos 26.0`, whose `WKCompanionAppBundleIdentifier` reads back as
+the phone id, and which carries `PlugIns/ShoutKitWatchWidgets.appex` (the "Play Last"
+complication) with it. That last detail is the one worth noting: nothing separately embeds
+the complication into the phone app, because it rides inside the watch app, which is why its
+absence was invisible for a month.
+
+**The CI step that found this stops being a diagnostic.** It was added deliberately
+non-failing, because it was asserting something the tree did not yet satisfy — the honest
+shape for a check written before its fix. It now fails the build, and it additionally asserts
+the embedded bundle's `WKCompanionAppBundleIdentifier`. Checking for the copy phase in
+`project.pbxproj` would have been the cheaper check and the wrong one: a phase with a wrong
+`dstPath` copies the bundle somewhere the installer ignores, producing a green build and no
+companion — the same failure with a different cause. The check inspects the built bundle for
+the same reason it caught the bug in the first place.
+
+**Not verified, and deliberately left open:** that the companion actually *installs* and pairs.
+That needs a paired iPhone + Apple Watch simulator or real hardware, not a build product
+inspection. The payload is present, correctly built for watchOS, and correctly keyed; whether
+watchOS accepts it at install time is the next thing to confirm, and it belongs on the same
+list as the on-device AVRCP verification (#147) — checks that need hardware, not a commit.
+Reproduce the bundle-level check with:
+
+```sh
+xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit -configuration Debug \
+  -destination 'id=<an iPhone simulator udid>' -derivedDataPath DerivedData build
+ls DerivedData/Build/Products/Debug-iphonesimulator/ShoutKit.app/Watch
+```
+
+Note for anyone re-running it: `-destination 'platform=iOS Simulator,name=iPhone 17'` fails on
+a machine with two simulators of that name. Use `id=`.
+
 ## 2026-08-12 (tvOS takes the iOS engine: `AudioStreamingPlaybackEngine` replaces AVPlayer, and the TV gets track titles)
 
 The tvOS MVP shipped with `TVRadioPlaybackEngine`, an `AVPlayer` fork of the watch engine, and

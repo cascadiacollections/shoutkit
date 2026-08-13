@@ -7,6 +7,10 @@ All notable changes to ShoutKit are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **The Apple Watch app now actually installs with the phone app.** It has been built, tested,
+  and listed in the README for a month, and no one could get it: nothing bundled it into the
+  iPhone app, so there was nothing for your watch to install. It ships inside the app now,
+  along with its "Play Last" complication
 - **Stations that broadcast a fixed-length programme no longer repeat themselves.** A station
   like NPR's hourly newscast played through to the end and then started over — several times,
   before stopping with an error. The app treated the end of a broadcast the same way it treats a

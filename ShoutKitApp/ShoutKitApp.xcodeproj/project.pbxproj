@@ -54,6 +54,7 @@
 		414EDC8DD0E322F7B7890A27 /* WatchAppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA49F89063497CAB19069B1 /* WatchAppDependencies.swift */; };
 		44AC2BEF222DBA0CBE89A887 /* WatchRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50B4E5649B9B1DA06B5FB1FC /* WatchRootView.swift */; };
 		5C8848F67AAA9BDD99B2E1BB /* ShoutKitWatchWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 2CF7489050D38CAD0C9BCAD5 /* ShoutKitWatchWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		0000000000000000000000F0 /* ShoutKitWatchApp.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 1F9BBE8DA0AFDC04C965EF42 /* ShoutKitWatchApp.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		61FB9A2F94033357F15F6F86 /* WatchLaunchRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1963A2095C47924C91C127EB /* WatchLaunchRoute.swift */; };
 		7AD926606E1286C3F3BD7E74 /* ShoutKitWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA8362D31F84827046BAEF74 /* ShoutKitWatchApp.swift */; };
 		80A56DAB6BC23378D22C1A6E /* WatchLaunchRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1963A2095C47924C91C127EB /* WatchLaunchRoute.swift */; };
@@ -95,6 +96,13 @@
 			remoteGlobalIDString = 000000000000000000000002;
 			remoteInfo = ShoutKit;
 		};
+		0000000000000000000000F1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3A593819EC2EC0E4966C890C;
+			remoteInfo = ShoutKitWatchApp;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -118,6 +126,17 @@
 				5C8848F67AAA9BDD99B2E1BB /* ShoutKitWatchWidgets.appex in Embed App Extensions */,
 			);
 			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0000000000000000000000F3 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				0000000000000000000000F0 /* ShoutKitWatchApp.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -402,11 +421,13 @@
 				00000000000000000000000B /* Frameworks */,
 				00000000000000000000000A /* Resources */,
 				00000000000000000000007E /* Embed Foundation Extensions */,
+				0000000000000000000000F3 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				000000000000000000000081 /* PBXTargetDependency */,
+				0000000000000000000000F2 /* PBXTargetDependency */,
 			);
 			name = ShoutKit;
 			packageProductDependencies = (
@@ -735,6 +756,12 @@
 			isa = PBXTargetDependency;
 			target = 000000000000000000000002 /* ShoutKit */;
 			targetProxy = 0000000000000000000000E9 /* PBXContainerItemProxy */;
+		};
+		0000000000000000000000F2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = ShoutKitWatchApp;
+			target = 3A593819EC2EC0E4966C890C /* ShoutKitWatchApp */;
+			targetProxy = 0000000000000000000000F1 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 

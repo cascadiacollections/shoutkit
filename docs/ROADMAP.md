@@ -63,7 +63,13 @@ The sprint this document scheduled twice and skipped twice. Landing in PR #138.
 - [ ] **Make SwiftFormat blocking** (#142). The mechanism landed — a `workflow_dispatch` Reformat
       job plus `.git-blame-ignore-revs` — but the one-time run has not been done. Dispatch
       it, review the diff, drop `continue-on-error` from `ci.yml`, record the SHA.
-- [ ] **The watch app does not ship with the phone app. Fix the embed** (#141). This started as a
+- [x] **The watch app does not ship with the phone app. Fix the embed** (#141). Fixed
+      2026-08-12. The root cause was a missing `WKCompanionAppBundleIdentifier` — the target
+      was configured as a *standalone* watch app — plus the absent copy phase. A real build
+      now emits `ShoutKit.app/Watch/ShoutKitWatchApp.app` (watchOS Mach-O, complication
+      nested inside), and the CI warning below is a hard check. **Still unverified: that it
+      installs and pairs**, which needs a paired simulator or hardware — see `DECISIONS.md`.
+      Original entry follows. This started as a
       suspicion from reading `project.pbxproj` — no `Embed Watch Content` phase, and
       `ShoutKitWatchApp` absent from `ShoutKit`'s dependencies — and the CI step added to
       check it has now confirmed it against a real build: `ShoutKit.app` has no `Watch/`
