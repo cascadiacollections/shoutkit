@@ -526,6 +526,13 @@
     .footer-links a { color: var(--muted); text-decoration: none; }
     .footer-links a:hover { color: var(--ink); text-decoration: underline; }
     .footnote { margin: 22px 0 0; font-size: 0.84rem; max-width: 74ch; }
+
+    /* ── Seasonal banner ──────────────────────────────────────────────── */
+    .promo { background: var(--sand-deep); border-bottom: 1px solid var(--border); }
+    .promo-inner { display: flex; justify-content: center; padding: 10px 0; text-align: center; }
+    .promo p { margin: 0; font-size: 0.88rem; color: var(--muted); }
+    .promo strong { color: var(--ink); }
+    .promo a { font-weight: 650; }
   </style>
 
   <script type="application/ld+json">
@@ -622,6 +629,12 @@
     </div>
   </header>
 
+  <div class="promo">
+    <div class="wrap promo-inner">
+      <p>🎉 <strong>Labor Day weekend:</strong> no sale, because it's always free — always has been. <a href="https://github.com/cascadiacollections/shoutkit">Grab the source →</a></p>
+    </div>
+  </div>
+
   <main id="main">
     <div id="top" class="hero">
       <div class="wrap">
@@ -632,10 +645,9 @@
           </p>
           <h1>Every station under the sun.</h1>
           <p class="lead">
-            ShoutKit is a <strong>native internet radio app</strong> for iPhone, iPad, Apple Watch, Apple TV
-            and CarPlay. Thousands of live stations, a Liquid Glass player that shows the track that's
-            playing right now, and Siri to start it — <strong>no ads, no accounts, no tracking,
-            no API keys</strong>. Free and open source, forever.
+            <strong>Internet radio for iPhone, iPad, Watch, Apple TV and CarPlay.</strong> Thousands
+            of live stations, a Liquid Glass player, Siri to start it — no ads, no accounts,
+            no tracking, no API keys. Free and open source, forever.
           </p>
           <div class="cta-row">
             <a class="btn btn-primary" href="https://github.com/cascadiacollections/shoutkit">
@@ -663,10 +675,7 @@
         <div class="section-head">
           <p class="kicker">What it does</p>
           <h2>Built the way an Apple app should be.</h2>
-          <p>
-            Pure SwiftUI, Swift 6, and the system frameworks — not a web view in a jacket.
-            Everything below ships in the app today.
-          </p>
+          <p>Pure SwiftUI and Swift 6 — not a web view in a jacket.</p>
         </div>
 
         <div class="group">
@@ -678,17 +687,17 @@
             <article class="card">
               <p class="tag">Now Playing</p>
               <h4>A Liquid Glass player</h4>
-              <p>A mini-player docked above the tab bar follows you everywhere, and expands into a full-screen Now Playing surface with live ICY track metadata.</p>
+              <p>A docked mini-player expands into a full-screen Now Playing view with live track metadata.</p>
             </article>
             <article class="card">
               <p class="tag">Artwork</p>
               <h4>Album art, resolved live</h4>
-              <p>Now Playing looks up artwork for the track on air and links straight to the matching song in Apple Music. On by default; one Settings toggle turns it off.</p>
+              <p>Looks up artwork for the track on air and links straight to it in Apple Music.</p>
             </article>
             <article class="card">
               <p class="tag">Sound</p>
               <h4>Equalizer &amp; sleep timer</h4>
-              <p>Preset EQ curves to colour the sound how you like it, and a sleep timer that pauses rather than stops — so resuming in the morning is one tap.</p>
+              <p>Preset EQ curves, and a sleep timer that pauses instead of stopping.</p>
             </article>
           </div>
         </div>
@@ -702,17 +711,17 @@
             <article class="card">
               <p class="tag">Discovery</p>
               <h4>Keyless, from first launch</h4>
-              <p>Real stations out of the box via the Radio-Browser community directory — search, genres and popular stations, with no API key to register for.</p>
+              <p>Real stations via the Radio-Browser community directory — no API key required.</p>
             </article>
             <article class="card">
               <p class="tag">Offline</p>
               <h4>Stations without the wait</h4>
-              <p>Discovery results are cached on device, so a launch paints stations immediately instead of a spinner — and keeps showing them when the network drops.</p>
+              <p>Cached on device, so stations appear instantly — even when the network drops.</p>
             </article>
             <article class="card">
               <p class="tag">Library</p>
               <h4>Favorites &amp; recents</h4>
-              <p>Backed by SwiftData and stored locally. Drag favorites into any order you like; recents remember where you left off.</p>
+              <p>Backed by SwiftData, stored locally. Reorder favorites; recents remember where you left off.</p>
             </article>
           </div>
         </div>
@@ -726,37 +735,37 @@
             <article class="card">
               <p class="tag">Siri · Shortcuts · Spotlight</p>
               <h4>“Play KEXP on ShoutKit”</h4>
-              <p>App Intents start playback in the background without foregrounding the app, and your favorites and recents are indexed in Spotlight.</p>
+              <p>App Intents start playback in the background; favorites are indexed in Spotlight.</p>
             </article>
             <article class="card">
               <p class="tag">Lock Screen</p>
               <h4>Controls where you expect them</h4>
-              <p>Full remote controls and now-playing info on the Lock Screen and in Control Center, plus a Dynamic Island Live Activity.</p>
+              <p>Full controls on the Lock Screen, Control Center, and a Dynamic Island Live Activity.</p>
             </article>
             <article class="card">
               <p class="tag">CarPlay</p>
               <h4>Favorites on the dashboard</h4>
-              <p>Your favorites and recent stations on the car's screen, driven by the same playback engine as the phone — so what's playing stays in sync.</p>
+              <p>Favorites and recents on the car's screen, in sync with the same playback engine.</p>
             </article>
             <article class="card">
               <p class="tag">Apple Watch</p>
               <h4>A real watch app</h4>
-              <p>Native now-playing and recent stations on the wrist, with a one-tap “Play Last” complication that starts your last station from the watch face.</p>
+              <p>Native now-playing on the wrist, with a one-tap “Play Last” complication.</p>
             </article>
             <article class="card">
               <p class="tag">Apple TV</p>
               <h4>Radio on the big screen</h4>
-              <p>Recent and popular station shelves built for the Siri Remote, with the current track's title and artist alongside the station — the same audio engine as the iPhone app.</p>
+              <p>Station shelves for the Siri Remote, with the current track's title and artist.</p>
             </article>
             <article class="card">
               <p class="tag">iPad</p>
               <h4>Not a stretched iPhone</h4>
-              <p>An adaptive sidebar and multi-column station grids that hold up in full screen, Split View and Stage Manager.</p>
+              <p>An adaptive sidebar and multi-column grids for full screen, Split View and Stage Manager.</p>
             </article>
             <article class="card">
               <p class="tag">Home Screen</p>
               <h4>Widgets &amp; deep links</h4>
-              <p>A widget plays a chosen favorite in one tap, and <code>shoutkit://station?…</code> links open the app straight to a station.</p>
+              <p>A widget plays a favorite in one tap; <code>shoutkit://station?…</code> opens any station.</p>
             </article>
           </div>
         </div>
@@ -775,28 +784,28 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
             <div>
               <strong>Zero data collection.</strong>
-              <p>The App Store privacy manifest declares no collected data types and no tracking domains.</p>
+              <p>The App Store privacy manifest declares nothing collected, nothing tracked.</p>
             </div>
           </li>
           <li>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
             <div>
               <strong>Nothing leaves the device.</strong>
-              <p>Favorites and recents live in a local SwiftData store. There is no sync service, because there is no server.</p>
+              <p>Favorites and recents live in local SwiftData. No server, no sync service.</p>
             </div>
           </li>
           <li>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
             <div>
               <strong>Minimal network traffic.</strong>
-              <p>Public directory queries, the station streams you choose, and the anonymous play reports the community directory uses to rank popularity. That's the list.</p>
+              <p>Just directory queries, the streams you play, and anonymous popularity pings.</p>
             </div>
           </li>
           <li>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
             <div>
               <strong>This page, too.</strong>
-              <p>No fonts from a CDN, no analytics script, no cookies — one HTML file and nothing else. You can read all of it.</p>
+              <p>No CDN fonts, no analytics, no cookies — one HTML file, nothing else.</p>
             </div>
           </li>
         </ul>
@@ -808,10 +817,7 @@
         <div class="section-head">
           <p class="kicker">Free software</p>
           <h2>Yours to read, build and fork.</h2>
-          <p>
-            The app is copyleft so it stays free for everyone who gets it. The infrastructure
-            underneath is permissive, so you can lift it into your own project.
-          </p>
+          <p>Copyleft keeps the app free; permissive packages are yours to lift into any project.</p>
         </div>
         <div class="split">
           <div class="panel">
@@ -826,10 +832,7 @@
                 <span class="what">The reusable packages: playback, directory, design system. Adopt them anywhere, including in closed source.</span>
               </li>
             </ul>
-            <p>
-              Reusable packages deliberately take no app-specific or heavyweight dependencies, so
-              dropping one into your project doesn't drag ShoutKit along with it.
-            </p>
+            <p>Reusable packages take no app-specific or heavyweight dependencies, so dropping one into your project won't drag ShoutKit along with it.</p>
             <p>
               <a href="https://github.com/cascadiacollections/shoutkit/blob/main/LICENSE">Read the licence</a> ·
               <a href="https://github.com/cascadiacollections/shoutkit/blob/main/THIRD_PARTY_LICENSES.md">Third-party notices</a>
@@ -838,13 +841,12 @@
 
           <div class="panel">
             <h3>Build it in three commands</h3>
-            <p>No keys, no secrets, no service to sign up for. Xcode 27 and a Mac.</p>
+            <p>No keys, no secrets, no sign-up. Just Xcode 27 and a Mac.</p>
 <pre><code>git clone https://github.com/cascadiacollections/shoutkit.git
 cd shoutkit
 open ShoutKit.xcworkspace <span class="c"># then ⌘R</span></code></pre>
             <p style="margin-top:14px;">
-              Prefer the terminal? <code>swift test --disable-xctest</code> runs the package suites
-              on a Mac host without booting a simulator.
+              Prefer the terminal? <code>swift test --disable-xctest</code> runs it without a simulator.
             </p>
           </div>
 
@@ -852,9 +854,9 @@ open ShoutKit.xcworkspace <span class="c"># then ⌘R</span></code></pre>
             <h3>Come help</h3>
             <p>Issues, docs, translations, station fixes — all welcome, no CLA to sign.</p>
             <ul class="linklist">
-              <li><a href="https://github.com/cascadiacollections/shoutkit/issues">Open issues</a><br /><span>Pick something up, or tell us what's broken.</span></li>
-              <li><a href="https://github.com/cascadiacollections/shoutkit/blob/main/CONTRIBUTING.md">Contributing guide</a><br /><span>How to build, test, localize and sign off.</span></li>
-              <li><a href="https://github.com/cascadiacollections/shoutkit/blob/main/DECISIONS.md">Decision log</a><br /><span>Why the code is the way it is, newest first.</span></li>
+              <li><a href="https://github.com/cascadiacollections/shoutkit/issues">Open issues</a><br /><span>Pick something up, or report what's broken.</span></li>
+              <li><a href="https://github.com/cascadiacollections/shoutkit/blob/main/CONTRIBUTING.md">Contributing guide</a><br /><span>Build, test, localize, sign off.</span></li>
+              <li><a href="https://github.com/cascadiacollections/shoutkit/blob/main/DECISIONS.md">Decision log</a><br /><span>Why the code is this way, newest first.</span></li>
               <li><a href="https://github.com/cascadiacollections/shoutkit/blob/main/SECURITY.md">Security policy</a><br /><span>How to report something quietly.</span></li>
             </ul>
           </div>
@@ -863,12 +865,8 @@ open ShoutKit.xcworkspace <span class="c"># then ⌘R</span></code></pre>
             <h3>Standing on free software</h3>
             <p>
               Station data comes from <a href="https://www.radio-browser.info">Radio-Browser</a>, a
-              free community directory with an open API and no key requirement. ShoutKit sends a
-              descriptive User-Agent and reports plays back so the directory's popularity ranking
-              keeps working — the same etiquette any good client follows.
-            </p>
-            <p>
-              If you like the app, the directory is the part worth supporting too.
+              free community directory with no key required. ShoutKit reports plays back so
+              its popularity ranking keeps working.
             </p>
           </div>
         </div>
@@ -900,27 +898,27 @@ open ShoutKit.xcworkspace <span class="c"># then ⌘R</span></code></pre>
         <div class="faq">
           <details>
             <summary>Does ShoutKit cost anything?</summary>
-            <p>No. It's free software with no paywalls, no subscriptions and no in-app purchases. Every feature works whether or not you support the project.</p>
+            <p>No. No paywalls, subscriptions or in-app purchases — every feature is free.</p>
           </details>
           <details>
             <summary>Do I need an API key or an account?</summary>
-            <p>Neither. Discovery works from first launch through the Radio-Browser community directory, which needs no key, and there's no ShoutKit account to create — your favorites and recents are stored on your device.</p>
+            <p>Neither. Discovery needs no key, and favorites and recents stay on your device.</p>
           </details>
           <details>
             <summary>What data does it collect?</summary>
-            <p>None. The privacy manifest declares no collected data types and no tracking. Network traffic is limited to public directory queries, the station streams you play, and the anonymous play reports the directory uses to rank popularity.</p>
+            <p>None — just directory queries, your streams, and anonymous popularity pings.</p>
           </details>
           <details>
             <summary>Which devices does it run on?</summary>
-            <p>iPhone and iPad on iOS or iPadOS 26 and later, Apple Watch on watchOS 26 and later, and Apple TV on tvOS 26 and later — plus CarPlay, a Home Screen widget, and a watch face complication.</p>
+            <p>iPhone, iPad, Apple Watch and Apple TV, plus CarPlay and a Home Screen widget.</p>
           </details>
           <details>
             <summary>Can I add a station that isn't listed?</summary>
-            <p>Stations come from the Radio-Browser community directory, so anything added there shows up in ShoutKit — the directory is editable by anyone. A handful of curated stations are bundled so the app is never empty.</p>
+            <p>Anything added to the Radio-Browser community directory shows up in ShoutKit — it's editable by anyone.</p>
           </details>
           <details>
             <summary>Can I build it myself?</summary>
-            <p>Yes, and it's the intended way to get it today. Clone the repository, open <code>ShoutKit.xcworkspace</code> in Xcode 27, and run the ShoutKit scheme — the default configuration needs no secrets.</p>
+            <p>Yes — clone it, open <code>ShoutKit.xcworkspace</code> in Xcode 27, and run it. No secrets needed.</p>
           </details>
         </div>
       </div>
