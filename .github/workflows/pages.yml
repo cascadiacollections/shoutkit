@@ -32,12 +32,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  api-docs:
-    name: Build API docs (DocC)
-    # DocC generation goes through `xcodebuild docbuild`, so it needs the same
-    # pinned Xcode as the rest of CI (see ci.yml's cost comment on this label).
+  deploy:
+    name: Build API docs and deploy Pages
+    # DocC generation goes through `xcodebuild docbuild`, so this needs the
+    # same pinned Xcode as the rest of CI (see ci.yml's cost comment on this
+    # label). Building and deploying in one job also sidesteps a real bug:
+    # `actions/upload-artifact` rejects filenames containing `:`, and DocC's
+    # JSON output encodes Swift parameter labels straight into filenames
+    # (`start(url:streamGeneration:).json`), so handing the built docs to a
+    # separate deploy job via upload-artifact/download-artifact fails outright.
+    # `upload-pages-artifact` doesn't have this problem — it tars the whole
+    # site into one archive rather than validating each entry's name.
     runs-on: xcode-27
     timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
 
@@ -61,8 +71,6 @@ jobs:
             RadioDirectory
           )
 
-          mkdir -p api-docs
-
           for package in "${packages[@]}"; do
             echo "::group::${package}"
             derived_data="$RUNNER_TEMP/dd-${package}"
@@ -80,32 +88,10 @@ jobs:
             fi
 
             xcrun docc process-archive transform-for-static-hosting "${archive}" \
-              --output-path "api-docs/${package}" \
+              --output-path "site/api/${package}" \
               --hosting-base-path "shoutkit/api/${package}"
             echo "::endgroup::"
           done
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: api-docs
-          path: api-docs
-          retention-days: 1
-
-  deploy:
-    name: Assemble and deploy Pages
-    needs: api-docs
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: api-docs
-          path: site/api
 
       - name: Configure Pages
         uses: actions/configure-pages@v6
