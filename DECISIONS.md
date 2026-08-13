@@ -1,5 +1,52 @@
 # Decisions
 
+## 2026-08-13 (nothing has ever been released: 0.1–0.3 are milestones, `v0.4.0` is the first real release)
+
+The repo has **zero git tags**. `release.yml` is `on: push: tags: v*.*.*` and has never run.
+Meanwhile `CHANGELOG.md` carried a dated `[0.1.0]`, a `[0.2.0] — in progress (first TestFlight
+beta)`, and a 260-line `[Unreleased]`; `docs/releases/` held plans for 0.2.0 and 0.3.0, the
+latter marked "Closed 2026-08-07. Every workstream below shipped"; `docs/ROADMAP.md` said
+"0.3.0 is done"; and the project file read `MARKETING_VERSION = 0.2.0`. **There was no
+`[0.3.0]` section in the changelog at all**, so pushing `v0.3.0` would have failed on
+`release.yml`'s own guard — the pipeline was not merely unused, it could not have worked.
+
+**The decision: 0.1.0–0.3.0 were internal milestones, not releases, and the changelog now says
+so.** The alternative was to reconstruct a `[0.3.0]` section by splitting `[Unreleased]` at
+the 2026-08-07 close date and retro-tagging it. That was rejected because it documents a
+fiction: no build from any of those numbers reached a user, and "released" has to mean a user
+could get it or the word stops carrying information. It is the same failure mode as a roadmap
+listing shipped work as pending — a record that reads plausibly and is false. The milestone
+numbers are kept rather than renumbered because the release-plan docs, `DECISIONS.md`, and
+`git log` all reference them; rewriting history to start at 0.1.0 again would break more than
+it fixed.
+
+`v0.4.0` continues the sequence rather than claiming 1.0.0. The 1.0 bar — a professional icon,
+signing secrets, an App Store listing — is not met, and a first release that overstates itself
+is the same error in the other direction.
+
+**A bug found while doing this, worth more than the bookkeeping: the targets disagreed with
+each other.** `MARKETING_VERSION` appears twelve times in `project.pbxproj` (there is no
+xcconfig for it) and split six/six — the app, widgets, and tests at `0.2.0`; the watch app,
+watch widgets, and tvOS app at `0.3.0`. An embedded watch app whose
+`CFBundleShortVersionString` differs from its host app's **fails App Store validation**, and
+the watch app only became embedded at all in #166 — so this would have surfaced as a rejected
+upload on the first real submission, with the embed as the obvious suspect and the version
+skew as the actual cause. All twelve now read `0.4.0`.
+
+**What a release currently is, stated plainly because it was not written down anywhere:**
+`release.yml` extracts the matching `## [X.Y.Z]` section from `CHANGELOG.md` and opens a
+*draft* GitHub Release. It does not sign, archive, upload to TestFlight, or submit. Every
+binary that has ever reached a device was built by hand in Xcode. `docs/RELEASING.md` now
+records that, along with the steps, the twelve-site version bump, and the gaps still open
+(no signing secrets, no build-number increment, no check that the tag matches
+`MARKETING_VERSION`).
+
+**Sequencing note.** The changelog cut-over — renaming `[Unreleased]` to `[0.4.0]` — is
+deliberately *not* in this change, and is the last step before the tag. Three PRs (#166, #167,
+#168) were in flight writing to `[Unreleased]`, and renaming the heading underneath them
+guarantees three conflicts for no benefit. `docs/RELEASING.md` documents it as step 1 of the
+release itself.
+
 ## 2026-08-13 (a privacy manifest per bundle: the watch and tvOS apps had none)
 
 `PrivacyInfo.xcprivacy` existed exactly once, in `ShoutKitApp/ShoutKitApp/`, registered to the
