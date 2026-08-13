@@ -1,5 +1,51 @@
 # Decisions
 
+## 2026-08-13 (a privacy manifest per bundle: the watch and tvOS apps had none)
+
+`PrivacyInfo.xcprivacy` existed exactly once, in `ShoutKitApp/ShoutKitApp/`, registered to the
+`ShoutKit` target alone. The watch app and the tvOS app — separate bundles, one of them now
+embedded inside the iOS app — shipped without one. Both now have their own.
+
+**Why it matters, and why it would not have shown up until the worst moment.** `UserDefaults`
+is a required-reason API. Apple's submission check (ITMS-91053, "Missing API declaration")
+inspects each bundle in the upload, so an embedded watch app or a separately-submitted tvOS app
+needs its own declaration; the host app's does not cover them. Nothing in the build, the tests,
+or `swiftlint` looks at this. It surfaces as a rejected or flagged upload on the **first real
+submission** — which, since the repo has never released anything (see the entry below), is
+still ahead. That makes it the same shape as the `MARKETING_VERSION` skew found the same day:
+silent locally, fatal once, and pointing at the wrong culprit when it fires.
+
+**The two targets are declared for different reasons, and the tvOS one is worth stating
+plainly:**
+
+- **watch app** — a direct call. `WatchAppDependencies` holds a `UserDefaults.standard` and
+  stores the last-played station under `Keys.lastStation` so the "Play Last" complication can
+  render and act without the phone.
+- **tvOS app** — *no tvOS source touches `UserDefaults` at all.* `TVAppDependencies` goes
+  through `Persistence`'s `LibraryStore`, which is SwiftData. But `Persistence` is statically
+  linked into the tvOS binary and its `SettingsStore`/`DefaultsKey` do call `UserDefaults`, and
+  Apple's check is **symbol-based rather than reachability-based**. Declaring it is therefore
+  correct even though the path may never run. The alternative — omitting it and arguing
+  reachability with App Review — is not a trade worth making for four lines of plist.
+
+**Deliberately not added: manifests for the widget extensions.** `ShoutKitWidgets` and
+`ShoutKitWatchWidgets` import only SwiftUI and WidgetKit, and reach app data through
+`QuickPlayFavoritesStore`, which is file I/O in the App Group container — writing and reading
+files is not a required-reason category, and neither extension touches `UserDefaults`. Adding
+empty manifests there would be cargo-culting. If either extension later reads file timestamps
+or disk space, that changes and the manifest becomes required.
+
+**Verified against the built products, not the project file**, because a resource that fails to
+register still builds green — the same trap as the source-file registration noted on 2026-08-12
+and the watch embed itself. Both `ShoutKitWatchApp.app` and `ShoutKitTVApp.app` were built and
+inspected for `PrivacyInfo.xcprivacy` in the bundle root.
+
+Also checked and *not* a gap: the iOS app's existing manifest. It declares
+`NSPrivacyAccessedAPICategoryUserDefaults` with reason `CA92.1` and nothing else, and a sweep
+for file-timestamp and disk-space APIs across every package and app target found only
+`setResourceValues(isExcludedFromBackup:)` in `DirectoryDiscoverySnapshot`, which is not a
+required-reason category. The declaration is accurate as written.
+
 ## 2026-08-12 (tvOS takes the iOS engine: `AudioStreamingPlaybackEngine` replaces AVPlayer, and the TV gets track titles)
 
 The tvOS MVP shipped with `TVRadioPlaybackEngine`, an `AVPlayer` fork of the watch engine, and
