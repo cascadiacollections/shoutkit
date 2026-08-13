@@ -113,15 +113,29 @@ in `ListenNowView`.
 
 That is not a backlog, it is unshipped inventory, and it costs something to carry: every one
 of them is code that has to keep compiling, keep passing tests, and keep being reasoned
-about during refactors. Each needs a decision — **promote or delete** (#146):
+about during refactors. Each needs a decision — **promote or delete** (#146).
 
-- `recommendations` — "More Like This" from local play history
-- `geoStations` — region-filtered discovery
-- `prewarmStations` — launch-time DNS/TLS warming of top stations
-- `liveActivity` — off with a stated reason (artwork can lag the track); the reason is
-  fixable or it is a decision to delete
-- `diagnostics` — local MetricKit collection, opt-in; arguably correct as internal-only
-  forever, but say so
+The inventory was measured on 2026-08-13 and is ~2,050 lines, distributed far more unevenly
+than this section implied — `diagnostics` alone is more than the other four combined:
+
+- [ ] `recommendations` (320 lines) — "More Like This" from local play history. One call site
+      (`ListenNowView.swift:251`), self-contained in `RadioDirectory`; cleanly deletable.
+- [ ] `prewarmStations` (304 lines) — launch-time DNS/TLS warming of top stations. Deletable,
+      but spans `Playback` and `Persistence`.
+- [ ] `geoStations` (173 dark lines) — region-filtered discovery. **Not cleanly deletable**,
+      contrary to the framing above: region identity is threaded into the *shipping* caching
+      layer (`CachingRadioDirectory.swift:195`, `DirectoryDiscoverySnapshot.swift:40`) and
+      runs for every user today. Only `GeoStationLocationCoordinator` and the flag are dark,
+      so scope this as "delete the opt-in precise-location path," not "delete geo".
+- [ ] `liveActivity` — off with a stated reason (artwork can lag the track); the reason is
+      fixable or it is a decision to delete. Smaller blast radius than it looks:
+      `NowPlayingActivityCore` is linked by the **shipped** quick-play widget
+      (`QuickPlayWidget.swift:34`), so the package stays either way.
+- [x] `diagnostics` (1,087 lines — 54% of the inventory) — **decided 2026-08-13: stays
+      internal-only, permanently.** It is a developer instrument with no user-facing surface,
+      double-gated and with no network egress at all. See `DECISIONS.md`. That entry also
+      flags `DiagnosticsMetricSummary` (422 lines) as a deletion candidate *within* the
+      retained feature — nothing reads its summaries programmatically.
 
 ## Later — release readiness
 
