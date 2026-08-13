@@ -123,22 +123,53 @@ stations by listener count; crash-free ≥ 99.5%; no open P0/P1 for a week.
 
 ## Then — decide about the dark features
 
-Five features are built, wired, and tested, and sit at `internalOnly` /
-`defaultEnabled: false` in `FeatureCatalog` — no user outside a Debug build has ever seen
-them. `RecommendationService` alone is 193 lines with 127 lines of tests and a live call site
-in `ListenNowView`.
+Five features were built, wired, and tested, and sat at `internalOnly` /
+`defaultEnabled: false` in `FeatureCatalog` — no user outside a Debug build ever saw them.
+**Two are now resolved** (`recommendations` deleted, `diagnostics` decided; both 2026-08-13),
+leaving three.
 
 That is not a backlog, it is unshipped inventory, and it costs something to carry: every one
 of them is code that has to keep compiling, keep passing tests, and keep being reasoned
-about during refactors. Each needs a decision — **promote or delete** (#146):
+about during refactors. Each needs a decision — **promote or delete** (#146).
 
-- `recommendations` — "More Like This" from local play history
-- `geoStations` — region-filtered discovery
-- `prewarmStations` — launch-time DNS/TLS warming of top stations
-- `liveActivity` — off with a stated reason (artwork can lag the track); the reason is
-  fixable or it is a decision to delete
-- `diagnostics` — local MetricKit collection, opt-in; arguably correct as internal-only
-  forever, but say so
+The inventory was measured on 2026-08-13 and is ~2,050 lines, distributed far more unevenly
+than this section implied — `diagnostics` alone is more than the other four combined.
+
+**A line count next to a flag is not a deletion estimate**, and treating it as one was the
+mistake this section originally made and then repeated: three of the five share code with
+shipping features, so the flag's blast radius is smaller than the feature's footprint. Each
+entry below states what is actually dark.
+
+- [x] `recommendations` (320 lines) — **deleted 2026-08-13.** The only one of the five that
+      could be removed without touching a shipping feature. `BrowseFeature` lost its
+      `FeatureFlags` dependency with it, and `RecommendationHashing` went too. See
+      `DECISIONS.md`.
+- [ ] `prewarmStations` — launch-time DNS/TLS warming of top stations. **Not cleanly
+      deletable either**, and the 304-line figure first written here was wrong: the flag
+      gates far less than the machinery. `StationConnectionPrewarmer` (133 lines) is called
+      by `WarmupRadioAudioQueueIntent` (`ShoutKitAudioIntents.swift:82`), a **shipping App
+      Intent with no flag gate**, and `LibraryStore+Prewarm.swift` (123 lines) is mostly not
+      prewarm at all — `rankedStations(limit:)` drives CarPlay
+      (`ShoutKitCarPlaySceneDelegate.swift:106`), alongside `favoriteStations()`,
+      `mostRecentStation()`, and `refreshStreamURLSnapshot()`. The genuinely dark surface is
+      the flag, the launch-warmup block in `AppDependencies+Warmups.swift:26`,
+      `prewarmStreamURLs(limit:)`, and the `tapToAudioPrewarmEnabledProvider` wiring (which
+      only labels a log line in `TapToAudioLatencyTrace`). Scope it that way, and note that
+      deleting the flag leaves the prewarmer itself in place and still used.
+- [ ] `geoStations` (173 dark lines) — region-filtered discovery. **Not cleanly deletable**,
+      contrary to the framing above: region identity is threaded into the *shipping* caching
+      layer (`CachingRadioDirectory.swift:195`, `DirectoryDiscoverySnapshot.swift:40`) and
+      runs for every user today. Only `GeoStationLocationCoordinator` and the flag are dark,
+      so scope this as "delete the opt-in precise-location path," not "delete geo".
+- [ ] `liveActivity` — off with a stated reason (artwork can lag the track); the reason is
+      fixable or it is a decision to delete. Smaller blast radius than it looks:
+      `NowPlayingActivityCore` is linked by the **shipped** quick-play widget
+      (`QuickPlayWidget.swift:34`), so the package stays either way.
+- [x] `diagnostics` (1,087 lines — 54% of the inventory) — **decided 2026-08-13: stays
+      internal-only, permanently.** It is a developer instrument with no user-facing surface,
+      double-gated and with no network egress at all. See `DECISIONS.md`. That entry also
+      flags `DiagnosticsMetricSummary` (422 lines) as a deletion candidate *within* the
+      retained feature — nothing reads its summaries programmatically.
 
 ## Now — release readiness
 

@@ -93,6 +93,120 @@ for file-timestamp and disk-space APIs across every package and app target found
 `setResourceValues(isExcludedFromBackup:)` in `DirectoryDiscoverySnapshot`, which is not a
 required-reason category. The declaration is accurate as written.
 
+## 2026-08-13 (`recommendations` is deleted — the only one of the five that was actually deletable)
+
+`RecommendationService` is gone: 193 lines of source, 127 of tests, the `FeatureCatalog`
+entry, the "More Like This" section in `ListenNowView`, and two localized strings. This
+resolves the second of #146's five, and it is the *only* one the audit found could be removed
+without touching a shipping feature.
+
+**Why delete rather than promote.** It had been built, tested, and wired for months with a
+live call site, and no user had ever seen it. Promoting it would mean deciding that
+content-based station similarity is a feature ShoutKit wants to stand behind — its quality
+tuned, its empty state designed, its results defensible — and nobody has made that case. The
+carrying cost was real and ongoing: it kept `Accelerate` and a 40-line FNV-1a hashing utility
+alive, and it added two parameters to a public `ListenNowView` initializer that no caller ever
+passed. Deleting is reversible through git; carrying dead code is not free.
+
+**What made this one clean, when three of its siblings are not.** Every reference resolved to
+either the feature itself or its single call site — verified by tracing, not by counting
+files, which is the discipline the entry below had to learn twice. `ListenNowView` was the
+only consumer, and `RootView.swift:127` constructs it as `ListenNowView(viewModel:)` without
+either injected dependency, so removing both parameters changed no call site.
+
+**Two things removed that were not obviously part of the feature:**
+
+- **`BrowseFeature` no longer depends on `FeatureFlags` at all** — target *and* package
+  dependency. `ListenNowView` was the package's only `FeatureFlags` consumer, and it only
+  used it to ask whether recommendations were on. A discovery surface that no longer asks any
+  feature-flag question should not link the module that answers them.
+- **`RecommendationHashing`** went with it. It was `public` and looked like general-purpose
+  infrastructure, but the only caller outside `RecommendationService` was the recommendation
+  cache key in `ListenNowView`. If a stable cross-process FNV-1a is wanted later it is four
+  lines, and `git log` has this one.
+
+**One thing deliberately kept.** `LibraryStore.hideFromListenNow` stays a *soft* hide even
+though its stated reason was that "the play record stays intact so recommendations still learn
+from it." The behaviour is still correct — dismissing a card from the Listen Now teaser is not
+"forget I played this," and the record still feeds the Library's Recently Played list and
+`rankedStations`, which drives CarPlay and the quick-play widget — so the comments were
+rewritten to the reason that survives rather than deleted along with the feature. A comment
+whose justification has been removed is worse than no comment: it is a live claim about why
+the code is shaped this way, and it would have been false.
+
+## 2026-08-13 (`diagnostics` stays internal-only, permanently, and that is the decision — not a deferral)
+
+`docs/ROADMAP.md` lists five features sitting at `internalOnly` / `defaultEnabled: false` in
+`FeatureCatalog` and asks each to be **promoted or deleted** (#146), on the correct principle
+that unshipped inventory is not a backlog — it is code that must keep compiling, keep passing
+tests, and keep being reasoned about during refactors. It also allows that `diagnostics` is
+"arguably correct as internal-only forever, but say so." This says so, and closes that fourth
+of #146. It is a third answer to promote-or-delete, and it is only legitimate *stated*: an
+undecided flag and a permanently-internal one look identical in the catalog, which is how the
+first becomes the second by neglect.
+
+**Measured first, because the roadmap's framing understates this one.** `diagnostics` is
+**1,087 lines** across `DiagnosticsMetricSummary` (422), `DiagnosticsService` (213),
+`DiagnosticsPayloadStore` (146), `Container+Diagnostics` (18), and 288 lines of tests. The
+whole dark inventory is roughly 2,050 lines, so this single feature is **over half of it** —
+more than `recommendations` (320), `prewarmStations` (304), and the `geoStations` coordinator
+(173) combined. Whatever is decided about the other four, this is the one that dominates the
+carrying cost.
+
+**Why it stays rather than ships.** It is a developer instrument, not a user feature. It
+subscribes to MetricKit, persists `MXMetricPayload`/`MXDiagnosticPayload` blobs to a local
+GRDB store with 30-day retention, and logs summaries. A user toggling it on gets no screen,
+no number, and no benefit — the value accrues to whoever reads the log while debugging.
+Promoting it would mean building the surface that makes it worth a user's attention, which is
+a feature nobody has asked for; deleting it would throw away the instrument that makes a
+launch-time or memory regression diagnosable, right as #148 proposes capturing exactly those
+baselines per build.
+
+**Why it stays rather than gets deleted, stated as a privacy question**, because that is the
+form the objection takes for anything named "diagnostics": it is double-gated on
+`featureFlags.isEnabled(diagnostics) && settings.isDiagnosticsSharingEnabled`
+(`DiagnosticsService.swift:91`), both false by default, and **there is no network egress
+anywhere in it** — no `URLSession`, no upload path, nothing. The data is on the device and
+stays there. "Sharing" in the settings key is a misnomer worth correcting whenever that
+string is next touched; nothing is shared with anyone.
+
+**Two things this audit turned up that are not resolved here**, recorded so they are not
+rediscovered:
+
+1. **`DiagnosticsMetricSummary` (422 lines — 39% of the feature) has no consumer outside
+   `Persistence`.** Nothing reads `metricPayloadSummaries(limit:)`; the summaries go to
+   `OSLog` and stop. So the largest single file in the feature exists to format text nobody
+   retrieves programmatically. That is a genuine deletion candidate *even though the feature
+   stays*, and it is a separate decision from this one — it needs someone to confirm the
+   OSLog output is actually what gets read during a debugging session, which is a claim about
+   practice, not code.
+2. **Three of the five are not cleanly deletable, contrary to the roadmap's framing of all
+   five as equivalent** — and the general lesson is that **a line count next to a flag is not
+   a deletion estimate**. What a flag gates is routinely smaller than the code it names,
+   because the code gets reused by something that ships:
+
+   - **`geoStations`** — region identity is threaded into the *shipping* caching layer
+     (`CachingRadioDirectory.swift:195`, `DirectoryDiscoverySnapshot.swift:40`), stamping and
+     invalidating snapshots by region for every user today. Only the 173-line
+     `GeoStationLocationCoordinator` and the flag are dark. Scope it as "delete the opt-in
+     precise-location path," not "delete geo."
+   - **`prewarmStations`** — `StationConnectionPrewarmer` (133 lines) is called by
+     `WarmupRadioAudioQueueIntent` (`ShoutKitAudioIntents.swift:82`), a shipping App Intent
+     with **no flag gate**, so deleting the flag leaves the prewarmer in place and still used.
+     `LibraryStore+Prewarm.swift` (123 lines) is mostly not prewarm either —
+     `rankedStations(limit:)` drives CarPlay (`ShoutKitCarPlaySceneDelegate.swift:106`),
+     alongside `favoriteStations()`, `mostRecentStation()`, and `refreshStreamURLSnapshot()`.
+     The dark surface is the flag, the launch-warmup block, `prewarmStreamURLs(limit:)`, and
+     the `tapToAudioPrewarmEnabledProvider` wiring, which only labels a log line in
+     `TapToAudioLatencyTrace`.
+   - **`liveActivity`** — `NowPlayingActivityCore` is linked by the shipped quick-play Home
+     Screen widget (`QuickPlayWidget.swift:34` uses `QuickPlayFavoritesStore`), so deleting
+     the feature removes `NowPlayingLiveActivity.swift` and the artwork store while the
+     package stays.
+
+   That leaves **`recommendations` as the only one of the five that is cleanly deletable**:
+   one call site, self-contained in `RadioDirectory`.
+
 ## 2026-08-12 (the watch app ships: a companion key, an embed phase, and the warning becomes a check)
 
 The watchOS companion recorded here on 2026-07-16, advertised in `README.md`, and compiled by

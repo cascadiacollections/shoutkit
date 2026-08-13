@@ -1,6 +1,5 @@
 import BrowseFeatureCore
 import DesignSystem
-import FeatureFlags
 import Persistence
 import Playback
 import RadioDirectory
@@ -17,7 +16,6 @@ import SwiftUI
 /// rather than the same ten stations twice.
 public struct ListenNowView: View {
     private enum Configuration {
-        static let recommendationLimit = 10
         /// How many of the top stations become poster cards. The rest fall
         /// through to the list below, so nothing appears in both.
         static let carouselLimit = 10
@@ -27,9 +25,6 @@ public struct ListenNowView: View {
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
     @Environment(\.displayScale) private var displayScale
-    private let recommendationService: any RecommendationServicing
-    private let featureFlags: any FeatureFlagProviding
-    @State private var cachedRecommendations: [Station] = []
     // See `RecentlyPlayedTeaserState` (Persistence) for the no-backfill dismiss logic.
     @State private var recentlyPlayedTeaser = RecentlyPlayedTeaserState()
     @State private var dismissUndo: DismissUndo?
@@ -45,13 +40,9 @@ public struct ListenNowView: View {
     private var recents: [RecentStation]
 
     public init(
-        viewModel: @autoclosure @escaping () -> BrowseViewModel = BrowseViewModel(),
-        recommendationService: (any RecommendationServicing)? = nil,
-        featureFlags: (any FeatureFlagProviding)? = nil
+        viewModel: @autoclosure @escaping () -> BrowseViewModel = BrowseViewModel()
     ) {
         _viewModel = State(wrappedValue: viewModel())
-        self.recommendationService = recommendationService ?? sharedRecommendationService()
-        self.featureFlags = featureFlags ?? sharedFeatureFlags()
     }
 
     public var body: some View {
@@ -98,7 +89,8 @@ public struct ListenNowView: View {
     }
 
     // Recents dismissed from the Listen Now teaser but still present in
-    // `recents` for recommendation scoring (see `LibraryStore.hideFromListenNow`).
+    // `recents`, which remains the play record the Library's own list and the
+    // station ranking read (see `LibraryStore.hideFromListenNow`).
     private var visibleRecents: [RecentStation] {
         recents.filter { $0.isHiddenFromListenNow == false }
     }
@@ -132,8 +124,6 @@ public struct ListenNowView: View {
             SavedStationsNotice(origin: loaded.origin, refreshError: viewModel.refreshError)
 
             recentlyPlayed
-
-            recommendationsSection(loaded)
 
             popularCarousel(loaded)
 
@@ -187,8 +177,10 @@ public struct ListenNowView: View {
     }
 
     private func dismissRecent(stationID: String, stationName: String, at index: Int) {
-        // A soft hide, not `removeRecent` — the play record stays intact so
-        // recommendations still learn from it even once this teaser is empty.
+        // A soft hide, not `removeRecent` — dismissing a card from this teaser
+        // is not "forget I played this". The play record stays intact for the
+        // Library's Recently Played list and for `rankedStations`, which feeds
+        // CarPlay and the quick-play widget.
         library?.hideFromListenNow(stationID: stationID)
         // Removed here too (not just left to the query refresh) so the slot
         // doesn't backfill from `recents` — dismissing shrinks the list.
@@ -213,47 +205,6 @@ public struct ListenNowView: View {
         recentlyPlayedTeaser.restore(undo.stationID, at: undo.restoreIndex)
         dismissUndoExpiryTask?.cancel()
         dismissUndo = nil
-    }
-
-    @ViewBuilder
-    private func recommendationsSection(_ loaded: BrowseContent) -> some View {
-        // Result builders don't support `guard`, so gate with `if`. The
-        // `.task` sits on the (possibly empty) Group so recommendations still
-        // compute before the first carousel render.
-        if recommendationsEnabled {
-            VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
-                SectionHeaderView(String(localized: "More Like This", bundle: .module))
-                if cachedRecommendations.isEmpty {
-                    // Otherwise the flag has no visible effect at all, and
-                    // looks like it silently did nothing after being enabled.
-                    Text(String(localized: "Play a few stations to get recommendations here.", bundle: .module))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                } else {
-                    StationCarousel(
-                        stations: cachedRecommendations,
-                        phase: { playback?.phase(for: $0) ?? .idle },
-                        onTap: { playback?.toggle($0) }
-                    )
-                }
-            }
-            .task(id: recommendationCacheKey(loaded)) {
-                cachedRecommendations = recommendationService.moreLikeThis(
-                    from: recents.map(\.station),
-                    candidates: loaded.stations,
-                    limit: Configuration.recommendationLimit
-                ).map(\.station)
-            }
-        }
-    }
-
-    private var recommendationsEnabled: Bool {
-        featureFlags.isEnabled(FeatureCatalog.recommendations)
-    }
-
-    private func recommendationCacheKey(_ loaded: BrowseContent) -> UInt64 {
-        // Bounded inputs: recents cap at 25 and browse stations at 24.
-        RecommendationHashing.stableHash(segments: recents.map(\.stationID) + loaded.stations.map(\.id))
     }
 
     private func popularCarousel(_ loaded: BrowseContent) -> some View {
