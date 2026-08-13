@@ -1,12 +1,20 @@
-name: Deploy marketing site
+name: Deploy site and API docs
 
-# Publishes the static marketing site in `site/` to GitHub Pages. The site is
-# plain HTML with no build step, so we just upload the folder as-is.
+# Publishes the static marketing site in `site/` plus generated DocC reference
+# sites for the MIT-licensed packages (the ShoutKit SDK surface) to GitHub
+# Pages. The marketing site is plain HTML with no build step; the API docs are
+# built fresh on every run from `xcodebuild docbuild` and never committed.
 on:
   push:
     branches: [main]
     paths:
       - "site/**"
+      - "Packages/DesignSystem/Sources/**"
+      - "Packages/FeatureFlags/Sources/**"
+      - "Packages/Persistence/Sources/**"
+      - "Packages/Playback/Sources/**"
+      - "Packages/PlaybackEngineAudioStreaming/Sources/**"
+      - "Packages/RadioDirectory/Sources/**"
       - ".github/workflows/pages.yml"
   # Allow manual runs from the Actions tab (e.g. first deploy).
   workflow_dispatch:
@@ -24,8 +32,68 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  api-docs:
+    name: Build API docs (DocC)
+    # DocC generation goes through `xcodebuild docbuild`, so it needs the same
+    # pinned Xcode as the rest of CI (see ci.yml's cost comment on this label).
+    runs-on: xcode-27
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
+
+      - name: Build and export each package's documentation
+        run: |
+          set -euo pipefail
+          # The MIT-licensed, reusable packages only — see the Licensing table
+          # in README.md. GPL packages (feature code, LiveActivity,
+          # ImageIODownsample, the app itself) aren't part of the SDK surface
+          # this site documents.
+          packages=(
+            DesignSystem
+            FeatureFlags
+            Persistence
+            Playback
+            PlaybackEngineAudioStreaming
+            RadioDirectory
+          )
+
+          mkdir -p api-docs
+
+          for package in "${packages[@]}"; do
+            echo "::group::${package}"
+            derived_data="$RUNNER_TEMP/dd-${package}"
+
+            xcodebuild docbuild \
+              -workspace ShoutKit.xcworkspace \
+              -scheme "${package}" \
+              -destination 'generic/platform=iOS Simulator' \
+              -derivedDataPath "${derived_data}"
+
+            archive=$(find "${derived_data}" -name "*.doccarchive" -print -quit)
+            if [ -z "${archive}" ]; then
+              echo "No .doccarchive produced for ${package}" >&2
+              exit 1
+            fi
+
+            xcrun docc process-archive transform-for-static-hosting "${archive}" \
+              --output-path "api-docs/${package}" \
+              --hosting-base-path "shoutkit/api/${package}"
+            echo "::endgroup::"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: api-docs
+          path: api-docs
+          retention-days: 1
+
   deploy:
-    name: Build and deploy
+    name: Assemble and deploy Pages
+    needs: api-docs
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
@@ -33,6 +101,11 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: api-docs
+          path: site/api
 
       - name: Configure Pages
         uses: actions/configure-pages@v6

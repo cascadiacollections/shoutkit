@@ -1,5 +1,35 @@
 # Decisions
 
+## 2026-08-13 (API docs are DocC, not Doxygen, and cover the MIT packages only)
+
+Asked to deploy Doxygen pages for the SDK surface in preparation for opening it up to adopters.
+Doxygen 1.9.8 was actually installed and pointed at real package sources (`EXTENSION_MAPPING =
+swift=Objective-C`, the standard workaround for Swift-less Doxygen) before deciding anything —
+and it extracts nothing. No class, struct, protocol, or actor from a from-scratch three-type test
+file made it into the output; only the file listing and its own doc-comment prose survived. That
+workaround dates from an era of Doxygen that tolerated Swift's syntax loosely; 1.9.8 does not.
+Building a custom Swift-to-Objective-C source filter to keep "Doxygen" literal was the other
+option on the table and was rejected as the wrong trade: a hand-rolled filter is exactly the kind
+of fragile, high-maintenance shim the "reusable packages stay adoptable" principle in `CLAUDE.md`
+exists to avoid, and it would need re-validating against every generic, property wrapper,
+extension, and actor already in these packages.
+
+`docc` — Swift's own toolchain doc compiler, already the implicit target of every `` ``Symbol`` ``
+cross-reference in the existing `///` comments — parses actual Swift and ships with Xcode, so
+generating through it needed nothing new: `xcodebuild docbuild -scheme <Package> -destination
+'generic/platform=iOS Simulator'` per package, then `docc process-archive
+transform-for-static-hosting` for a GitHub-Pages-ready static site. `.github/workflows/pages.yml`
+gained a `xcode-27` job for this (docbuild needs a real Xcode, same as `ci.yml`'s simulator job)
+that hands the six archives to the existing `ubuntu-latest` deploy job, which merges them under
+`site/api/` alongside the marketing site — one Pages deployment, same as before.
+
+Scope is the six packages carrying a per-package `LICENSE` file per the Licensing table in
+`README.md`: `DesignSystem`, `FeatureFlags`, `Persistence`, `Playback`,
+`PlaybackEngineAudioStreaming`, `RadioDirectory`. `ImageIODownsample` looks MIT-adjacent (a small
+leaf module, no app-specific dependencies) but is GPL-3.0 per that table, so it's excluded along
+with the feature packages, `LiveActivity`, and the app target — this site documents the adoptable
+surface, not the whole tree.
+
 ## 2026-08-13 (artwork traffic gets its own, lower-priority session — it was never actually deprioritized against the stream)
 
 The 2026-08-03 power review (below) gave *speculative* artwork prefetch its own session

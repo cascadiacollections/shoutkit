@@ -190,6 +190,9 @@ The rule, if you're adding a package: a per-package `LICENSE` file makes it MIT 
 must stay adoptable — no app-specific or heavyweight dependencies. Everything else inherits
 GPL-3.0 from the root `LICENSE`.
 
+DocC-generated API reference for the six MIT packages above is published at
+[cascadiacollections.github.io/shoutkit/api](https://cascadiacollections.github.io/shoutkit/api/).
+
 The reusable infrastructure packages are MIT so they can be adopted anywhere; the app itself is
 GPL-3.0 so distributed forks must remain open source. The **ShoutKit name and branding are not
 covered by the code licenses** — see [TRADEMARK.md](TRADEMARK.md). Contributions require a DCO
