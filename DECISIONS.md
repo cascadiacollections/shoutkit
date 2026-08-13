@@ -1,5 +1,37 @@
 # Decisions
 
+## 2026-08-13 (artwork traffic gets its own, lower-priority session — it was never actually deprioritized against the stream)
+
+The 2026-08-03 power review (below) gave *speculative* artwork prefetch its own session
+(`.background`, refuses constrained/expensive networks) so it would yield to "the directory and
+to artwork a visible row actually needs." What it left unexamined: what a visible row, the Now
+Playing hero, lock-screen art, and Live Activity art were yielding to. All four defaulted to
+`URLSessionHTTPTransport.shared` — the same `.responsiveData` session as directory search — and
+`.responsiveData` is a scheduling hint, not a label: on a weak link (LTE, 3G, a saturated Wi-Fi;
+"5G or worse" covers the range this matters for) it tells the system this fetch is as
+latency-sensitive as anything else marked the same way. The one thing on the device actually
+marked that way and genuinely latency-sensitive is the audio stream itself — except it isn't
+marked at all. `PlaybackEngineAudioStreaming` hands a URL to AudioStreaming's `AudioPlayer` and
+never touches the `URLSession` underneath; that session is entirely internal to the library, so
+nothing in this repo can raise the stream's own priority.
+
+The only lever available, then, is to lower artwork's instead. `URLSessionHTTPTransport.artwork`
+(`HTTPTransport.swift`) is a new session for exactly the traffic the August review didn't touch:
+row thumbnails, hero art, `NowPlayingCenter`/`MediaSessionNowPlayingCenter` lock-screen art, and
+`NowPlayingActivityCoordinator`'s Live Activity art. It sets `networkServiceType = .background`
+like the speculative session, but — unlike speculative — leaves
+`allowsConstrainedNetworkAccess`/`allowsExpensiveNetworkAccess` at their permissive defaults: this
+is traffic a listener is actually waiting on (their lock screen, the row they're looking at), not
+a look-ahead guess, so Low Data Mode and cellular must not suppress it outright the way they
+suppress prefetch. `.background` only asks the scheduler to give it a lower queue position than
+whatever else is moving bytes — which in this app is always the stream.
+
+Directory JSON search (`ShoutcastDirectoryClient`, `RadioBrowserDirectoryClient`) stays on
+`.shared`/`.responsiveData`: it's a few KB of metadata per keystroke, not a sustained transfer,
+and it isn't the traffic this problem is about. `AlbumArtLookup`'s iTunes metadata query is the
+same shape and is left alone for the same reason — only the artwork *bytes* it points at, fetched
+through `ArtworkLoader`, move to `.artwork`.
+
 ## 2026-08-13 (nothing has ever been released: 0.1–0.3 are milestones, `v0.4.0` is the first real release)
 
 The repo has **zero git tags**. `release.yml` is `on: push: tags: v*.*.*` and has never run.

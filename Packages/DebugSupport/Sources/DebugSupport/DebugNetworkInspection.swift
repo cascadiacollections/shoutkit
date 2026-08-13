@@ -11,11 +11,16 @@ import Pulse
 /// the Release binary is belt-and-suspenders on top of that.
 public enum DebugNetworkInspection {
     /// Routes `URLSessionHTTPTransport.shared` — the transport Radio-Browser/
-    /// SHOUTcast lookups and artwork downloads default to — through a session
-    /// wired with Pulse's proxy delegate, so those requests show up in Pulse
-    /// without any call site knowing about it. Must run before the first
-    /// network call resolves `shared`; `AppDependencies.bootstrap()` calls it
-    /// first thing. Compiles to a no-op in Release.
+    /// SHOUTcast lookups default to — through a session wired with Pulse's
+    /// proxy delegate, so those requests show up in Pulse without any call
+    /// site knowing about it. Must run before the first network call resolves
+    /// `shared`; `AppDependencies.bootstrap()` calls it first thing. Compiles
+    /// to a no-op in Release.
+    ///
+    /// Artwork traffic no longer defaults here — it runs over
+    /// `URLSessionHTTPTransport.artwork` so it doesn't compete with the audio
+    /// stream on a weak connection (see `artworkConfiguration()`), and that
+    /// session isn't currently wired through Pulse.
     public static func install() {
         #if DEBUG
         // Build from the same latency-tuned configuration the Release session
