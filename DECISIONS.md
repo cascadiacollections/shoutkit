@@ -93,6 +93,64 @@ for file-timestamp and disk-space APIs across every package and app target found
 `setResourceValues(isExcludedFromBackup:)` in `DirectoryDiscoverySnapshot`, which is not a
 required-reason category. The declaration is accurate as written.
 
+## 2026-08-13 (`diagnostics` stays internal-only, permanently, and that is the decision — not a deferral)
+
+`docs/ROADMAP.md` lists five features sitting at `internalOnly` / `defaultEnabled: false` in
+`FeatureCatalog` and asks each to be **promoted or deleted** (#146), on the correct principle
+that unshipped inventory is not a backlog — it is code that must keep compiling, keep passing
+tests, and keep being reasoned about during refactors. It also allows that `diagnostics` is
+"arguably correct as internal-only forever, but say so." This says so, and closes that fourth
+of #146. It is a third answer to promote-or-delete, and it is only legitimate *stated*: an
+undecided flag and a permanently-internal one look identical in the catalog, which is how the
+first becomes the second by neglect.
+
+**Measured first, because the roadmap's framing understates this one.** `diagnostics` is
+**1,087 lines** across `DiagnosticsMetricSummary` (422), `DiagnosticsService` (213),
+`DiagnosticsPayloadStore` (146), `Container+Diagnostics` (18), and 288 lines of tests. The
+whole dark inventory is roughly 2,050 lines, so this single feature is **over half of it** —
+more than `recommendations` (320), `prewarmStations` (304), and the `geoStations` coordinator
+(173) combined. Whatever is decided about the other four, this is the one that dominates the
+carrying cost.
+
+**Why it stays rather than ships.** It is a developer instrument, not a user feature. It
+subscribes to MetricKit, persists `MXMetricPayload`/`MXDiagnosticPayload` blobs to a local
+GRDB store with 30-day retention, and logs summaries. A user toggling it on gets no screen,
+no number, and no benefit — the value accrues to whoever reads the log while debugging.
+Promoting it would mean building the surface that makes it worth a user's attention, which is
+a feature nobody has asked for; deleting it would throw away the instrument that makes a
+launch-time or memory regression diagnosable, right as #148 proposes capturing exactly those
+baselines per build.
+
+**Why it stays rather than gets deleted, stated as a privacy question**, because that is the
+form the objection takes for anything named "diagnostics": it is double-gated on
+`featureFlags.isEnabled(diagnostics) && settings.isDiagnosticsSharingEnabled`
+(`DiagnosticsService.swift:91`), both false by default, and **there is no network egress
+anywhere in it** — no `URLSession`, no upload path, nothing. The data is on the device and
+stays there. "Sharing" in the settings key is a misnomer worth correcting whenever that
+string is next touched; nothing is shared with anyone.
+
+**Two things this audit turned up that are not resolved here**, recorded so they are not
+rediscovered:
+
+1. **`DiagnosticsMetricSummary` (422 lines — 39% of the feature) has no consumer outside
+   `Persistence`.** Nothing reads `metricPayloadSummaries(limit:)`; the summaries go to
+   `OSLog` and stop. So the largest single file in the feature exists to format text nobody
+   retrieves programmatically. That is a genuine deletion candidate *even though the feature
+   stays*, and it is a separate decision from this one — it needs someone to confirm the
+   OSLog output is actually what gets read during a debugging session, which is a claim about
+   practice, not code.
+2. **`geoStations` is not cleanly deletable, contrary to the roadmap's framing of all five as
+   equivalent.** Region identity is threaded into the *shipping* caching layer —
+   `CachingRadioDirectory.swift:195` and `DirectoryDiscoverySnapshot.swift:40` stamp and
+   invalidate snapshots by region for every user today. Only the 173-line
+   `GeoStationLocationCoordinator` and the flag are dark. Whoever takes the rest of #146
+   should scope that item as "delete the opt-in precise-location path," not "delete geo."
+
+Related: `liveActivity`'s blast radius is likewise smaller than "delete the package."
+`NowPlayingActivityCore` is linked by the **shipped** quick-play Home Screen widget
+(`QuickPlayWidget.swift:34` uses `QuickPlayFavoritesStore`), so deleting the Live Activity
+feature removes `NowPlayingLiveActivity.swift` and the artwork store while the package stays.
+
 ## 2026-08-12 (the watch app ships: a companion key, an embed phase, and the warning becomes a check)
 
 The watchOS companion recorded here on 2026-07-16, advertised in `README.md`, and compiled by
