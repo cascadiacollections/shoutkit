@@ -1,6 +1,7 @@
 import Foundation
 import Persistence
 import Playback
+import PlaybackEngineAudioStreaming
 import RadioDirectory
 import SwiftData
 
@@ -23,6 +24,11 @@ struct TVAppServices {
 /// path exists for the iOS app, and inheriting it here would resolve
 /// `StubRadioPlaybackEngine` and play silence (see DECISIONS.md on the `os(iOS)` gates).
 ///
+/// The engine is `AudioStreamingPlaybackEngine`, the same one the phone uses, injected
+/// directly rather than resolved. Sharing the *engine* while keeping the *wiring*
+/// explicit is the point: the TV gets ICY track metadata and the equalizer seam without
+/// also inheriting an initializer that silently resolves a stub.
+///
 /// The WatchConnectivity last-station sync has no tvOS counterpart and is dropped: a TV
 /// is not a companion device, so recents come from this device's own store.
 @MainActor
@@ -42,7 +48,7 @@ enum TVAppDependencies {
         )
         let playbackController = PlaybackController(
             directory: directory,
-            output: TVRadioPlaybackEngine(),
+            output: AudioStreamingPlaybackEngine(),
             nowPlayingCenter: TVNowPlayingCenter()
         )
         playbackController.onStationPlayed = { station in

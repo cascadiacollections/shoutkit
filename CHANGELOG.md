@@ -75,6 +75,12 @@ All notable changes to ShoutKit are documented here. The format follows
   visible row never fetch the same image twice
 
 ### Added
+- **Apple TV app**: ShoutKit on tvOS, built for the Siri Remote — a now-playing banner over
+  Recent and Popular station shelves, with play/pause and stop, and the system Now Playing panel
+  (TV button) showing artwork and responding to the remote's transport controls. It runs the same
+  audio engine as the iPhone app, so the current track's title and artist appear alongside the
+  station name; stations that send no track information show their genre instead. Recents come
+  from the Apple TV itself — there is no sync with your phone
 - **Home Screen quick-play widget**: a small/medium Home Screen widget that plays a favorite
   station in one tap. Long-press → **Edit Widget** to choose which favorite it plays (it falls back
   to your first favorite until you pick one); tapping the tile opens ShoutKit straight onto that
