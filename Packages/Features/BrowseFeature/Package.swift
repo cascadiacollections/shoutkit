@@ -14,7 +14,6 @@ let package = Package(
     dependencies: [
         .package(path: "../../BrowseFeatureCore"),
         .package(path: "../../DesignSystem"),
-        .package(path: "../../FeatureFlags"),
         .package(path: "../../Playback"),
         .package(path: "../../Persistence"),
         .package(path: "../../RadioDirectory"),
@@ -26,7 +25,6 @@ let package = Package(
             dependencies: [
                 "BrowseFeatureCore",
                 "DesignSystem",
-                "FeatureFlags",
                 "Playback",
                 "Persistence",
                 "RadioDirectory",
