@@ -84,9 +84,10 @@ struct TVRootView: View {
         .padding(.top, 8)
     }
 
-    /// Station name doubles as the second line when there is no track, because this
-    /// engine emits no ICY metadata (see `TVRadioPlaybackEngine`) — the genre is the
-    /// most informative thing actually available.
+    /// The current track, once ICY metadata arrives from
+    /// `AudioStreamingPlaybackEngine`. Genre is the fallback rather than the norm: a
+    /// station may send no metadata at all, and the first title lands a beat after
+    /// playback starts, so this line has to read sensibly with `nowPlaying` still nil.
     private var subtitle: String {
         guard let playback, let station = playback.currentStation else {
             return "Pick a station to start listening."

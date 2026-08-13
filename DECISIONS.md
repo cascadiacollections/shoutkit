@@ -1,5 +1,84 @@
 # Decisions
 
+## 2026-08-12 (tvOS takes the iOS engine: `AudioStreamingPlaybackEngine` replaces AVPlayer, and the TV gets track titles)
+
+The tvOS MVP shipped with `TVRadioPlaybackEngine`, an `AVPlayer` fork of the watch engine, and
+the entry below records the known cost: **no ICY metadata**, so a 10-foot display showed the
+station and its artwork but never the track. That entry also named the upgrade path and said the
+fix would be switching engines rather than patching around it. This is that switch.
+`ShoutKitTVApp` now links `PlaybackEngineAudioStreaming` and injects
+`AudioStreamingPlaybackEngine` — the same engine the phone runs — and
+`TVRadioPlaybackEngine.swift` is deleted rather than left as a fallback.
+
+**What the deferral was protecting against, and why it no longer applies.** The MVP's argument
+was not that tvOS was unsupported; it was that binary-artifact resolution on an unproven platform
+was a risk not worth taking for v1. That risk is now measured rather than estimated. Re-checked at
+the exact revisions pinned in `Package.resolved`, and in the downloaded artifacts rather than the
+manifests that describe them:
+
+- `ogg.xcframework` 0.1.2 and `vorbis.xcframework` 0.1.2 each carry a real `tvos-arm64` slice
+  *and* a `tvos-arm64_x86_64-simulator` slice (`Info.plist`, `LibraryIdentifier`).
+- AudioStreaming 1.4.4 declares `.tvOS(.v16)`.
+
+That is the whole difference from watchOS, which has no slice at all and is why
+`Packages/PlaybackEngineAudioStreaming/Package.swift` still omits `.watchOS` — the omission is
+load-bearing, the `.tvOS(.v26)` addition is not a loosening of it. The watch keeps
+`WatchRadioPlaybackEngine` and there is no version of this change that includes it.
+
+**Verifying the slices, not the manifests, is the point.** A `binaryTarget`'s platform support is
+a property of the zip, not of the `platforms:` list in the package that fetches it, and the two can
+disagree — the failure mode is a link error naming a missing architecture, which reads as a
+toolchain problem rather than a dependency one (#123 is the recorded instance of exactly that, in
+the other direction). Reading `LibraryIdentifier` out of each `Info.plist` is a check that can
+fail; a manifest's platform list is a claim.
+
+**What the TV gains.** Live track titles, via the one ICY seam in
+`audioPlayerDidReadMetadata` — `TVRootView`'s subtitle line and `TVNowPlayingCenter`'s
+`MPMediaItemPropertyTitle`/`Artist` were already written to prefer `nowPlaying` and fall back to
+the station, so they light up with no change beyond a corrected comment. It also inherits, for
+free, everything that has accumulated in the shared engine and could never have been ported
+twice: the session-activation retry backoff, media-services-reset recovery, the
+`.endOfStream`/`.failed` classification with its 250 ms grace period (the entry directly below),
+and the equalizer attach point. The last one is latent — `supportsEqualizer` is now `true` on
+tvOS, but there is no Settings surface on this platform, so the preset stays `.normal` until one
+exists. That is a seam waiting, not a feature claimed.
+
+**Factory is still bypassed, and that part is not up for revision.** Sharing the engine is not the
+same as sharing the wiring. `TVAppDependencies` keeps calling `PlaybackController`'s *designated*
+initializer with every collaborator explicit and still does not call
+`registerProductionPlaybackEngine()` — the engine is constructed and injected directly. The
+`os(iOS)` gates recorded below exist precisely so a second UIKit platform cannot inherit an
+initializer that resolves `StubRadioPlaybackEngine` and plays silence, and linking the engine
+package is exactly the moment that inheritance would start looking convenient.
+
+**The link is four hand-added `project.pbxproj` entries**, because the app targets are not SwiftPM
+packages: an `XCSwiftPackageProductDependency` pointing at the existing
+`XCLocalSwiftPackageReference` (the iOS app already declares it, so no new package reference), a
+`PBXBuildFile` wrapping it, and one line each in the TV target's `packageProductDependencies` and
+its `PBXFrameworksBuildPhase`. The deleted engine's four entries came out in the same pass. A
+missing registration compiles green while silently not being in the binary, so the same
+after-the-fact inspection the MVP used was run on the built `.app`, and it is worth recording what
+it actually proves:
+
+- The four remaining TV sources each produce a `.o` (`ShoutKitTVApp`, `TVAppDependencies`,
+  `TVNowPlayingCenter`, `TVRootView`) and `TVRadioPlaybackEngine.o` is gone — the file was deleted,
+  not merely orphaned from the target.
+- `otool -L` on the app binary lists `@rpath/ogg.framework/ogg` and `@rpath/vorbis.framework/vorbis`,
+  and `vtool -show-build` on the embedded `ogg` reports `platform TVOSSIMULATOR`. The codec chain
+  did not merely resolve; a tvOS slice linked and embedded.
+- `nm` finds both `AudioStreamingPlaybackEngine` and AudioStreaming's `AudioPlayer` in the binary.
+
+The link check is the one that mattered: a `binaryTarget` whose zip lacked the slice would have
+failed here, after resolution reported success.
+
+**The cost side, stated plainly.** The tvOS app is now heavier than the AVPlayer version — it pulls
+the C codec stack and its own `AVAudioEngine` graph where before it used the system player — and it
+picks up a dependency chain that can break on a tvOS-specific slice regression upstream. The tvOS
+compile lives in `release-checks` (push-to-main and `workflow_dispatch`), not on every PR, so a
+regression there surfaces on `main`. That trade was accepted for the MVP's own reasons and is
+unchanged by this; it is worth restating because the blast radius of a tvOS build failure just grew
+from "our five files" to "our five files plus a binary dependency chain".
+
 ## 2026-08-12 (a finished broadcast is not a dropped stream: `.endOfStream`, and looping as opt-in)
 
 Stations that broadcast a **fixed-length programme** — NPR's hourly newscast is the reported

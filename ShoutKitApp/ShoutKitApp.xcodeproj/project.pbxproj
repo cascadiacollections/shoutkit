@@ -63,12 +63,12 @@
 		7C0FE00000000000000000A1 /* ShoutKitTVApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000B1 /* ShoutKitTVApp.swift */; };
 		7C0FE00000000000000000A2 /* TVAppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000B2 /* TVAppDependencies.swift */; };
 		7C0FE00000000000000000A3 /* TVNowPlayingCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000B3 /* TVNowPlayingCenter.swift */; };
-		7C0FE00000000000000000A4 /* TVRadioPlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000B4 /* TVRadioPlaybackEngine.swift */; };
 		7C0FE00000000000000000A5 /* TVRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000B5 /* TVRootView.swift */; };
 		7C0FE00000000000000000A6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000B7 /* Assets.xcassets */; };
 		7C0FE00000000000000000A7 /* RadioDirectory in Frameworks */ = {isa = PBXBuildFile; productRef = 7C0FE00000000000000000D1 /* RadioDirectory */; };
 		7C0FE00000000000000000A8 /* Playback in Frameworks */ = {isa = PBXBuildFile; productRef = 7C0FE00000000000000000D2 /* Playback */; };
 		7C0FE00000000000000000A9 /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = 7C0FE00000000000000000D3 /* Persistence */; };
+		7C0FE00000000000000000AA /* PlaybackEngineAudioStreaming in Frameworks */ = {isa = PBXBuildFile; productRef = 7C0FE00000000000000000D4 /* PlaybackEngineAudioStreaming */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -171,7 +171,6 @@
 		7C0FE00000000000000000B1 /* ShoutKitTVApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShoutKitTVApp.swift; sourceTree = "<group>"; };
 		7C0FE00000000000000000B2 /* TVAppDependencies.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TVAppDependencies.swift; sourceTree = "<group>"; };
 		7C0FE00000000000000000B3 /* TVNowPlayingCenter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TVNowPlayingCenter.swift; sourceTree = "<group>"; };
-		7C0FE00000000000000000B4 /* TVRadioPlaybackEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TVRadioPlaybackEngine.swift; sourceTree = "<group>"; };
 		7C0FE00000000000000000B5 /* TVRootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TVRootView.swift; sourceTree = "<group>"; };
 		7C0FE00000000000000000B6 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		7C0FE00000000000000000B7 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -237,6 +236,7 @@
 			files = (
 				7C0FE00000000000000000A7 /* RadioDirectory in Frameworks */,
 				7C0FE00000000000000000A8 /* Playback in Frameworks */,
+				7C0FE00000000000000000AA /* PlaybackEngineAudioStreaming in Frameworks */,
 				7C0FE00000000000000000A9 /* Persistence in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -378,7 +378,6 @@
 				7C0FE00000000000000000B1 /* ShoutKitTVApp.swift */,
 				7C0FE00000000000000000B2 /* TVAppDependencies.swift */,
 				7C0FE00000000000000000B3 /* TVNowPlayingCenter.swift */,
-				7C0FE00000000000000000B4 /* TVRadioPlaybackEngine.swift */,
 				7C0FE00000000000000000B5 /* TVRootView.swift */,
 				7C0FE00000000000000000B6 /* Info.plist */,
 				7C0FE00000000000000000B7 /* Assets.xcassets */,
@@ -517,6 +516,7 @@
 			packageProductDependencies = (
 				7C0FE00000000000000000D1 /* RadioDirectory */,
 				7C0FE00000000000000000D2 /* Playback */,
+				7C0FE00000000000000000D4 /* PlaybackEngineAudioStreaming */,
 				7C0FE00000000000000000D3 /* Persistence */,
 			);
 			productName = ShoutKitTVApp;
@@ -705,7 +705,6 @@
 				7C0FE00000000000000000A1 /* ShoutKitTVApp.swift in Sources */,
 				7C0FE00000000000000000A2 /* TVAppDependencies.swift in Sources */,
 				7C0FE00000000000000000A3 /* TVNowPlayingCenter.swift in Sources */,
-				7C0FE00000000000000000A4 /* TVRadioPlaybackEngine.swift in Sources */,
 				7C0FE00000000000000000A5 /* TVRootView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1318,6 +1317,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 000000000000000000000043 /* XCLocalSwiftPackageReference "Persistence" */;
 			productName = Persistence;
+		};
+		7C0FE00000000000000000D4 /* PlaybackEngineAudioStreaming */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 00000000000000000000004B /* XCLocalSwiftPackageReference "PlaybackEngineAudioStreaming" */;
+			productName = PlaybackEngineAudioStreaming;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

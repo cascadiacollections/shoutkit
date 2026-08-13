@@ -15,10 +15,10 @@ import UIKit
 /// ``NowPlayingPresenting`` is the seam, and this is the tvOS implementation of it.
 ///
 /// Artwork is decoded with `UIImage(data:)` rather than through
-/// `ImageIODownsample`. The MVP links exactly the three packages the watch app does,
-/// and on a TV the decoded bitmap is both wanted at a large size and not competing
-/// for memory on a backgrounded phone. If this target later links
-/// `ImageIODownsample`, prefer its downsampling decode for consistency.
+/// `ImageIODownsample`, which this target still does not link, and on a TV the decoded
+/// bitmap is both wanted at a large size and not competing for memory on a backgrounded
+/// phone. If this target later links `ImageIODownsample`, prefer its downsampling
+/// decode for consistency.
 @MainActor
 final class TVNowPlayingCenter: NowPlayingPresenting {
     var onPlay: (() -> Void)?

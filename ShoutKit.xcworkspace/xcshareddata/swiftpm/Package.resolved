@@ -1,5 +1,5 @@
 {
-  "originHash" : "7c7c9948750101fba80026ff482ad8fd4bb8b14f022bda3f3cdc777168fba7ff",
+  "originHash" : "3084058beb19975c14a5bbeccdffa514f7fcf10286df75337961299c3a93e779",
   "pins" : [
     {
       "identity" : "audiostreaming",
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/hmlongco/Factory.git",
       "state" : {
-        "revision" : "4654b75ad36733d5d1d415bea10da794d0c4592e",
-        "version" : "3.3.1"
+        "revision" : "27717e148c0c1ed2998f687a8e98d9395d684abf",
+        "version" : "3.3.2"
       }
     },
     {
