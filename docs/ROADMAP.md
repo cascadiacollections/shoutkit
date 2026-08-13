@@ -106,10 +106,10 @@ stations by listener count; crash-free ≥ 99.5%; no open P0/P1 for a week.
 
 ## Then — decide about the dark features
 
-Five features are built, wired, and tested, and sit at `internalOnly` /
-`defaultEnabled: false` in `FeatureCatalog` — no user outside a Debug build has ever seen
-them. `RecommendationService` alone is 193 lines with 127 lines of tests and a live call site
-in `ListenNowView`.
+Five features were built, wired, and tested, and sat at `internalOnly` /
+`defaultEnabled: false` in `FeatureCatalog` — no user outside a Debug build ever saw them.
+**Two are now resolved** (`recommendations` deleted, `diagnostics` decided; both 2026-08-13),
+leaving three.
 
 That is not a backlog, it is unshipped inventory, and it costs something to carry: every one
 of them is code that has to keep compiling, keep passing tests, and keep being reasoned
@@ -123,9 +123,10 @@ mistake this section originally made and then repeated: three of the five share 
 shipping features, so the flag's blast radius is smaller than the feature's footprint. Each
 entry below states what is actually dark.
 
-- [ ] `recommendations` (320 lines) — "More Like This" from local play history. One call site
-      (`ListenNowView.swift:251`), self-contained in `RadioDirectory`; the only one of the
-      five that is cleanly deletable. Verified by tracing every reference, not by file count.
+- [x] `recommendations` (320 lines) — **deleted 2026-08-13.** The only one of the five that
+      could be removed without touching a shipping feature. `BrowseFeature` lost its
+      `FeatureFlags` dependency with it, and `RecommendationHashing` went too. See
+      `DECISIONS.md`.
 - [ ] `prewarmStations` — launch-time DNS/TLS warming of top stations. **Not cleanly
       deletable either**, and the 304-line figure first written here was wrong: the flag
       gates far less than the machinery. `StationConnectionPrewarmer` (133 lines) is called

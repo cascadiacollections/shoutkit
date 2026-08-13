@@ -1,5 +1,46 @@
 # Decisions
 
+## 2026-08-13 (`recommendations` is deleted — the only one of the five that was actually deletable)
+
+`RecommendationService` is gone: 193 lines of source, 127 of tests, the `FeatureCatalog`
+entry, the "More Like This" section in `ListenNowView`, and two localized strings. This
+resolves the second of #146's five, and it is the *only* one the audit found could be removed
+without touching a shipping feature.
+
+**Why delete rather than promote.** It had been built, tested, and wired for months with a
+live call site, and no user had ever seen it. Promoting it would mean deciding that
+content-based station similarity is a feature ShoutKit wants to stand behind — its quality
+tuned, its empty state designed, its results defensible — and nobody has made that case. The
+carrying cost was real and ongoing: it kept `Accelerate` and a 40-line FNV-1a hashing utility
+alive, and it added two parameters to a public `ListenNowView` initializer that no caller ever
+passed. Deleting is reversible through git; carrying dead code is not free.
+
+**What made this one clean, when three of its siblings are not.** Every reference resolved to
+either the feature itself or its single call site — verified by tracing, not by counting
+files, which is the discipline the entry below had to learn twice. `ListenNowView` was the
+only consumer, and `RootView.swift:127` constructs it as `ListenNowView(viewModel:)` without
+either injected dependency, so removing both parameters changed no call site.
+
+**Two things removed that were not obviously part of the feature:**
+
+- **`BrowseFeature` no longer depends on `FeatureFlags` at all** — target *and* package
+  dependency. `ListenNowView` was the package's only `FeatureFlags` consumer, and it only
+  used it to ask whether recommendations were on. A discovery surface that no longer asks any
+  feature-flag question should not link the module that answers them.
+- **`RecommendationHashing`** went with it. It was `public` and looked like general-purpose
+  infrastructure, but the only caller outside `RecommendationService` was the recommendation
+  cache key in `ListenNowView`. If a stable cross-process FNV-1a is wanted later it is four
+  lines, and `git log` has this one.
+
+**One thing deliberately kept.** `LibraryStore.hideFromListenNow` stays a *soft* hide even
+though its stated reason was that "the play record stays intact so recommendations still learn
+from it." The behaviour is still correct — dismissing a card from the Listen Now teaser is not
+"forget I played this," and the record still feeds the Library's Recently Played list and
+`rankedStations`, which drives CarPlay and the quick-play widget — so the comments were
+rewritten to the reason that survives rather than deleted along with the feature. A comment
+whose justification has been removed is worse than no comment: it is a live claim about why
+the code is shaped this way, and it would have been false.
+
 ## 2026-08-13 (`diagnostics` stays internal-only, permanently, and that is the decision — not a deferral)
 
 `docs/ROADMAP.md` lists five features sitting at `internalOnly` / `defaultEnabled: false` in
