@@ -61,6 +61,21 @@ struct HTTPTransportTests {
     }
 
     @Test
+    func artworkConfigurationYieldsPriorityWithoutRefusingConstrainedNetworks() throws {
+        let configuration = URLSessionHTTPTransport.artworkConfiguration()
+
+        // `.background` so artwork doesn't contend with the audio stream for
+        // scheduling priority on a weak connection.
+        #expect(configuration.networkServiceType == .background)
+        // But still permitted on cellular/Low Data Mode: a listener actively
+        // playing a station still expects to see its art, unlike the
+        // look-ahead prefetch `speculativeConfiguration()` suppresses.
+        #expect(configuration.allowsConstrainedNetworkAccess)
+        #expect(configuration.allowsExpensiveNetworkAccess)
+        #expect(configuration.waitsForConnectivity == false)
+    }
+
+    @Test
     func escapesPlusInQueryValues() throws {
         var components = try #require(URLComponents(string: "https://example.com/search"))
         components.queryItems = [URLQueryItem(name: "q", value: "C+C Music Factory")]

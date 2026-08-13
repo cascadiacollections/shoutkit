@@ -122,7 +122,11 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
 
     private nonisolated static let maxUnavailableArtworkURLs = 64
 
-    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.shared) {
+    /// Defaults to `.artwork` rather than `.shared`: this artwork loads while
+    /// the station it belongs to is actively streaming, and `.artwork`'s
+    /// `.background` service type keeps it from competing with that stream on
+    /// a weak connection (see `URLSessionHTTPTransport.artworkConfiguration()`).
+    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.artwork) {
         self.transport = transport
     }
 

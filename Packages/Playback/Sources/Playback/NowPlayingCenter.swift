@@ -71,7 +71,11 @@ public final class NowPlayingCenter: NowPlayingPresenting {
     // isolated to read this on the main actor without an escape hatch.
     private var commandTargets: [(MPRemoteCommand, Any)] = []
 
-    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.shared) {
+    /// Defaults to `.artwork` rather than `.shared`: lock-screen art loads
+    /// while the station it belongs to is actively streaming, and `.artwork`'s
+    /// `.background` service type keeps it from competing with that stream on
+    /// a weak connection (see `URLSessionHTTPTransport.artworkConfiguration()`).
+    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.artwork) {
         self.transport = transport
         configureRemoteCommands()
     }
