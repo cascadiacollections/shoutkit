@@ -52,6 +52,13 @@
 	</dict>
 	<key>WKApplication</key>
 	<true/>
+	<!-- The key that makes this a *companion* rather than a standalone watch app,
+	     and its absence is why nothing ever embedded it: the bundle id was already
+	     a suffix of the phone app's, but without this the two bundles are unrelated
+	     as far as the installer is concerned. Must stay in sync with
+	     PRODUCT_BUNDLE_IDENTIFIER in Config/{Debug,Release}.xcconfig. -->
+	<key>WKCompanionAppBundleIdentifier</key>
+	<string>com.cascadiacollections.shoutkit</string>
 	<key>WKBackgroundModes</key>
 	<array>
 		<string>audio</string>
