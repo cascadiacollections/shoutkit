@@ -570,6 +570,47 @@ jobs:
           grep -E "[^ /]+\.(swift|h|m|mm):[0-9]+:[0-9]+: (error|fatal error): |^error: " build-tv.log \
             | sort -u | head -20 | sed 's/^/::error::/' || true
 
+      # Every submitted bundle needs its own PrivacyInfo.xcprivacy: `UserDefaults`
+      # is a required-reason API, and Apple's ITMS-91053 check inspects each bundle
+      # in the upload rather than inheriting the host app's declaration. Until
+      # 2026-08-13 only ShoutKit.app had one, so the watch app (embedded since
+      # #166) and the tvOS app (its own submission) would both have been flagged.
+      #
+      # Inspects the built bundles rather than the repo, for the reason this file
+      # keeps repeating: a resource that fails to register in project.pbxproj still
+      # builds green. Nothing else here would notice its removal — no test, no
+      # lint, and the failure otherwise waits for a real App Store upload.
+      - name: Check watch and tvOS bundles carry a privacy manifest
+        run: |
+          # Named `failed` rather than `status`: `status` is read-only in zsh, so a
+          # copy-paste of this loop into a local macOS shell would fail confusingly.
+          failed=0
+          for bundle in \
+            "DerivedData/Build/Products/Debug-watchsimulator/ShoutKitWatchApp.app" \
+            "DerivedData/Build/Products/Debug-appletvsimulator/ShoutKitTVApp.app"
+          do
+            name=$(basename "$bundle")
+            if [ ! -d "$bundle" ]; then
+              echo "::warning::$name was not built in this job; skipping its privacy-manifest check."
+              continue
+            fi
+            if [ ! -f "$bundle/PrivacyInfo.xcprivacy" ]; then
+              echo "::error::$name has no PrivacyInfo.xcprivacy. Each submitted bundle needs its own — the iOS app's does not cover it."
+              failed=1
+              continue
+            fi
+            reason=$(/usr/libexec/PlistBuddy \
+              -c "Print :NSPrivacyAccessedAPITypes:0:NSPrivacyAccessedAPIType" \
+              "$bundle/PrivacyInfo.xcprivacy" 2>/dev/null || true)
+            if [ "$reason" != "NSPrivacyAccessedAPICategoryUserDefaults" ]; then
+              echo "::error::$name's privacy manifest does not declare UserDefaults (got '${reason:-<none>}'). Both targets link Persistence, which reaches UserDefaults."
+              failed=1
+              continue
+            fi
+            echo "Confirmed: $name declares $reason."
+          done
+          exit $failed
+
       # The Debug-bundle counterpart to this — "is the watch app embedded in the
       # phone app" — lives in the `build` job, which is the one that produces a
       # Debug-iphonesimulator bundle to inspect.

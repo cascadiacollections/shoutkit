@@ -1,6 +1,7 @@
 # ShoutKit
 
-ShoutKit is a native SwiftUI internet-radio client for iOS and iPadOS 26+. It ships with real,
+ShoutKit is a native SwiftUI internet-radio client for iOS and iPadOS 26+, with companion apps
+for watchOS and tvOS. It ships with real,
 keyless station discovery out of the box via [Radio-Browser](https://www.radio-browser.info) — a
 free, open-source community radio directory — plus an Apple Music-style persistent player: a Liquid
 Glass mini-player docked above the tab bar, a full-screen Now Playing surface with live ICY track
@@ -13,7 +14,7 @@ browsing surfaces flow into adaptive multi-column layouts, including Split View 
 - Xcode 27 with the iOS 27 SDK (to build — the MediaSession path needs the iOS 27 SDK
   to compile, even though it only runs on iOS 27 devices)
 - Swift 6 strict concurrency
-- iOS / iPadOS 26.0+ deployment target
+- iOS / iPadOS 26.0+ deployment target; watchOS 26.0+ and tvOS 26.0+ for the companion apps
 
 If your active developer directory points at Command Line Tools, build with:
 
@@ -128,7 +129,11 @@ The phone app `Info.plist` declares `UIBackgroundModes = audio` for streaming pl
 `NSSupportsLiveActivities` for the lock screen / Dynamic Island now-playing Live Activity (the
 `ShoutKitWidgets` extension target, driven by `NowPlayingActivityCoordinator` from playback
 state, with synced album/station artwork). The watch app adds a native watchOS now-playing +
-recents surface plus a one-tap "Play Last" complication that deep-links into watch playback.
+recents surface plus a one-tap "Play Last" complication that deep-links into watch playback, and
+ships embedded in the phone app's bundle. **Apple TV** (`ShoutKitTVApp`, tvOS 26+) is a separate
+submission with its own bundle id: Recent and Popular station shelves built for the Siri Remote,
+over the same `AudioStreamingPlaybackEngine` the phone uses, so live ICY track titles appear on
+the big screen too.
 App Intents power Siri/Shortcuts with headless background playback (no app foregrounding);
 `StationEntity` also conforms to `IndexedEntity` so favorited, curated, and recently-played
 stations land in Spotlight's semantic index, letting Siri resolve "play ⟨station⟩" for a station
