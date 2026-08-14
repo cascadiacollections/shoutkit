@@ -61,6 +61,8 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>ShoutKit uses your location only after you opt in to refine geo-relevant station filtering.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>ShoutKit uses head-tracking motion data only when you opt in to Spatial Audio for headphones.</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>com.cascadiacollections.shoutkit.station</string>
