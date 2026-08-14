@@ -32,7 +32,7 @@ extension AudioStreamingPlaybackEngine {
     public func setSpatialAudioEnabled(_ isEnabled: Bool) {
         isSpatialAudioEnabled = isEnabled
         guard isEnabled else {
-            headphoneMotionManager.stopDeviceMotionUpdates()
+            detachSpatialAudioNode()
             return
         }
         let environment = spatialAudioNode ?? attachSpatialAudioNode()
@@ -60,10 +60,26 @@ extension AudioStreamingPlaybackEngine {
     /// Without this the effect would silently vanish on the next reset — the
     /// new `AVAudioEngine` has no memory of the old node.
     func reattachSpatialAudioIfNeeded() {
+        // The reset already discarded the whole `AVAudioEngine` this node
+        // lived in along with everything else, so there's nothing left to
+        // detach — just forget the reference.
         spatialAudioNode = nil
         guard isSpatialAudioEnabled else { return }
         let environment = attachSpatialAudioNode()
         startHeadTracking(for: environment)
+    }
+
+    /// Stops head tracking and removes the environment node from the render
+    /// chain entirely. Unlike the equalizer's "leave the node attached, apply
+    /// a flat curve" approach for `.normal`, an `AVAudioEnvironmentNode`'s
+    /// HRTF encoding isn't something a neutral parameter setting can make
+    /// transparent — it always downmixes to a binaural signal — so turning
+    /// the effect off has to mean removing the node, not just parking it.
+    private func detachSpatialAudioNode() {
+        headphoneMotionManager.stopDeviceMotionUpdates()
+        guard let environment = spatialAudioNode else { return }
+        player.detach(node: environment)
+        spatialAudioNode = nil
     }
 
     /// Drives `environment.listenerAngularOrientation` from the connected
