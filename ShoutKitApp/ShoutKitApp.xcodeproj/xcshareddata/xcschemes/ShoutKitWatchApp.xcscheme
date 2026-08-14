@@ -47,7 +47,6 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "3A593819EC2EC0E4966C890C"
             BuildableName = "ShoutKitWatchApp.app"
-            BlueprintName = "ShoutKitWatchApp"
             ReferencedContainer = "container:ShoutKitApp.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -64,7 +63,6 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "3A593819EC2EC0E4966C890C"
             BuildableName = "ShoutKitWatchApp.app"
-            BlueprintName = "ShoutKitWatchApp"
             ReferencedContainer = "container:ShoutKitApp.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
