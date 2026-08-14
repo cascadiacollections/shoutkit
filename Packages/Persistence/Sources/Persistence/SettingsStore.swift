@@ -17,6 +17,7 @@ public final class SettingsStore {
         )
         static let equalizerPreset = DefaultsKey<Int>.plist("settings.equalizerPresetRawValue", default: 0)
         static let streamLooping = DefaultsKey<Bool>.plist("settings.streamLoopingEnabled", default: false)
+        static let spatialAudio = DefaultsKey<Bool>.plist("settings.spatialAudioEnabled", default: false)
     }
 
     /// Whether plays are reported to Radio-Browser (station UUID only, per that
@@ -66,6 +67,15 @@ public final class SettingsStore {
         didSet { defaults.set(isStreamLoopingEnabled, for: Keys.streamLooping) }
     }
 
+    /// Whether the active stream is rendered through a head-tracked binaural
+    /// virtualization effect over headphones, when the active playback engine
+    /// supports it (`AVPlayer`-backed engines, including the watch companion,
+    /// do not). Defaults to off: it's a hardware-dependent, opt-in effect, not
+    /// a correctness fix everyone should get automatically.
+    public var isSpatialAudioEnabled: Bool {
+        didSet { defaults.set(isSpatialAudioEnabled, for: Keys.spatialAudio) }
+    }
+
     @ObservationIgnored private let defaults: UserDefaults
 
     public init(defaults: UserDefaults = .standard) {
@@ -76,5 +86,6 @@ public final class SettingsStore {
         isPreciseGeoStationLocationEnabled = defaults.value(for: Keys.preciseGeoStationLocation)
         equalizerPresetRawValue = defaults.value(for: Keys.equalizerPreset)
         isStreamLoopingEnabled = defaults.value(for: Keys.streamLooping)
+        isSpatialAudioEnabled = defaults.value(for: Keys.spatialAudio)
     }
 }

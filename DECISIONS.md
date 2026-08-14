@@ -1,5 +1,39 @@
 # Decisions
 
+## 2026-08-14 (Spatial Audio is a stereo virtualization effect, not object-based audio, and lives behind an opt-in toggle)
+
+Asked to "support Apple hardware capabilities as a feature sell," specifically spatial audio. The
+honest starting point: ShoutKit's binary input is a plain stereo/mono ICY radio stream with no
+channel or object separation, so real object-based spatial audio (Dolby Atmos-style) has nothing
+to render — there is no per-object metadata in the source to spatialize, and none can be
+synthesized after the fact. What Apple itself does for non-Atmos stereo content elsewhere in the
+OS is a virtualization effect instead: HRTF binaural rendering over headphones, with the
+soundstage held fixed in space as the listener's head turns. That's the achievable, honest version
+of this feature, and it's what shipped — presented to the user as exactly that (see the Settings
+footer copy), not as "real" spatial audio.
+
+Implementation follows the equalizer's precedent (2026-08-05) for inserting a custom node into
+AudioStreaming's `AVAudioEngine` graph via `AudioPlayer.attach(node:)`: an `AVAudioEnvironmentNode`
+with `outputType = .headphones`, driven by `CMHeadphoneMotionManager` head tracking
+(`AudioStreamingPlaybackEngine+SpatialAudio.swift`). One wrinkle `attachEqualizer()` didn't have:
+`attach(node:)` inserts the node into AudioStreaming's internal chain without exposing the
+upstream node, so there's no reachable `AVAudioMixingDestination` to position the *source* at a
+fixed offset the usual way. The environment node's own `listenerPosition` is moved instead — the
+node's only property that's actually ours to set — giving head rotation something to pan around
+without needing that reference. Reattachment after a media-services reset mirrors
+`reattachEqualizerIfNeeded()` exactly, for the same reason: the reset kills the whole engine this
+node lives in.
+
+Gated behind `RadioPlaybackEngine.supportsSpatialAudio` (defaults `false`, same shape as
+`supportsEqualizer`) rather than a `FeatureFlags`-catalog entry: this isn't a staged internal
+rollout, it's a capability that's only real on an `AVAudioEngine`-backed engine with
+`CMHeadphoneMotionManager` support (iOS; not the watch's `AVPlayer` engine, not
+`StubRadioPlaybackEngine`), so the same "degrade automatically, don't expose a dead control"
+contract applies. The persisted preference (`SettingsStore.isSpatialAudioEnabled`, opt-in, default
+off) lives next to `equalizerPresetRawValue` for the same reason that one does: `Persistence`
+doesn't depend on `Playback`, so the store never touches `RadioPlaybackEngine` itself, only a
+plain `Bool`.
+
 ## 2026-08-13 (API docs are DocC, not Doxygen, and cover the MIT packages only)
 
 Asked to deploy Doxygen pages for the SDK surface in preparation for opening it up to adopters.
