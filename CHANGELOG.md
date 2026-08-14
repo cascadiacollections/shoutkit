@@ -13,6 +13,10 @@ All notable changes to ShoutKit are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Spatial Audio no longer crashes the app on launch.** The feature's head-tracking touches
+  `CMHeadphoneMotionManager` at bootstrap regardless of whether Spatial Audio is turned on, but
+  the app's Info.plist never declared `NSMotionUsageDescription` — iOS aborted the process on
+  every launch as a result. The missing usage-description key is added
 - **The Apple Watch app now actually installs with the phone app.** It has been built, tested,
   and listed in the README for a month, and no one could get it: nothing bundled it into the
   iPhone app, so there was nothing for your watch to install. It ships inside the app now,
