@@ -81,9 +81,15 @@ jobs:
               -destination 'generic/platform=iOS Simulator' \
               -derivedDataPath "${derived_data}"
 
-            archive=$(find "${derived_data}" -name "*.doccarchive" -print -quit)
+            # docbuild produces a .doccarchive for every documentable target in
+            # the scheme's dependency graph, not just ${package} itself — e.g.
+            # building DesignSystem's docs also archives RadioDirectory,
+            # Playback, and ImageIODownsample along the way. Match by exact
+            # name; a wildcard first-match here silently serves a dependency's
+            # docs under the wrong package's route.
+            archive=$(find "${derived_data}" -name "${package}.doccarchive" -print -quit)
             if [ -z "${archive}" ]; then
-              echo "No .doccarchive produced for ${package}" >&2
+              echo "No ${package}.doccarchive produced (found: $(find "${derived_data}" -name '*.doccarchive' -exec basename {} \; | tr '\n' ' '))" >&2
               exit 1
             fi
 
