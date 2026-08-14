@@ -24,11 +24,30 @@ public protocol RadioPlaybackEngine: AudioOutput {
     /// Applies `preset`'s gain curve to this engine's equalizer, if any.
     /// A no-op when ``supportsEqualizer`` is `false`.
     func setEqualizerPreset(_ preset: EqualizerPreset)
+
+    /// Whether this engine can render a head-tracked binaural virtualization
+    /// of the stream over headphones. Same reasoning as ``supportsEqualizer``:
+    /// only an `AVAudioEngine`-backed engine can insert the environment node
+    /// this needs, and only on hardware with `CMHeadphoneMotionManager` head
+    /// tracking (iOS; not watchOS).
+    ///
+    /// This is a stereo virtualization effect (HRTF rendering plus head
+    /// tracking), not object-based spatial audio — the stream itself carries
+    /// no channel/object separation for that. The name matches how Apple
+    /// labels the same technique for non-Atmos content elsewhere in the OS.
+    var supportsSpatialAudio: Bool { get }
+
+    /// Enables or disables spatial audio virtualization. A no-op when
+    /// ``supportsSpatialAudio`` is `false`.
+    func setSpatialAudioEnabled(_ isEnabled: Bool)
 }
 
 public extension RadioPlaybackEngine {
     var supportsEqualizer: Bool { false }
     func setEqualizerPreset(_ preset: EqualizerPreset) {}
+
+    var supportsSpatialAudio: Bool { false }
+    func setSpatialAudioEnabled(_ isEnabled: Bool) {}
 }
 
 /// Placeholder ``RadioPlaybackEngine`` registered until a concrete engine lands.

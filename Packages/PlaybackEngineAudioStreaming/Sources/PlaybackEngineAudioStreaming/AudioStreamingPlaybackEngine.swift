@@ -1,5 +1,6 @@
 import AudioStreaming
 import AVFoundation
+import CoreMotion
 import Foundation
 import os
 import Playback
@@ -74,6 +75,23 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     /// re-attach and re-apply it to the rebuilt engine.
     var currentEqualizerPreset: EqualizerPreset = .normal
 
+    /// The attached `AVAudioEnvironmentNode`, if spatial audio is on — see
+    /// AudioStreamingPlaybackEngine+SpatialAudio.swift. `nil` until the first
+    /// `setSpatialAudioEnabled(true)` call, and again immediately after a
+    /// media-services reset until it's rebuilt.
+    var spatialAudioNode: AVAudioEnvironmentNode?
+
+    /// Whether spatial audio is currently on, kept so
+    /// `handleMediaServicesReset()` can re-attach it to the rebuilt engine and
+    /// so head-tracking updates can check it's still wanted.
+    var isSpatialAudioEnabled = false
+
+    /// Head tracking source for the spatial audio effect. Allocating this
+    /// unconditionally is cheap — it does nothing until
+    /// `startDeviceMotionUpdates(to:withHandler:)` is called, which only
+    /// happens once spatial audio is switched on.
+    let headphoneMotionManager = CMHeadphoneMotionManager()
+
     public init() {
         player.delegate = self
         configureSession()
@@ -84,6 +102,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         sessionDeactivationTask?.cancel()
         sessionActivationTask?.cancel()
         stopClassificationTask?.cancel()
+        headphoneMotionManager.stopDeviceMotionUpdates()
         for token in notificationTokens {
             NotificationCenter.default.removeObserver(token)
         }
