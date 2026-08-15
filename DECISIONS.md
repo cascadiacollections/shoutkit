@@ -1,5 +1,41 @@
 # Decisions
 
+## 2026-08-15 (closing three gaps left open by the MIT API-surface review)
+
+Follow-ups to #177/#178, from a second pass over the reusable packages' public surface.
+
+**`Persistence`'s Factory pin was `from: "3.3.2"`, not `exact:`, unlike every other manifest
+that depends on it.** `Container` extensions are public API for four packages, so an adopter
+resolving a newer Factory than the app expects is a build break at their end, not a routine
+bump — the whole point of pinning `exact` elsewhere. Fixed to match; the dependabot `factory`
+group already spans all of them, so this stops being the one manifest it can silently drift on.
+
+**`PreferredStations` (KEXP, literal streamguys URLs) stays in `RadioDirectory`, deliberately.**
+An audit read its presence there as an editorial choice leaking into a general-purpose
+directory package's public API, and it is — but relocating it turned out not to be the quick
+fix it looked like. `PreviewRadioDirectory.sampleStations` (a production DI default, not a
+test fixture — see the 2026-08-15 entry above) references `PreferredStations.kexpHighBandwidth`
+directly, and the three app targets that also use it (iOS, watchOS, tvOS, plus the shortcut
+provider) share no SwiftPM module besides `Persistence`, `Playback`, and `RadioDirectory` — the
+first two fit this data worse than `RadioDirectory` does. Moving it would mean either a new
+package (app-target `project.pbxproj` surgery that CLAUDE.md warns can silently fail to link)
+or threading it through one of the two above. Neither is a small change, so it stays, now with
+a doc comment on the type itself explaining why an adopter has no reason to touch it — the
+existing `PreferredRadioDirectory`/`BundledRadioDirectory` initializers already refuse to
+default to it for the same reason.
+
+**`RadioDirectoryProviding.station(id:)`'s default implementation silently returns `nil`.**
+Same shape as the `AudioOutput.streamGeneration` trap documented in #177: a directory that
+doesn't implement the optional lookup compiles cleanly, and the failure — a station saved by
+an App Intent or widget failing to rehydrate — is indistinguishable from a legitimate "not
+found," with nothing at the call site to signal which. The requirement itself already had a
+doc comment; the default now has a `Warning:` telling an implementer to override rather than
+inherit it.
+
+Verified: `swift test --disable-xctest` in `RadioDirectory` (34/34, including
+`preferredSearchFindsKEXP`, unaffected by the doc-only change) and in `Persistence`;
+`swiftlint --strict` clean.
+
 ## 2026-08-15 (Spatial Audio is compiled out on tvOS rather than stubbed at runtime)
 
 `ShoutKitTVApp` had not built since #175. `AudioStreamingPlaybackEngine+SpatialAudio.swift`

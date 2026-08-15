@@ -21,7 +21,11 @@ let package = Package(
         .package(path: "../RadioDirectory"),
         .package(path: "../FeatureFlags"),
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.11.1"),
-        .package(url: "https://github.com/hmlongco/Factory.git", from: "3.3.2")
+        // exact, matching every other manifest that depends on Factory: a public
+        // `extension Container` is public API surface, so a version drift here
+        // is a resolution failure for an adopter on a different Factory version,
+        // not a routine bump. The dependabot `factory` group spans all of them.
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2")
     ],
     targets: [
         .target(
