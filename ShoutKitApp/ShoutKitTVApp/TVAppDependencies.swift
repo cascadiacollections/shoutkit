@@ -44,7 +44,10 @@ enum TVAppDependencies {
         let container = ShoutKitModelContainer.makeContainer()
         let libraryStore = LibraryStore(context: container.mainContext)
         let directory = CachingRadioDirectory(
-            base: PreferredRadioDirectory(base: RadioBrowserDirectoryClient())
+            base: PreferredRadioDirectory(
+                base: RadioBrowserDirectoryClient(),
+                preferredStations: PreferredStations.all
+            )
         )
         let playbackController = PlaybackController(
             directory: directory,

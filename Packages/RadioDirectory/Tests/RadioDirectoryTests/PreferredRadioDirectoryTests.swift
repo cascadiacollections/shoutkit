@@ -3,7 +3,7 @@ import Testing
 
 @Test
 func preferredStationsLeadTopStations() async throws {
-    let directory = PreferredRadioDirectory(base: PreviewRadioDirectory())
+    let directory = PreferredRadioDirectory(base: PreviewRadioDirectory(), preferredStations: PreferredStations.all)
 
     let stations = try await directory.topStations(limit: 4)
 
@@ -13,7 +13,7 @@ func preferredStationsLeadTopStations() async throws {
 
 @Test
 func preferredKEXPResolvesDirectStreamURL() async throws {
-    let directory = PreferredRadioDirectory(base: PreviewRadioDirectory())
+    let directory = PreferredRadioDirectory(base: PreviewRadioDirectory(), preferredStations: PreferredStations.all)
 
     let endpoint = try await directory.streamEndpoint(for: PreferredStations.kexpHighBandwidth)
 
@@ -23,7 +23,7 @@ func preferredKEXPResolvesDirectStreamURL() async throws {
 
 @Test
 func preferredSearchFindsKEXP() async throws {
-    let directory = PreferredRadioDirectory(base: PreviewRadioDirectory())
+    let directory = PreferredRadioDirectory(base: PreviewRadioDirectory(), preferredStations: PreferredStations.all)
 
     let stations = try await directory.searchStations(matching: "kexp", limit: 10)
 
@@ -32,7 +32,7 @@ func preferredSearchFindsKEXP() async throws {
 
 @Test
 func preferredGenreQueryForwardsToBaseAndLayersMatches() async throws {
-    let directory = PreferredRadioDirectory(base: PreviewRadioDirectory())
+    let directory = PreferredRadioDirectory(base: PreviewRadioDirectory(), preferredStations: PreferredStations.all)
 
     // Preview's genre fallback is a search, which matches its sample stations'
     // genre field; no preferred station is in this genre.
@@ -46,7 +46,7 @@ func preferredGenreQueryForwardsToBaseAndLayersMatches() async throws {
 
 @Test
 func stationLookupByIDFindsPreferredThenFallsBackToBase() async throws {
-    let directory = PreferredRadioDirectory(base: PreviewRadioDirectory())
+    let directory = PreferredRadioDirectory(base: PreviewRadioDirectory(), preferredStations: PreferredStations.all)
 
     let preferred = try await directory.station(id: "preferred-kexp-160-aac")
     let base = try await directory.station(id: "ambient-current")
@@ -59,7 +59,7 @@ func stationLookupByIDFindsPreferredThenFallsBackToBase() async throws {
 
 @Test
 func bundledDirectoryContainsOnlyCuratedLiveStations() async throws {
-    let directory = BundledRadioDirectory()
+    let directory = BundledRadioDirectory(stations: PreferredStations.all)
 
     let stations = try await directory.topStations(limit: 10)
 
@@ -68,7 +68,7 @@ func bundledDirectoryContainsOnlyCuratedLiveStations() async throws {
 
 @Test
 func bundledDirectoryResolvesKEXPWithoutShoutcastKey() async throws {
-    let directory = BundledRadioDirectory()
+    let directory = BundledRadioDirectory(stations: PreferredStations.all)
 
     let endpoint = try await directory.streamEndpoint(for: PreferredStations.kexpLowBandwidth)
 

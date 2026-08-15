@@ -85,9 +85,15 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
     private let base: any RadioDirectoryProviding
     private let preferredStations: [Station]
 
+    /// - Parameters:
+    ///   - base: The directory to decorate.
+    ///   - preferredStations: Stations pinned ahead of `base`'s results. No
+    ///     default: ``PreferredStations`` is ShoutKit's own editorial choice, and
+    ///     inheriting it silently is not something a library should do to an
+    ///     adopter. Pass `PreferredStations.all` to opt into it.
     public init(
         base: any RadioDirectoryProviding,
-        preferredStations: [Station] = PreferredStations.all
+        preferredStations: [Station]
     ) {
         self.base = base
         self.preferredStations = preferredStations
@@ -175,7 +181,10 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
 public struct BundledRadioDirectory: RadioDirectoryProviding {
     private let stations: [Station]
 
-    public init(stations: [Station] = PreferredStations.all) {
+    /// - Parameter stations: The fixed station list to serve. No default, for
+    ///   the same reason as ``PreferredRadioDirectory``: the curated set is this
+    ///   app's, not every adopter's.
+    public init(stations: [Station]) {
         self.stations = stations
     }
 

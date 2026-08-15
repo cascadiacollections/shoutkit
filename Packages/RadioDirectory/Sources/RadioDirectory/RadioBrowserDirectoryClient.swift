@@ -24,22 +24,39 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         URL(string: "https://de1.api.radio-browser.info") ?? URL(fileURLWithPath: "/")
     ]
 
+    /// Sent as the `User-Agent` on every request when a caller supplies nothing
+    /// else. Radio-Browser rate-limits by agent, so identify your own app rather
+    /// than sharing this one's budget.
+    public static let defaultUserAgent = "ShoutKit/0.1"
+
     private let hosts: [URL]
     private let transport: any HTTPTransporting
     private let retryPolicy: RetryPolicy
     private let geoFilterProvider: (any RadioBrowserGeoFilterProviding)?
+    private let userAgent: String
     private let logger = Logger(subsystem: "ShoutKit.RadioDirectory", category: "RadioBrowserDirectoryClient")
 
+    /// - Parameters:
+    ///   - hosts: Mirrors to walk in order. An empty array falls back to
+    ///     ``defaultHosts``.
+    ///   - transport: The HTTP transport to issue requests through.
+    ///   - retryPolicy: Timeout and backoff for mirror failover.
+    ///   - geoFilterProvider: Supplies the country/language filter applied to
+    ///     discovery queries, or `nil` for unfiltered results.
+    ///   - userAgent: Value sent as `User-Agent`. Radio-Browser is volunteer-run
+    ///     and rate-limits by agent; pass your own app's identifier.
     public init(
         hosts: [URL] = RadioBrowserDirectoryClient.defaultHosts,
         transport: any HTTPTransporting = URLSessionHTTPTransport.shared,
         retryPolicy: RetryPolicy = .interactive,
-        geoFilterProvider: (any RadioBrowserGeoFilterProviding)? = nil
+        geoFilterProvider: (any RadioBrowserGeoFilterProviding)? = nil,
+        userAgent: String = RadioBrowserDirectoryClient.defaultUserAgent
     ) {
         self.hosts = hosts.isEmpty ? RadioBrowserDirectoryClient.defaultHosts : hosts
         self.transport = transport
         self.retryPolicy = retryPolicy
         self.geoFilterProvider = geoFilterProvider
+        self.userAgent = userAgent.isEmpty ? RadioBrowserDirectoryClient.defaultUserAgent : userAgent
     }
 
     // MARK: - RadioDirectoryProviding
@@ -240,6 +257,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         let retryPolicy = self.retryPolicy
         let logger = self.logger
         let hosts = self.hosts
+        let userAgent = self.userAgent
         let attemptBudget = min(hosts.count, retryPolicy.maximumRetries + 1)
 
         do {
@@ -257,7 +275,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
                         timeoutInterval: retryPolicy.timeout
                     )
                     // Radio-Browser asks clients to identify themselves with a speaking agent.
-                    request.setValue("ShoutKit/0.1", forHTTPHeaderField: "User-Agent")
+                    request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
                     return request
                 }
             )

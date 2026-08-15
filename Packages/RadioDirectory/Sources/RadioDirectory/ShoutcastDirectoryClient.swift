@@ -8,18 +8,28 @@ public actor ShoutcastDirectoryClient: RadioDirectoryProviding {
     private let endpoints: ShoutcastEndpoints
     private let transport: any HTTPTransporting
     private let retryPolicy: RetryPolicy
+    private let userAgent: String
     private let logger = Logger(subsystem: "ShoutKit.RadioDirectory", category: "ShoutcastDirectoryClient")
 
+    /// - Parameters:
+    ///   - apiKey: SHOUTcast developer key.
+    ///   - endpoints: Base URLs to query.
+    ///   - transport: The HTTP transport to issue requests through.
+    ///   - retryPolicy: Timeout and backoff for failed requests.
+    ///   - userAgent: Value sent as `User-Agent`. Pass your own app's identifier
+    ///     rather than shipping under ShoutKit's.
     public init(
         apiKey: String,
         endpoints: ShoutcastEndpoints = .production,
         transport: any HTTPTransporting = URLSessionHTTPTransport.shared,
-        retryPolicy: RetryPolicy = .default
+        retryPolicy: RetryPolicy = .default,
+        userAgent: String = RadioBrowserDirectoryClient.defaultUserAgent
     ) {
         self.apiKey = apiKey
         self.endpoints = endpoints
         self.transport = transport
         self.retryPolicy = retryPolicy
+        self.userAgent = userAgent.isEmpty ? RadioBrowserDirectoryClient.defaultUserAgent : userAgent
     }
 
     public func genres() async throws(RadioDirectoryError) -> [Genre] {
@@ -94,6 +104,7 @@ public actor ShoutcastDirectoryClient: RadioDirectoryProviding {
         let transport = self.transport
         let retryPolicy = self.retryPolicy
         let logger = self.logger
+        let userAgent = self.userAgent
 
         do {
             return try await transport.retryingData(
@@ -110,7 +121,7 @@ public actor ShoutcastDirectoryClient: RadioDirectoryProviding {
                 },
                 request: { _ in
                     var request = URLRequest(url: url, timeoutInterval: retryPolicy.timeout)
-                    request.setValue("ShoutKit/0.1", forHTTPHeaderField: "User-Agent")
+                    request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
                     return request
                 }
             )
@@ -202,79 +213,6 @@ public struct RetryPolicy: Sendable {
 
     public func delay(forAttempt attempt: Int) -> TimeInterval {
         baseDelay * pow(2, Double(attempt))
-    }
-}
-
-public enum RadioDirectoryError: Error, Equatable, LocalizedError, Sendable {
-    case emptyPlaylist
-    case httpStatus(Int)
-    case invalidResponse
-    case invalidURL
-    case missingAPIKey
-    case parsingFailed(String)
-    case transport(String?)
-
-    public var errorDescription: String? {
-        switch self {
-        case .emptyPlaylist:
-            String(localized: "The station did not return a playable stream.", bundle: .module)
-        case let .httpStatus(statusCode):
-            String(localized: "The station directory returned HTTP \(statusCode).", bundle: .module)
-        case .invalidResponse:
-            String(localized: "The station directory returned an invalid response.", bundle: .module)
-        case .invalidURL:
-            String(localized: "The station directory URL could not be built.", bundle: .module)
-        case .missingAPIKey:
-            String(localized: "Add SHOUTCAST_DEV_KEY to Secrets.xcconfig to fetch live stations.", bundle: .module)
-        case let .parsingFailed(message):
-            // Constructed at the throw site — either a literal we authored
-            // (already wrapped there) or a system-provided description.
-            message
-        case let .transport(message):
-            // System-provided (URLSession's localizedDescription) when non-nil.
-            message ?? String(
-                localized: "The station directory could not be reached. Check your connection.",
-                bundle: .module
-            )
-        }
-    }
-
-    /// Whether retrying the same request might plausibly succeed — lets the UI
-    /// distinguish "try again" failures (network) from permanent ones (bad data).
-    public var isRetryable: Bool {
-        switch self {
-        case .transport, .httpStatus, .invalidResponse, .emptyPlaylist:
-            true
-        case .invalidURL, .missingAPIKey, .parsingFailed:
-            false
-        }
-    }
-
-    /// Friendly, full-length message suitable for the Now Playing screen.
-    /// Each case returns a pre-mapped string; the UI layer never interprets
-    /// raw error codes.
-    public var userMessage: String {
-        switch self {
-        case .transport:
-            String(localized: "Can't reach the station. Check your connection.", bundle: .module)
-        case .emptyPlaylist, .httpStatus, .invalidResponse:
-            String(localized: "The station isn't available right now.", bundle: .module)
-        case .invalidURL, .missingAPIKey, .parsingFailed:
-            String(localized: "The station has a configuration problem.", bundle: .module)
-        }
-    }
-
-    /// Short message suitable for compact surfaces such as the mini player
-    /// or lock screen.
-    public var shortUserMessage: String {
-        switch self {
-        case .transport:
-            String(localized: "No connection", bundle: .module)
-        case .emptyPlaylist, .httpStatus, .invalidResponse:
-            String(localized: "Unavailable", bundle: .module)
-        case .invalidURL, .missingAPIKey, .parsingFailed:
-            String(localized: "Station error", bundle: .module)
-        }
     }
 }
 
