@@ -49,6 +49,20 @@ env:
 # `macos-26` image, flipping `runs-on` takes this bill to approximately zero.
 # That is what .github/workflows/runner-image-watch.yml exists to notice.
 jobs:
+  # Pure shell over the package manifests, so it runs on Linux rather than
+  # burning an `xcode-27` slot. Asserts the Licensing rule in README.md: an MIT
+  # package may not depend on a GPL-3.0 one. This is a real regression guard —
+  # `Playback` and `DesignSystem` both linked the then-GPL `ImageIODownsample`
+  # while the docs site listed it as excluded-because-GPL.
+  license-boundary:
+    name: License boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check MIT packages take no GPL-3.0 dependencies
+        run: .github/scripts/check-license-boundary.sh
+
   # Deliberately ungated and first: it is by far the cheapest job here, and both
   # mac jobs below `needs` it.
   lint:

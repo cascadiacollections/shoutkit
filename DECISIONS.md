@@ -1,5 +1,37 @@
 # Decisions
 
+## 2026-08-15 (ImageIODownsample is MIT, and the MIT/GPL boundary is now a CI check)
+
+An API-surface review of the six MIT packages turned up a licensing hole that had been reasoned
+about and then not enforced. `Packages/ImageIODownsample` carried no per-package `LICENSE`, so by
+the rule in README.md it inherited GPL-3.0 from the root — and `site/api/index.html` said so
+explicitly, listing it among the GPL packages excluded from the documented SDK surface. But
+`Packages/Playback` (`NowPlayingCenter.swift`, `MediaSessionNowPlayingCenter.swift`) and
+`Packages/DesignSystem` (`ImageDownsampler.swift`) both link and import it, and
+`PlaybackEngineAudioStreaming` inherits it through `Playback`. The root `LICENSE` is plain GPL-3.0
+with no linking exception, so three of the six "MIT" packages were not actually distributable
+under MIT.
+
+Relicensed `ImageIODownsample` MIT rather than extracting the two call sites. It is 56 lines in one
+file, an original wrapper over `CGImageSourceCreateThumbnailAtIndex` with no third-party lineage,
+and it is a leaf module with no dependencies of its own — exactly the kind of thing the MIT tier
+exists for. Extracting it would have meant duplicating the same ImageIO call in two packages to
+preserve a boundary that had no reason to be GPL in the first place. The GPL consumer
+(`Packages/LiveActivity`) is unaffected: GPL-3.0 code may link MIT code.
+
+The more durable half is `.github/scripts/check-license-boundary.sh`, wired into CI as its own
+`license-boundary` job. It walks every `Package.swift`, treats "has a per-package `LICENSE`" as the
+definition of MIT (the same rule README.md states), and fails if an MIT package declares a
+`.package(path:)` dependency on one without. Runs on `ubuntu-latest` — it is pure shell over the
+manifests and needs no toolchain, so it doesn't consume an `xcode-27` slot.
+
+Written to fail first: with `ImageIODownsample`'s `LICENSE` removed the script reports both real
+violations and exits 1, and an earlier revision of it that silently passed the known-bad tree (a
+greedy `sed` capture that dropped every extracted path) was caught precisely because that negative
+case was run. Same instinct as the existing CI assertions that Pulse links only into Debug and that
+`Packages/Playback` resolves no binary artifacts: prefer a check that can fail over a claim in a
+comment.
+
 ## 2026-08-14 (Spatial Audio is a stereo virtualization effect, not object-based audio, and lives behind an opt-in toggle)
 
 Asked to "support Apple hardware capabilities as a feature sell," specifically spatial audio. The

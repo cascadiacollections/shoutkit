@@ -183,12 +183,17 @@ codesign workaround.
 
 | Component | License |
 |---|---|
-| App target (`ShoutKitApp`, incl. the debug-only `DebugSupport` package), feature packages (`Packages/Features/*` and their `*FeatureCore` counterparts), `Packages/LiveActivity`, `Packages/ImageIODownsample` | [GPL-3.0](LICENSE) |
-| `Packages/RadioDirectory`, `Packages/Playback`, `Packages/PlaybackEngineAudioStreaming`, `Packages/Persistence`, `Packages/DesignSystem`, `Packages/FeatureFlags` | [MIT](Packages/RadioDirectory/LICENSE) (per-package `LICENSE` files) |
+| App target (`ShoutKitApp`, incl. the debug-only `DebugSupport` package), feature packages (`Packages/Features/*` and their `*FeatureCore` counterparts), `Packages/LiveActivity` | [GPL-3.0](LICENSE) |
+| `Packages/RadioDirectory`, `Packages/Playback`, `Packages/PlaybackEngineAudioStreaming`, `Packages/Persistence`, `Packages/DesignSystem`, `Packages/FeatureFlags`, `Packages/ImageIODownsample` | [MIT](Packages/RadioDirectory/LICENSE) (per-package `LICENSE` files) |
 
 The rule, if you're adding a package: a per-package `LICENSE` file makes it MIT and means it
 must stay adoptable — no app-specific or heavyweight dependencies. Everything else inherits
 GPL-3.0 from the root `LICENSE`.
+
+That rule is enforced, not just documented: CI fails if an MIT package takes a dependency on a
+GPL-3.0 one (`.github/workflows/ci.yml`, the `license-boundary` job). `ImageIODownsample` is MIT
+for exactly this reason — `Playback` and `DesignSystem` both link it, so a GPL-3.0
+`ImageIODownsample` would have made those two packages undistributable under MIT.
 
 DocC-generated API reference for the six MIT packages above is published at
 [cascadiacollections.github.io/shoutkit/api](https://cascadiacollections.github.io/shoutkit/api/).
