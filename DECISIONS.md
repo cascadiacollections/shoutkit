@@ -89,12 +89,21 @@ gained a `xcode-27` job for this (docbuild needs a real Xcode, same as `ci.yml`'
 that hands the six archives to the existing `ubuntu-latest` deploy job, which merges them under
 `site/api/` alongside the marketing site — one Pages deployment, same as before.
 
-Scope is the six packages carrying a per-package `LICENSE` file per the Licensing table in
+**Superseded twice, same day and after.** The two-job split above never worked and was reverted in
+`8696fba`: `actions/upload-artifact` rejects filenames containing `:`, and DocC encodes Swift
+argument labels straight into filenames (`start(url:streamGeneration:).json`), so the handoff
+failed outright. `pages.yml` has been a single `xcode-27` build-and-deploy job ever since, and the
+comment at the top of that job records why. See also 2026-08-15, which moved the build into
+`.github/scripts/build-docs.sh` and replaced the six independent archives with one merged one.
+
+Scope is the packages carrying a per-package `LICENSE` file per the Licensing table in
 `README.md`: `DesignSystem`, `FeatureFlags`, `Persistence`, `Playback`,
 `PlaybackEngineAudioStreaming`, `RadioDirectory`. `ImageIODownsample` looks MIT-adjacent (a small
 leaf module, no app-specific dependencies) but is GPL-3.0 per that table, so it's excluded along
 with the feature packages, `LiveActivity`, and the app target — this site documents the adoptable
-surface, not the whole tree.
+surface, not the whole tree. (`ImageIODownsample` was relicensed MIT on 2026-08-15 — it was
+*already* linked by `Playback` and `DesignSystem`, which made the exclusion here a symptom rather
+than a boundary — and now ships as the seventh documented package.)
 
 ## 2026-08-13 (artwork traffic gets its own, lower-priority session — it was never actually deprioritized against the stream)
 

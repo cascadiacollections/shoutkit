@@ -150,7 +150,10 @@ without a heavyweight CLA.
 
 By contributing, you agree your changes are licensed under the license of the component they
 touch: GPL-3.0 for the app and feature packages, MIT for `RadioDirectory`, `Playback`,
-`Persistence`, and `DesignSystem` (see the Licensing table in the README).
+`PlaybackEngineAudioStreaming`, `Persistence`, `DesignSystem`, `FeatureFlags`, and
+`ImageIODownsample` (see the Licensing table in the README — the authoritative rule is that a
+package with its own `LICENSE` file is MIT, and CI enforces that those never depend on a
+GPL-3.0 package).
 
 ## Pull requests
 
