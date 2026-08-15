@@ -1,5 +1,34 @@
 # Decisions
 
+## 2026-08-15 (Spatial Audio is compiled out on tvOS rather than stubbed at runtime)
+
+`ShoutKitTVApp` had not built since #175. `AudioStreamingPlaybackEngine+SpatialAudio.swift`
+imports `CoreMotion`, which does not exist on tvOS, and
+`PlaybackEngineAudioStreaming/Package.swift` declares `.tvOS(.v26)` — so the tvOS build failed
+inside the package, before it ever reached the app target. The break survived four days on
+`main` because `release-checks` runs only on pushes, so the tvOS job reports *after* a merge,
+on the branch that ships. #177 applied the same fix to the docs job by adding a `pull_request`
+trigger; the release jobs still need it.
+
+Gated on `canImport(CoreMotion)`, not `!os(tvOS)`. The capability the feature actually needs is
+`CMHeadphoneMotionManager`, and the import is what fails to resolve; naming the platform would
+restate a consequence and quietly go wrong the next time a platform is added to the manifest.
+
+Compiled out rather than stubbed, because `RadioPlaybackEngine` already defaults
+`supportsSpatialAudio` to `false` and `setSpatialAudioEnabled(_:)` to a no-op
+(`RadioPlaybackEngine.swift`). Omitting both overrides means the protocol default applies and
+`SettingsFeature`, which keys its row off `supportsSpatialAudio`, hides the control instead of
+offering one that does nothing — the degradation contract that file's own doc comment
+describes. The one member that needed a cross-platform declaration is
+`reattachSpatialAudioIfNeeded()`, called unconditionally from `handleMediaServicesReset()`; it
+gets a no-op `#else` sibling so the reset path carries no `#if` of its own.
+
+`spatialAudioNode` and `isSpatialAudioEnabled` stay ungated — `AVAudioEnvironmentNode` exists on
+tvOS, and two unread stored properties are cheaper than two more conditionals.
+
+Verified by building `ShoutKitTVApp` for `generic/platform=tvOS Simulator` (was failing, now
+succeeds) and `ShoutKit` for iOS (unchanged), plus `swiftlint --strict`.
+
 ## 2026-08-15 (the MIT packages stop speaking as ShoutKit, and the "fixtures" turn out to be production)
 
 Continuing the API-surface review. Three app-identity leaks in `RadioDirectory` were worth

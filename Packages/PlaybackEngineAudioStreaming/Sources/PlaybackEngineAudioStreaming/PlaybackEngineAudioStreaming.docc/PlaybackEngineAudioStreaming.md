@@ -36,6 +36,11 @@ This engine reports `true` for both `supportsEqualizer` and `supportsSpatialAudi
 possible. Spatial audio here is HRTF binaural virtualization with head tracking, not
 object-based audio — a radio stream carries no object metadata to render.
 
+`supportsSpatialAudio` is `false` on tvOS. Head tracking needs
+`CMHeadphoneMotionManager`, and there is no CoreMotion on tvOS; the effect is compiled out
+there and the protocol's `false` default applies, so a host UI keyed off the capability hides
+the control rather than offering one that does nothing.
+
 ## Topics
 
 ### The Engine
