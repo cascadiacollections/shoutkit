@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// Abstraction over the streaming engine backing ``PlaybackController``'s
 /// ``AudioOutput``, resolved via Factory so the concrete backend can be swapped
@@ -53,14 +54,41 @@ public extension RadioPlaybackEngine {
 /// Placeholder ``RadioPlaybackEngine`` registered until a concrete engine lands.
 /// Plays nothing — it exists so ``Container/radioPlaybackEngine`` always resolves
 /// to something functional in previews and tests.
+///
+/// - Important: If you are hearing silence and playback appears stuck loading,
+///   this type is the first thing to check. Reaching ``start(url:streamGeneration:)``
+///   on the stub means no production engine was registered — see
+///   <doc:RegisteringAPlaybackEngine>. The stub logs a fault to the
+///   `ShoutKit.Playback` subsystem the first time that happens, rather than
+///   trapping: the watch app legitimately replaces the engine by injecting its
+///   own through `PlaybackController.init(output:)`, and previews and tests want
+///   a no-op engine.
 @MainActor
 public final class StubRadioPlaybackEngine: RadioPlaybackEngine {
+    private static let logger = Logger(subsystem: "ShoutKit.Playback", category: "StubEngine")
+
+    /// Logged at most once per process. A stuck stream will call `start` on every
+    /// retry, and a fault per retry buries the first one.
+    private var hasLoggedNoEngineFault = false
+
     public var onStatusChange: ((AudioStatus) -> Void)?
     public var onTrackInfo: ((AudioTrackInfo) -> Void)?
 
     public init() {}
 
-    public func start(url: URL, streamGeneration: UInt64) {}
+    public func start(url: URL, streamGeneration: UInt64) {
+        guard !hasLoggedNoEngineFault else { return }
+        hasLoggedNoEngineFault = true
+        Self.logger.fault(
+            """
+            StubRadioPlaybackEngine.start called — no production playback engine is registered, \
+            so this stream will never produce audio and playback will stay in .loading. \
+            Call registerProductionPlaybackEngine() (PlaybackEngineAudioStreaming) during \
+            startup, or inject an engine via PlaybackController.init(output:).
+            """
+        )
+    }
+
     public func pause() {}
     public func resume() {}
     public func stop() {}

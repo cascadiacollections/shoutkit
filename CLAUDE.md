@@ -34,9 +34,13 @@ xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
   and Xcode 27 beta's agent segfaults doing it. Drop the flag only when a stable Xcode 27
   is on the runner image.
 - **Only some packages build on the mac host.** Anything depending on `DesignSystem` does
-  not — its sources are UIKit-only. That is why `BrowseFeatureCore`, `SearchFeatureCore`,
-  and `PlayerFeatureCore` exist: they hold the logic that would otherwise be untestable
-  behind a view.
+  not. The reason is its manifest: `Packages/DesignSystem/Package.swift` declares
+  `.iOS(.v26)` and nothing else, so SwiftPM won't build it for macOS at all. (The sources
+  are SwiftUI, not UIKit — 13 files import SwiftUI and 4 import UIKit, all of those for
+  `UIImage` in the artwork pipeline. An older version of this note said "UIKit-only", which
+  sent people looking in the wrong place.) That single-platform declaration is why
+  `BrowseFeatureCore`, `SearchFeatureCore`, and `PlayerFeatureCore` exist: they hold the
+  logic that would otherwise be untestable behind a view.
 - If `swift test` fails to launch the test binary on a macOS beta, see the `xattr -cr` +
   ad-hoc `codesign` workaround in `CONTRIBUTING.md`.
 - If `DEVELOPER_DIR` points at Command Line Tools, prefix commands with

@@ -1,5 +1,78 @@
 # Decisions
 
+## 2026-08-15 (the MIT packages stop speaking as ShoutKit, and the "fixtures" turn out to be production)
+
+Continuing the API-surface review. Three app-identity leaks in `RadioDirectory` were worth
+fixing because they are wrong *for this app too*, not merely impolite to a hypothetical adopter.
+
+`User-Agent` was hardcoded `"ShoutKit/0.1"` in both clients, three lines below a doc comment
+citing Radio-Browser's etiquette rule about sending a descriptive agent. Radio-Browser is
+volunteer-run and rate-limits by agent, so every adopter would have been sharing one budget
+under our name. Now a `userAgent:` initializer parameter defaulting to
+`RadioBrowserDirectoryClient.defaultUserAgent`, with the old value as that default so nothing
+changes for the app.
+
+`RadioDirectoryError.missingAPIKey` rendered, through `LocalizedError.errorDescription`, as
+"Add SHOUTCAST_DEV_KEY to Secrets.xcconfig to fetch live stations." That is a build instruction
+on an end user's screen — a defect in the shipping app, not a reusability concern. Now "Live
+stations are unavailable right now."; the build-time cause moved to the case's doc comment. The
+catalog key was swapped by hand, since command-line builds don't sync `.xcstrings`.
+
+`PreferredStations.all` — KEXP 90.3, with literal streamguys URLs — was the *default argument*
+of `PreferredRadioDirectory.init` and `BundledRadioDirectory.init`, so an editorial choice
+arrived silently with the type. The defaults are gone; the four production call sites (iOS,
+watch, tvOS, and the shortcut provider) now pass `PreferredStations.all` explicitly, which also
+makes the curation greppable instead of implicit.
+
+`RadioDirectoryError` moved to its own file. It was defined at line 208 of
+`ShoutcastDirectoryClient.swift` — the package's entire error vocabulary, since all eight
+`RadioDirectoryProviding` requirements are `throws(RadioDirectoryError)`, living inside one of
+the two clients that raise it. That also took the file from 431 back to 355 lines.
+
+**What was investigated and deliberately not done:** an audit recommended extracting
+`PreviewRadioDirectory`, `BundledRadioDirectory`, `NoopDiagnosticsService`,
+`InMemoryDiagnosticsPayloadStore`, and `UnavailableDirectoryDiscoveryCache` into `*TestSupport`
+products, on the reading that they are fixtures inflating the public surface. They are not.
+Every one is a production DI default or null object: `Container+RadioDirectory.swift` resolves
+`PreviewRadioDirectory` for `.onPreview`/`.onTest` and `UnavailableDirectoryDiscoveryCache` as
+the base `directoryDiscoveryCache`; `Container+Diagnostics.swift` defaults to
+`NoopDiagnosticsService`; `AppDependencies+Factories.swift` uses
+`InMemoryDiagnosticsPayloadStore` in production. Extracting them would break the zero-config
+container defaults and make `RadioDirectory` depend on its own test-support product. Recorded
+here so the suggestion isn't re-litigated from the same premise.
+
+## 2026-08-15 (ImageIODownsample is MIT, and the MIT/GPL boundary is now a CI check)
+
+An API-surface review of the six MIT packages turned up a licensing hole that had been reasoned
+about and then not enforced. `Packages/ImageIODownsample` carried no per-package `LICENSE`, so by
+the rule in README.md it inherited GPL-3.0 from the root — and `site/api/index.html` said so
+explicitly, listing it among the GPL packages excluded from the documented SDK surface. But
+`Packages/Playback` (`NowPlayingCenter.swift`, `MediaSessionNowPlayingCenter.swift`) and
+`Packages/DesignSystem` (`ImageDownsampler.swift`) both link and import it, and
+`PlaybackEngineAudioStreaming` inherits it through `Playback`. The root `LICENSE` is plain GPL-3.0
+with no linking exception, so three of the six "MIT" packages were not actually distributable
+under MIT.
+
+Relicensed `ImageIODownsample` MIT rather than extracting the two call sites. It is 56 lines in one
+file, an original wrapper over `CGImageSourceCreateThumbnailAtIndex` with no third-party lineage,
+and it is a leaf module with no dependencies of its own — exactly the kind of thing the MIT tier
+exists for. Extracting it would have meant duplicating the same ImageIO call in two packages to
+preserve a boundary that had no reason to be GPL in the first place. The GPL consumer
+(`Packages/LiveActivity`) is unaffected: GPL-3.0 code may link MIT code.
+
+The more durable half is `.github/scripts/check-license-boundary.sh`, wired into CI as its own
+`license-boundary` job. It walks every `Package.swift`, treats "has a per-package `LICENSE`" as the
+definition of MIT (the same rule README.md states), and fails if an MIT package declares a
+`.package(path:)` dependency on one without. Runs on `ubuntu-latest` — it is pure shell over the
+manifests and needs no toolchain, so it doesn't consume an `xcode-27` slot.
+
+Written to fail first: with `ImageIODownsample`'s `LICENSE` removed the script reports both real
+violations and exits 1, and an earlier revision of it that silently passed the known-bad tree (a
+greedy `sed` capture that dropped every extracted path) was caught precisely because that negative
+case was run. Same instinct as the existing CI assertions that Pulse links only into Debug and that
+`Packages/Playback` resolves no binary artifacts: prefer a check that can fail over a claim in a
+comment.
+
 ## 2026-08-14 (Spatial Audio is a stereo virtualization effect, not object-based audio, and lives behind an opt-in toggle)
 
 Asked to "support Apple hardware capabilities as a feature sell," specifically spatial audio. The
@@ -57,12 +130,21 @@ gained a `xcode-27` job for this (docbuild needs a real Xcode, same as `ci.yml`'
 that hands the six archives to the existing `ubuntu-latest` deploy job, which merges them under
 `site/api/` alongside the marketing site — one Pages deployment, same as before.
 
-Scope is the six packages carrying a per-package `LICENSE` file per the Licensing table in
+**Superseded twice, same day and after.** The two-job split above never worked and was reverted in
+`8696fba`: `actions/upload-artifact` rejects filenames containing `:`, and DocC encodes Swift
+argument labels straight into filenames (`start(url:streamGeneration:).json`), so the handoff
+failed outright. `pages.yml` has been a single `xcode-27` build-and-deploy job ever since, and the
+comment at the top of that job records why. See also 2026-08-15, which moved the build into
+`.github/scripts/build-docs.sh` and replaced the six independent archives with one merged one.
+
+Scope is the packages carrying a per-package `LICENSE` file per the Licensing table in
 `README.md`: `DesignSystem`, `FeatureFlags`, `Persistence`, `Playback`,
 `PlaybackEngineAudioStreaming`, `RadioDirectory`. `ImageIODownsample` looks MIT-adjacent (a small
 leaf module, no app-specific dependencies) but is GPL-3.0 per that table, so it's excluded along
 with the feature packages, `LiveActivity`, and the app target — this site documents the adoptable
-surface, not the whole tree.
+surface, not the whole tree. (`ImageIODownsample` was relicensed MIT on 2026-08-15 — it was
+*already* linked by `Playback` and `DesignSystem`, which made the exclusion here a symptom rather
+than a boundary — and now ships as the seventh documented package.)
 
 ## 2026-08-13 (artwork traffic gets its own, lower-priority session — it was never actually deprioritized against the stream)
 

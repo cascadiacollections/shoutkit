@@ -42,8 +42,11 @@ public final class PlaybackController {
     // `internal(set)` (not `private(set)`) so the wiring extension in
     // PlaybackController+Internals.swift can drive these; the public read
     // surface is unchanged.
+    /// The current playback state. Observe this rather than the engine.
     public internal(set) var state: PlaybackState = .idle
 
+    /// Track metadata for what is playing now, or `nil` when the stream has
+    /// sent none yet. Cleared on a track change, a fresh start, and stop.
     public internal(set) var nowPlaying: NowPlayingMetadata?
 
     /// The resolved album art URL for the current track, or `nil` when no
@@ -216,6 +219,13 @@ public final class PlaybackController {
 
     // MARK: - Intents
 
+    /// Starts playing `station`, replacing anything already playing.
+    ///
+    /// Resolves the station's stream endpoint, then drives the ``AudioOutput``.
+    /// Failures surface through ``state`` as ``PlaybackState/failed(_:)``
+    /// rather than being thrown.
+    ///
+    /// - Parameter station: The station to play.
     public func play(_ station: Station) {
         reconnectAttempts = 0
         tapToAudioTrace?.cancel()
@@ -230,6 +240,10 @@ public final class PlaybackController {
         onStationPlayed?(station)
     }
 
+    /// Pauses playback, and cancels any pending auto-reconnect.
+    ///
+    /// A user pause outranks a reconnect that is already scheduled — otherwise
+    /// a stream the listener just stopped resurrects itself.
     public func pause() {
         resumeAfterRouteChange = false
         // A user pause must win over a pending auto-reconnect, or a stream the
@@ -255,6 +269,10 @@ public final class PlaybackController {
         output.pause()
     }
 
+    /// Resumes the paused station. No-op when nothing is active.
+    ///
+    /// Live streams reconnect to the live edge rather than resuming from the
+    /// paused position, so expect ``PlaybackState/buffering(_:)`` first.
     public func resume() {
         guard let station = activeStation else { return }
 
@@ -300,6 +318,7 @@ public final class PlaybackController {
         }
     }
 
+    /// Stops playback, releases the stream, and clears ``nowPlaying``.
     public func stop() {
         tapToAudioTrace?.cancel()
         tapToAudioTrace = nil
@@ -325,6 +344,14 @@ public final class PlaybackController {
 
     // MARK: - Per-station phase
 
+    /// The phase to render for `station` in a list or grid.
+    ///
+    /// Returns ``StationPlaybackPhase/idle`` for every station except the
+    /// active one, so a row can bind to this without knowing what else is
+    /// playing.
+    ///
+    /// - Parameter station: The station whose row is being rendered.
+    /// - Returns: That station's phase relative to current playback.
     public func phase(for station: Station) -> StationPlaybackPhase {
         guard activeStation?.id == station.id else { return .idle }
 
