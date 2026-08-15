@@ -138,47 +138,54 @@
 
     <ul class="grid">
       <li>
-        <a class="card" href="DesignSystem/documentation/designsystem/">
+        <a class="card" href="docs/documentation/designsystem/">
           <h2>DesignSystem</h2>
           <p>Liquid Glass-aware SwiftUI surfaces and design tokens — station rows/cards/carousel, artwork, playing indicator.</p>
         </a>
       </li>
       <li>
-        <a class="card" href="RadioDirectory/documentation/radiodirectory/">
+        <a class="card" href="docs/documentation/radiodirectory/">
           <h2>RadioDirectory</h2>
           <p>Domain models, the <code>RadioDirectoryProviding</code> boundary, the Radio-Browser and SHOUTcast clients, curated/bundled directories.</p>
         </a>
       </li>
       <li>
-        <a class="card" href="Playback/documentation/playback/">
+        <a class="card" href="docs/documentation/playback/">
           <h2>Playback</h2>
           <p><code>PlaybackController</code>, the <code>RadioPlaybackEngine</code> seam, ICY metadata parsing, the sleep timer, and now-playing bridging.</p>
         </a>
       </li>
       <li>
-        <a class="card" href="PlaybackEngineAudioStreaming/documentation/playbackengineaudiostreaming/">
+        <a class="card" href="docs/documentation/playbackengineaudiostreaming/">
           <h2>PlaybackEngineAudioStreaming</h2>
           <p>The production <code>RadioPlaybackEngine</code>, AVAudioEngine-backed via the AudioStreaming library.</p>
         </a>
       </li>
       <li>
-        <a class="card" href="Persistence/documentation/persistence/">
+        <a class="card" href="docs/documentation/persistence/">
           <h2>Persistence</h2>
           <p>SwiftData models and <code>LibraryStore</code> for favorites and recents.</p>
         </a>
       </li>
       <li>
-        <a class="card" href="FeatureFlags/documentation/featureflags/">
+        <a class="card" href="docs/documentation/featureflags/">
           <h2>FeatureFlags</h2>
           <p>The feature-flagging seam used to gate work in progress across the app.</p>
+        </a>
+      </li>
+      <li>
+        <a class="card" href="docs/documentation/imageiodownsample/">
+          <h2>ImageIODownsample</h2>
+          <p>A leaf module wrapping ImageIO thumbnail decoding, so images never decode larger than the surface that draws them.</p>
         </a>
       </li>
     </ul>
 
     <footer>
       Generated with <a href="https://www.swift.org/documentation/docc/">DocC</a> from each
-      package's public API. Rebuilt on every push that touches one of these packages — see
-      <a href="https://github.com/cascadiacollections/shoutkit/blob/main/.github/workflows/pages.yml">pages.yml</a>.
+      package's public API and merged into one cross-linked archive, so symbol references resolve
+      across package boundaries. Rebuilt on every push that touches one of these packages — see
+      <a href="https://github.com/cascadiacollections/shoutkit/blob/main/.github/scripts/build-docs.sh">build-docs.sh</a>.
     </footer>
   </div>
 </body>

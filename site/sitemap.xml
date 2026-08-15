@@ -8,8 +8,53 @@
   </url>
   <url>
     <loc>https://cascadiacollections.github.io/shoutkit/api/</loc>
-    <lastmod>2026-08-13</lastmod>
+    <lastmod>2026-08-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
+  </url>
+  <!-- Per-module documentation roots. Symbol pages below these are left to
+       crawler link-following; listing them would mean regenerating this file
+       from the built archive on every deploy. -->
+  <url>
+    <loc>https://cascadiacollections.github.io/shoutkit/api/docs/documentation/designsystem/</loc>
+    <lastmod>2026-08-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://cascadiacollections.github.io/shoutkit/api/docs/documentation/radiodirectory/</loc>
+    <lastmod>2026-08-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://cascadiacollections.github.io/shoutkit/api/docs/documentation/playback/</loc>
+    <lastmod>2026-08-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://cascadiacollections.github.io/shoutkit/api/docs/documentation/playbackengineaudiostreaming/</loc>
+    <lastmod>2026-08-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://cascadiacollections.github.io/shoutkit/api/docs/documentation/persistence/</loc>
+    <lastmod>2026-08-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://cascadiacollections.github.io/shoutkit/api/docs/documentation/featureflags/</loc>
+    <lastmod>2026-08-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://cascadiacollections.github.io/shoutkit/api/docs/documentation/imageiodownsample/</loc>
+    <lastmod>2026-08-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>
 </urlset>
