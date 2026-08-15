@@ -1,8 +1,11 @@
 import AudioStreaming
 import AVFoundation
-import CoreMotion
 import Foundation
 import Playback
+
+#if canImport(CoreMotion)
+import CoreMotion
+#endif
 
 // Opt-in, headphones-only spatial audio: an `AVAudioEnvironmentNode` inserted
 // at the same attach point the equalizer uses (see
@@ -15,6 +18,16 @@ import Playback
 // It's the same technique Apple applies to non-Atmos content elsewhere in the
 // OS, and is presented to the user that way (see `SettingsFeature`), not as
 // "real" Dolby Atmos.
+//
+// The whole effect is gated on `canImport(CoreMotion)`, which given this
+// package's `.iOS` + `.tvOS` platform list means "not tvOS": there is no
+// CoreMotion — and so no `CMHeadphoneMotionManager` — on tvOS, and head
+// tracking is the point of the feature. `RadioPlaybackEngine` defaults
+// `supportsSpatialAudio` to `false` and `setSpatialAudioEnabled(_:)` to a
+// no-op, so leaving both out here degrades the capability rather than
+// exposing a dead control (`SettingsFeature` keys its row off
+// `supportsSpatialAudio`).
+#if canImport(CoreMotion)
 extension AudioStreamingPlaybackEngine {
     /// Fixed virtual distance (meters) placed between the listener and the
     /// stream's origin, so head rotation has a stereo image to pan around.
@@ -111,3 +124,11 @@ extension AudioStreamingPlaybackEngine {
         }
     }
 }
+#else
+extension AudioStreamingPlaybackEngine {
+    /// Declared on every platform so `handleMediaServicesReset()` needs no
+    /// `#if` of its own. There is never a spatial audio node to re-attach
+    /// where CoreMotion is unavailable, because there is no way to attach one.
+    func reattachSpatialAudioIfNeeded() {}
+}
+#endif

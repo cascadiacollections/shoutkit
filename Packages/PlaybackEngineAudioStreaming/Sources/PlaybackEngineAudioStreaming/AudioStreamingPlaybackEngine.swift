@@ -1,9 +1,12 @@
 import AudioStreaming
 import AVFoundation
-import CoreMotion
 import Foundation
 import os
 import Playback
+
+#if canImport(CoreMotion)
+import CoreMotion
+#endif
 
 /// `RadioPlaybackEngine` backed by AudioStreaming's `AudioPlayer`
 /// (`AVAudioEngine`), registered over the `Container.radioPlaybackEngine` stub
@@ -90,7 +93,13 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     /// unconditionally is cheap — it does nothing until
     /// `startDeviceMotionUpdates(to:withHandler:)` is called, which only
     /// happens once spatial audio is switched on.
+    ///
+    /// Absent where CoreMotion is — tvOS, given this package's platform list —
+    /// along with the whole effect it drives. See
+    /// AudioStreamingPlaybackEngine+SpatialAudio.swift.
+    #if canImport(CoreMotion)
     let headphoneMotionManager = CMHeadphoneMotionManager()
+    #endif
 
     public init() {
         player.delegate = self
@@ -102,7 +111,9 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         sessionDeactivationTask?.cancel()
         sessionActivationTask?.cancel()
         stopClassificationTask?.cancel()
+        #if canImport(CoreMotion)
         headphoneMotionManager.stopDeviceMotionUpdates()
+        #endif
         for token in notificationTokens {
             NotificationCenter.default.removeObserver(token)
         }
