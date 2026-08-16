@@ -13,6 +13,11 @@ All notable changes to ShoutKit are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Album art no longer shows as a broken/undefined image on Tesla right after the first
+  track of a stream starts.** A station with no artwork of its own had nothing on screen yet
+  when the first track's album art resolved, and that "nothing yet" state was mistaken for the
+  one case where advertising unfetched art immediately is fine (switching stations). The art is
+  now held back until its bytes are actually in hand, same as every other track boundary
 - **Spatial Audio no longer crashes the app on launch.** The feature's head-tracking touches
   `CMHeadphoneMotionManager` at bootstrap regardless of whether Spatial Audio is turned on, but
   the app's Info.plist never declared `NSMotionUsageDescription` — iOS aborted the process on

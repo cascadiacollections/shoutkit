@@ -34,8 +34,11 @@ enum NowPlayingArtworkPolicy {
 
         /// Keep advertising `current` and fetch `pending` in the background. The
         /// surface re-runs the decision once `pending` is ready, and the identity
-        /// flips exactly once — with the image already in hand.
-        case hold(current: URL, pending: URL)
+        /// flips exactly once — with the image already in hand. `current` is `nil`
+        /// when there was nothing to hold in the first place — the station has no
+        /// artwork of its own — so "nothing" is what keeps advertising while
+        /// `pending` fetches, rather than the still-unfetched `pending` itself.
+        case hold(current: URL?, pending: URL)
     }
 
     /// - Parameters:
@@ -66,9 +69,19 @@ enum NowPlayingArtworkPolicy {
 
         case let .resolved(url):
             guard let target = url ?? stationArtworkURL else { return .present(nil) }
-            guard let held, held != target, readyArtworkURLs.contains(target) == false else {
+
+            // A station switch has nothing worth holding on to: the surface was
+            // already going to interrupt whatever it was showing, so advertise
+            // the new identity right away rather than delaying it behind a fetch.
+            guard isSameStation else { return .present(target) }
+
+            guard held != target, readyArtworkURLs.contains(target) == false else {
                 return .present(target)
             }
+            // Not resident yet. `held` may itself be `nil` — the station has no
+            // artwork of its own, so nothing was ever advertised for it — and
+            // that is still a hold, not a green light to advertise `target`
+            // before its bytes exist.
             return .hold(current: held, pending: target)
         }
     }
