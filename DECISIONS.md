@@ -1,5 +1,37 @@
 # Decisions
 
+## 2026-08-16 (the Tesla artwork race the 2026-08-06 fix left open)
+
+Reported from a Tesla again: album art shows as a broken/undefined image specifically after
+the first track's ICY metadata arrives, on a fresh stream start. The 2026-08-06 entry flagged
+its own fix as "unverified on-device" and asked to revisit if that proved insufficient — this
+is that signal, and it's a real gap in `NowPlayingArtworkPolicy.decide`, not a new class of bug.
+
+The `.resolved` branch used `guard let held` to decide whether it was safe to skip the
+"is `target` resident yet" check, on the theory that `held == nil` only happens on a genuine
+station switch — where advertising immediately, unfetched, is the documented, tested trade-off
+("a station switch has nothing worth holding on to"). But `held` is also `nil` whenever the
+*same* station simply has no artwork of its own: nothing was ever advertised for it, so there
+is nothing to hold, even though `isSameStation` is true. In that shape — no station favicon,
+first track's own album art resolves before its bytes are fetched — the guard read "nothing
+held" as "safe to skip the residency check" and advertised the still-unfetched track artwork
+immediately. AVRCP then got a track-changed notification for an identity with nothing behind
+it, which is exactly the failure mode the 2026-08-06 fix existed to prevent, just reached by a
+different door.
+
+Fixed by branching on `isSameStation` directly instead of inferring it from `held`'s
+nullability: a genuine switch still presents immediately (unchanged, still tested), but a
+same-station push with `held == nil` now holds — the interim state is "nothing", not the
+unready target — until `target` lands in `readyArtworkURLs`. That required widening
+`Decision.hold`'s `current` from `URL` to `URL?`; `MediaSessionNowPlayingCenter.apply(_:)`
+needed no change, since it already assigns straight into a `URL?`.
+
+Still unverified on a real Tesla — this repo has no way to test AVRCP directly — but the new
+`resolvedFirstTrackArtOnAStationWithNoArtworkOfItsOwnHoldsUntilFetched` and
+`…IsPresentedOnceItsBytesAreResident` cases in `NowPlayingArtworkPolicyTests` pin the exact
+shape down at the unit level, and every pre-existing case in that file (including the
+station-switch one) still holds.
+
 ## 2026-08-15 (closing three gaps left open by the MIT API-surface review)
 
 Follow-ups to #177/#178, from a second pass over the reusable packages' public surface.
