@@ -56,17 +56,17 @@ public struct LibraryView: View {
                     }
 
                     if recentlyHeardTracks.isEmpty == false {
-                        Section("Top Tracks") {
-                            Picker("Timeframe", selection: $topTracksTimeframe) {
-                                Text("This Week").tag(TopTracksTimeframe.week)
-                                Text("This Month").tag(TopTracksTimeframe.month)
-                                Text("All Time").tag(TopTracksTimeframe.allTime)
+                        Section(String(localized: "Top Tracks", bundle: .module)) {
+                            Picker(String(localized: "Timeframe", bundle: .module), selection: $topTracksTimeframe) {
+                                Text(String(localized: "This Week", bundle: .module)).tag(TopTracksTimeframe.week)
+                                Text(String(localized: "This Month", bundle: .module)).tag(TopTracksTimeframe.month)
+                                Text(String(localized: "All Time", bundle: .module)).tag(TopTracksTimeframe.allTime)
                             }
                             .pickerStyle(.segmented)
                             .listRowSeparator(.hidden)
 
                             if topTracks.isEmpty {
-                                Text("No repeated tracks yet.")
+                                Text(String(localized: "No repeated tracks yet.", bundle: .module))
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                             } else {

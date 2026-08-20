@@ -66,7 +66,10 @@ public enum TopTracksAggregator {
                   title.isEmpty == false, artist.isEmpty == false else { continue }
             if let since, track.heardAt < since { continue }
 
-            let key = "\(title.lowercased())|\(artist.lowercased())"
+            // A unit separator, not "|": a track title or artist can legitimately
+            // contain a pipe (e.g. "Artist | Live"), which would otherwise let two
+            // distinct tracks collide into the same bucket and `TopTrack.id`.
+            let key = "\(title.lowercased())\u{1F}\(artist.lowercased())"
             if let existing = buckets[key] {
                 let isNewer = track.heardAt > existing.lastHeardAt
                 buckets[key] = TopTrack(
