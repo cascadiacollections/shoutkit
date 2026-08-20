@@ -22,7 +22,13 @@ public struct LibraryView: View {
     @Query(sort: \RecentlyHeardTrack.heardAt, order: .reverse)
     private var recentlyHeardTracks: [RecentlyHeardTrack]
 
+    @State private var topTracksTimeframe: TopTracksTimeframe = .week
+
     public init() {}
+
+    private var topTracks: [TopTrack] {
+        TopTracksAggregator.aggregate(recentlyHeardTracks, timeframe: topTracksTimeframe)
+    }
 
     public var body: some View {
         Group {
@@ -50,6 +56,26 @@ public struct LibraryView: View {
                     }
 
                     if recentlyHeardTracks.isEmpty == false {
+                        Section("Top Tracks") {
+                            Picker("Timeframe", selection: $topTracksTimeframe) {
+                                Text("This Week").tag(TopTracksTimeframe.week)
+                                Text("This Month").tag(TopTracksTimeframe.month)
+                                Text("All Time").tag(TopTracksTimeframe.allTime)
+                            }
+                            .pickerStyle(.segmented)
+                            .listRowSeparator(.hidden)
+
+                            if topTracks.isEmpty {
+                                Text("No repeated tracks yet.")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                ForEach(topTracks) { track in
+                                    topTrackRow(for: track)
+                                }
+                            }
+                        }
+
                         Section("Recently Heard") {
                             ForEach(recentlyHeardTracks) { track in
                                 recentlyHeardRow(for: track)
@@ -87,6 +113,39 @@ public struct LibraryView: View {
             Label("No Favorites Yet", systemImage: "heart")
         } description: {
             Text("Favorites, recently played stations, and recently heard tracks appear here.")
+        }
+    }
+
+    private func topTrackRow(for track: TopTrack) -> some View {
+        let content = HStack(spacing: ShoutKitSpacing.small) {
+            StationArtworkView(artworkURL: track.artworkURL, size: 44)
+            VStack(alignment: .leading, spacing: ShoutKitSpacing.extraSmall) {
+                Text(track.title)
+                    .font(.headline)
+                    .lineLimit(1)
+                Text(track.artist)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Text("\(track.playCount)×")
+                .font(.footnote.monospacedDigit())
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 4)
+
+        return Group {
+            if let url = track.appleMusicURL {
+                Button {
+                    openURL(url)
+                } label: {
+                    content
+                }
+                .buttonStyle(.plain)
+            } else {
+                content
+            }
         }
     }
 

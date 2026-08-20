@@ -43,6 +43,12 @@ that shares the suite.
 - ``RecentStation``
 - ``RecentlyHeardTrack``
 
+### Top Tracks
+
+- ``TopTrack``
+- ``TopTracksTimeframe``
+- ``TopTracksAggregator``
+
 ### Stores
 
 - ``LibraryStore``

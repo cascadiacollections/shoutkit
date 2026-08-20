@@ -237,7 +237,7 @@ extension PlaybackController {
             receivedAt: Date()
         )
         nowPlaying = metadata
-        onTrackHeard?(HeardTrack(station: station, track: metadata, appleMusicURL: nil))
+        onTrackHeard?(HeardTrack(station: station, track: metadata, artworkURL: nil, appleMusicURL: nil))
 
         // The title has to reach the system surface now — it's what a listener
         // (and a head unit) sees change at the track boundary. The artwork answer
@@ -278,7 +278,12 @@ extension PlaybackController {
             guard let station = self.activeStation else { return }
             if let metadata = self.nowPlaying {
                 self.onTrackHeard?(
-                    HeardTrack(station: station, track: metadata, appleMusicURL: resources.appleMusicURL)
+                    HeardTrack(
+                        station: station,
+                        track: metadata,
+                        artworkURL: resources.artworkURL,
+                        appleMusicURL: resources.appleMusicURL
+                    )
                 )
             }
             // Pushed even for a miss: the track-start push left the surface
