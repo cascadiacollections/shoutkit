@@ -24,11 +24,13 @@ public struct TrackResources: Sendable, Equatable {
 public struct HeardTrack {
     public let station: Station
     public let track: NowPlayingMetadata
+    public let artworkURL: URL?
     public let appleMusicURL: URL?
 
-    public init(station: Station, track: NowPlayingMetadata, appleMusicURL: URL?) {
+    public init(station: Station, track: NowPlayingMetadata, artworkURL: URL?, appleMusicURL: URL?) {
         self.station = station
         self.track = track
+        self.artworkURL = artworkURL
         self.appleMusicURL = appleMusicURL
     }
 }

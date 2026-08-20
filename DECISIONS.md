@@ -1,5 +1,51 @@
 # Decisions
 
+## 2026-08-20 (Top Tracks: most-played local history, with cover art)
+
+Added a "Top Tracks" report to the Library tab — most-played (title, artist) pairs over a
+week/month/all-time window, with cover art where a lookup found any. This was scoped first as
+a feasibility study (see the exploratory pass earlier the same day): the metadata parsing and
+per-track artwork lookup already existed end-to-end; the gap was persistence.
+
+**Aggregation is a pure function over `[RecentlyHeardTrack]`, not a new SwiftData query
+method.** `LibraryView` already holds every recently-heard row via `@Query`; grouping that
+array by `(title, artist)` in `TopTracksAggregator.aggregate(_:timeframe:limit:now:)` means the
+report recomputes for free whenever the underlying table changes, with no separate fetch/cache
+to keep in sync. `now:` is an injected parameter (not `.now` inline) purely so tests are
+deterministic against a fixed clock — the existing `heardAt` fields already carry real
+`Date`s.
+
+**Matching requires both a title and an artist.** ICY metadata sometimes carries only one
+(`logRecentlyHeardTrack` already accepts `title != nil || artist != nil`), but a one-sided
+value can't be matched against a later play with any confidence, so those rows are counted in
+Recently Heard but excluded from Top Tracks. Matching is case-insensitive (`"SONG"` and
+`"Song"` collapse) since ICY sources aren't consistent about casing across pushes.
+
+**`RecentlyHeardTrack` gained `artworkURLString`, alongside the existing `appleMusicURLString`
+field — an additive, default-`nil` column, the same lightweight-migration shape as
+`FavoriteStation.sortIndex` and `RecentStation.playCount`.** Getting it populated required
+threading `artworkURL` through `HeardTrack` (`Playback`) — previously it carried only
+`appleMusicURL`, because nothing downstream needed the art URL until now. The album-art lookup
+itself needed no change: `AlbumArtLookup`/`trackResourcesProvider` already resolve it per
+track, per the 2026-07-09 "album art discovery" decision; this only widens the pipe carrying
+the result down to the persistence callback, and it stays in `AppDependencies+Callbacks.swift`
+— `Playback` still has no DesignSystem/iTunes dependency.
+
+**`recentlyHeardLimit` raised from 250 to 1000.** A global 250-row cap across every station was
+too shallow to answer "most played this week/month" once a listener had more than a handful of
+repeats — the window could roll off a real repeat before a second play ever landed inside it.
+Rows are small (two strings, two optional URL strings, a date), so 4x the retention is cheap;
+this is still a rolling cap, not unbounded history, matching the existing trim-on-write
+behavior in `LibraryStore+RecentlyHeard.swift`.
+
+**Historical artwork is never re-fetched at report time.** Some earlier designs for this
+considered re-querying `AlbumArtLookup` live when rendering the report, to backfill art for
+rows logged before this change (which have `artworkURLString == nil`). Rejected: it would
+re-hit the iTunes API for old tracks whose in-memory lookup cache has long since reset, is pure
+added latency on a report screen, and duplicates a job `AlbumArtLookup` already does at
+listen-time. Old rows simply show the placeholder from `StationArtworkView`; only plays logged
+after this change carry art.
+
 ## 2026-08-16 (the Tesla artwork race the 2026-08-06 fix left open)
 
 Reported from a Tesla again: album art shows as a broken/undefined image specifically after
