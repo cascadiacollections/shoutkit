@@ -13,6 +13,10 @@ All notable changes to ShoutKit are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Playback no longer pops when it rejoins a station after Siri, a TTS announcement, or a
+  phone call interrupts it.** Live radio has no position to resume from, so every rejoin
+  reconnects at the live edge — but it used to do that at full volume, which read as an
+  audible click or jump-cut. It now fades in over a third of a second instead
 - **Album art no longer shows as a broken/undefined image on Tesla right after the first
   track of a stream starts.** A station with no artwork of its own had nothing on screen yet
   when the first track's album art resolved, and that "nothing yet" state was mistaken for the

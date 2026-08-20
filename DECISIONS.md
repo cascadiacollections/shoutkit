@@ -1,5 +1,40 @@
 # Decisions
 
+## 2026-08-20 (fading a rejoin in, instead of trying to buffer around it)
+
+Reported as a Siri/TTS interruption "clipping forward" after it ends. Live radio has no
+position to lose, so this was never a buffering gap in the sense the report implied — confirmed
+by reading `PlaybackController+Interruptions.swift` and `+Recovery.swift`: every resume, from an
+interruption or otherwise, is a fresh `startPlayback(of:isReconnect: true)` that rejoins the
+stream at whatever the live edge currently is. `DECISIONS.md` had already declined tuning
+`AVAudioSession.setPreferredIOBufferDuration` (left open, 2026-08-03 entry) and
+`AVPlayerItem.preferredForwardBufferDuration` (declined outright) for unrelated reasons, and
+neither would have changed this: a bigger client-side buffer only helps when replaying stored
+audio across a gap, and a rejoin never does that — it always jumps to "now."
+
+So the real defect wasn't a missing buffer, it was the audible discontinuity itself: a rejoin's
+first decoded frames land at full volume, reading as a click or a jump-cut. Considered adding a
+genuine DVR-style delay buffer to `Playback` so a listener could catch up across an
+interruption — rejected as disproportionate: it adds latency for every listener, on every
+station, to soften a comparatively rare event, and would need plumbing through both
+`AudioStreamingPlaybackEngine` and any future `AudioOutput` conformer.
+
+Fixed at the smaller, safer layer instead: `AudioStreamingPlaybackEngine` now zeroes
+`AudioPlayer.volume` before every `start`/`resume`/`replayCurrentStream` (`silenceForUpcomingPlayback()`)
+and ramps it back to full over 350ms once the engine actually reports `.playing`
+(`fadeInVolume()`), in the new `AudioStreamingPlaybackEngine+VolumeRamp.swift` split (the
+400-line `file_length` limit was already at its ceiling). The resume watchdog in
+`+Recovery.swift` was left untouched — at `resumeWatchdogTimeout: .seconds(2)` it's already
+about as tight as it can go without risking false-positive teardowns on a slower rejoin, so
+there was nothing safe to tighten there.
+
+Not verified on-device: this environment has no Mac host or simulator, so `swift test` and
+`xcodebuild` could not run. `AudioPlayer` is a concrete type from the `AudioStreaming` package
+with no test seam, matching the rest of this file having no dedicated
+`PlaybackEngineAudioStreaming` test target — the ramp logic was checked by reading, not by a
+suite. Revisit if the fade is audible as a fade rather than invisible, or if it doesn't fully
+mask the artifact in practice.
+
 ## 2026-08-20 (Top Tracks: most-played local history, with cover art)
 
 Added a "Top Tracks" report to the Library tab — most-played (title, artist) pairs over a
