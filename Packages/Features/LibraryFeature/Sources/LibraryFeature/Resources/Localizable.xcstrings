@@ -1,16 +1,37 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "All Time" : {
+
+    },
     "Favorites" : {
 
     },
     "No Favorites Yet" : {
 
     },
+    "No repeated tracks yet." : {
+
+    },
+    "Recently Heard" : {
+
+    },
     "Recently Played" : {
 
     },
     "Stations you favorite and recently play will appear here." : {
+
+    },
+    "This Month" : {
+
+    },
+    "This Week" : {
+
+    },
+    "Timeframe" : {
+
+    },
+    "Top Tracks" : {
 
     }
   },

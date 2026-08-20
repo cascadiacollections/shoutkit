@@ -98,6 +98,9 @@ All notable changes to ShoutKit are documented here. The format follows
   visible row never fetch the same image twice
 
 ### Added
+- **Top Tracks**: the Library tab now shows your most-played songs — over the last week, the
+  last month, or all time — with cover art where it's available, right alongside Recently
+  Heard
 - **Apple TV app**: ShoutKit on tvOS, built for the Siri Remote — a now-playing banner over
   Recent and Popular station shelves, with play/pause and stop, and the system Now Playing panel
   (TV button) showing artwork and responding to the remote's transport controls. It runs the same
