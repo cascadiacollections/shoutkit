@@ -1,4 +1,4 @@
-# Releasing ShoutKit
+# Releasing Holmdel
 
 How to cut a release, and what a release does and does not currently include.
 
@@ -37,7 +37,7 @@ merged**, because the workflow reads `CHANGELOG.md` at the tagged commit.
    fine (`## [0.4.0] — 2026-08-13` works).
 
 2. **Bump `MARKETING_VERSION`.** It appears **twelve times** in
-   `ShoutKitApp/ShoutKitApp.xcodeproj/project.pbxproj` — six configurations across the app,
+   `HolmdelApp/Holmdel.xcodeproj/project.pbxproj` — six configurations across the app,
    widgets, and tests, and six more across the watch app, watch widgets, and tvOS app. It is
    *not* in an xcconfig, so there is no single place to change it.
 
@@ -47,7 +47,7 @@ merged**, because the workflow reads `CHANGELOG.md` at the tagged commit.
    and the watch app only became embedded at all in #166.
 
    ```sh
-   grep -c 'MARKETING_VERSION = X.Y.Z;' ShoutKitApp/ShoutKitApp.xcodeproj/project.pbxproj
+   grep -c 'MARKETING_VERSION = X.Y.Z;' HolmdelApp/Holmdel.xcodeproj/project.pbxproj
    # must print 12
    ```
 

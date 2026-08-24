@@ -125,7 +125,7 @@ public struct SettingsView: View {
                 prompt; the optional precise-location toggle asks Apple for location permission \
                 only after you turn it on, and falls back to that locale region if permission \
                 is denied. \
-                ShoutKit has no analytics, no ads, and no accounts.
+                Holmdel has no analytics, no ads, and no accounts.
                 """)
             }
         }
@@ -174,7 +174,7 @@ public struct SettingsView: View {
                 if playbackController.supportsSpatialAudio {
                     Text("""
                     Spatial Audio renders the stream through a head-tracked virtual sound stage on \
-                    AirPods and other supported headphones. It's a stereo effect ShoutKit applies to \
+                    AirPods and other supported headphones. It's a stereo effect Holmdel applies to \
                     every station, not Dolby Atmos content from the broadcaster — radio streams carry \
                     no object-based audio to spatialize.
                     """)
@@ -189,13 +189,13 @@ public struct SettingsView: View {
                 Label("Report an Issue", systemImage: "ladybug")
             }
             Link(destination: ProjectLinks.sponsors) {
-                Label("Support ShoutKit", systemImage: "heart")
+                Label("Support Holmdel", systemImage: "heart")
             }
         } header: {
             Text("Feedback & Support")
         } footer: {
             Text("""
-            ShoutKit is free software — everything works whether or not you donate. \
+            Holmdel is free software — everything works whether or not you donate. \
             On beta builds you can also send feedback by taking a screenshot in TestFlight.
             """)
         }
@@ -235,7 +235,13 @@ public struct SettingsView: View {
         } header: {
             Text("About")
         } footer: {
-            Text("Station discovery is powered by Radio-Browser, a free, community-run directory.")
+            Text("""
+            Holmdel is named for the Bell Labs site in Holmdel, New Jersey, where in 1964 Arno \
+            Penzias and Robert Wilson used the Holmdel Horn Antenna to detect the cosmic \
+            microwave background — proof of the Big Bang, and one of the most consequential \
+            radio signals ever received. Station discovery here is powered by Radio-Browser, a \
+            free, community-run directory.
+            """)
         }
     }
 }

@@ -14,8 +14,8 @@ import Foundation
 /// through ActivityKit.
 public enum LiveActivityArtworkStore {
     /// The App Group both the app and the widget extension are entitled to. Must
-    /// stay in sync with `ShoutKitApp.entitlements` / `ShoutKitWidgets.entitlements`.
-    public static let appGroupIdentifier = "group.com.cascadiacollections.shoutkit"
+    /// stay in sync with `Holmdel.entitlements` / `Holmdel.entitlements`.
+    public static let appGroupIdentifier = "group.com.cascadiacollections.holmdel"
 
     /// Subdirectory inside the container so artwork can't collide with anything
     /// else the group might hold later.

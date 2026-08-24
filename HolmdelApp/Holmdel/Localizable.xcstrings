@@ -1,0 +1,57 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@" : {
+
+    },
+    "Browse" : {
+
+    },
+    "Everything works without an account. Tap a station to start listening." : {
+
+    },
+    "Favorites" : {
+
+    },
+    "Get Started" : {
+
+    },
+    "Listen Now" : {
+
+    },
+    "Open" : {
+
+    },
+    "Open Holmdel" : {
+
+    },
+    "Opens Holmdel." : {
+
+    },
+    "Play Station" : {
+
+    },
+    "Playing %@" : {
+
+    },
+    "Plays a radio station in Holmdel." : {
+
+    },
+    "Radio Station" : {
+
+    },
+    "Search" : {
+
+    },
+    "Settings" : {
+
+    },
+    "Station" : {
+
+    },
+    "Welcome to Holmdel" : {
+
+    }
+  },
+  "version" : "1.1"
+}

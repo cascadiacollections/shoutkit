@@ -75,7 +75,7 @@ for package in "${packages[@]}"; do
     derived_data="${work_dir}/dd-${package}"
 
     xcodebuild docbuild \
-        -workspace ShoutKit.xcworkspace \
+        -workspace Holmdel.xcworkspace \
         -scheme "${package}" \
         -destination 'generic/platform=iOS Simulator' \
         -derivedDataPath "${derived_data}"
@@ -104,19 +104,19 @@ done
 # signatures name RadioDirectory's `Station`, and so on. Unmerged, every one of
 # those renders as dead text instead of a link.
 echo "::group::merge"
-merged="${work_dir}/ShoutKit.doccarchive"
+merged="${work_dir}/Holmdel.doccarchive"
 rm -rf "${merged}"
 # shellcheck disable=SC2046 # intentional word splitting over the archive list
 xcrun docc merge $(printf '%s\n' "${archives_dir}"/*.doccarchive) \
     --output-path "${merged}" \
-    --synthesized-landing-page-name "ShoutKit"
+    --synthesized-landing-page-name "Holmdel"
 echo "::endgroup::"
 
 echo "::group::transform-for-static-hosting"
 rm -rf site/api/docs
 xcrun docc process-archive transform-for-static-hosting "${merged}" \
     --output-path site/api/docs \
-    --hosting-base-path "shoutkit/api/docs"
+    --hosting-base-path "holmdel/api/docs"
 echo "::endgroup::"
 
 echo "Docs built into site/api/docs"
