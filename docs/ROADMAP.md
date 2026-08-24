@@ -1,6 +1,6 @@
-# ShoutKit roadmap
+# Holmdel roadmap
 
-A sprint-aligned view of where ShoutKit is headed, spanning both **feature** work and
+A sprint-aligned view of where Holmdel is headed, spanning both **feature** work and
 **general engineering** (test infra, CI, tech debt). Sprints are 2 weeks. This complements,
 rather than replaces, the per-release plans in `docs/releases/*.md` — those stay the
 detailed, checkbox-level source of truth for a release in flight; this document is the
@@ -58,7 +58,7 @@ The sprint this document scheduled twice and skipped twice. Landing in PR #138.
       has never measured buys tests for whatever is cheapest to cover.
 - [x] **The watchOS target compiles in CI.** It is a separate top-level target with no
       shared scheme, so ~670 lines could break with every check green. (The *widget*
-      extension was already covered — `ShoutKit` depends on and embeds it.)
+      extension was already covered — `Holmdel` depends on and embeds it.)
 - [x] **`Packages/PlaybackEngineAudioStreaming`** — the codec dependency leaves the
       MIT-licensed `Playback` package (#122), with a CI step asserting it stays gone.
       Closes #123 and #126 with it.
@@ -72,13 +72,13 @@ The sprint this document scheduled twice and skipped twice. Landing in PR #138.
 - [x] **The watch app does not ship with the phone app. Fix the embed** (#141). Fixed
       2026-08-12. The root cause was a missing `WKCompanionAppBundleIdentifier` — the target
       was configured as a *standalone* watch app — plus the absent copy phase. A real build
-      now emits `ShoutKit.app/Watch/ShoutKitWatchApp.app` (watchOS Mach-O, complication
+      now emits `Holmdel.app/Watch/HolmdelWatchApp.app` (watchOS Mach-O, complication
       nested inside), and the CI warning below is a hard check. **Still unverified: that it
       installs and pairs**, which needs a paired simulator or hardware — see `DECISIONS.md`.
       Original entry follows. This started as a
       suspicion from reading `project.pbxproj` — no `Embed Watch Content` phase, and
-      `ShoutKitWatchApp` absent from `ShoutKit`'s dependencies — and the CI step added to
-      check it has now confirmed it against a real build: `ShoutKit.app` has no `Watch/`
+      `HolmdelWatchApp` absent from `Holmdel`'s dependencies — and the CI step added to
+      check it has now confirmed it against a real build: `Holmdel.app` has no `Watch/`
       payload. So the watchOS companion that `README.md` advertises, and that
       `DECISIONS.md` recorded on 2026-07-16, has never installed alongside the app.
       **This is a P1, not a chore**, and it needs someone with Xcode: adding an embed phase
@@ -147,10 +147,10 @@ entry below states what is actually dark.
 - [ ] `prewarmStations` — launch-time DNS/TLS warming of top stations. **Not cleanly
       deletable either**, and the 304-line figure first written here was wrong: the flag
       gates far less than the machinery. `StationConnectionPrewarmer` (133 lines) is called
-      by `WarmupRadioAudioQueueIntent` (`ShoutKitAudioIntents.swift:82`), a **shipping App
+      by `WarmupRadioAudioQueueIntent` (`HolmdelAudioIntents.swift:82`), a **shipping App
       Intent with no flag gate**, and `LibraryStore+Prewarm.swift` (123 lines) is mostly not
       prewarm at all — `rankedStations(limit:)` drives CarPlay
-      (`ShoutKitCarPlaySceneDelegate.swift:106`), alongside `favoriteStations()`,
+      (`HolmdelCarPlaySceneDelegate.swift:106`), alongside `favoriteStations()`,
       `mostRecentStation()`, and `refreshStreamURLSnapshot()`. The genuinely dark surface is
       the flag, the launch-warmup block in `AppDependencies+Warmups.swift:26`,
       `prewarmStreamURLs(limit:)`, and the `tapToAudioPrewarmEnabledProvider` wiring (which
@@ -209,7 +209,7 @@ something a user receives.
 ## Next — get off the billed macOS runner
 
 CI spend is currently the largest line item in running this project, and all of it comes
-from one label. ShoutKit is public, so GitHub's *standard* hosted runners are free;
+from one label. Holmdel is public, so GitHub's *standard* hosted runners are free;
 `xcode-27` is a **larger runner**, and larger runners are billed on public repos like any
 other. The 2026-08-11 pass rationed minutes on that label (see `DECISIONS.md`) and bought
 roughly a 70% cut, but rationing is not the fix — getting off the label is. Two routes, and

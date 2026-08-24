@@ -2,7 +2,7 @@ name: Runner image watch
 
 # Watches for the one change that takes this repository's Actions bill to zero.
 #
-# ShoutKit is public, so GitHub's standard hosted runners — `ubuntu-latest`,
+# Holmdel is public, so GitHub's standard hosted runners — `ubuntu-latest`,
 # `macos-26`, and friends — are free. The `xcode-27` label the mac jobs use is a
 # *larger runner*, and larger runners are billed on public repos like any other.
 # Everything in ci.yml's job graph is shaped around minimising minutes on that
@@ -96,7 +96,7 @@ jobs:
             cat versions.txt
             echo '```'
             echo
-            echo "ShoutKit is a public repository, so standard hosted runners are free while the"
+            echo "Holmdel is a public repository, so standard hosted runners are free while the"
             echo "\`xcode-27\` larger-runner label is billed. Swapping \`runs-on: xcode-27\` for"
             echo "\`runs-on: macos-26\` in \`.github/workflows/ci.yml\` and \`.github/workflows/codeql.yml\`"
             echo "should take the Actions bill for this repo to approximately zero."

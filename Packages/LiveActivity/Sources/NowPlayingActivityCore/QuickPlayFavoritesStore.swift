@@ -33,8 +33,8 @@ public enum QuickPlayFavoritesStore {
     public static let widgetKind = "ShoutKitQuickPlay"
 
     /// The App Group both the app and the widget extension are entitled to. Must
-    /// stay in sync with `ShoutKitApp.entitlements` / `ShoutKitWidgets.entitlements`.
-    public static let appGroupIdentifier = "group.com.cascadiacollections.shoutkit"
+    /// stay in sync with `Holmdel.entitlements` / `Holmdel.entitlements`.
+    public static let appGroupIdentifier = "group.com.cascadiacollections.holmdel"
 
     private static let directoryName = "QuickPlayFavorites"
     private static let fileName = "favorites.json"

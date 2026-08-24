@@ -103,7 +103,7 @@ jobs:
       # DECISIONS.md); drop continue-on-error once the tree is clean.
       - name: Format check
         continue-on-error: true
-        run: swiftformat ShoutKitApp Packages --lint
+        run: swiftformat HolmdelApp Packages --lint
 
   host-tests:
     name: Package tests (macOS host)
@@ -295,7 +295,7 @@ jobs:
           path: |
             ~/Library/Caches/org.swift.swiftpm
             DerivedData/SourcePackages
-          key: spm-app-${{ steps.toolchain.outputs.id }}-${{ hashFiles('ShoutKit.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: spm-app-${{ steps.toolchain.outputs.id }}-${{ hashFiles('Holmdel.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: |
             spm-app-${{ steps.toolchain.outputs.id }}-
 
@@ -337,7 +337,7 @@ jobs:
           echo "Using simulator $UDID"
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
 
-      # `test`, not `build`: this is the only job that runs ShoutKitTests and
+      # `test`, not `build`: this is the only job that runs HolmdelTests and
       # the iOS-only package suites (DesignSystemTests,
       # NowPlayingActivityCoreTests) — none of them can run on the macOS host,
       # so before this they were maintained but never executed. It also still
@@ -349,7 +349,7 @@ jobs:
       - name: Test app (Debug)
         run: |
           set -o pipefail
-          xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
+          xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
             -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
             -derivedDataPath DerivedData \
             -resultBundlePath TestResults.xcresult \
@@ -392,7 +392,7 @@ jobs:
       # the iOS-only code can be measured at all: DesignSystem,
       # NowPlayingActivityCore and the app target never run on the mac host.
       # Baseline only, same as there — reported, never gated. Enabled by
-      # `codeCoverage` in ShoutKit.xctestplan rather than a flag here, so a
+      # `codeCoverage` in Holmdel.xctestplan rather than a flag here, so a
       # local Cmd+U run produces the same data.
       - name: Coverage baseline (iOS targets)
         if: always()
@@ -421,7 +421,7 @@ jobs:
 
       - name: Verify Pulse symbols are present in the Debug build
         run: |
-          APP_BINARY="DerivedData/Build/Products/Debug-iphonesimulator/ShoutKit.app/ShoutKit"
+          APP_BINARY="DerivedData/Build/Products/Debug-iphonesimulator/Holmdel.app/Holmdel"
           if [ ! -f "$APP_BINARY" ]; then
             echo "::error::Debug app binary not found at $APP_BINARY"
             exit 1
@@ -449,25 +449,25 @@ jobs:
       # inspects the *phone* app's Debug bundle, which is this job's product.
       - name: Check the watch app is embedded in the phone app
         run: |
-          APP="DerivedData/Build/Products/Debug-iphonesimulator/ShoutKit.app"
+          APP="DerivedData/Build/Products/Debug-iphonesimulator/Holmdel.app"
           if [ ! -d "$APP" ]; then
             echo "::error::No Debug app bundle at $APP to inspect."
             exit 1
           fi
-          WATCH_APP="$APP/Watch/ShoutKitWatchApp.app"
+          WATCH_APP="$APP/Watch/HolmdelWatchApp.app"
           if [ ! -d "$WATCH_APP" ]; then
-            echo "::error::No Watch/ShoutKitWatchApp.app payload in ShoutKit.app — the watchOS companion is not embedded in the phone app. Check the Embed Watch Content copy phase on the ShoutKit target."
+            echo "::error::No Watch/HolmdelWatchApp.app payload in Holmdel.app — the watchOS companion is not embedded in the phone app. Check the Embed Watch Content copy phase on the Holmdel target."
             exit 1
           fi
           # The companion key is what makes the payload installable rather than
           # merely present; a standalone watch app copied into Watch/ is the
           # shape this bug originally had.
           COMPANION=$(/usr/libexec/PlistBuddy -c "Print :WKCompanionAppBundleIdentifier" "$WATCH_APP/Info.plist" 2>/dev/null || true)
-          if [ "$COMPANION" != "com.cascadiacollections.shoutkit" ]; then
-            echo "::error::Embedded watch app's WKCompanionAppBundleIdentifier is '${COMPANION:-<missing>}', expected com.cascadiacollections.shoutkit."
+          if [ "$COMPANION" != "com.cascadiacollections.holmdel" ]; then
+            echo "::error::Embedded watch app's WKCompanionAppBundleIdentifier is '${COMPANION:-<missing>}', expected com.cascadiacollections.holmdel."
             exit 1
           fi
-          echo "Confirmed: watch companion embedded at Watch/ShoutKitWatchApp.app, companion id $COMPANION."
+          echo "Confirmed: watch companion embedded at Watch/HolmdelWatchApp.app, companion id $COMPANION."
 
   # Release-configuration and watchOS compiles, split out of `build` and off the
   # per-push path. Both are compile-only — neither runs a test — and together
@@ -508,14 +508,14 @@ jobs:
           path: |
             ~/Library/Caches/org.swift.swiftpm
             DerivedData/SourcePackages
-          key: spm-app-${{ steps.toolchain.outputs.id }}-${{ hashFiles('ShoutKit.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: spm-app-${{ steps.toolchain.outputs.id }}-${{ hashFiles('Holmdel.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: |
             spm-app-${{ steps.toolchain.outputs.id }}-
 
       - name: Build app (Release)
         run: |
           set -o pipefail
-          xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
+          xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
             -configuration Release \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath DerivedData \
@@ -528,11 +528,11 @@ jobs:
           grep -E "(error|fatal error): " build-release.log | sort -u | head -10 | sed 's/^/::error::/' || true
 
       # The watch app is a separate top-level target, not an extension embedded
-      # in ShoutKit: it is absent from ShoutKit's `dependencies` and from its
-      # Embed Foundation Extensions phase (which carries ShoutKitWidgets.appex
-      # and nothing else). So the ShoutKit scheme never compiles it, and until
+      # in Holmdel: it is absent from Holmdel's `dependencies` and from its
+      # Embed Foundation Extensions phase (which carries HolmdelWidgets.appex
+      # and nothing else). So the Holmdel scheme never compiles it, and until
       # this step the watch app and its complication — ~670 lines across
-      # ShoutKitWatchApp and ShoutKitWatchWidgets — could break without any
+      # HolmdelWatchApp and HolmdelWatchWidgets — could break without any
       # check going red. Built via its own shared scheme, added alongside this.
       #
       # `generic/platform=watchOS Simulator`: this is a compile check, not a
@@ -540,7 +540,7 @@ jobs:
       - name: Build watch app (Debug)
         run: |
           set -o pipefail
-          xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKitWatchApp \
+          xcodebuild -workspace Holmdel.xcworkspace -scheme HolmdelWatchApp \
             -destination 'generic/platform=watchOS Simulator' \
             -derivedDataPath DerivedData \
             CODE_SIGNING_ALLOWED=NO \
@@ -557,7 +557,7 @@ jobs:
             | sort -u | head -20 | sed 's/^/::error::/' || true
 
       # Same reasoning as the watch step above, and the same blind spot it closed:
-      # ShoutKitTVApp is a separate top-level target, absent from ShoutKit's
+      # HolmdelTVApp is a separate top-level target, absent from Holmdel's
       # `dependencies` and from its Embed phase, so no other check compiles it.
       # It lives here rather than on every PR because `xcode-27` is a billed
       # larger runner and this job was restructured to cut that spend — a third
@@ -570,7 +570,7 @@ jobs:
       - name: Build tvOS app (Debug)
         run: |
           set -o pipefail
-          xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKitTVApp \
+          xcodebuild -workspace Holmdel.xcworkspace -scheme HolmdelTVApp \
             -destination 'generic/platform=tvOS Simulator' \
             -derivedDataPath DerivedData \
             CODE_SIGNING_ALLOWED=NO \
@@ -600,7 +600,7 @@ jobs:
       # Every submitted bundle needs its own PrivacyInfo.xcprivacy: `UserDefaults`
       # is a required-reason API, and Apple's ITMS-91053 check inspects each bundle
       # in the upload rather than inheriting the host app's declaration. Until
-      # 2026-08-13 only ShoutKit.app had one, so the watch app (embedded since
+      # 2026-08-13 only Holmdel.app had one, so the watch app (embedded since
       # #166) and the tvOS app (its own submission) would both have been flagged.
       #
       # Inspects the built bundles rather than the repo, for the reason this file
@@ -613,8 +613,8 @@ jobs:
           # copy-paste of this loop into a local macOS shell would fail confusingly.
           failed=0
           for bundle in \
-            "DerivedData/Build/Products/Debug-watchsimulator/ShoutKitWatchApp.app" \
-            "DerivedData/Build/Products/Debug-appletvsimulator/ShoutKitTVApp.app"
+            "DerivedData/Build/Products/Debug-watchsimulator/HolmdelWatchApp.app" \
+            "DerivedData/Build/Products/Debug-appletvsimulator/HolmdelTVApp.app"
           do
             name=$(basename "$bundle")
             if [ ! -d "$bundle" ]; then
@@ -643,7 +643,7 @@ jobs:
       # Debug-iphonesimulator bundle to inspect.
       - name: Report Pulse symbol status in the Release build
         run: |
-          APP_BINARY="DerivedData/Build/Products/Release-iphonesimulator/ShoutKit.app/ShoutKit"
+          APP_BINARY="DerivedData/Build/Products/Release-iphonesimulator/Holmdel.app/Holmdel"
           if [ ! -f "$APP_BINARY" ]; then
             echo "::error::Release app binary not found at $APP_BINARY"
             exit 1

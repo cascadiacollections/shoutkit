@@ -49,7 +49,7 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
     @Observable
     @MainActor
     final class SessionState: MediaSessionRepresentable {
-        let id = "com.cascadiacollections.shoutkit.playback"
+        let id = "com.cascadiacollections.holmdel.playback"
         var content: (any MediaContentRepresentable)?
         var playbackSnapshot: MediaPlaybackSnapshot?
         var commands: [MediaCommand] = []

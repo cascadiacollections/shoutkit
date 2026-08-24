@@ -1,7 +1,7 @@
 name: Deploy site and API docs
 
 # Publishes the static marketing site in `site/` plus the generated DocC
-# reference for the MIT-licensed packages (the ShoutKit SDK surface) to GitHub
+# reference for the MIT-licensed packages (the Holmdel SDK surface) to GitHub
 # Pages. The marketing site is plain HTML with no build step; the API docs are
 # built fresh on every run by `.github/scripts/build-docs.sh` and never
 # committed.

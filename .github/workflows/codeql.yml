@@ -106,7 +106,7 @@ jobs:
           path: |
             ~/Library/Caches/org.swift.swiftpm
             DerivedData/SourcePackages
-          key: spm-app-codeql-${{ hashFiles('ShoutKit.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: spm-app-codeql-${{ hashFiles('Holmdel.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: |
             spm-app-codeql-
 
@@ -117,7 +117,7 @@ jobs:
         run: |
           set -o pipefail
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
-          xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
+          xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
             -configuration Release \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath DerivedData \

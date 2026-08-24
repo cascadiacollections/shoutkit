@@ -9,7 +9,7 @@ import Foundation
 /// directly and never round-trip through a URL.
 public struct StationLink: Equatable, Sendable {
     public static let appScheme = "shoutkit"
-    public static let handoffActivityType = "com.cascadiacollections.shoutkit.station"
+    public static let handoffActivityType = "com.cascadiacollections.holmdel.station"
 
     public let station: Station
     public let autoPlay: Bool
