@@ -12,6 +12,8 @@ All notable changes to ShoutKit are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-08-24
+
 ### Fixed
 - **Playback no longer pops when it rejoins a station after Siri, a TTS announcement, or a
   phone call interrupts it.** Live radio has no position to resume from, so every rejoin
