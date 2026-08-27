@@ -1,6 +1,7 @@
 # ShoutKit
 
-ShoutKit is a native SwiftUI internet-radio client for iOS and iPadOS 27+. It ships with real,
+ShoutKit is a native SwiftUI internet-radio client for iOS and iPadOS 26+, with companion apps
+for watchOS and tvOS. It ships with real,
 keyless station discovery out of the box via [Radio-Browser](https://www.radio-browser.info) — a
 free, open-source community radio directory — plus an Apple Music-style persistent player: a Liquid
 Glass mini-player docked above the tab bar, a full-screen Now Playing surface with live ICY track
@@ -10,9 +11,10 @@ browsing surfaces flow into adaptive multi-column layouts, including Split View 
 
 ## Requirements
 
-- Xcode 27 with the iOS 27 SDK
+- Xcode 27 with the iOS 27 SDK (to build — the MediaSession path needs the iOS 27 SDK
+  to compile, even though it only runs on iOS 27 devices)
 - Swift 6 strict concurrency
-- iOS / iPadOS 27.0+ deployment target
+- iOS / iPadOS 26.0+ deployment target; watchOS 26.0+ and tvOS 26.0+ for the companion apps
 
 If your active developer directory points at Command Line Tools, build with:
 
@@ -107,8 +109,9 @@ SHOUTCAST_DEV_KEY = your_key_here
 - `Packages/Features/*`: one package per tab surface.
 - `Packages/BrowseFeatureCore`, `SearchFeatureCore`, `PlayerFeatureCore`: the platform-free
   half of those surfaces — view-model logic and decision rules, split out because the feature
-  packages depend on `DesignSystem`, whose UIKit-only sources don't build for the mac host, so
-  nothing inside them can be reached by `swift test`. This is where their tests live.
+  packages depend on `DesignSystem`, which declares `.iOS(.v26)` alone and so doesn't build for
+  the mac host, meaning nothing inside them can be reached by `swift test`. This is where their
+  tests live.
 
 Dependency wiring across these packages goes through [Factory](https://github.com/hmlongco/Factory)
 (`Container`-based DI) rather than direct instantiation, so tests and previews can substitute fakes
@@ -127,8 +130,12 @@ The phone app `Info.plist` declares `UIBackgroundModes = audio` for streaming pl
 `NSSupportsLiveActivities` for the lock screen / Dynamic Island now-playing Live Activity (the
 `ShoutKitWidgets` extension target, driven by `NowPlayingActivityCoordinator` from playback
 state, with synced album/station artwork). The watch app adds a native watchOS now-playing +
-recents surface plus a one-tap "Play Last" complication that deep-links into watch playback.
-App Intents power Siri/Shortcuts with headless background playback (no app foregrounding);
+recents surface plus a one-tap "Play Last" complication that deep-links into watch playback, and
+ships embedded in the phone app's bundle. **Apple TV** (`ShoutKitTVApp`, tvOS 26+) is a separate
+submission with its own bundle id: Recent and Popular station shelves built for the Siri Remote,
+over the same `AudioStreamingPlaybackEngine` the phone uses, so live ICY track titles appear on
+the big screen too. App Intents power Siri/Shortcuts with headless background playback (no app
+foregrounding);
 `StationEntity` also conforms to `IndexedEntity` so favorited, curated, and recently-played
 stations land in Spotlight's semantic index, letting Siri resolve "play ⟨station⟩" for a station
 from a previous session. `shoutkit://station?...` deep links open the phone app to a station for
@@ -177,12 +184,20 @@ codesign workaround.
 
 | Component | License |
 |---|---|
-| App target (`ShoutKitApp`, incl. the debug-only `DebugSupport` package), feature packages (`Packages/Features/*` and their `*FeatureCore` counterparts), `Packages/LiveActivity`, `Packages/ImageIODownsample` | [GPL-3.0](LICENSE) |
-| `Packages/RadioDirectory`, `Packages/Playback`, `Packages/PlaybackEngineAudioStreaming`, `Packages/Persistence`, `Packages/DesignSystem`, `Packages/FeatureFlags` | [MIT](Packages/RadioDirectory/LICENSE) (per-package `LICENSE` files) |
+| App target (`ShoutKitApp`, incl. the debug-only `DebugSupport` package), feature packages (`Packages/Features/*` and their `*FeatureCore` counterparts), `Packages/LiveActivity` | [GPL-3.0](LICENSE) |
+| `Packages/RadioDirectory`, `Packages/Playback`, `Packages/PlaybackEngineAudioStreaming`, `Packages/Persistence`, `Packages/DesignSystem`, `Packages/FeatureFlags`, `Packages/ImageIODownsample` | [MIT](Packages/RadioDirectory/LICENSE) (per-package `LICENSE` files) |
 
 The rule, if you're adding a package: a per-package `LICENSE` file makes it MIT and means it
 must stay adoptable — no app-specific or heavyweight dependencies. Everything else inherits
 GPL-3.0 from the root `LICENSE`.
+
+That rule is enforced, not just documented: CI fails if an MIT package takes a dependency on a
+GPL-3.0 one (`.github/workflows/ci.yml`, the `license-boundary` job). `ImageIODownsample` is MIT
+for exactly this reason — `Playback` and `DesignSystem` both link it, so a GPL-3.0
+`ImageIODownsample` would have made those two packages undistributable under MIT.
+
+DocC-generated API reference for the six MIT packages above is published at
+[cascadiacollections.github.io/shoutkit/api](https://cascadiacollections.github.io/shoutkit/api/).
 
 The reusable infrastructure packages are MIT so they can be adopted anywhere; the app itself is
 GPL-3.0 so distributed forks must remain open source. The **ShoutKit name and branding are not

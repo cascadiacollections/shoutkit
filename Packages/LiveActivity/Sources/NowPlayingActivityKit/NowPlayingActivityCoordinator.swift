@@ -63,7 +63,11 @@ public final class NowPlayingActivityCoordinator {
     /// so the off-main staging path can read it.
     private nonisolated static let artworkMaxPixelSize = 256
 
-    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.shared) {
+    /// Defaults to `.artwork` rather than `.shared`: Live Activity art loads
+    /// while the station it belongs to is actively streaming, and `.artwork`'s
+    /// `.background` service type keeps it from competing with that stream on
+    /// a weak connection (see `URLSessionHTTPTransport.artworkConfiguration()`).
+    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.artwork) {
         self.transport = transport
     }
 

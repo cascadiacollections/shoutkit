@@ -11,6 +11,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     private var timeControlObservation: NSKeyValueObservation?
     private var itemStatusObservation: NSKeyValueObservation?
     private var failedToEndObserver: NSObjectProtocol?
+    private var playedToEndObserver: NSObjectProtocol?
     private var interruptionObserver: NSObjectProtocol?
     private var routeChangeObserver: NSObjectProtocol?
 
@@ -118,6 +119,32 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
                 self.onStatusChange?(.failed(.streamFailed(message)))
             }
         }
+        observePlaythroughToEnd(of: item)
+    }
+
+    /// A finite programme (a newscast, a recorded show) reaching its last frame.
+    /// `AVPlayer` reports it as a plain stop, which reads as a pause and leaves
+    /// the mini-player parked — correct by default, but indistinguishable from a
+    /// user pause, so the controller can't offer to loop it. Reporting
+    /// `.endOfStream` gives it the honest name, and the controller decides
+    /// between stopping and starting over. A live stream never reaches this
+    /// notification; it drops, which is `AVPlayerItemFailedToPlayToEndTime`.
+    private func observePlaythroughToEnd(of item: AVPlayerItem) {
+        // `queue: .main` + `MainActor.assumeIsolated` for the same
+        // `AVPlayerItem`-isn't-`Sendable` reason as the observer above.
+        playedToEndObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: item,
+            queue: .main
+        ) { [weak self] notification in
+            let endedItem = notification.object as? AVPlayerItem
+            MainActor.assumeIsolated {
+                guard let self,
+                      let endedItem,
+                      self.player?.currentItem === endedItem else { return }
+                self.onStatusChange?(.endOfStream)
+            }
+        }
     }
 
     private func handleTimeControlStatus(_ status: AVPlayer.TimeControlStatus) {
@@ -151,16 +178,23 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
             NotificationCenter.default.removeObserver(failedToEndObserver)
             self.failedToEndObserver = nil
         }
+        if let playedToEndObserver {
+            NotificationCenter.default.removeObserver(playedToEndObserver)
+            self.playedToEndObserver = nil
+        }
         player?.replaceCurrentItem(with: nil)
         player = nil
     }
 
     private func activateAudioSession(completion: @escaping @MainActor () -> Void) {
         let session = AVAudioSession.sharedInstance()
+        // Best effort: long-form policy improves behavior but playback can still
+        // proceed with the session's prior category.
         try? session.setCategory(.playback, mode: .default, policy: .longFormAudio)
         // Ordinary system alerts duck this stream instead of interrupting it, so a
         // notification can't pause the watch's audio (and leave it paused when iOS
         // omits the resume hint). Genuine interruptions still arrive normally.
+        // Best effort: this preference is advisory and unsupported on some routes.
         try? session.setPrefersNoInterruptionsFromSystemAlerts(true)
         session.activate(options: []) { _, _ in
             Task { @MainActor in completion() }
@@ -235,6 +269,8 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     }
 
     private func deactivateAudioSession() {
+        // Best effort: deactivation can legitimately fail during interruption
+        // races and should not block local teardown.
         try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
     }
 }

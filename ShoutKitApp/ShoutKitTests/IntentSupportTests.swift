@@ -67,12 +67,21 @@ import Testing
 
     // MARK: - Schema enums
 
+    // Both enums are `@available(iOS 27, *)` — they carry `AppSchema.audio`
+    // macros, which cannot build at the app's iOS 26 floor (DECISIONS.md
+    // 2026-08-12). The runtime guard is what keeps this target compiling; on
+    // iOS 26 the types do not exist, so there is nothing to assert.
+
     @Test func playbackAttributesExposeEveryCaseToTheSchema() {
+        guard #available(iOS 27, *) else { return }
+
         #expect(PlaybackAttributes.caseDisplayRepresentations.count == 3)
         #expect(PlaybackAttributes.caseDisplayRepresentations[.none] != nil)
     }
 
     @Test func queueInsertionLocationsExposeEveryCaseToTheSchema() {
+        guard #available(iOS 27, *) else { return }
+
         #expect(QueueInsertionLocation.caseDisplayRepresentations.count == 3)
         #expect(QueueInsertionLocation.caseDisplayRepresentations[.now] != nil)
     }

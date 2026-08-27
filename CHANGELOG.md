@@ -4,7 +4,39 @@ All notable changes to ShoutKit are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org).
 
+> **0.1.0 through 0.3.0 were internal milestones, not releases.** None was ever tagged, and
+> no build from them reached a user — the repo had zero git tags until `v0.4.0`. Their
+> sections are kept as the development record. `v0.4.0` is the first real release; see
+> `docs/RELEASING.md` for how one is cut and `DECISIONS.md` (2026-08-13) for why the
+> numbering continues rather than restarting at 1.0.0.
+
 ## [Unreleased]
+
+### Fixed
+- **Playback no longer pops when it rejoins a station after Siri, a TTS announcement, or a
+  phone call interrupts it.** Live radio has no position to resume from, so every rejoin
+  reconnects at the live edge — but it used to do that at full volume, which read as an
+  audible click or jump-cut. It now fades in over a third of a second instead
+- **Album art no longer shows as a broken/undefined image on Tesla right after the first
+  track of a stream starts.** A station with no artwork of its own had nothing on screen yet
+  when the first track's album art resolved, and that "nothing yet" state was mistaken for the
+  one case where advertising unfetched art immediately is fine (switching stations). The art is
+  now held back until its bytes are actually in hand, same as every other track boundary
+- **Spatial Audio no longer crashes the app on launch.** The feature's head-tracking touches
+  `CMHeadphoneMotionManager` at bootstrap regardless of whether Spatial Audio is turned on, but
+  the app's Info.plist never declared `NSMotionUsageDescription` — iOS aborted the process on
+  every launch as a result. The missing usage-description key is added
+- **The Apple Watch app now actually installs with the phone app.** It has been built, tested,
+  and listed in the README for a month, and no one could get it: nothing bundled it into the
+  iPhone app, so there was nothing for your watch to install. It ships inside the app now,
+  along with its "Play Last" complication
+- **Stations that broadcast a fixed-length programme no longer repeat themselves.** A station
+  like NPR's hourly newscast played through to the end and then started over — several times,
+  before stopping with an error. The app treated the end of a broadcast the same way it treats a
+  live stream dropping, because to a player those look identical. It can tell them apart now: a
+  programme that finishes stops, and the play button replays it. If you *want* it to start over,
+  Settings → Playback → **Loop Finished Broadcasts** does that; it's off by default, and it has
+  no effect on continuous stations, which never end on their own
 
 ### Changed
 - **VoiceOver now reads the sleep timer's remaining time.** The button announced only that a
@@ -66,6 +98,15 @@ All notable changes to ShoutKit are documented here. The format follows
   visible row never fetch the same image twice
 
 ### Added
+- **Top Tracks**: the Library tab now shows your most-played songs — over the last week, the
+  last month, or all time — with cover art where it's available, right alongside Recently
+  Heard
+- **Apple TV app**: ShoutKit on tvOS, built for the Siri Remote — a now-playing banner over
+  Recent and Popular station shelves, with play/pause and stop, and the system Now Playing panel
+  (TV button) showing artwork and responding to the remote's transport controls. It runs the same
+  audio engine as the iPhone app, so the current track's title and artist appear alongside the
+  station name; stations that send no track information show their genre instead. Recents come
+  from the Apple TV itself — there is no sync with your phone
 - **Home Screen quick-play widget**: a small/medium Home Screen widget that plays a favorite
   station in one tap. Long-press → **Edit Widget** to choose which favorite it plays (it falls back
   to your first favorite until you pick one); tapping the tile opens ShoutKit straight onto that
@@ -253,7 +294,7 @@ All notable changes to ShoutKit are documented here. The format follows
 - Resuming after a stream failure (or after pausing while a station was still loading) no longer
   re-logs the station to recents and re-reports the play to Radio-Browser
 
-## [0.2.0] — in progress (first TestFlight beta)
+## [0.2.0] — milestone, never released (planned as the first TestFlight beta)
 
 ### Added
 - **Sleep timer** in Now Playing (15/30/45/60 minutes) with a live countdown; pauses playback
@@ -303,7 +344,7 @@ All notable changes to ShoutKit are documented here. The format follows
   timed-metadata group
 - ICY titles with an empty artist (`" - Title"`) no longer parse the separator into the title
 
-## [0.1.0] — 2026-06-25
+## [0.1.0] — milestone, never released (dated 2026-06-25)
 
 ### Added
 - Initial scaffold: iOS 26 SwiftUI app shell, modular Swift packages, SHOUTcast directory

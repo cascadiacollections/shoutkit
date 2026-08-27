@@ -113,6 +113,42 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
         session: URLSession(configuration: URLSessionHTTPTransport.speculativeConfiguration())
     )
 
+    /// A configuration for artwork a listener can see *right now* — a visible
+    /// row, the Now Playing hero, lock-screen and Live Activity art — as
+    /// distinct from the directory JSON search that shares `interactiveConfiguration()`.
+    /// Both are real, unprefetched fetches, so `allowsConstrainedNetworkAccess`
+    /// and `allowsExpensiveNetworkAccess` stay at their permissive defaults: a
+    /// listener actively playing a station over cellular still expects to see
+    /// its art, unlike the look-ahead prefetch `speculativeConfiguration()`
+    /// exists to suppress.
+    ///
+    /// What changes is `networkServiceType`: `.background` instead of
+    /// `.responsiveData`. The audio stream itself runs through AudioStreaming's
+    /// own, unconfigurable `URLSession` (see `PlaybackEngineAudioStreaming`),
+    /// so this package has no way to *boost* the stream's priority — the only
+    /// lever available is to stop artwork from claiming equal or better
+    /// scheduling priority than it. On a weak link (LTE, 3G, a saturated
+    /// Wi-Fi — the cases "5G or worse" is shorthand for), a `.responsiveData`
+    /// artwork fetch and the audio stream are asking the system's cellular
+    /// scheduler for the same front-of-queue treatment; `.background` yields
+    /// that queue position to whatever else is moving bytes, which in this
+    /// app is always the thing the listener is actually here for.
+    public static func artworkConfiguration() -> URLSessionConfiguration {
+        let configuration = URLSessionConfiguration.default
+        configuration.waitsForConnectivity = false
+        configuration.networkServiceType = .background
+        return configuration
+    }
+
+    /// Shared transport for artwork a listener can currently see. Deliberately
+    /// its own session, plain like `.speculative`'s — no Debug inspection hook
+    /// yet, but unlike speculative prefetch this does carry user-visible
+    /// traffic, so a future need to inspect it in Pulse is a real possibility,
+    /// not a hypothetical.
+    public static let artwork = URLSessionHTTPTransport(
+        session: URLSession(configuration: URLSessionHTTPTransport.artworkConfiguration())
+    )
+
     private let session: URLSession
 
     public init(session: URLSession = .shared) {

@@ -1,5 +1,1149 @@
 # Decisions
 
+## 2026-08-20 (fading a rejoin in, instead of trying to buffer around it)
+
+Reported as a Siri/TTS interruption "clipping forward" after it ends. Live radio has no
+position to lose, so this was never a buffering gap in the sense the report implied — confirmed
+by reading `PlaybackController+Interruptions.swift` and `+Recovery.swift`: every resume, from an
+interruption or otherwise, is a fresh `startPlayback(of:isReconnect: true)` that rejoins the
+stream at whatever the live edge currently is. `DECISIONS.md` had already declined tuning
+`AVAudioSession.setPreferredIOBufferDuration` (left open, 2026-08-03 entry) and
+`AVPlayerItem.preferredForwardBufferDuration` (declined outright) for unrelated reasons, and
+neither would have changed this: a bigger client-side buffer only helps when replaying stored
+audio across a gap, and a rejoin never does that — it always jumps to "now."
+
+So the real defect wasn't a missing buffer, it was the audible discontinuity itself: a rejoin's
+first decoded frames land at full volume, reading as a click or a jump-cut. Considered adding a
+genuine DVR-style delay buffer to `Playback` so a listener could catch up across an
+interruption — rejected as disproportionate: it adds latency for every listener, on every
+station, to soften a comparatively rare event, and would need plumbing through both
+`AudioStreamingPlaybackEngine` and any future `AudioOutput` conformer.
+
+Fixed at the smaller, safer layer instead: `AudioStreamingPlaybackEngine` now zeroes
+`AudioPlayer.volume` before every `start`/`resume`/`replayCurrentStream` (`silenceForUpcomingPlayback()`)
+and ramps it back to full over 350ms once the engine actually reports `.playing`
+(`fadeInVolume()`), in the new `AudioStreamingPlaybackEngine+VolumeRamp.swift` split (the
+400-line `file_length` limit was already at its ceiling). The resume watchdog in
+`+Recovery.swift` was left untouched — at `resumeWatchdogTimeout: .seconds(2)` it's already
+about as tight as it can go without risking false-positive teardowns on a slower rejoin, so
+there was nothing safe to tighten there.
+
+Not verified on-device: this environment has no Mac host or simulator, so `swift test` and
+`xcodebuild` could not run. `AudioPlayer` is a concrete type from the `AudioStreaming` package
+with no test seam, matching the rest of this file having no dedicated
+`PlaybackEngineAudioStreaming` test target — the ramp logic was checked by reading, not by a
+suite. Revisit if the fade is audible as a fade rather than invisible, or if it doesn't fully
+mask the artifact in practice.
+
+## 2026-08-20 (Top Tracks: most-played local history, with cover art)
+
+Added a "Top Tracks" report to the Library tab — most-played (title, artist) pairs over a
+week/month/all-time window, with cover art where a lookup found any. This was scoped first as
+a feasibility study (see the exploratory pass earlier the same day): the metadata parsing and
+per-track artwork lookup already existed end-to-end; the gap was persistence.
+
+**Aggregation is a pure function over `[RecentlyHeardTrack]`, not a new SwiftData query
+method.** `LibraryView` already holds every recently-heard row via `@Query`; grouping that
+array by `(title, artist)` in `TopTracksAggregator.aggregate(_:timeframe:limit:now:)` means the
+report recomputes for free whenever the underlying table changes, with no separate fetch/cache
+to keep in sync. `now:` is an injected parameter (not `.now` inline) purely so tests are
+deterministic against a fixed clock — the existing `heardAt` fields already carry real
+`Date`s.
+
+**Matching requires both a title and an artist.** ICY metadata sometimes carries only one
+(`logRecentlyHeardTrack` already accepts `title != nil || artist != nil`), but a one-sided
+value can't be matched against a later play with any confidence, so those rows are counted in
+Recently Heard but excluded from Top Tracks. Matching is case-insensitive (`"SONG"` and
+`"Song"` collapse) since ICY sources aren't consistent about casing across pushes.
+
+**`RecentlyHeardTrack` gained `artworkURLString`, alongside the existing `appleMusicURLString`
+field — an additive, default-`nil` column, the same lightweight-migration shape as
+`FavoriteStation.sortIndex` and `RecentStation.playCount`.** Getting it populated required
+threading `artworkURL` through `HeardTrack` (`Playback`) — previously it carried only
+`appleMusicURL`, because nothing downstream needed the art URL until now. The album-art lookup
+itself needed no change: `AlbumArtLookup`/`trackResourcesProvider` already resolve it per
+track, per the 2026-07-09 "album art discovery" decision; this only widens the pipe carrying
+the result down to the persistence callback, and it stays in `AppDependencies+Callbacks.swift`
+— `Playback` still has no DesignSystem/iTunes dependency.
+
+**`recentlyHeardLimit` raised from 250 to 1000.** A global 250-row cap across every station was
+too shallow to answer "most played this week/month" once a listener had more than a handful of
+repeats — the window could roll off a real repeat before a second play ever landed inside it.
+Rows are small (two strings, two optional URL strings, a date), so 4x the retention is cheap;
+this is still a rolling cap, not unbounded history, matching the existing trim-on-write
+behavior in `LibraryStore+RecentlyHeard.swift`.
+
+**Historical artwork is never re-fetched at report time.** Some earlier designs for this
+considered re-querying `AlbumArtLookup` live when rendering the report, to backfill art for
+rows logged before this change (which have `artworkURLString == nil`). Rejected: it would
+re-hit the iTunes API for old tracks whose in-memory lookup cache has long since reset, is pure
+added latency on a report screen, and duplicates a job `AlbumArtLookup` already does at
+listen-time. Old rows simply show the placeholder from `StationArtworkView`; only plays logged
+after this change carry art.
+
+## 2026-08-16 (the Tesla artwork race the 2026-08-06 fix left open)
+
+Reported from a Tesla again: album art shows as a broken/undefined image specifically after
+the first track's ICY metadata arrives, on a fresh stream start. The 2026-08-06 entry flagged
+its own fix as "unverified on-device" and asked to revisit if that proved insufficient — this
+is that signal, and it's a real gap in `NowPlayingArtworkPolicy.decide`, not a new class of bug.
+
+The `.resolved` branch used `guard let held` to decide whether it was safe to skip the
+"is `target` resident yet" check, on the theory that `held == nil` only happens on a genuine
+station switch — where advertising immediately, unfetched, is the documented, tested trade-off
+("a station switch has nothing worth holding on to"). But `held` is also `nil` whenever the
+*same* station simply has no artwork of its own: nothing was ever advertised for it, so there
+is nothing to hold, even though `isSameStation` is true. In that shape — no station favicon,
+first track's own album art resolves before its bytes are fetched — the guard read "nothing
+held" as "safe to skip the residency check" and advertised the still-unfetched track artwork
+immediately. AVRCP then got a track-changed notification for an identity with nothing behind
+it, which is exactly the failure mode the 2026-08-06 fix existed to prevent, just reached by a
+different door.
+
+Fixed by branching on `isSameStation` directly instead of inferring it from `held`'s
+nullability: a genuine switch still presents immediately (unchanged, still tested), but a
+same-station push with `held == nil` now holds — the interim state is "nothing", not the
+unready target — until `target` lands in `readyArtworkURLs`. That required widening
+`Decision.hold`'s `current` from `URL` to `URL?`; `MediaSessionNowPlayingCenter.apply(_:)`
+needed no change, since it already assigns straight into a `URL?`.
+
+Still unverified on a real Tesla — this repo has no way to test AVRCP directly — but the new
+`resolvedFirstTrackArtOnAStationWithNoArtworkOfItsOwnHoldsUntilFetched` and
+`…IsPresentedOnceItsBytesAreResident` cases in `NowPlayingArtworkPolicyTests` pin the exact
+shape down at the unit level, and every pre-existing case in that file (including the
+station-switch one) still holds.
+
+## 2026-08-15 (closing three gaps left open by the MIT API-surface review)
+
+Follow-ups to #177/#178, from a second pass over the reusable packages' public surface.
+
+**`Persistence`'s Factory pin was `from: "3.3.2"`, not `exact:`, unlike every other manifest
+that depends on it.** `Container` extensions are public API for four packages, so an adopter
+resolving a newer Factory than the app expects is a build break at their end, not a routine
+bump — the whole point of pinning `exact` elsewhere. Fixed to match; the dependabot `factory`
+group already spans all of them, so this stops being the one manifest it can silently drift on.
+
+**`PreferredStations` (KEXP, literal streamguys URLs) stays in `RadioDirectory`, deliberately.**
+An audit read its presence there as an editorial choice leaking into a general-purpose
+directory package's public API, and it is — but relocating it turned out not to be the quick
+fix it looked like. `PreviewRadioDirectory.sampleStations` (a production DI default, not a
+test fixture — see the 2026-08-15 entry above) references `PreferredStations.kexpHighBandwidth`
+directly, and the three app targets that also use it (iOS, watchOS, tvOS, plus the shortcut
+provider) share no SwiftPM module besides `Persistence`, `Playback`, and `RadioDirectory` — the
+first two fit this data worse than `RadioDirectory` does. Moving it would mean either a new
+package (app-target `project.pbxproj` surgery that CLAUDE.md warns can silently fail to link)
+or threading it through one of the two above. Neither is a small change, so it stays, now with
+a doc comment on the type itself explaining why an adopter has no reason to touch it — the
+existing `PreferredRadioDirectory`/`BundledRadioDirectory` initializers already refuse to
+default to it for the same reason.
+
+**`RadioDirectoryProviding.station(id:)`'s default implementation silently returns `nil`.**
+Same shape as the `AudioOutput.streamGeneration` trap documented in #177: a directory that
+doesn't implement the optional lookup compiles cleanly, and the failure — a station saved by
+an App Intent or widget failing to rehydrate — is indistinguishable from a legitimate "not
+found," with nothing at the call site to signal which. The requirement itself already had a
+doc comment; the default now has a `Warning:` telling an implementer to override rather than
+inherit it.
+
+Verified: `swift test --disable-xctest` in `RadioDirectory` (34/34, including
+`preferredSearchFindsKEXP`, unaffected by the doc-only change) and in `Persistence`;
+`swiftlint --strict` clean.
+
+## 2026-08-15 (Spatial Audio is compiled out on tvOS rather than stubbed at runtime)
+
+`ShoutKitTVApp` had not built since #175. `AudioStreamingPlaybackEngine+SpatialAudio.swift`
+imports `CoreMotion`, which does not exist on tvOS, and
+`PlaybackEngineAudioStreaming/Package.swift` declares `.tvOS(.v26)` — so the tvOS build failed
+inside the package, before it ever reached the app target. The break survived four days on
+`main` because `release-checks` runs only on pushes, so the tvOS job reports *after* a merge,
+on the branch that ships. #177 applied the same fix to the docs job by adding a `pull_request`
+trigger; the release jobs still need it.
+
+Gated on `canImport(CoreMotion)`, not `!os(tvOS)`. The capability the feature actually needs is
+`CMHeadphoneMotionManager`, and the import is what fails to resolve; naming the platform would
+restate a consequence and quietly go wrong the next time a platform is added to the manifest.
+
+Compiled out rather than stubbed, because `RadioPlaybackEngine` already defaults
+`supportsSpatialAudio` to `false` and `setSpatialAudioEnabled(_:)` to a no-op
+(`RadioPlaybackEngine.swift`). Omitting both overrides means the protocol default applies and
+`SettingsFeature`, which keys its row off `supportsSpatialAudio`, hides the control instead of
+offering one that does nothing — the degradation contract that file's own doc comment
+describes. The one member that needed a cross-platform declaration is
+`reattachSpatialAudioIfNeeded()`, called unconditionally from `handleMediaServicesReset()`; it
+gets a no-op `#else` sibling so the reset path carries no `#if` of its own.
+
+`spatialAudioNode` and `isSpatialAudioEnabled` stay ungated — `AVAudioEnvironmentNode` exists on
+tvOS, and two unread stored properties are cheaper than two more conditionals.
+
+Verified by building `ShoutKitTVApp` for `generic/platform=tvOS Simulator` (was failing, now
+succeeds) and `ShoutKit` for iOS (unchanged), plus `swiftlint --strict`.
+
+## 2026-08-15 (the MIT packages stop speaking as ShoutKit, and the "fixtures" turn out to be production)
+
+Continuing the API-surface review. Three app-identity leaks in `RadioDirectory` were worth
+fixing because they are wrong *for this app too*, not merely impolite to a hypothetical adopter.
+
+`User-Agent` was hardcoded `"ShoutKit/0.1"` in both clients, three lines below a doc comment
+citing Radio-Browser's etiquette rule about sending a descriptive agent. Radio-Browser is
+volunteer-run and rate-limits by agent, so every adopter would have been sharing one budget
+under our name. Now a `userAgent:` initializer parameter defaulting to
+`RadioBrowserDirectoryClient.defaultUserAgent`, with the old value as that default so nothing
+changes for the app.
+
+`RadioDirectoryError.missingAPIKey` rendered, through `LocalizedError.errorDescription`, as
+"Add SHOUTCAST_DEV_KEY to Secrets.xcconfig to fetch live stations." That is a build instruction
+on an end user's screen — a defect in the shipping app, not a reusability concern. Now "Live
+stations are unavailable right now."; the build-time cause moved to the case's doc comment. The
+catalog key was swapped by hand, since command-line builds don't sync `.xcstrings`.
+
+`PreferredStations.all` — KEXP 90.3, with literal streamguys URLs — was the *default argument*
+of `PreferredRadioDirectory.init` and `BundledRadioDirectory.init`, so an editorial choice
+arrived silently with the type. The defaults are gone; the four production call sites (iOS,
+watch, tvOS, and the shortcut provider) now pass `PreferredStations.all` explicitly, which also
+makes the curation greppable instead of implicit.
+
+`RadioDirectoryError` moved to its own file. It was defined at line 208 of
+`ShoutcastDirectoryClient.swift` — the package's entire error vocabulary, since all eight
+`RadioDirectoryProviding` requirements are `throws(RadioDirectoryError)`, living inside one of
+the two clients that raise it. That also took the file from 431 back to 355 lines.
+
+**What was investigated and deliberately not done:** an audit recommended extracting
+`PreviewRadioDirectory`, `BundledRadioDirectory`, `NoopDiagnosticsService`,
+`InMemoryDiagnosticsPayloadStore`, and `UnavailableDirectoryDiscoveryCache` into `*TestSupport`
+products, on the reading that they are fixtures inflating the public surface. They are not.
+Every one is a production DI default or null object: `Container+RadioDirectory.swift` resolves
+`PreviewRadioDirectory` for `.onPreview`/`.onTest` and `UnavailableDirectoryDiscoveryCache` as
+the base `directoryDiscoveryCache`; `Container+Diagnostics.swift` defaults to
+`NoopDiagnosticsService`; `AppDependencies+Factories.swift` uses
+`InMemoryDiagnosticsPayloadStore` in production. Extracting them would break the zero-config
+container defaults and make `RadioDirectory` depend on its own test-support product. Recorded
+here so the suggestion isn't re-litigated from the same premise.
+
+## 2026-08-15 (ImageIODownsample is MIT, and the MIT/GPL boundary is now a CI check)
+
+An API-surface review of the six MIT packages turned up a licensing hole that had been reasoned
+about and then not enforced. `Packages/ImageIODownsample` carried no per-package `LICENSE`, so by
+the rule in README.md it inherited GPL-3.0 from the root — and `site/api/index.html` said so
+explicitly, listing it among the GPL packages excluded from the documented SDK surface. But
+`Packages/Playback` (`NowPlayingCenter.swift`, `MediaSessionNowPlayingCenter.swift`) and
+`Packages/DesignSystem` (`ImageDownsampler.swift`) both link and import it, and
+`PlaybackEngineAudioStreaming` inherits it through `Playback`. The root `LICENSE` is plain GPL-3.0
+with no linking exception, so three of the six "MIT" packages were not actually distributable
+under MIT.
+
+Relicensed `ImageIODownsample` MIT rather than extracting the two call sites. It is 56 lines in one
+file, an original wrapper over `CGImageSourceCreateThumbnailAtIndex` with no third-party lineage,
+and it is a leaf module with no dependencies of its own — exactly the kind of thing the MIT tier
+exists for. Extracting it would have meant duplicating the same ImageIO call in two packages to
+preserve a boundary that had no reason to be GPL in the first place. The GPL consumer
+(`Packages/LiveActivity`) is unaffected: GPL-3.0 code may link MIT code.
+
+The more durable half is `.github/scripts/check-license-boundary.sh`, wired into CI as its own
+`license-boundary` job. It walks every `Package.swift`, treats "has a per-package `LICENSE`" as the
+definition of MIT (the same rule README.md states), and fails if an MIT package declares a
+`.package(path:)` dependency on one without. Runs on `ubuntu-latest` — it is pure shell over the
+manifests and needs no toolchain, so it doesn't consume an `xcode-27` slot.
+
+Written to fail first: with `ImageIODownsample`'s `LICENSE` removed the script reports both real
+violations and exits 1, and an earlier revision of it that silently passed the known-bad tree (a
+greedy `sed` capture that dropped every extracted path) was caught precisely because that negative
+case was run. Same instinct as the existing CI assertions that Pulse links only into Debug and that
+`Packages/Playback` resolves no binary artifacts: prefer a check that can fail over a claim in a
+comment.
+
+## 2026-08-14 (Spatial Audio is a stereo virtualization effect, not object-based audio, and lives behind an opt-in toggle)
+
+Asked to "support Apple hardware capabilities as a feature sell," specifically spatial audio. The
+honest starting point: ShoutKit's binary input is a plain stereo/mono ICY radio stream with no
+channel or object separation, so real object-based spatial audio (Dolby Atmos-style) has nothing
+to render — there is no per-object metadata in the source to spatialize, and none can be
+synthesized after the fact. What Apple itself does for non-Atmos stereo content elsewhere in the
+OS is a virtualization effect instead: HRTF binaural rendering over headphones, with the
+soundstage held fixed in space as the listener's head turns. That's the achievable, honest version
+of this feature, and it's what shipped — presented to the user as exactly that (see the Settings
+footer copy), not as "real" spatial audio.
+
+Implementation follows the equalizer's precedent (2026-08-05) for inserting a custom node into
+AudioStreaming's `AVAudioEngine` graph via `AudioPlayer.attach(node:)`: an `AVAudioEnvironmentNode`
+with `outputType = .headphones`, driven by `CMHeadphoneMotionManager` head tracking
+(`AudioStreamingPlaybackEngine+SpatialAudio.swift`). One wrinkle `attachEqualizer()` didn't have:
+`attach(node:)` inserts the node into AudioStreaming's internal chain without exposing the
+upstream node, so there's no reachable `AVAudioMixingDestination` to position the *source* at a
+fixed offset the usual way. The environment node's own `listenerPosition` is moved instead — the
+node's only property that's actually ours to set — giving head rotation something to pan around
+without needing that reference. Reattachment after a media-services reset mirrors
+`reattachEqualizerIfNeeded()` exactly, for the same reason: the reset kills the whole engine this
+node lives in.
+
+Gated behind `RadioPlaybackEngine.supportsSpatialAudio` (defaults `false`, same shape as
+`supportsEqualizer`) rather than a `FeatureFlags`-catalog entry: this isn't a staged internal
+rollout, it's a capability that's only real on an `AVAudioEngine`-backed engine with
+`CMHeadphoneMotionManager` support (iOS; not the watch's `AVPlayer` engine, not
+`StubRadioPlaybackEngine`), so the same "degrade automatically, don't expose a dead control"
+contract applies. The persisted preference (`SettingsStore.isSpatialAudioEnabled`, opt-in, default
+off) lives next to `equalizerPresetRawValue` for the same reason that one does: `Persistence`
+doesn't depend on `Playback`, so the store never touches `RadioPlaybackEngine` itself, only a
+plain `Bool`.
+
+## 2026-08-13 (API docs are DocC, not Doxygen, and cover the MIT packages only)
+
+Asked to deploy Doxygen pages for the SDK surface in preparation for opening it up to adopters.
+Doxygen 1.9.8 was actually installed and pointed at real package sources (`EXTENSION_MAPPING =
+swift=Objective-C`, the standard workaround for Swift-less Doxygen) before deciding anything —
+and it extracts nothing. No class, struct, protocol, or actor from a from-scratch three-type test
+file made it into the output; only the file listing and its own doc-comment prose survived. That
+workaround dates from an era of Doxygen that tolerated Swift's syntax loosely; 1.9.8 does not.
+Building a custom Swift-to-Objective-C source filter to keep "Doxygen" literal was the other
+option on the table and was rejected as the wrong trade: a hand-rolled filter is exactly the kind
+of fragile, high-maintenance shim the "reusable packages stay adoptable" principle in `CLAUDE.md`
+exists to avoid, and it would need re-validating against every generic, property wrapper,
+extension, and actor already in these packages.
+
+`docc` — Swift's own toolchain doc compiler, already the implicit target of every `` ``Symbol`` ``
+cross-reference in the existing `///` comments — parses actual Swift and ships with Xcode, so
+generating through it needed nothing new: `xcodebuild docbuild -scheme <Package> -destination
+'generic/platform=iOS Simulator'` per package, then `docc process-archive
+transform-for-static-hosting` for a GitHub-Pages-ready static site. `.github/workflows/pages.yml`
+gained a `xcode-27` job for this (docbuild needs a real Xcode, same as `ci.yml`'s simulator job)
+that hands the six archives to the existing `ubuntu-latest` deploy job, which merges them under
+`site/api/` alongside the marketing site — one Pages deployment, same as before.
+
+**Superseded twice, same day and after.** The two-job split above never worked and was reverted in
+`8696fba`: `actions/upload-artifact` rejects filenames containing `:`, and DocC encodes Swift
+argument labels straight into filenames (`start(url:streamGeneration:).json`), so the handoff
+failed outright. `pages.yml` has been a single `xcode-27` build-and-deploy job ever since, and the
+comment at the top of that job records why. See also 2026-08-15, which moved the build into
+`.github/scripts/build-docs.sh` and replaced the six independent archives with one merged one.
+
+Scope is the packages carrying a per-package `LICENSE` file per the Licensing table in
+`README.md`: `DesignSystem`, `FeatureFlags`, `Persistence`, `Playback`,
+`PlaybackEngineAudioStreaming`, `RadioDirectory`. `ImageIODownsample` looks MIT-adjacent (a small
+leaf module, no app-specific dependencies) but is GPL-3.0 per that table, so it's excluded along
+with the feature packages, `LiveActivity`, and the app target — this site documents the adoptable
+surface, not the whole tree. (`ImageIODownsample` was relicensed MIT on 2026-08-15 — it was
+*already* linked by `Playback` and `DesignSystem`, which made the exclusion here a symptom rather
+than a boundary — and now ships as the seventh documented package.)
+
+## 2026-08-13 (artwork traffic gets its own, lower-priority session — it was never actually deprioritized against the stream)
+
+The 2026-08-03 power review (below) gave *speculative* artwork prefetch its own session
+(`.background`, refuses constrained/expensive networks) so it would yield to "the directory and
+to artwork a visible row actually needs." What it left unexamined: what a visible row, the Now
+Playing hero, lock-screen art, and Live Activity art were yielding to. All four defaulted to
+`URLSessionHTTPTransport.shared` — the same `.responsiveData` session as directory search — and
+`.responsiveData` is a scheduling hint, not a label: on a weak link (LTE, 3G, a saturated Wi-Fi;
+"5G or worse" covers the range this matters for) it tells the system this fetch is as
+latency-sensitive as anything else marked the same way. The one thing on the device actually
+marked that way and genuinely latency-sensitive is the audio stream itself — except it isn't
+marked at all. `PlaybackEngineAudioStreaming` hands a URL to AudioStreaming's `AudioPlayer` and
+never touches the `URLSession` underneath; that session is entirely internal to the library, so
+nothing in this repo can raise the stream's own priority.
+
+The only lever available, then, is to lower artwork's instead. `URLSessionHTTPTransport.artwork`
+(`HTTPTransport.swift`) is a new session for exactly the traffic the August review didn't touch:
+row thumbnails, hero art, `NowPlayingCenter`/`MediaSessionNowPlayingCenter` lock-screen art, and
+`NowPlayingActivityCoordinator`'s Live Activity art. It sets `networkServiceType = .background`
+like the speculative session, but — unlike speculative — leaves
+`allowsConstrainedNetworkAccess`/`allowsExpensiveNetworkAccess` at their permissive defaults: this
+is traffic a listener is actually waiting on (their lock screen, the row they're looking at), not
+a look-ahead guess, so Low Data Mode and cellular must not suppress it outright the way they
+suppress prefetch. `.background` only asks the scheduler to give it a lower queue position than
+whatever else is moving bytes — which in this app is always the stream.
+
+Directory JSON search (`ShoutcastDirectoryClient`, `RadioBrowserDirectoryClient`) stays on
+`.shared`/`.responsiveData`: it's a few KB of metadata per keystroke, not a sustained transfer,
+and it isn't the traffic this problem is about. `AlbumArtLookup`'s iTunes metadata query is the
+same shape and is left alone for the same reason — only the artwork *bytes* it points at, fetched
+through `ArtworkLoader`, move to `.artwork`.
+
+## 2026-08-13 (nothing has ever been released: 0.1–0.3 are milestones, `v0.4.0` is the first real release)
+
+The repo has **zero git tags**. `release.yml` is `on: push: tags: v*.*.*` and has never run.
+Meanwhile `CHANGELOG.md` carried a dated `[0.1.0]`, a `[0.2.0] — in progress (first TestFlight
+beta)`, and a 260-line `[Unreleased]`; `docs/releases/` held plans for 0.2.0 and 0.3.0, the
+latter marked "Closed 2026-08-07. Every workstream below shipped"; `docs/ROADMAP.md` said
+"0.3.0 is done"; and the project file read `MARKETING_VERSION = 0.2.0`. **There was no
+`[0.3.0]` section in the changelog at all**, so pushing `v0.3.0` would have failed on
+`release.yml`'s own guard — the pipeline was not merely unused, it could not have worked.
+
+**The decision: 0.1.0–0.3.0 were internal milestones, not releases, and the changelog now says
+so.** The alternative was to reconstruct a `[0.3.0]` section by splitting `[Unreleased]` at
+the 2026-08-07 close date and retro-tagging it. That was rejected because it documents a
+fiction: no build from any of those numbers reached a user, and "released" has to mean a user
+could get it or the word stops carrying information. It is the same failure mode as a roadmap
+listing shipped work as pending — a record that reads plausibly and is false. The milestone
+numbers are kept rather than renumbered because the release-plan docs, `DECISIONS.md`, and
+`git log` all reference them; rewriting history to start at 0.1.0 again would break more than
+it fixed.
+
+`v0.4.0` continues the sequence rather than claiming 1.0.0. The 1.0 bar — a professional icon,
+signing secrets, an App Store listing — is not met, and a first release that overstates itself
+is the same error in the other direction.
+
+**A bug found while doing this, worth more than the bookkeeping: the targets disagreed with
+each other.** `MARKETING_VERSION` appears twelve times in `project.pbxproj` (there is no
+xcconfig for it) and split six/six — the app, widgets, and tests at `0.2.0`; the watch app,
+watch widgets, and tvOS app at `0.3.0`. An embedded watch app whose
+`CFBundleShortVersionString` differs from its host app's **fails App Store validation**, and
+the watch app only became embedded at all in #166 — so this would have surfaced as a rejected
+upload on the first real submission, with the embed as the obvious suspect and the version
+skew as the actual cause. All twelve now read `0.4.0`.
+
+**What a release currently is, stated plainly because it was not written down anywhere:**
+`release.yml` extracts the matching `## [X.Y.Z]` section from `CHANGELOG.md` and opens a
+*draft* GitHub Release. It does not sign, archive, upload to TestFlight, or submit. Every
+binary that has ever reached a device was built by hand in Xcode. `docs/RELEASING.md` now
+records that, along with the steps, the twelve-site version bump, and the gaps still open
+(no signing secrets, no build-number increment, no check that the tag matches
+`MARKETING_VERSION`).
+
+**Sequencing note.** The changelog cut-over — renaming `[Unreleased]` to `[0.4.0]` — is
+deliberately *not* in this change, and is the last step before the tag. Three PRs (#166, #167,
+#168) were in flight writing to `[Unreleased]`, and renaming the heading underneath them
+guarantees three conflicts for no benefit. `docs/RELEASING.md` documents it as step 1 of the
+release itself.
+
+## 2026-08-13 (a privacy manifest per bundle: the watch and tvOS apps had none)
+
+`PrivacyInfo.xcprivacy` existed exactly once, in `ShoutKitApp/ShoutKitApp/`, registered to the
+`ShoutKit` target alone. The watch app and the tvOS app — separate bundles, one of them now
+embedded inside the iOS app — shipped without one. Both now have their own.
+
+**Why it matters, and why it would not have shown up until the worst moment.** `UserDefaults`
+is a required-reason API. Apple's submission check (ITMS-91053, "Missing API declaration")
+inspects each bundle in the upload, so an embedded watch app or a separately-submitted tvOS app
+needs its own declaration; the host app's does not cover them. Nothing in the build, the tests,
+or `swiftlint` looks at this. It surfaces as a rejected or flagged upload on the **first real
+submission** — which, since the repo has never released anything (see the entry below), is
+still ahead. That makes it the same shape as the `MARKETING_VERSION` skew found the same day:
+silent locally, fatal once, and pointing at the wrong culprit when it fires.
+
+**The two targets are declared for different reasons, and the tvOS one is worth stating
+plainly:**
+
+- **watch app** — a direct call. `WatchAppDependencies` holds a `UserDefaults.standard` and
+  stores the last-played station under `Keys.lastStation` so the "Play Last" complication can
+  render and act without the phone.
+- **tvOS app** — *no tvOS source touches `UserDefaults` at all.* `TVAppDependencies` goes
+  through `Persistence`'s `LibraryStore`, which is SwiftData. But `Persistence` is statically
+  linked into the tvOS binary and its `SettingsStore`/`DefaultsKey` do call `UserDefaults`, and
+  Apple's check is **symbol-based rather than reachability-based**. Declaring it is therefore
+  correct even though the path may never run. The alternative — omitting it and arguing
+  reachability with App Review — is not a trade worth making for four lines of plist.
+
+**Deliberately not added: manifests for the widget extensions.** `ShoutKitWidgets` and
+`ShoutKitWatchWidgets` import only SwiftUI and WidgetKit, and reach app data through
+`QuickPlayFavoritesStore`, which is file I/O in the App Group container — writing and reading
+files is not a required-reason category, and neither extension touches `UserDefaults`. Adding
+empty manifests there would be cargo-culting. If either extension later reads file timestamps
+or disk space, that changes and the manifest becomes required.
+
+**Verified against the built products, not the project file**, because a resource that fails to
+register still builds green — the same trap as the source-file registration noted on 2026-08-12
+and the watch embed itself. Both `ShoutKitWatchApp.app` and `ShoutKitTVApp.app` were built and
+inspected for `PrivacyInfo.xcprivacy` in the bundle root.
+
+Also checked and *not* a gap: the iOS app's existing manifest. It declares
+`NSPrivacyAccessedAPICategoryUserDefaults` with reason `CA92.1` and nothing else, and a sweep
+for file-timestamp and disk-space APIs across every package and app target found only
+`setResourceValues(isExcludedFromBackup:)` in `DirectoryDiscoverySnapshot`, which is not a
+required-reason category. The declaration is accurate as written.
+
+## 2026-08-13 (`recommendations` is deleted — the only one of the five that was actually deletable)
+
+`RecommendationService` is gone: 193 lines of source, 127 of tests, the `FeatureCatalog`
+entry, the "More Like This" section in `ListenNowView`, and two localized strings. This
+resolves the second of #146's five, and it is the *only* one the audit found could be removed
+without touching a shipping feature.
+
+**Why delete rather than promote.** It had been built, tested, and wired for months with a
+live call site, and no user had ever seen it. Promoting it would mean deciding that
+content-based station similarity is a feature ShoutKit wants to stand behind — its quality
+tuned, its empty state designed, its results defensible — and nobody has made that case. The
+carrying cost was real and ongoing: it kept `Accelerate` and a 40-line FNV-1a hashing utility
+alive, and it added two parameters to a public `ListenNowView` initializer that no caller ever
+passed. Deleting is reversible through git; carrying dead code is not free.
+
+**What made this one clean, when three of its siblings are not.** Every reference resolved to
+either the feature itself or its single call site — verified by tracing, not by counting
+files, which is the discipline the entry below had to learn twice. `ListenNowView` was the
+only consumer, and `RootView.swift:127` constructs it as `ListenNowView(viewModel:)` without
+either injected dependency, so removing both parameters changed no call site.
+
+**Two things removed that were not obviously part of the feature:**
+
+- **`BrowseFeature` no longer depends on `FeatureFlags` at all** — target *and* package
+  dependency. `ListenNowView` was the package's only `FeatureFlags` consumer, and it only
+  used it to ask whether recommendations were on. A discovery surface that no longer asks any
+  feature-flag question should not link the module that answers them.
+- **`RecommendationHashing`** went with it. It was `public` and looked like general-purpose
+  infrastructure, but the only caller outside `RecommendationService` was the recommendation
+  cache key in `ListenNowView`. If a stable cross-process FNV-1a is wanted later it is four
+  lines, and `git log` has this one.
+
+**One thing deliberately kept.** `LibraryStore.hideFromListenNow` stays a *soft* hide even
+though its stated reason was that "the play record stays intact so recommendations still learn
+from it." The behaviour is still correct — dismissing a card from the Listen Now teaser is not
+"forget I played this," and the record still feeds the Library's Recently Played list and
+`rankedStations`, which drives CarPlay and the quick-play widget — so the comments were
+rewritten to the reason that survives rather than deleted along with the feature. A comment
+whose justification has been removed is worse than no comment: it is a live claim about why
+the code is shaped this way, and it would have been false.
+
+## 2026-08-13 (`diagnostics` stays internal-only, permanently, and that is the decision — not a deferral)
+
+`docs/ROADMAP.md` lists five features sitting at `internalOnly` / `defaultEnabled: false` in
+`FeatureCatalog` and asks each to be **promoted or deleted** (#146), on the correct principle
+that unshipped inventory is not a backlog — it is code that must keep compiling, keep passing
+tests, and keep being reasoned about during refactors. It also allows that `diagnostics` is
+"arguably correct as internal-only forever, but say so." This says so, and closes that fourth
+of #146. It is a third answer to promote-or-delete, and it is only legitimate *stated*: an
+undecided flag and a permanently-internal one look identical in the catalog, which is how the
+first becomes the second by neglect.
+
+**Measured first, because the roadmap's framing understates this one.** `diagnostics` is
+**1,087 lines** across `DiagnosticsMetricSummary` (422), `DiagnosticsService` (213),
+`DiagnosticsPayloadStore` (146), `Container+Diagnostics` (18), and 288 lines of tests. The
+whole dark inventory is roughly 2,050 lines, so this single feature is **over half of it** —
+more than `recommendations` (320), `prewarmStations` (304), and the `geoStations` coordinator
+(173) combined. Whatever is decided about the other four, this is the one that dominates the
+carrying cost.
+
+**Why it stays rather than ships.** It is a developer instrument, not a user feature. It
+subscribes to MetricKit, persists `MXMetricPayload`/`MXDiagnosticPayload` blobs to a local
+GRDB store with 30-day retention, and logs summaries. A user toggling it on gets no screen,
+no number, and no benefit — the value accrues to whoever reads the log while debugging.
+Promoting it would mean building the surface that makes it worth a user's attention, which is
+a feature nobody has asked for; deleting it would throw away the instrument that makes a
+launch-time or memory regression diagnosable, right as #148 proposes capturing exactly those
+baselines per build.
+
+**Why it stays rather than gets deleted, stated as a privacy question**, because that is the
+form the objection takes for anything named "diagnostics": it is double-gated on
+`featureFlags.isEnabled(diagnostics) && settings.isDiagnosticsSharingEnabled`
+(`DiagnosticsService.swift:91`), both false by default, and **there is no network egress
+anywhere in it** — no `URLSession`, no upload path, nothing. The data is on the device and
+stays there. "Sharing" in the settings key is a misnomer worth correcting whenever that
+string is next touched; nothing is shared with anyone.
+
+**Two things this audit turned up that are not resolved here**, recorded so they are not
+rediscovered:
+
+1. **`DiagnosticsMetricSummary` (422 lines — 39% of the feature) has no consumer outside
+   `Persistence`.** Nothing reads `metricPayloadSummaries(limit:)`; the summaries go to
+   `OSLog` and stop. So the largest single file in the feature exists to format text nobody
+   retrieves programmatically. That is a genuine deletion candidate *even though the feature
+   stays*, and it is a separate decision from this one — it needs someone to confirm the
+   OSLog output is actually what gets read during a debugging session, which is a claim about
+   practice, not code.
+2. **Three of the five are not cleanly deletable, contrary to the roadmap's framing of all
+   five as equivalent** — and the general lesson is that **a line count next to a flag is not
+   a deletion estimate**. What a flag gates is routinely smaller than the code it names,
+   because the code gets reused by something that ships:
+
+   - **`geoStations`** — region identity is threaded into the *shipping* caching layer
+     (`CachingRadioDirectory.swift:195`, `DirectoryDiscoverySnapshot.swift:40`), stamping and
+     invalidating snapshots by region for every user today. Only the 173-line
+     `GeoStationLocationCoordinator` and the flag are dark. Scope it as "delete the opt-in
+     precise-location path," not "delete geo."
+   - **`prewarmStations`** — `StationConnectionPrewarmer` (133 lines) is called by
+     `WarmupRadioAudioQueueIntent` (`ShoutKitAudioIntents.swift:82`), a shipping App Intent
+     with **no flag gate**, so deleting the flag leaves the prewarmer in place and still used.
+     `LibraryStore+Prewarm.swift` (123 lines) is mostly not prewarm either —
+     `rankedStations(limit:)` drives CarPlay (`ShoutKitCarPlaySceneDelegate.swift:106`),
+     alongside `favoriteStations()`, `mostRecentStation()`, and `refreshStreamURLSnapshot()`.
+     The dark surface is the flag, the launch-warmup block, `prewarmStreamURLs(limit:)`, and
+     the `tapToAudioPrewarmEnabledProvider` wiring, which only labels a log line in
+     `TapToAudioLatencyTrace`.
+   - **`liveActivity`** — `NowPlayingActivityCore` is linked by the shipped quick-play Home
+     Screen widget (`QuickPlayWidget.swift:34` uses `QuickPlayFavoritesStore`), so deleting
+     the feature removes `NowPlayingLiveActivity.swift` and the artwork store while the
+     package stays.
+
+   That leaves **`recommendations` as the only one of the five that is cleanly deletable**:
+   one call site, self-contained in `RadioDirectory`.
+
+## 2026-08-12 (the watch app ships: a companion key, an embed phase, and the warning becomes a check)
+
+The watchOS companion recorded here on 2026-07-16, advertised in `README.md`, and compiled by
+CI since PR #138 has **never installed on anyone's watch**. It built, it passed, and it was
+not in the product. `ShoutKit.app` had no `Watch/` payload; `ShoutKitWatchApp` was a sibling
+top-level target reachable only from its own scheme.
+
+**The root cause was one missing Info.plist key, not the missing copy phase.**
+`ShoutKitWatchApp/Info.plist` declared `WKApplication` and stopped there, which describes a
+*standalone* watch app — one distributed on its own, with no phone app to attach to. The
+bundle id was already `com.cascadiacollections.shoutkit.watch`, a correct suffix of the phone's
+`com.cascadiacollections.shoutkit` (`Config/{Debug,Release}.xcconfig`), so the intent was
+plainly a companion; nothing ever told the installer that. `WKCompanionAppBundleIdentifier` is
+now set. It is hardcoded rather than derived because `PRODUCT_BUNDLE_IDENTIFIER` inside the
+watch target's own plist would expand to the *watch's* id; `Beta.xcconfig` only adds
+`OTHER_SWIFT_FLAGS`, so there is no configuration in which the phone id differs.
+
+The embed itself is the ordinary five objects added to `project.pbxproj` by hand — a
+`PBXBuildFile` for `ShoutKitWatchApp.app`, a `PBXContainerItemProxy` and `PBXTargetDependency`
+so the watch target builds first, and a `PBXCopyFilesBuildPhase` with
+`dstSubfolderSpec = 16` / `dstPath = "$(CONTENTS_FOLDER_PATH)/Watch"`, wired into `ShoutKit`'s
+`buildPhases` and `dependencies`.
+
+**Hand-editing the pbxproj is the thing `CLAUDE.md` warns about, so the edit was checked
+against a real build rather than trusted.** `xcodebuild … -destination id=<iPhone 17>` now
+produces `ShoutKit.app/Watch/ShoutKitWatchApp.app`, whose Mach-O reports
+`platform WATCHOSSIMULATOR / minos 26.0`, whose `WKCompanionAppBundleIdentifier` reads back as
+the phone id, and which carries `PlugIns/ShoutKitWatchWidgets.appex` (the "Play Last"
+complication) with it. That last detail is the one worth noting: nothing separately embeds
+the complication into the phone app, because it rides inside the watch app, which is why its
+absence was invisible for a month.
+
+**The CI step that found this stops being a diagnostic.** It was added deliberately
+non-failing, because it was asserting something the tree did not yet satisfy — the honest
+shape for a check written before its fix. It now fails the build, and it additionally asserts
+the embedded bundle's `WKCompanionAppBundleIdentifier`. Checking for the copy phase in
+`project.pbxproj` would have been the cheaper check and the wrong one: a phase with a wrong
+`dstPath` copies the bundle somewhere the installer ignores, producing a green build and no
+companion — the same failure with a different cause. The check inspects the built bundle for
+the same reason it caught the bug in the first place.
+
+**Not verified, and deliberately left open:** that the companion actually *installs* and pairs.
+That needs a paired iPhone + Apple Watch simulator or real hardware, not a build product
+inspection. The payload is present, correctly built for watchOS, and correctly keyed; whether
+watchOS accepts it at install time is the next thing to confirm, and it belongs on the same
+list as the on-device AVRCP verification (#147) — checks that need hardware, not a commit.
+Reproduce the bundle-level check with:
+
+```sh
+xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit -configuration Debug \
+  -destination 'id=<an iPhone simulator udid>' -derivedDataPath DerivedData build
+ls DerivedData/Build/Products/Debug-iphonesimulator/ShoutKit.app/Watch
+```
+
+Note for anyone re-running it: `-destination 'platform=iOS Simulator,name=iPhone 17'` fails on
+a machine with two simulators of that name. Use `id=`.
+
+## 2026-08-12 (tvOS takes the iOS engine: `AudioStreamingPlaybackEngine` replaces AVPlayer, and the TV gets track titles)
+
+The tvOS MVP shipped with `TVRadioPlaybackEngine`, an `AVPlayer` fork of the watch engine, and
+the entry below records the known cost: **no ICY metadata**, so a 10-foot display showed the
+station and its artwork but never the track. That entry also named the upgrade path and said the
+fix would be switching engines rather than patching around it. This is that switch.
+`ShoutKitTVApp` now links `PlaybackEngineAudioStreaming` and injects
+`AudioStreamingPlaybackEngine` — the same engine the phone runs — and
+`TVRadioPlaybackEngine.swift` is deleted rather than left as a fallback.
+
+**What the deferral was protecting against, and why it no longer applies.** The MVP's argument
+was not that tvOS was unsupported; it was that binary-artifact resolution on an unproven platform
+was a risk not worth taking for v1. That risk is now measured rather than estimated. Re-checked at
+the exact revisions pinned in `Package.resolved`, and in the downloaded artifacts rather than the
+manifests that describe them:
+
+- `ogg.xcframework` 0.1.2 and `vorbis.xcframework` 0.1.2 each carry a real `tvos-arm64` slice
+  *and* a `tvos-arm64_x86_64-simulator` slice (`Info.plist`, `LibraryIdentifier`).
+- AudioStreaming 1.4.4 declares `.tvOS(.v16)`.
+
+That is the whole difference from watchOS, which has no slice at all and is why
+`Packages/PlaybackEngineAudioStreaming/Package.swift` still omits `.watchOS` — the omission is
+load-bearing, the `.tvOS(.v26)` addition is not a loosening of it. The watch keeps
+`WatchRadioPlaybackEngine` and there is no version of this change that includes it.
+
+**Verifying the slices, not the manifests, is the point.** A `binaryTarget`'s platform support is
+a property of the zip, not of the `platforms:` list in the package that fetches it, and the two can
+disagree — the failure mode is a link error naming a missing architecture, which reads as a
+toolchain problem rather than a dependency one (#123 is the recorded instance of exactly that, in
+the other direction). Reading `LibraryIdentifier` out of each `Info.plist` is a check that can
+fail; a manifest's platform list is a claim.
+
+**What the TV gains.** Live track titles, via the one ICY seam in
+`audioPlayerDidReadMetadata` — `TVRootView`'s subtitle line and `TVNowPlayingCenter`'s
+`MPMediaItemPropertyTitle`/`Artist` were already written to prefer `nowPlaying` and fall back to
+the station, so they light up with no change beyond a corrected comment. It also inherits, for
+free, everything that has accumulated in the shared engine and could never have been ported
+twice: the session-activation retry backoff, media-services-reset recovery, the
+`.endOfStream`/`.failed` classification with its 250 ms grace period (the entry directly below),
+and the equalizer attach point. The last one is latent — `supportsEqualizer` is now `true` on
+tvOS, but there is no Settings surface on this platform, so the preset stays `.normal` until one
+exists. That is a seam waiting, not a feature claimed.
+
+**Factory is still bypassed, and that part is not up for revision.** Sharing the engine is not the
+same as sharing the wiring. `TVAppDependencies` keeps calling `PlaybackController`'s *designated*
+initializer with every collaborator explicit and still does not call
+`registerProductionPlaybackEngine()` — the engine is constructed and injected directly. The
+`os(iOS)` gates recorded below exist precisely so a second UIKit platform cannot inherit an
+initializer that resolves `StubRadioPlaybackEngine` and plays silence, and linking the engine
+package is exactly the moment that inheritance would start looking convenient.
+
+**The link is four hand-added `project.pbxproj` entries**, because the app targets are not SwiftPM
+packages: an `XCSwiftPackageProductDependency` pointing at the existing
+`XCLocalSwiftPackageReference` (the iOS app already declares it, so no new package reference), a
+`PBXBuildFile` wrapping it, and one line each in the TV target's `packageProductDependencies` and
+its `PBXFrameworksBuildPhase`. The deleted engine's four entries came out in the same pass. A
+missing registration compiles green while silently not being in the binary, so the same
+after-the-fact inspection the MVP used was run on the built `.app`, and it is worth recording what
+it actually proves:
+
+- The four remaining TV sources each produce a `.o` (`ShoutKitTVApp`, `TVAppDependencies`,
+  `TVNowPlayingCenter`, `TVRootView`) and `TVRadioPlaybackEngine.o` is gone — the file was deleted,
+  not merely orphaned from the target.
+- `otool -L` on the app binary lists `@rpath/ogg.framework/ogg` and `@rpath/vorbis.framework/vorbis`,
+  and `vtool -show-build` on the embedded `ogg` reports `platform TVOSSIMULATOR`. The codec chain
+  did not merely resolve; a tvOS slice linked and embedded.
+- `nm` finds both `AudioStreamingPlaybackEngine` and AudioStreaming's `AudioPlayer` in the binary.
+
+The link check is the one that mattered: a `binaryTarget` whose zip lacked the slice would have
+failed here, after resolution reported success.
+
+**And a third thing that builds green while being broken, found by running it.** Every check above
+passed and the app still died at launch, on the device and in the simulator alike:
+
+```
+Termination Reason: DYLD, Code 1, Library missing
+Library not loaded: @rpath/ogg.framework/ogg
+  tried: '…/ShoutKitTVApp.app/ogg.framework/ogg' (no such file)
+```
+
+The frameworks were embedded correctly at `.app/Frameworks/`. What was missing was the *runpath*:
+the hand-written tvOS target had no `LD_RUNPATH_SEARCH_PATHS`, so its only rpath entries were
+`@loader_path` and a build-directory path, and dyld looked for `ogg.framework` beside the
+executable rather than in `Frameworks/`. Note what the failing path says — it is not "cannot find
+the library" in the abstract, it is "looked in the wrong directory."
+
+This is a latent defect the MVP could not have surfaced. Xcode adds
+`@executable_path/Frameworks` when *it* creates an app target; this one was assembled by hand in
+`project.pbxproj`, and every dependency it linked was a static SwiftPM library, so the missing
+setting cost nothing. Linking this package introduced the target's first *dynamic* frameworks and
+the omission became fatal immediately. Both the Debug and Release configurations now carry the
+setting, matching `ShoutKitApp`'s.
+
+**The lesson for the checklist is that the existing checks were all static.** `.o` files, `otool -L`,
+`vtool`, `nm`, and a green compile together prove the binary was *built* right; not one of them
+runs it, and dyld failures live entirely in the gap between linking and launching. The tvOS job in
+`release-checks` compiles and would have stayed green. A launch check — install to a booted tvOS
+simulator and confirm the process is still alive a few seconds later — is the cheap check that
+would have caught this, and it is the one worth adding when this target next gets CI attention.
+
+**The cost side, stated plainly.** The tvOS app is now heavier than the AVPlayer version — it pulls
+the C codec stack and its own `AVAudioEngine` graph where before it used the system player — and it
+picks up a dependency chain that can break on a tvOS-specific slice regression upstream. The tvOS
+compile lives in `release-checks` (push-to-main and `workflow_dispatch`), not on every PR, so a
+regression there surfaces on `main`. That trade was accepted for the MVP's own reasons and is
+unchanged by this; it is worth restating because the blast radius of a tvOS build failure just grew
+from "our five files" to "our five files plus a binary dependency chain".
+
+## 2026-08-12 (a finished broadcast is not a dropped stream: `.endOfStream`, and looping as opt-in)
+
+Stations that broadcast a **fixed-length programme** — NPR's hourly newscast is the reported
+case — played through and then started over, up to four times, before the app gave up. The
+stream itself was fine; the bug was in what "the stream stopped" was taken to mean.
+
+`AudioStreamingPlaybackEngine` reported end-of-stream as `.failed(.streamFailed(…))`, which was
+right for the case it was written for (2026-05-14: a live stream the server closes stops the
+player with no error, and swallowing it left a dead stream showing as playing). The controller
+does the sensible thing with a retryable failure and calls `attemptReconnect`, and a reconnect
+for live radio is a fresh `startPlayback` — so a *finite* programme was rejoined from the top
+once per attempt in the budget. The reconnect wasn't misbehaving; it was being handed the wrong
+verdict.
+
+**The fix is a third verdict, not a tuned reconnect.** `AudioStatus.endOfStream` sits alongside
+`.failed`, and `PlaybackController.handleEndOfStream` parks the station as `.paused` with the
+player torn down — the lock screen and mini-player stay put, and play replays the programme
+through the existing `outputStarted == false` restart path. Same shape as the stall ceiling's
+give-up (2026-05-27), and for the same reason: reaching the end of a broadcast is not a user
+error, so a `.failed` screen would be a lie.
+
+**Only the engine can tell the two endings apart, and only from one callback.** AudioStreaming's
+`.stopped` transition carries nothing that distinguishes them; the pair that does is
+`audioPlayerDidFinishPlaying`'s `progress`/`duration`. `duration` is `0` for live audio (it can
+only be derived from a known content length), so an endless stream never qualifies however it
+ends, and a finite one truncated mid-download doesn't either — its duration is the whole
+programme's while its progress is where the bytes stopped, which is a genuine drop worth
+reconnecting for. The tolerance around the comparison (3s or 2%, whichever is larger) is there
+because both numbers come from an estimated bitrate and rarely agree exactly; a strict compare
+would reinstate the bug on any file whose estimate ran long.
+
+**The ordering that made this awkward, from reading AudioStreaming 1.4.4:** the `.stopped` state
+change is dispatched to the main queue from inside `processSource()`, and `didFinishPlaying` is
+dispatched *after* it, from the same source-queue block. So the stop always arrives first, with
+no way to classify it yet. Rather than decide wrongly, `handleUnexpectedStop` leaves the stop
+unattributed for a 250 ms grace period; `reportEndOfStream()` cancels that task if the finish
+callback claims the ending, and otherwise it becomes the retryable failure it always was. The
+cost is 250 ms of added latency before a reconnect for a genuinely dropped stream, which is
+inside the backoff's own first delay. This is a grace period, not a poll — it only has to
+outlast a main-queue hop, and both re-checks (`didRequestStop`, `player.state`) still run when
+it fires.
+
+**Looping is opt-in, and off by default.** `SettingsStore.isStreamLoopingEnabled` (Settings →
+Playback → "Loop Finished Broadcasts") flips the ending from "stop" to "start over". Default off:
+a broadcast with an end means to end, and repeating it is a listener's choice, not a player's
+guess. The controller reads it through `isStreamLoopingEnabledProvider` at each ending rather
+than capturing it at `play()`, so flipping the toggle applies to the programme already playing —
+and `Playback` keeps knowing nothing about `Persistence`, same seam as
+`tapToAudioPrewarmEnabledProvider` and `trackResourcesProvider`. The loop restart is an
+*internal* restart (`isReconnect: true`): the resolved endpoint is reused and `onStationPlayed`
+stays silent, so a loop can't log one listening session as many recents or many Radio-Browser
+play reports.
+
+**The AVPlayer engines get the same signal.** watchOS and tvOS reported a finished item as a
+plain `.paused` (a stop with `currentItem` still set), which happened to look right and was
+indistinguishable from a user pause — so it could never be looped. Both now observe
+`AVPlayerItemDidPlayToEndTime` and report `.endOfStream`; a live stream on those engines drops
+through `AVPlayerItemFailedToPlayToEndTime` instead, which stays a failure. Neither app has a
+settings surface, so both take the default and stop, exactly as they did before.
+
+## 2026-08-12 (tvOS MVP: the watch app is the blueprint, and AVPlayer is the engine)
+
+ShoutKit gets a fourth platform. `ShoutKitTVApp` is a top-level target — five files, three
+linked packages (`RadioDirectory`, `Playback`, `Persistence`), bundle id
+`com.cascadiacollections.shoutkit.tv`, tvOS 26.0 floor.
+
+**The blueprint is `ShoutKitWatchApp`, not `ShoutKitApp`.** The watch app is the working
+precedent for a second platform reusing the shared packages with its own minimal service
+graph: it calls `PlaybackController`'s *designated* initializer with every collaborator
+explicit and bypasses Factory entirely, so it never touches
+`registerProductionPlaybackEngine()`. `TVAppDependencies` copies that exactly. The phone app's
+`Features/*` and `DesignSystem` are deliberately **not** linked — the focus engine changes the
+whole layout model, so a touch-idiom view hierarchy would have to be fought rather than reused,
+and the watch established that skipping them is viable. `LiveActivity` (ActivityKit, iOS-only)
+and `DebugSupport` (Pulse) stay off for the reasons they are separate packages at all.
+
+A new platform only has to implement `AudioOutput` — four methods and two callbacks —
+because `PlaybackController` itself is portable (Foundation + Observation + RadioDirectory).
+`RadioPlaybackEngine`'s equalizer members have defaults, so an AVPlayer engine inherits
+"no EQ" for free.
+
+**AVPlayer over AudioStreaming, and the ICY cost.** Checked at the exact tags in
+`Package.resolved`, tvOS *is* supported by the whole streaming chain — AudioStreaming 1.4.4
+declares `.tvOS(.v16)`, and both the ogg and vorbis xcframeworks declare `.tvOS(.v15)`. So
+unlike watchOS, which genuinely has no slice, `PlaybackEngineAudioStreaming` **could** ship
+here. It is deferred to v2 anyway: AVPlayer is the established doctrine (2026-07-16), it is
+proven twice in this repo, and it keeps binary-artifact resolution off an unproven platform.
+
+The price is paid knowingly and is worth restating because it is user-visible: **the AVPlayer
+engine emits no ICY metadata**, so the TV shows station name, genre, and artwork but never the
+current track. On a 10-foot display that absence is more noticeable than on a watch. If live
+track titles turn out to be must-have, the fix is switching to AudioStreaming, not patching
+around it — the dependency chain already supports it.
+
+`TVNowPlayingCenter` is a *real* `NowPlayingPresenting`, unlike the watch's no-op: tvOS shows
+artwork, so the station favicon is fetched and attached. It is a separate type from
+`Playback`'s `NowPlayingCenter` (now `os(iOS)`-gated, see below) because that one carries the
+lock-screen contract and a Bluetooth/AVRCP artwork-resizing path with no meaning on a TV.
+
+**Two things that build green while being broken**, both now checked rather than trusted:
+
+1. A source file missing its `project.pbxproj` registration compiles green and silently isn't
+   in the binary. Verified by confirming all five `.o` files land in the build directory.
+2. **actool reports a malformed layered app icon and still exits zero.** The first build of
+   this target printed `** BUILD SUCCEEDED **` alongside `The image stack "App Icon" must have
+   at least 2 layers with applicable content` — a green build with an icon that would fail at
+   install or App Store validation. CI now greps the tvOS build log for asset-catalog errors
+   and fails on them, because the compiler's exit code will not.
+
+The tvOS build sits in `release-checks` (push-to-main and `workflow_dispatch` only), not on
+every PR: `xcode-27` is a billed larger runner and that job was just restructured to cut spend
+~70%. Same accepted trade as the Release and watchOS compiles it joins — tvOS breakage surfaces
+on `main` rather than on the PR, in exchange for not paying for a third compile per push.
+
+Signing note for anyone reproducing this: `generic/platform=tvOS` fails with "your team has no
+devices from which to generate a provisioning profile". A tvOS profile requires a *registered*
+Apple TV, so the first build must target a paired device by `id=` — that registers it and mints
+the profile. CI therefore builds tvOS with `CODE_SIGNING_ALLOWED=NO`.
+
+## 2026-08-12 (platform gates say what they mean: `os(iOS)`, not "UIKit and not watch")
+
+Two `#if` gates in `Packages/Playback` were spelled `canImport(UIKit) && !os(watchOS)` and
+meant `os(iOS)`. Both are now `os(iOS)`:
+
+- `PlaybackControllerPlatform.swift:1` — the `PlaybackController.init(directory:)` convenience
+  initializer plus `makeSystemNowPlayingCenter()`.
+- `NowPlayingCenter.swift:38` — the `MPNowPlayingInfoCenter` bridge.
+
+The UIKit spelling is true on **tvOS and visionOS as well as iOS**, and the difference is not
+cosmetic. `init(directory:)` resolves the engine through `Container.shared.radioPlaybackEngine()`,
+which is `StubRadioPlaybackEngine` until `registerProductionPlaybackEngine()` runs. Any future
+UIKit platform target would therefore have silently inherited an initializer that compiles,
+links, launches, and **plays silence** — the exact failure `CLAUDE.md` calls out for engine
+registration ordering, arriving by inheritance rather than by a missed call. `NowPlayingCenter`
+would likewise have come along with its `UIImage`/`UIGraphicsImageRenderer` artwork path onto a
+platform wanting its own now-playing surface.
+
+The seam that makes narrowing safe already existed: `NowPlayingPresenting` is ungated, and the
+watch app is the working precedent for a second platform calling `PlaybackController`'s
+*designated* initializer with explicit collaborators and bypassing Factory entirely
+(`WatchAppDependencies.swift`). **A new platform should have to write its wiring, not inherit
+iOS's.** These gates now enforce that rather than leaving it to whoever notices.
+
+Availability wildcards were tightened in the same pass, for the reason recorded below on
+2026-08-12: a bare `*` means "available from *this* platform's deployment target", so it is
+correct only by coincidence and goes wrong the moment a platform exists at a floor beneath what
+the symbols require. That already cost a broken watch build once. Both `NowPlaying` sites now
+name tvOS explicitly — `MediaSessionNowPlayingCenter`'s `@available` (gated only on
+`canImport(NowPlaying)`, so it compiles on any platform that has the framework) and the
+`#available` check that selects it.
+
+No behaviour changes on any shipping platform: iOS and Mac Catalyst are inside `os(iOS)`, and
+watchOS was excluded before and after. Verified locally — `swiftlint --strict` clean, the
+`Playback` host suite, the iOS Simulator build, and the watchOS compile check all green.
+
+## 2026-08-12 (the marketing page gets a face, and an og-image that isn't a guess)
+
+The `site/` one-pager was a competent dark/indigo template. It said the right things but looked
+like every other developer landing page, and it was missing the parts that make a page findable:
+no canonical URL, no `og:image`, no structured data, no `robots.txt`, no sitemap. A social share
+rendered as a bare text link.
+
+The rewrite is a warm, low-sun palette — sand ground, sunset gradient, teal for links — with the
+boldness spent in exactly one place: a sunset panel that keeps its own colours in *both* themes,
+so the accent never washes out on a light ground. Everything else reads from tokens defined three
+times (bare `:root`, `prefers-color-scheme` guarded by `:not([data-theme="light"])`, and an
+explicit `[data-theme="dark"]` stamp), which is what makes an unstamped "system" viewer resolve
+correctly. The recurring structural device is a tuning-dial rule, because the subject is a radio.
+
+**No webfont, deliberately.** The obvious move for a warmer page is a display face from a font
+CDN. A page whose central claim is "this app tracks nothing" should not open a connection to
+Google on load, so the type is built from `ui-rounded` / `ui-sans-serif` / `ui-mono` system
+stacks. The page is still one file with zero subresources, which is also the fastest thing it
+could possibly be.
+
+**The social card is generated, not hand-drawn.** `site/og-image.html` renders to
+`site/og-image.png` with a headless Chromium screenshot at 1200×630, so the card can be
+regenerated after a copy change without a design tool. One trap worth recording: full Chrome
+reserves part of `--window-size` for browser UI and letterboxes the shot — the bottom of the card
+came out clipped and the difference is invisible until you look at the PNG. Chromium's
+`headless_shell` sizes the viewport exactly. The command and the caveat are in a comment at the
+top of the generator.
+
+SEO additions are the ordinary set, and they are ordinary on purpose: canonical, `og:`/`twitter:`
+tags pointing at the generated card, a JSON-LD `@graph` (`WebSite`, `SoftwareApplication`,
+`FAQPage`), `robots.txt`, `sitemap.xml`, one `<h1>`, semantic landmarks, and a skip link. The
+FAQ copy and the JSON-LD `FAQPage` are written from the same answers — if one changes, both have
+to, which is the cost of having them at all.
+
+Content moved toward the free-software story the project actually has: the two-licence split and
+*why* it exists, a three-command build, where to contribute, and credit to Radio-Browser as the
+upstream that makes keyless discovery possible. No App Store link, because there isn't one — the
+primary CTA is the source.
+
+## 2026-08-12 (the deployment floor drops to iOS 26)
+
+Minimum iOS/iPadOS and watchOS go from 27.0 to **26.0**. iOS 27 is still in beta; requiring it
+meant the shipping app could only be installed by people running a beta OS, which is not a
+supportable position for a public release. iOS 26 is the current shipping release and becomes
+N-1 when 27 goes GA.
+
+Devices already on the iOS 27 beta are unaffected, and this is worth being explicit about
+because it is the part people get backwards: a *lower* deployment target does not drop newer
+systems. iOS 27 runs an iOS 26-targeted build exactly as before, and the iOS 27-only code path
+still activates there at runtime. The floor is a minimum, not a target.
+
+**The surprise: nothing had to be back-ported.** The expectation going in was that lowering the
+floor would mean an availability-gating pass. It did not — the repository contains exactly two
+availability annotations, and both already gate the only iOS 27-only API in the tree:
+
+- `Packages/Playback/Sources/Playback/MediaSessionNowPlayingCenter.swift:28` —
+  `@available(iOS 27, macOS 27, *)` on the type.
+- `Packages/Playback/Sources/Playback/PlaybackControllerPlatform.swift:39` —
+  `if #available(iOS 27, *)` selecting it, with `NowPlayingCenter` (the
+  `MPNowPlayingInfoCenter`/`MPRemoteCommandCenter` bridge) as the unconditional fallback.
+
+That selection was built in the 2026-07-13 pass *because* MediaSession was a first-beta
+framework worth being able to back out of. The iOS 26 path was therefore written, wired, and
+kept working the whole time — the floor was simply set higher than any code required. So this
+change is version numbers, not behaviour: 17 `Package.swift` manifests, 8 build settings in
+`project.pbxproj`, and the two `.xcconfig` files.
+
+The `.xcconfig` pair is the trap worth recording. `ShoutKitApp/Config/Debug.xcconfig` and
+`Release.xcconfig` each set `IPHONEOS_DEPLOYMENT_TARGET`, and they are the app target's
+`baseConfigurationReference`, so they *override* the project-level value in `project.pbxproj`.
+Editing only the pbxproj — which is where you would look — leaves the app itself on the old
+floor while every package moves, and nothing fails to build to tell you.
+
+What did **not** change: the toolchain. The manifests are still `swift-tools-version: 6.4` and
+the MediaSession path still needs the iOS 27 SDK to compile, so Xcode 27 and the billed
+`xcode-27` runner remain required. Deployment target and toolchain are independent, and
+lowering one does not lower the other — see the 2026-08-11 CI entry for why that distinction
+has money attached to it.
+
+## 2026-08-12 (RadioBrowserDirectoryClient splits; `main` is lint-clean again)
+
+`RadioBrowserDirectoryClient.swift` went 398 → 445 lines when the search filters landed in
+#157, crossing SwiftLint's 400-line `file_length` limit that `--strict` promotes to an
+error. `main` had been lint-red since that merge, and once `lint` became a gate (2026-08-11)
+that one violation was skipping every test job in the repository — no host tests, no
+simulator run, no `release-checks`, on any branch.
+
+Split along three seams rather than suppressed, per the standing house rule:
+
+- **`+Mapping`** — the five `static` DTO→`Station` translators. The cleanest of the three:
+  no actor state, no I/O, already `static`, and it was the largest single block in the type.
+- **`+Filters`** — `StationSearchFilters.radioBrowserQueryItems`, the query-parameter
+  encoding added by #157. `private` became internal now that it no longer shares a file with
+  its only caller.
+- **`RadioBrowserWireTypes`** — the `Decodable` wire structs, which were never part of the
+  client at all, only adjacent to it.
+
+The client drops 445 → 306 lines. The load-bearing detail is that this also let the
+`// swiftlint:disable type_body_length` at the top of the file go: the actor body was 288
+effective lines, over the 250 warning threshold, and moving `+Mapping` out takes it to 231.
+That matters in both directions — had the split landed while leaving the disable in place,
+`superfluous_disable_command` would have failed `--strict` just as surely as the original
+violation did. A suppression that stops being necessary is itself a lint error here, so
+splitting and un-suppressing are one change, not two.
+
+Worth noting for the next person who hits this: the limits are not on raw line count.
+`file_length` counts every line, `type_body_length` counts only non-blank non-comment lines
+inside the braces. This file is comment-dense, which is why it could be 445 raw lines with a
+288-line body, and why "shorten the file" and "shorten the type" are different jobs.
+
+## 2026-08-12 (CodeQL becomes a scheduled scan; the matrix `if` that broke it)
+
+Two things, one of which was a self-inflicted outage.
+
+**The bug.** The 2026-08-11 entry below describes excluding the Swift analysis from pull
+requests with a job-level `if: matrix.language != 'swift' || …`. That expression is invalid:
+`jobs.<job_id>.if` is evaluated *before* the matrix is expanded, so the `matrix` context is
+not available to it — only `github`, `needs`, `vars`, and `inputs` are. A workflow that
+references an unavailable context there does not skip the job, it fails to load: zero jobs,
+an instant red X, and a run titled `.github/workflows/codeql.yml` instead of `CodeQL`,
+because there is no parsed workflow to take a name from. CodeQL ran **not at all** —
+neither language — from 21285a9 until this fix.
+
+The reason it survived review is worth recording, because the tell was there. On the PR the
+Swift check simply wasn't in the check-run list, which is exactly what a working exclusion
+looks like; it was read as confirmation rather than checked. The run titled by file path,
+one click away, said otherwise. **A check that is absent and a check that is skipped look
+identical from the check list and mean opposite things** — `conclusion: skipped` in the
+jobs API distinguishes them, and that is the thing to look at.
+
+Note the neighbouring `timeout-minutes: ${{ matrix.language == 'swift' && 45 || 15 }}` was
+fine and had worked for months: `matrix` *is* available there. Context availability is
+per-key, not per-file, so "it works two lines up" proves nothing.
+
+The fix drops the matrix entirely for two explicit jobs — `analyze-actions` and
+`analyze-swift`. Each condition then sits in a context that can see it, and the workflow
+reads as what it is: two unrelated analyses that never shared anything but a `steps:` block.
+
+**The schedule.** With that corrected, the Swift analysis moved further than the original
+change took it: from "every push and PR" to **scheduled runs only** (the existing Monday
+cron, plus `workflow_dispatch`). One run per week is ~30 billed macOS minutes in total
+rather than ~30 per push. A Swift finding now surfaces up to a week late instead of on the
+PR — acceptable for an app with no server, no accounts, and no credential handling, where
+the CodeQL Swift pack has never produced a finding. `analyze-actions` is unchanged and still
+runs on every push and PR: it needs no build and runs free on ubuntu, so there is nothing to
+save by moving it and real value in keeping workflow changes reviewed where they are made.
+
+## 2026-08-11 (CI is rationed against one billed runner label)
+
+Actions spend had become the largest cost of running this project, and measuring it before
+changing anything located the whole of it in one place: the `xcode-27` label. ShoutKit is
+public, so GitHub's standard hosted runners — `ubuntu-latest`, `macos-26` — are free.
+`xcode-27` is a *larger runner*, and larger runners are billed on public repositories too.
+Every mac job in the repo was on it.
+
+Measured per push, from the API rather than from estimate (billing rounds each job up to
+the minute):
+
+| Job | Wall clock | Billed |
+|---|---|---|
+| CodeQL `Analyze (swift)` | 29m | 30 |
+| CI `build` | 14m03s | 15 |
+| CI `host-tests` | 3m28s | 4 |
+| CI `lint` | 14s | 1 |
+| | | **50 mac-minutes per push** |
+
+The surprise was CodeQL, not CI. Its Swift analysis ran on every push *and* every pull
+request, and CodeQL's build tracing turns the 4-minute Release build into a 27-minute one —
+so the security scan cost more than the entire CI workflow beside it, on a UIKit radio app
+where it has never produced a finding. It now runs on `main` and on the existing weekly
+cron. That keeps the alert database current and gives up only per-PR alert annotations,
+which is a fair trade at this merge rate. The `actions` analysis is untouched: it needs no
+build, runs free on ubuntu, and stays on PRs.
+
+The rest is three rules, applied in `ci.yml`:
+
+- **Nothing expensive starts until `lint` passes.** Lint is ~15 seconds of work and it was
+  running *beside* the mac jobs rather than in front of them. Run 31275068736 is the case
+  that settled it: lint went red 7 seconds in, and `build` carried on for another 14 minutes
+  on a tree that could not merge. `needs: lint` costs ~30s of added latency on green runs
+  and stops that entirely.
+- **Draft PRs get the cheap signal, not the expensive one.** `host-tests` (~4 min, eight
+  packages) runs on drafts; the ~15-minute simulator job waits for `ready_for_review`. The
+  branch names in the run history are almost all agent-authored, and those push many times
+  per PR — which is where the minutes were actually going. `ready_for_review` had to be
+  added to the trigger's `types` for this to work at all; without it, marking a draft ready
+  fires no event and the skipped job never runs.
+- **Compile-only checks move to `main`.** Release config and the watch app are ~5.5 of that
+  job's 14 minutes and neither runs a test, so they split into `release-checks`, gated to
+  push and `workflow_dispatch`.
+
+That last one is a real regression in signal and is worth naming as such rather than
+burying: a change that builds Debug-for-iOS but breaks Release or watchOS now goes red on
+`main` instead of on the PR that caused it. Accepted because the failure mode is narrow
+(Release-only breakage is nearly always `#if DEBUG` drift; watch breakage is nearly always a
+shared-package API change), because it always surfaces as a compile error rather than as
+something subtle, and because it is cheap to fix forward — whereas checking it on every push
+was not cheap at all.
+
+Net: a PR push goes from ~50 billed mac-minutes to ~5 (draft) or ~20 (ready), while `main`
+keeps full coverage including CodeQL. Two smaller things landed with it — the CodeQL Swift
+job had no SwiftPM cache at all and cold-resolved the workspace including the AudioStreaming
+codec download every run, and `build`'s 75-minute timeout meant a wedged simulator could
+bill 75 minutes for nothing (now 30, against an observed 8-9).
+
+Explicitly *not* done: moving `lint` to a free ubuntu runner. SwiftLint has a Linux build,
+but not full rule parity — the SourceKit-backed rules behave differently — and this job is
+now the gate the other three trust. A gate that means something slightly different from what
+contributors run locally is worse than a gate that costs one minute. Revisit if parity
+closes.
+
+None of this is the actual fix, which is to stop paying for the label: either the free
+`macos-26` image gains a new enough Xcode, or the work moves to a self-hosted Mac mini.
+`runner-image-watch.yml` is a weekly ubuntu job that watches for the former and files an
+issue when it happens, because the alternative is nobody noticing for months while the meter
+runs. `docs/ROADMAP.md` carries the sequencing for the latter, including the constraint that
+matters most: a self-hosted runner on a public repo must not accept fork PRs.
+
+## 2026-08-07 (`try?` audit: gate rechecked before deferring)
+
+Issue #143 had been rolling forward behind "wait for Swift 6.4's unhandled-error
+warning in `Task` closures", but every manifest was already at
+`swift-tools-version: 6.4`, so repeating that gate was information-free.
+
+- **Rechecked the gate explicitly.** A probe closure (`Task { try await … }`)
+  typechecked on the current toolchains without an unhandled-error warning, so
+  there is currently no warning to turn on in this tree.
+- **Recorded a concrete arrival check instead of a vague wait.** The command
+  `swiftc -typecheck -warnings-as-errors /tmp/task-unhandled-error-probe.swift`
+  is the trigger: when that probe starts failing, the compiler has gained the
+  diagnostic and the audit can switch from manual reasoning to compiler-driven
+  enumeration.
+- **Audited existing non-test `try?` call sites for intent.** The remaining
+  sites are intentional best-effort paths (cache/file hygiene, advisory audio
+  session tuning, non-blocking handoff/suggestions, cancellation-tolerant
+  sleeps, optional artwork fetches) rather than user-facing hard failures.
+- **Made ambiguous sites explicit in code.** The app/watch sync and shortcuts
+  fallback paths, watch audio-session setup/teardown, defaults codable
+  fallback, and media-session primary request now state their best-effort
+  intent next to the `try?`, so an unexplained `try?` regains signal as a
+  likely oversight.
+
+## 2026-08-07 (Search filters over Radio-Browser)
+
+- Added a dedicated `StationSearchFilters` model (bitrate min/max, tag, country
+  code) and threaded it through `RadioDirectoryProviding` as explicit filtered
+  overloads for both name search and genre browsing. Existing call sites stay
+  source-compatible through default protocol implementations, while
+  `RadioBrowserDirectoryClient` overrides to send native API params
+  (`bitrateMin`/`bitrateMax`/`tagList`/`countrycode`) on the same endpoints the
+  app already uses.
+- Filter state is transient UI state on `SearchViewModel` (not persisted) and
+  composes with both free-text queries and genre chips, matching the search
+  surface contract established in the 2026-08-04 UX pass.
+- Empty-search results now surface active filter context and include an explicit
+  "Clear Filters" action to recover quickly from over-constrained queries.
+- Missing metadata is treated as "unknown", not an automatic failure: local
+  filter evaluation only excludes stations that positively fail the selected
+  bounds (e.g. known bitrate below the minimum), to avoid collapsing discovery
+  on sparse community data.
+
 ## 2026-08-07 (the codec dependency leaves Playback; CI starts measuring itself)
 
 Three gaps that were gaps because nothing reported them, closed together because

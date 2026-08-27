@@ -89,7 +89,10 @@ extension AppDependencies {
         let snapshotStore = FileDirectorySnapshotStore.applicationSupport()
 
         if let apiKey = shoutcastAPIKey() {
-            let directory = PreferredRadioDirectory(base: ShoutcastDirectoryClient(apiKey: apiKey))
+            let directory = PreferredRadioDirectory(
+                base: ShoutcastDirectoryClient(apiKey: apiKey),
+                preferredStations: PreferredStations.all
+            )
             let caching = CachingRadioDirectory(
                 base: directory,
                 snapshotStore: snapshotStore,
@@ -104,7 +107,7 @@ extension AppDependencies {
         }
 
         let radioBrowser = RadioBrowserDirectoryClient(geoFilterProvider: geoFilterProvider)
-        let directory = PreferredRadioDirectory(base: radioBrowser)
+        let directory = PreferredRadioDirectory(base: radioBrowser, preferredStations: PreferredStations.all)
         let caching = CachingRadioDirectory(
             base: directory,
             snapshotStore: snapshotStore,

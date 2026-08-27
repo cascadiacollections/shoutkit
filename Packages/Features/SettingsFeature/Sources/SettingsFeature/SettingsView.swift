@@ -20,9 +20,11 @@ public struct SettingsView: View {
     public var body: some View {
         NavigationStack {
             Form {
+                playbackSection
                 privacySection
-                if let playbackController, playbackController.supportsEqualizer {
-                    equalizerSection
+                if let playbackController,
+                   playbackController.supportsEqualizer || playbackController.supportsSpatialAudio {
+                    soundSection
                 }
                 // Debug and TestFlight builds only: the catalog is all internal
                 // placeholder flags, so App Store users have nothing actionable here.
@@ -43,6 +45,34 @@ public struct SettingsView: View {
     }
 
     // MARK: - Sections
+
+    /// The one playback behaviour a listener has to be able to choose, because
+    /// either answer is wrong for half the stations: a continuous live stream
+    /// never ends, while a station that broadcasts a fixed-length programme does.
+    /// Off by default — a finished broadcast stops, the way every other player
+    /// treats it.
+    @ViewBuilder
+    private var playbackSection: some View {
+        if let settings {
+            Section {
+                Toggle(
+                    "Loop Finished Broadcasts",
+                    isOn: Binding(
+                        get: { settings.isStreamLoopingEnabled },
+                        set: { settings.isStreamLoopingEnabled = $0 }
+                    )
+                )
+            } header: {
+                Text("Playback")
+            } footer: {
+                Text("""
+                Most stations stream continuously and never end, so this changes nothing for \
+                them. A station that broadcasts a fixed-length programme — an hourly newscast, \
+                say — stops when it reaches the end; turn this on to have it start over instead.
+                """)
+            }
+        }
+    }
 
     @ViewBuilder
     private var privacySection: some View {
@@ -101,30 +131,54 @@ public struct SettingsView: View {
         }
     }
 
-    /// Only shown when ``PlaybackController/supportsEqualizer`` is true —
-    /// `AVPlayer`-backed engines (the watch companion) have no supported way
-    /// to insert a filter into their render chain, so there is nothing here
-    /// to offer rather than a control that silently does nothing.
+    /// Equalizer picker and/or spatial audio toggle, each shown only when the
+    /// active engine reports it can back it — `AVPlayer`-backed engines (the
+    /// watch companion) have no supported way to insert either into their
+    /// render chain, so there is nothing here to offer rather than a control
+    /// that silently does nothing.
     @ViewBuilder
-    private var equalizerSection: some View {
+    private var soundSection: some View {
         if let settings, let playbackController {
             Section {
-                Picker(
-                    "Equalizer",
-                    selection: Binding(
-                        get: { EqualizerPreset(rawValue: settings.equalizerPresetRawValue) ?? .normal },
-                        set: { preset in
-                            settings.equalizerPresetRawValue = preset.rawValue
-                            playbackController.setEqualizerPreset(preset)
+                if playbackController.supportsEqualizer {
+                    Picker(
+                        "Equalizer",
+                        selection: Binding(
+                            get: { EqualizerPreset(rawValue: settings.equalizerPresetRawValue) ?? .normal },
+                            set: { preset in
+                                settings.equalizerPresetRawValue = preset.rawValue
+                                playbackController.setEqualizerPreset(preset)
+                            }
+                        )
+                    ) {
+                        ForEach(EqualizerPreset.allCases, id: \.self) { preset in
+                            Text(preset.displayName).tag(preset)
                         }
-                    )
-                ) {
-                    ForEach(EqualizerPreset.allCases, id: \.self) { preset in
-                        Text(preset.displayName).tag(preset)
                     }
+                }
+                if playbackController.supportsSpatialAudio {
+                    Toggle(
+                        "Spatial Audio",
+                        isOn: Binding(
+                            get: { settings.isSpatialAudioEnabled },
+                            set: { isEnabled in
+                                settings.isSpatialAudioEnabled = isEnabled
+                                playbackController.setSpatialAudioEnabled(isEnabled)
+                            }
+                        )
+                    )
                 }
             } header: {
                 Text("Sound")
+            } footer: {
+                if playbackController.supportsSpatialAudio {
+                    Text("""
+                    Spatial Audio renders the stream through a head-tracked virtual sound stage on \
+                    AirPods and other supported headphones. It's a stereo effect ShoutKit applies to \
+                    every station, not Dolby Atmos content from the broadcaster — radio streams carry \
+                    no object-based audio to spatialize.
+                    """)
+                }
             }
         }
     }

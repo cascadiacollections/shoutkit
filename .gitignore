@@ -7,3 +7,8 @@ xcuserdata/
 
 # Local secrets. Copy the template and keep real keys untracked.
 ShoutKitApp/Config/Secrets.xcconfig
+
+# DocC output for the MIT packages (site/api/index.html is hand-authored and
+# stays tracked; site/api/docs/ is the merged archive built by
+# .github/scripts/build-docs.sh).
+site/api/*/

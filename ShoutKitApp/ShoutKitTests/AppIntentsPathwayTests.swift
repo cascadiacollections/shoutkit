@@ -20,9 +20,13 @@ import Testing
 /// adjust the string to the identifier Xcode's App Intents metadata assigns to
 /// `StationEntity`.
 ///
-/// No `@available` guard is needed — the app's deployment target is iOS 27, so
-/// `AppIntentsTesting` is always available (and Swift Testing's macros reject an
-/// `@available` annotation on the suite anyway).
+/// The suite carries no `@available` guard, and Swift Testing's macros reject
+/// one on a suite anyway. That was free when the deployment floor was iOS 27.
+/// Since the floor dropped to iOS 26 (DECISIONS.md 2026-08-12) the guard has to
+/// live *inside* the test body instead — `AppIntentsTesting`'s `IntentDefinitions`
+/// is iOS 27-only, and the whole target failed to build without it. A runtime
+/// `guard #available` is what the macros permit, and it costs nothing here
+/// because the case is `.disabled` in CI regardless.
 @Suite struct AppIntentsPathwayTests {
     /// The `StationEntity` query must surface stations even before the user has
     /// favorited or played anything — the curated `PreferredStations` seed the
@@ -49,6 +53,13 @@ import Testing
     /// even though the tests themselves finish in 8 s.
     @Test(.disabled("IntentDefinitions has no live intents session in CI — run it on a host"))
     func stationEntityQuerySuggestsStationsOnAFreshLibrary() async throws {
+        // `IntentDefinitions` and the entity accessors it vends are iOS 27-only,
+        // and the app's floor is iOS 26 — so the availability check is what keeps
+        // this target compiling, not a choice about what to exercise. Below 27
+        // there is nothing to assert: the App Intents Testing framework that
+        // drives the real system pathway does not exist there.
+        guard #available(iOS 27, *) else { return }
+
         let definitions = IntentDefinitions(bundleIdentifier: "com.cascadiacollections.shoutkit")
         let stationEntity = definitions.entities["StationEntity"]
 

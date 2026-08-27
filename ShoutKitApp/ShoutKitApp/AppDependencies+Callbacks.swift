@@ -47,12 +47,19 @@ extension AppDependencies {
                 title: heard.track.title,
                 artist: heard.track.artist,
                 heardAt: heard.track.receivedAt,
+                artworkURL: heard.artworkURL,
                 appleMusicURL: heard.appleMusicURL
             )
         }
 
         controller.tapToAudioPrewarmEnabledProvider = {
             featureFlags.isEnabled(FeatureCatalog.prewarmStations)
+        }
+
+        // Read at each end-of-stream rather than captured, so flipping the
+        // toggle applies to the programme already playing.
+        controller.isStreamLoopingEnabledProvider = {
+            settings.isStreamLoopingEnabled
         }
 
         // Best-effort album art + Apple Music link from a single iTunes Search
@@ -126,7 +133,9 @@ private final class PhoneWatchLastStationSync: NSObject, WCSessionDelegate {
         guard let session,
               session.activationState == .activated,
               session.isWatchAppInstalled else { return }
+        // Best effort: watch handoff should never block local playback state.
         guard let encoded = try? encoder.encode(station) else { return }
+        // Best effort: WCSession will deliver a newer context on the next play.
         try? session.updateApplicationContext([Keys.lastStation: encoded])
     }
 

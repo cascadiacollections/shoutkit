@@ -7,6 +7,7 @@ import SwiftUI
 
 public struct SearchView: View {
     @State private var viewModel: SearchViewModel
+    @State private var isFilterSheetPresented = false
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
     @Environment(\.displayScale) private var displayScale
@@ -44,6 +45,23 @@ public struct SearchView: View {
         .task {
             await viewModel.loadGenres()
         }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    isFilterSheetPresented = true
+                } label: {
+                    Image(systemName: viewModel.filters.normalized.isActive
+                        ? "line.3.horizontal.decrease.circle.fill"
+                        : "line.3.horizontal.decrease.circle")
+                }
+                .accessibilityLabel(String(localized: "Search Filters", bundle: .module))
+            }
+        }
+        .sheet(isPresented: $isFilterSheetPresented) {
+            SearchFilterSheet(filters: $viewModel.filters) {
+                viewModel.clearFilters()
+            }
+        }
     }
 
     @ViewBuilder
@@ -57,7 +75,7 @@ public struct SearchView: View {
         case let .results(stations):
             resultsList(stations)
         case .empty:
-            ContentUnavailableView.search
+            emptyStateView
         case let .failed(error):
             DirectoryUnavailableView(
                 title: String(localized: "Search Unavailable", bundle: .module),
@@ -109,6 +127,69 @@ public struct SearchView: View {
             }
         }
     }
+
+    @ViewBuilder
+    private var emptyStateView: some View {
+        if viewModel.filters.normalized.isActive {
+            ContentUnavailableView {
+                Label(
+                    String(localized: "No matching stations", bundle: .module),
+                    systemImage: "line.3.horizontal.decrease.circle"
+                )
+            } description: {
+                Text(
+                    String(
+                        format: String(localized: "Active filters: %@", bundle: .module),
+                        activeFilterSummary
+                    )
+                )
+            } actions: {
+                Button(String(localized: "Clear Filters", bundle: .module)) {
+                    viewModel.clearFilters()
+                }
+            }
+        } else {
+            ContentUnavailableView.search
+        }
+    }
+
+    private var activeFilterSummary: String {
+        let filters = viewModel.filters.normalized
+        var parts: [String] = []
+        if let bitrateMin = filters.bitrateMin {
+            parts.append(
+                String(
+                    format: String(localized: "%d kbps or higher", bundle: .module),
+                    bitrateMin
+                )
+            )
+        }
+        if let bitrateMax = filters.bitrateMax {
+            parts.append(
+                String(
+                    format: String(localized: "%d kbps or lower", bundle: .module),
+                    bitrateMax
+                )
+            )
+        }
+        if let tag = filters.tag {
+            parts.append(
+                String(
+                    format: String(localized: "Tag: %@", bundle: .module),
+                    tag
+                )
+            )
+        }
+        if let countryCode = filters.countryCode {
+            parts.append(
+                String(
+                    format: String(localized: "Country: %@", bundle: .module),
+                    countryCode
+                )
+            )
+        }
+        return parts.joined(separator: ", ")
+    }
 }
 
 /// A wrapping grid of genre chips, with the browsed one held selected so the
@@ -145,5 +226,100 @@ private struct GenreChips: View {
             Button { onSelect(genre) } label: { label }
                 .buttonStyle(.glass)
         }
+    }
+}
+
+private struct SearchFilterSheet: View {
+    @Binding var filters: StationSearchFilters
+    let onClear: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    private let bitrateOptions: [Int] = [64, 96, 128, 160, 192, 256, 320]
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section(String(localized: "Bitrate", bundle: .module)) {
+                    Picker(
+                        String(localized: "Minimum Bitrate", bundle: .module),
+                        selection: minimumBitrateBinding
+                    ) {
+                        Text(String(localized: "Any", bundle: .module)).tag(Int?.none)
+                        ForEach(bitrateOptions, id: \.self) { bitrate in
+                            Text("\(bitrate) kbps").tag(Optional(bitrate))
+                        }
+                    }
+
+                    Picker(
+                        String(localized: "Maximum Bitrate", bundle: .module),
+                        selection: maximumBitrateBinding
+                    ) {
+                        Text(String(localized: "Any", bundle: .module)).tag(Int?.none)
+                        ForEach(bitrateOptions, id: \.self) { bitrate in
+                            Text("\(bitrate) kbps").tag(Optional(bitrate))
+                        }
+                    }
+                }
+
+                Section {
+                    TextField(String(localized: "Tag", bundle: .module), text: tagBinding)
+                    TextField(
+                        String(localized: "Country Code", bundle: .module),
+                        text: countryCodeBinding
+                    )
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                }
+            }
+            .navigationTitle(String(localized: "Search Filters", bundle: .module))
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    if filters.normalized.isActive {
+                        Button(String(localized: "Clear Filters", bundle: .module)) {
+                            onClear()
+                        }
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(String(localized: "Done", bundle: .module)) {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    private var minimumBitrateBinding: Binding<Int?> {
+        Binding(
+            get: { filters.bitrateMin },
+            set: { filters.bitrateMin = $0 }
+        )
+    }
+
+    private var maximumBitrateBinding: Binding<Int?> {
+        Binding(
+            get: { filters.bitrateMax },
+            set: { filters.bitrateMax = $0 }
+        )
+    }
+
+    private var tagBinding: Binding<String> {
+        Binding(
+            get: { filters.tag ?? "" },
+            set: { newValue in
+                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                filters.tag = trimmed.isEmpty ? nil : newValue
+            }
+        )
+    }
+
+    private var countryCodeBinding: Binding<String> {
+        Binding(
+            get: { filters.countryCode ?? "" },
+            set: { newValue in
+                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                filters.countryCode = trimmed.isEmpty ? nil : newValue
+            }
+        )
     }
 }

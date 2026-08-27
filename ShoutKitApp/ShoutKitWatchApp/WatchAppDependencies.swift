@@ -28,7 +28,10 @@ enum WatchAppDependencies {
         let container = ShoutKitModelContainer.makeContainer()
         let libraryStore = LibraryStore(context: container.mainContext)
         let directory = CachingRadioDirectory(
-            base: PreferredRadioDirectory(base: RadioBrowserDirectoryClient())
+            base: PreferredRadioDirectory(
+                base: RadioBrowserDirectoryClient(),
+                preferredStations: PreferredStations.all
+            )
         )
         let playbackController = PlaybackController(
             directory: directory,
@@ -97,6 +100,8 @@ private final class WatchLastStationSync: NSObject, WCSessionDelegate {
 
     func syncedStation() -> Station? {
         guard let data = defaults.data(forKey: Keys.lastStation) else { return nil }
+        // Best effort: an old/corrupt payload should simply clear the watch-side
+        // fallback and let normal station discovery continue.
         return try? decoder.decode(Station.self, from: data)
     }
 

@@ -1,13 +1,16 @@
 # Contributing to ShoutKit
 
-Thanks for your interest! ShoutKit is a native iOS 27 SwiftUI internet-radio client built in the
-open. This document covers everything you need to build, test, and land a change.
+Thanks for your interest! ShoutKit is a native iOS SwiftUI internet-radio client built in the
+open, supporting iOS 26 and newer. This document covers everything you need to build, test, and
+land a change.
 
 ## Building
 
-Requirements: Xcode 27 with the iOS 27 SDK (the package manifests are `swift-tools-version: 6.4`
-and the deployment floor is iOS 27, so an earlier Xcode can't open or build the project — see
-`DECISIONS.md`).
+Requirements: Xcode 27 with the iOS 27 SDK. Note this is a *build* requirement, not the
+deployment floor: the manifests are `swift-tools-version: 6.4` and the MediaSession
+now-playing path needs the iOS 27 SDK to compile, so an earlier Xcode can't open or build the
+project. The app itself ships a deployment floor of **iOS 26.0** and runs there — see
+`DECISIONS.md`.
 
 ```sh
 xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
@@ -147,7 +150,10 @@ without a heavyweight CLA.
 
 By contributing, you agree your changes are licensed under the license of the component they
 touch: GPL-3.0 for the app and feature packages, MIT for `RadioDirectory`, `Playback`,
-`Persistence`, and `DesignSystem` (see the Licensing table in the README).
+`PlaybackEngineAudioStreaming`, `Persistence`, `DesignSystem`, `FeatureFlags`, and
+`ImageIODownsample` (see the Licensing table in the README — the authoritative rule is that a
+package with its own `LICENSE` file is MIT, and CI enforces that those never depend on a
+GPL-3.0 package).
 
 ## Pull requests
 
