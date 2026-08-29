@@ -40,8 +40,15 @@ struct DiagnosticsServiceTests {
             unsubscribe: { _ in }
         )
 
-        service.ingest(metricPayloads: [Data("metric".utf8)], diagnosticPayloads: [Data("diag".utf8)])
+        // A nil task is the real assertion: no work was even scheduled. The
+        // store being empty on its own would also hold if a task had been
+        // spawned and simply hadn't run yet.
+        let ingestTask = service.ingest(
+            metricPayloads: [Data("metric".utf8)],
+            diagnosticPayloads: [Data("diag".utf8)]
+        )
 
+        #expect(ingestTask == nil)
         #expect(subscribeCalls == 0)
         #expect(payloadStore.metricPayloads.isEmpty)
         #expect(payloadStore.diagnosticPayloads.isEmpty)
@@ -62,8 +69,12 @@ struct DiagnosticsServiceTests {
             unsubscribe: { _ in }
         )
 
-        service.ingest(metricPayloads: [Data("metric".utf8)], diagnosticPayloads: [Data("diag".utf8)])
+        let ingestTask = service.ingest(
+            metricPayloads: [Data("metric".utf8)],
+            diagnosticPayloads: [Data("diag".utf8)]
+        )
 
+        #expect(ingestTask == nil)
         #expect(subscribeCalls == 0)
         #expect(payloadStore.metricPayloads.isEmpty)
         #expect(payloadStore.diagnosticPayloads.isEmpty)
@@ -84,12 +95,16 @@ struct DiagnosticsServiceTests {
             unsubscribe: { _ in }
         )
 
-        service.ingest(metricPayloads: [Data("metric".utf8)], diagnosticPayloads: [Data("diag".utf8)])
+        // Awaiting the returned task is what makes this deterministic: the
+        // persist happens on a `.utility` Task, and polling for its side
+        // effects lost the scheduler race under CI's parallel execution.
+        let ingestTask = service.ingest(
+            metricPayloads: [Data("metric".utf8)],
+            diagnosticPayloads: [Data("diag".utf8)]
+        )
+        try await #require(ingestTask).value
 
         #expect(subscribeCalls == 1)
-        await waitUntil {
-            payloadStore.metricPayloads.count == 1 && payloadStore.diagnosticPayloads.count == 1
-        }
         #expect(payloadStore.metricPayloads.count == 1)
         #expect(payloadStore.diagnosticPayloads.count == 1)
     }
@@ -143,20 +158,23 @@ struct DiagnosticsServiceTests {
         #expect(unsubscribeCalls == 1)
     }
 
-    /// Polls until `condition` holds. The timeout only bounds the *failing*
-    /// path — the loop returns the moment the condition is true — so a generous
-    /// budget costs a passing run nothing and is purely flake insurance. One
-    /// second was not enough: `collectionStartsWhenFlagAndOptInEnabled` records
-    /// its issue waiting on `Observations` to propagate a flag change, and CI
-    /// runs this suite alongside 70-odd other cases in parallel, where that
-    /// propagation loses the scheduler race often enough to redden unrelated
-    /// PRs. Seen on #115, whose diff doesn't touch this package. Five seconds
-    /// wasn't enough either: the same test (this time waiting on a
-    /// `.utility`-priority ingest `Task`, not the flag `Observations`) needed
-    /// 33.6s under CI contention on 2026-08-29. Bumped generously rather than
-    /// incrementally since the cost of over-provisioning here is zero.
+    /// Polls until `condition` holds. Only
+    /// `refreshesSubscriptionWhenFeatureFlagChanges` still needs this, and only
+    /// because there is no way to await an `Observations` hop directly — the
+    /// point of that test is that the observation is wired up at all, so
+    /// calling `refreshSubscription()` by hand would assert nothing.
+    ///
+    /// Everything else here is now deterministic. `ingest` returns its persist
+    /// `Task`, so `collectionStartsWhenFlagAndOptInEnabled` awaits the work
+    /// instead of watching for its side effects; that test was the one that
+    /// actually flaked, twice — a 1s budget reddened #115, and 5s wasn't enough
+    /// either when it needed 33.6s under CI contention on 2026-08-29.
+    ///
+    /// The timeout only bounds the *failing* path — the loop returns the moment
+    /// the condition is true — so this is sized generously for an in-process
+    /// observation hop with no I/O, not tuned.
     private func waitUntil(
-        timeoutSeconds: TimeInterval = 60,
+        timeoutSeconds: TimeInterval = 10,
         intervalNanoseconds: UInt64 = 10_000_000,
         condition: @escaping () -> Bool
     ) async {

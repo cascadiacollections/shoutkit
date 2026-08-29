@@ -1,5 +1,38 @@
 # Decisions
 
+## 2026-08-29 (returning the ingest `Task` instead of raising a poll timeout again)
+
+`DiagnosticsServiceTests.collectionStartsWhenFlagAndOptInEnabled` reddened `main` — it polled
+for `payloadStore` side effects with a 5s budget and needed 33.6s under CI contention. That was
+the second time this test flaked on the same helper: #115 had already raised the budget from 1s
+to 5s. Raising it a third time was the obvious move and is the one rejected here, because the
+number was never the problem. The full `Persistence` suite takes 35-45s under an 8-way loaded
+host, so any budget scaled to "how long CI feels like taking" is a guess that gets re-guessed
+on the next slow runner.
+
+**`ingest` now returns its persist `Task` (`@discardableResult`, so it stays fire-and-forget for
+the two MetricKit call sites), and the test awaits `.value`.** The wait is now causal rather
+than temporal: there is no timeout to tune and no scheduler race to lose. This is a deliberate
+widening of an internal API for testability — `ingest` is not `public`, so the MIT surface is
+unchanged.
+
+**The two negative tests got stronger, not just faster.** They asserted the payload store was
+empty *synchronously*, which would also have held if a task had been spawned and merely hadn't
+run yet — a latent false pass that could never have caught a regression letting collection
+through while the flag was off. They now assert `ingest` returns `nil`, i.e. that no work was
+scheduled at all.
+
+`waitUntil` survives for `refreshesSubscriptionWhenFeatureFlagChanges` only, and its timeout
+dropped 60s → 10s. There is no way to await an `Observations` hop directly, and driving it by
+calling `refreshSubscription()` by hand would assert nothing — that the observation is wired up
+at all is the whole point of that test. Its wait is an in-process hop with no I/O, so 10s is
+generous for what remains.
+
+Verified rather than assumed: the full 83-test suite passed 3× under 8-way CPU load (the
+original failure mode), `swiftlint --strict` is clean on both files, and `Persistence` builds
+for `iOS Simulator` — the only configuration that compiles the `MXMetricManagerSubscriber`
+extension where the returned task is discarded.
+
 ## 2026-08-20 (fading a rejoin in, instead of trying to buffer around it)
 
 Reported as a Siri/TTS interruption "clipping forward" after it ends. Live radio has no
