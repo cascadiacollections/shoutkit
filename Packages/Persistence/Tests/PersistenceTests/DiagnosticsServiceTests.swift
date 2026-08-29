@@ -150,9 +150,13 @@ struct DiagnosticsServiceTests {
     /// its issue waiting on `Observations` to propagate a flag change, and CI
     /// runs this suite alongside 70-odd other cases in parallel, where that
     /// propagation loses the scheduler race often enough to redden unrelated
-    /// PRs. Seen on #115, whose diff doesn't touch this package.
+    /// PRs. Seen on #115, whose diff doesn't touch this package. Five seconds
+    /// wasn't enough either: the same test (this time waiting on a
+    /// `.utility`-priority ingest `Task`, not the flag `Observations`) needed
+    /// 33.6s under CI contention on 2026-08-29. Bumped generously rather than
+    /// incrementally since the cost of over-provisioning here is zero.
     private func waitUntil(
-        timeoutSeconds: TimeInterval = 5,
+        timeoutSeconds: TimeInterval = 60,
         intervalNanoseconds: UInt64 = 10_000_000,
         condition: @escaping () -> Bool
     ) async {
