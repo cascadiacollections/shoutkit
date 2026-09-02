@@ -1,0 +1,10 @@
+# Rust build output
+rust/target/
+rust/generated/
+
+# build.sh output (regenerate with ./build.sh)
+build/
+
+# SPM build output and the xcframework build.sh drops in for the package to consume
+swift/.build/
+swift/artifacts/
