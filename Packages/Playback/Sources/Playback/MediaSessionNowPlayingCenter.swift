@@ -141,9 +141,10 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
     /// typical 600 px album art (~60 KB) passes through as-is.
     nonisolated static let maxPassthroughArtworkBytes = 512 * 1024
 
-    /// Bounds what a long drive on a bad link can accumulate. Dropping the whole
-    /// table just re-arms every retry, which under the retry policy is a
-    /// recoverable state rather than a lost one.
+    /// Bounds what a long drive on a bad link can accumulate. Overflow evicts the
+    /// least-recently-failed entry, one at a time, so each URL's attempt count
+    /// survives — clearing the table wholesale would hand a dead URL a fresh set
+    /// of retries every time the table filled.
     nonisolated static let maxArtworkFailureURLs = 64
 
     /// Defaults to `.nowPlayingArtwork`, not the in-app `.artwork` session.

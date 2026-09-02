@@ -81,8 +81,14 @@ extension MediaSessionNowPlayingCenter {
     }
 
     private func recordArtworkFailure(for url: URL) {
-        if artworkFailures[url] == nil, artworkFailures.count >= Self.maxArtworkFailureURLs {
-            artworkFailures.removeAll()
+        // Evict the single least-recently-failed entry rather than clearing the
+        // table. Wiping it would reset every attempt count, so a persistently
+        // dead URL could exceed `maximumAttempts` in one session whenever enough
+        // unique track-art URLs failed to fill the table — which is exactly the
+        // unbounded retrying the cap exists to prevent.
+        if artworkFailures[url] == nil, artworkFailures.count >= Self.maxArtworkFailureURLs,
+           let oldest = artworkFailures.min(by: { $0.value.lastAttempt < $1.value.lastAttempt })?.key {
+            artworkFailures.removeValue(forKey: oldest)
         }
         var failure = artworkFailures[url] ?? ArtworkFailure(attempts: 0, lastAttempt: Self.clock.now)
         failure.attempts += 1
