@@ -55,6 +55,12 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     /// ``handleUnexpectedStop()`` for why the decision waits.
     private var stopClassificationTask: Task<Void, Never>?
 
+    /// The in-flight volume ramp from a silent rejoin up to full volume — see
+    /// AudioStreamingPlaybackEngine+VolumeRamp.swift. `internal` rather than
+    /// `private` for the same reason as the session file: that extension drives
+    /// it from outside this file.
+    var volumeRampTask: Task<Void, Never>?
+
     /// How long a `.stopped` transition may stay unattributed while the
     /// end-of-playback callback that would claim it is still in flight. Both
     /// callbacks are dispatched to the main queue from the same block of
@@ -111,6 +117,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         sessionDeactivationTask?.cancel()
         sessionActivationTask?.cancel()
         stopClassificationTask?.cancel()
+        volumeRampTask?.cancel()
         #if canImport(CoreMotion)
         headphoneMotionManager.stopDeviceMotionUpdates()
         #endif
@@ -126,6 +133,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         hasReportedFailure = false
         hasReportedEndOfStream = false
         stopClassificationTask?.cancel()
+        silenceForUpcomingPlayback()
         withActiveSession { [weak self] in
             // A newer start (or a stop) supersedes this one; the pending
             // activation is cancelled for those, and this is the belt to that
@@ -140,11 +148,13 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         // session refused could still start audio moments after the listener —
         // or the system, mid-interruption — asked for silence.
         cancelPendingSessionActivation()
+        volumeRampTask?.cancel()
         player.pause()
         onStatusChange?(.paused)
     }
 
     public func resume() {
+        silenceForUpcomingPlayback()
         withActiveSession { [weak self] in
             guard let self else { return }
             // `AudioPlayer.resume()` acts only when AudioStreaming's own state is
@@ -167,6 +177,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         stopClassificationTask?.cancel()
         cancelPendingSessionActivation()
         sessionDeactivationTask?.cancel()
+        volumeRampTask?.cancel()
         player.stop()
         sessionDeactivationTask = Task { @MainActor in
             await self.deactivateSessionAfterStop()
@@ -181,6 +192,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         hasReportedFailure = false
         hasReportedEndOfStream = false
         stopClassificationTask?.cancel()
+        silenceForUpcomingPlayback()
         // `play(url:)` doesn't always change the player's public state (it is
         // already `.bufferring` when a stalled stream is rejoined), so the
         // transition out of paused has to be reported here or the controller
@@ -323,6 +335,7 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
         executeOnMainActor(for: player) {
             switch newState {
             case .playing:
+                self.fadeInVolume()
                 self.onStatusChange?(.playing)
             case .bufferring:
                 self.onStatusChange?(.buffering)

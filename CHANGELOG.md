@@ -13,16 +13,30 @@ All notable changes to ShoutKit are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
-- **Album art shows up again on Bluetooth car stereos.** In a car, the artwork either stayed
-  frozen on whatever had played before ShoutKit or never appeared at all — not the track's cover,
-  not even the station's own. Two things were behind it. A change meant to stop artwork downloads
-  from competing with the audio stream put them in the queue the system deprioritizes hardest, so
-  on a live connection the image often never arrived. And at the start of a session the app told
-  the car about artwork it hadn't downloaded yet — a car asks for cover art once and doesn't ask
-  again, so that one request was spent on an image that wasn't ready. Artwork the lock screen,
-  Dynamic Island, and car are waiting on now downloads at normal priority, and the app waits until
-  it has the image in hand before announcing it. In-app artwork still yields to the stream, which
-  is what that change was for
+- **Album art shows up again on Bluetooth car stereos.** In a car, artwork either stayed frozen on
+  whatever had played before ShoutKit or never appeared at all — not the track's cover, not even
+  the station's own. Two things were behind it. A change meant to stop artwork downloads from
+  competing with the audio stream put them in the queue the system deprioritizes hardest, so while
+  a station was playing the image often never arrived at all. And when you started playing, or
+  switched stations, the app told the car about artwork it hadn't downloaded yet — a car asks for
+  cover art once and doesn't ask again, so that one request was spent on an image that wasn't
+  ready. Artwork the lock screen, Dynamic Island, and car are waiting on now downloads at normal
+  priority, and the app waits until it has the image in hand before announcing it, in every case
+  rather than most of them. In-app artwork still yields to the stream, which is what that change
+  was for
+
+## [0.4.0] — 2026-08-30
+
+### Fixed
+- **Playback no longer pops when it rejoins a station after Siri, a TTS announcement, or a
+  phone call interrupts it.** Live radio has no position to resume from, so every rejoin
+  reconnects at the live edge — but it used to do that at full volume, which read as an
+  audible click or jump-cut. It now fades in over a third of a second instead
+- **Album art no longer shows as a broken/undefined image on Tesla right after the first
+  track of a stream starts.** A station with no artwork of its own had nothing on screen yet
+  when the first track's album art resolved, and that "nothing yet" state was mistaken for the
+  one case where advertising unfetched art immediately is fine (switching stations). The art is
+  now held back until its bytes are actually in hand, same as every other track boundary
 - **Spatial Audio no longer crashes the app on launch.** The feature's head-tracking touches
   `CMHeadphoneMotionManager` at bootstrap regardless of whether Spatial Audio is turned on, but
   the app's Info.plist never declared `NSMotionUsageDescription` — iOS aborted the process on
@@ -99,6 +113,9 @@ All notable changes to ShoutKit are documented here. The format follows
   visible row never fetch the same image twice
 
 ### Added
+- **Top Tracks**: the Library tab now shows your most-played songs — over the last week, the
+  last month, or all time — with cover art where it's available, right alongside Recently
+  Heard
 - **Apple TV app**: ShoutKit on tvOS, built for the Siri Remote — a now-playing banner over
   Recent and Popular station shelves, with play/pause and stop, and the system Now Playing panel
   (TV button) showing artwork and responding to the remote's transport controls. It runs the same

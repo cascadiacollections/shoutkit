@@ -161,4 +161,22 @@ struct NowPlayingArtworkPolicyTests {
     @Test func resolvedNothingAtAllPresentsNothing() {
         #expect(decide(artwork: .resolved(nil), presented: albumArt) == .present(nil))
     }
+
+    /// The Tesla regression: a station with no artwork of its own has nothing
+    /// presented yet (`held == nil`) by the time the first track's album art
+    /// resolves — but that is still the same station, not a switch, so the
+    /// unfetched art must not be advertised before its bytes exist.
+    @Test func resolvedFirstTrackArtOnAStationWithNoArtworkOfItsOwnHoldsUntilFetched() {
+        #expect(
+            decide(artwork: .resolved(albumArt))
+                == .hold(current: nil, pending: albumArt)
+        )
+    }
+
+    @Test func resolvedFirstTrackArtIsPresentedOnceItsBytesAreResident() {
+        #expect(
+            decide(artwork: .resolved(albumArt), ready: [albumArt])
+                == .present(albumArt)
+        )
+    }
 }

@@ -47,6 +47,7 @@ extension AppDependencies {
                 title: heard.track.title,
                 artist: heard.track.artist,
                 heardAt: heard.track.receivedAt,
+                artworkURL: heard.artworkURL,
                 appleMusicURL: heard.appleMusicURL
             )
         }

@@ -36,12 +36,13 @@ enum NowPlayingArtworkPolicy {
         /// surface re-runs the decision once `pending` is ready, and the identity
         /// flips exactly once — with the image already in hand.
         ///
-        /// `current` is `nil` on a cold start, when there is nothing worth
-        /// holding: advertise no artwork rather than a URL whose bytes we don't
-        /// have. A head unit asks for cover art once per identity and does not
-        /// retry, so offering it a URL backed only by a lazy network fetch spends
-        /// that one request on something that usually isn't ready in time. Waiting
-        /// costs the lock screen a beat and buys the car the image.
+        /// `current` is `nil` whenever there is nothing worth holding: the station
+        /// has no artwork of its own (2026-08-16), or this is a cold start or a
+        /// station switch (2026-09-02). In every one of those shapes the interim
+        /// state is "nothing" rather than the still-unfetched `pending`, because a
+        /// head unit asks for cover art once per identity and does not retry —
+        /// advertising a URL backed only by a lazy network fetch spends that one
+        /// request on an image that isn't ready.
         case hold(current: URL?, pending: URL)
     }
 
@@ -68,8 +69,8 @@ enum NowPlayingArtworkPolicy {
         let target: URL?
         switch artwork {
         case .resolving:
-            // Hold what's on screen. With nothing held — first play, or a station
-            // switch — the station's own artwork is what we aim at next.
+            // Keep what's on screen. With nothing held — a cold start, or a
+            // station switch — the station's own artwork is what we aim at next.
             target = held ?? stationArtworkURL
         case let .resolved(url):
             target = url ?? stationArtworkURL
@@ -82,6 +83,12 @@ enum NowPlayingArtworkPolicy {
         guard held != target, readyArtworkURLs.contains(target) == false else {
             return .present(target)
         }
+        // Everything else waits for bytes, including the station switch that used
+        // to be carved out of this check (2026-08-16). A switch is where the car
+        // is *most* likely to be holding the previous app's cover, and presenting
+        // an unfetched URL there spends its single request on nothing. The switch
+        // is also rare and user-initiated, so the extra identity change it costs
+        // doesn't touch the one-change-per-track budget this policy exists to keep.
         return .hold(current: held, pending: target)
     }
 }

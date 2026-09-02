@@ -1,23 +1,23 @@
 # Decisions
 
-## 2026-09-02 (Bluetooth artwork regressed: `.background` is the wrong tier for an image a head unit is blocked on, and the cold start never had bytes in hand)
+## 2026-09-02 (Bluetooth artwork, twice more: `.background` is the wrong tier for it, and the station-switch carve-out was the last hole)
 
-Reported from a Tesla again — neither per-track album art nor the station's own artwork
-resolving over Bluetooth. The 2026-08-06 fix for exactly this was never verified on-device (its
-own entry says so), so this is one confirmed regression plus one gap that fix left open.
+Reported from a Tesla again — neither per-track album art nor the station's own artwork resolving
+over Bluetooth. Two causes: one a regression introduced since the 2026-08-06 fix, one the last
+remaining case of the gap 2026-08-16 closed most of.
 
-**The regression: #173 moved now-playing artwork onto `networkServiceType = .background`.** That
-entry (2026-08-13, below) is right about the problem it set out to solve — nothing in this repo
-can raise the audio stream's priority, because AudioStreaming owns that `URLSession`, so the only
-lever is to lower artwork's. What it missed is that it swept four different kinds of artwork into
-one session. A row thumbnail on `.background` arrives late and is re-requested the next time the
-row is looked at; that is the case the reasoning was written for and it still holds. The
-now-playing image is not that case. `.background` is documented as traffic the user is not
-actively waiting for, and it is the tier the system defers first when something else is moving
-bytes — which in this app is always true, because the stream never goes idle. Worse,
-`MediaSessionNowPlayingCenter` deliberately **refuses to advertise artwork whose bytes it does not
-hold**, so on this path a deferred fetch is not a late image, it is no image for the entire track.
-The August fix's central invariant was routed through the one session guaranteed to starve it.
+**#173 moved now-playing artwork onto `networkServiceType = .background`.** That entry (2026-08-13)
+is right about the problem it set out to solve: nothing in this repo can raise the audio stream's
+priority, because AudioStreaming owns that `URLSession`, so the only lever is to lower artwork's.
+What it missed is that it swept four different kinds of artwork into one session. A row thumbnail
+on `.background` arrives late and is re-requested the next time the row is looked at; that is the
+case the reasoning was written for and it still holds. The now-playing image is not that case.
+`.background` is documented as traffic the user is not actively waiting for, and it is the tier the
+system defers first when something else is moving bytes — which in this app is always true, because
+the stream never goes idle. Worse, `MediaSessionNowPlayingCenter` deliberately **refuses to
+advertise artwork whose bytes it does not hold**, so on this path a deferred fetch is not a late
+image, it is no image for the entire track. The 2026-08-06 fix's central invariant was routed
+through the one session guaranteed to starve it.
 
 `URLSessionHTTPTransport.nowPlayingArtwork` is a third tier, for the single image a *system*
 surface is blocked on: `NowPlayingCenter`, `MediaSessionNowPlayingCenter`, and
@@ -29,27 +29,177 @@ argument is untouched, and prefetch stays on `.speculative`. Both new-tier sessi
 `URLSessionConfiguration.default`, so they share `URLCache.shared` and art already fetched for an
 in-app surface is served from cache rather than downloaded twice.
 
-**The gap: on a cold start the policy advertised a URL it had no bytes for.** `NowPlayingArtworkPolicy`
-held only when something was *already* presented. With nothing held — first play, or a station
-switch — it advertised the target immediately and `MediaSessionNowPlayingCenter` installed its
-lazy `Artwork` provider, which starts a download when asked. The 2026-08-06 entry records this as
-deliberate ("so the lock screen never regresses"), and for the lock screen it is fine: the lock
-screen can wait. AVRCP cannot. The head unit is told the track changed, asks for cover art once
-over OBEX/BIP, and does not retry — so the first artwork of every session, station art included,
-was spending the car's single request on a fetch that had not started yet. That is precisely the
-"even the station artwork is wrong" half of the report.
+**The station switch no longer skips the residency check — reversing the carve-out 2026-08-16
+deliberately preserved.** That entry fixed the same-station case and explicitly kept "a genuine
+switch still presents immediately (unchanged, still tested)", inherited from 2026-08-06. The
+trouble is which paths are a switch. `isSameStation` compares against `presentedStationID`, which
+is `nil` until something has been presented — so a **cold start is a station switch**, and the very
+first artwork of every session took the carve-out and was advertised unfetched. That is the "even
+the station artwork is wrong" half of this report, and it is also the exact symptom 2026-08-06
+opened with: the car still showing whatever had played in Apple Music before launch.
 
-`Decision.hold` now carries `current: URL?`, so a cold start holds *nothing* and advertises no
-artwork until the bytes land. The identity then flips once, to a URL whose provider is a memory
-hand-off — the same shape the steady-state path already had. The cost is that the lock screen goes
-without art for one fetch instead of showing it as soon as the network answers; that is a beat on
-a surface that can wait, in exchange for the image actually arriving on one that cannot. The lazy
-provider is still installed for a URL marked unfetchable, which is unchanged: a failed fetch must
-release the hold rather than pin the previous track's cover for the next song.
+The carve-out's rationale was that a switch interrupts the surface anyway, so there is nothing to
+gain by delaying the new identity behind a fetch. That reads as a cost-free simplification and
+isn't: a switch is precisely where the car is *most* likely to be holding a foreign cover, so
+spending its one request on an unready URL is where it hurts most. Against that, the cost of
+holding is an extra identity change on an event that is rare and user-initiated — it does not touch
+the one-change-per-track budget this policy exists to keep. `.resolving` was folded into the same
+gate for the same reason; it had been presenting `held ?? stationArtworkURL` eagerly. `decide` is
+now a single path: compute the target, present it if it is already advertised or servable without a
+fetch, otherwise hold with whatever is worth holding — possibly nothing — and fetch.
 
-**Still unverified on-device**, same as August. Both changes are from the AVRCP contract and the
-code, and the check that matters is a Tesla, a station carrying ICY metadata, and artwork that
-changes once per track and lands within a few seconds of the title.
+**Still unverified on-device**, same as both prior attempts; this repo cannot test AVRCP directly.
+The check that matters is a Tesla, a station carrying ICY metadata, and artwork that changes once
+per track and lands within a few seconds of the title. Three fixes deep on a bug no test here can
+observe end-to-end is itself the finding: the unit tests pin `decide`'s shape exactly and have been
+green through all three, because the failures were in what surrounded it — which session the fetch
+used, and which paths were exempted from the check.
+
+## 2026-08-29 (returning the ingest `Task` instead of raising a poll timeout again)
+
+`DiagnosticsServiceTests.collectionStartsWhenFlagAndOptInEnabled` reddened `main` — it polled
+for `payloadStore` side effects with a 5s budget and needed 33.6s under CI contention. That was
+the second time this test flaked on the same helper: #115 had already raised the budget from 1s
+to 5s. Raising it a third time was the obvious move and is the one rejected here, because the
+number was never the problem. The full `Persistence` suite takes 35-45s under an 8-way loaded
+host, so any budget scaled to "how long CI feels like taking" is a guess that gets re-guessed
+on the next slow runner.
+
+**`ingest` now returns its persist `Task` (`@discardableResult`, so it stays fire-and-forget for
+the two MetricKit call sites), and the test awaits `.value`.** The wait is now causal rather
+than temporal: there is no timeout to tune and no scheduler race to lose. This is a deliberate
+widening of an internal API for testability — `ingest` is not `public`, so the MIT surface is
+unchanged.
+
+**The two negative tests got stronger, not just faster.** They asserted the payload store was
+empty *synchronously*, which would also have held if a task had been spawned and merely hadn't
+run yet — a latent false pass that could never have caught a regression letting collection
+through while the flag was off. They now assert `ingest` returns `nil`, i.e. that no work was
+scheduled at all.
+
+`waitUntil` survives for `refreshesSubscriptionWhenFeatureFlagChanges` only, and its timeout
+dropped 60s → 10s. There is no way to await an `Observations` hop directly, and driving it by
+calling `refreshSubscription()` by hand would assert nothing — that the observation is wired up
+at all is the whole point of that test. Its wait is an in-process hop with no I/O, so 10s is
+generous for what remains.
+
+Verified rather than assumed: the full 83-test suite passed 3× under 8-way CPU load (the
+original failure mode), `swiftlint --strict` is clean on both files, and `Persistence` builds
+for `iOS Simulator` — the only configuration that compiles the `MXMetricManagerSubscriber`
+extension where the returned task is discarded.
+
+## 2026-08-20 (fading a rejoin in, instead of trying to buffer around it)
+
+Reported as a Siri/TTS interruption "clipping forward" after it ends. Live radio has no
+position to lose, so this was never a buffering gap in the sense the report implied — confirmed
+by reading `PlaybackController+Interruptions.swift` and `+Recovery.swift`: every resume, from an
+interruption or otherwise, is a fresh `startPlayback(of:isReconnect: true)` that rejoins the
+stream at whatever the live edge currently is. `DECISIONS.md` had already declined tuning
+`AVAudioSession.setPreferredIOBufferDuration` (left open, 2026-08-03 entry) and
+`AVPlayerItem.preferredForwardBufferDuration` (declined outright) for unrelated reasons, and
+neither would have changed this: a bigger client-side buffer only helps when replaying stored
+audio across a gap, and a rejoin never does that — it always jumps to "now."
+
+So the real defect wasn't a missing buffer, it was the audible discontinuity itself: a rejoin's
+first decoded frames land at full volume, reading as a click or a jump-cut. Considered adding a
+genuine DVR-style delay buffer to `Playback` so a listener could catch up across an
+interruption — rejected as disproportionate: it adds latency for every listener, on every
+station, to soften a comparatively rare event, and would need plumbing through both
+`AudioStreamingPlaybackEngine` and any future `AudioOutput` conformer.
+
+Fixed at the smaller, safer layer instead: `AudioStreamingPlaybackEngine` now zeroes
+`AudioPlayer.volume` before every `start`/`resume`/`replayCurrentStream` (`silenceForUpcomingPlayback()`)
+and ramps it back to full over 350ms once the engine actually reports `.playing`
+(`fadeInVolume()`), in the new `AudioStreamingPlaybackEngine+VolumeRamp.swift` split (the
+400-line `file_length` limit was already at its ceiling). The resume watchdog in
+`+Recovery.swift` was left untouched — at `resumeWatchdogTimeout: .seconds(2)` it's already
+about as tight as it can go without risking false-positive teardowns on a slower rejoin, so
+there was nothing safe to tighten there.
+
+Not verified on-device: this environment has no Mac host or simulator, so `swift test` and
+`xcodebuild` could not run. `AudioPlayer` is a concrete type from the `AudioStreaming` package
+with no test seam, matching the rest of this file having no dedicated
+`PlaybackEngineAudioStreaming` test target — the ramp logic was checked by reading, not by a
+suite. Revisit if the fade is audible as a fade rather than invisible, or if it doesn't fully
+mask the artifact in practice.
+
+## 2026-08-20 (Top Tracks: most-played local history, with cover art)
+
+Added a "Top Tracks" report to the Library tab — most-played (title, artist) pairs over a
+week/month/all-time window, with cover art where a lookup found any. This was scoped first as
+a feasibility study (see the exploratory pass earlier the same day): the metadata parsing and
+per-track artwork lookup already existed end-to-end; the gap was persistence.
+
+**Aggregation is a pure function over `[RecentlyHeardTrack]`, not a new SwiftData query
+method.** `LibraryView` already holds every recently-heard row via `@Query`; grouping that
+array by `(title, artist)` in `TopTracksAggregator.aggregate(_:timeframe:limit:now:)` means the
+report recomputes for free whenever the underlying table changes, with no separate fetch/cache
+to keep in sync. `now:` is an injected parameter (not `.now` inline) purely so tests are
+deterministic against a fixed clock — the existing `heardAt` fields already carry real
+`Date`s.
+
+**Matching requires both a title and an artist.** ICY metadata sometimes carries only one
+(`logRecentlyHeardTrack` already accepts `title != nil || artist != nil`), but a one-sided
+value can't be matched against a later play with any confidence, so those rows are counted in
+Recently Heard but excluded from Top Tracks. Matching is case-insensitive (`"SONG"` and
+`"Song"` collapse) since ICY sources aren't consistent about casing across pushes.
+
+**`RecentlyHeardTrack` gained `artworkURLString`, alongside the existing `appleMusicURLString`
+field — an additive, default-`nil` column, the same lightweight-migration shape as
+`FavoriteStation.sortIndex` and `RecentStation.playCount`.** Getting it populated required
+threading `artworkURL` through `HeardTrack` (`Playback`) — previously it carried only
+`appleMusicURL`, because nothing downstream needed the art URL until now. The album-art lookup
+itself needed no change: `AlbumArtLookup`/`trackResourcesProvider` already resolve it per
+track, per the 2026-07-09 "album art discovery" decision; this only widens the pipe carrying
+the result down to the persistence callback, and it stays in `AppDependencies+Callbacks.swift`
+— `Playback` still has no DesignSystem/iTunes dependency.
+
+**`recentlyHeardLimit` raised from 250 to 1000.** A global 250-row cap across every station was
+too shallow to answer "most played this week/month" once a listener had more than a handful of
+repeats — the window could roll off a real repeat before a second play ever landed inside it.
+Rows are small (two strings, two optional URL strings, a date), so 4x the retention is cheap;
+this is still a rolling cap, not unbounded history, matching the existing trim-on-write
+behavior in `LibraryStore+RecentlyHeard.swift`.
+
+**Historical artwork is never re-fetched at report time.** Some earlier designs for this
+considered re-querying `AlbumArtLookup` live when rendering the report, to backfill art for
+rows logged before this change (which have `artworkURLString == nil`). Rejected: it would
+re-hit the iTunes API for old tracks whose in-memory lookup cache has long since reset, is pure
+added latency on a report screen, and duplicates a job `AlbumArtLookup` already does at
+listen-time. Old rows simply show the placeholder from `StationArtworkView`; only plays logged
+after this change carry art.
+
+## 2026-08-16 (the Tesla artwork race the 2026-08-06 fix left open)
+
+Reported from a Tesla again: album art shows as a broken/undefined image specifically after
+the first track's ICY metadata arrives, on a fresh stream start. The 2026-08-06 entry flagged
+its own fix as "unverified on-device" and asked to revisit if that proved insufficient — this
+is that signal, and it's a real gap in `NowPlayingArtworkPolicy.decide`, not a new class of bug.
+
+The `.resolved` branch used `guard let held` to decide whether it was safe to skip the
+"is `target` resident yet" check, on the theory that `held == nil` only happens on a genuine
+station switch — where advertising immediately, unfetched, is the documented, tested trade-off
+("a station switch has nothing worth holding on to"). But `held` is also `nil` whenever the
+*same* station simply has no artwork of its own: nothing was ever advertised for it, so there
+is nothing to hold, even though `isSameStation` is true. In that shape — no station favicon,
+first track's own album art resolves before its bytes are fetched — the guard read "nothing
+held" as "safe to skip the residency check" and advertised the still-unfetched track artwork
+immediately. AVRCP then got a track-changed notification for an identity with nothing behind
+it, which is exactly the failure mode the 2026-08-06 fix existed to prevent, just reached by a
+different door.
+
+Fixed by branching on `isSameStation` directly instead of inferring it from `held`'s
+nullability: a genuine switch still presents immediately (unchanged, still tested), but a
+same-station push with `held == nil` now holds — the interim state is "nothing", not the
+unready target — until `target` lands in `readyArtworkURLs`. That required widening
+`Decision.hold`'s `current` from `URL` to `URL?`; `MediaSessionNowPlayingCenter.apply(_:)`
+needed no change, since it already assigns straight into a `URL?`.
+
+Still unverified on a real Tesla — this repo has no way to test AVRCP directly — but the new
+`resolvedFirstTrackArtOnAStationWithNoArtworkOfItsOwnHoldsUntilFetched` and
+`…IsPresentedOnceItsBytesAreResident` cases in `NowPlayingArtworkPolicyTests` pin the exact
+shape down at the unit level, and every pre-existing case in that file (including the
+station-switch one) still holds.
 
 ## 2026-08-15 (closing three gaps left open by the MIT API-surface review)
 
