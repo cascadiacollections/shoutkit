@@ -48,12 +48,41 @@ gate for the same reason; it had been presenting `held ?? stationArtworkURL` eag
 now a single path: compute the target, present it if it is already advertised or servable without a
 fetch, otherwise hold with whatever is worth holding — possibly nothing — and fetch.
 
-**Still unverified on-device**, same as both prior attempts; this repo cannot test AVRCP directly.
-The check that matters is a Tesla, a station carrying ICY metadata, and artwork that changes once
-per track and lands within a few seconds of the title. Three fixes deep on a bug no test here can
-observe end-to-end is itself the finding: the unit tests pin `decide`'s shape exactly and have been
-green through all three, because the failures were in what surrounded it — which session the fetch
-used, and which paths were exempted from the check.
+**Verified on-device on 2026-09-02** — a Tesla, over Bluetooth, on a commute, with a debug build
+of this branch. That is the first confirmation across three attempts at this bug: 2026-08-06 and
+2026-08-16 both shipped marked "unverified", and both were wrong in ways no test here could
+observe. Recording the confirmation is the point of this paragraph — a fix for an AVRCP bug is a
+hypothesis until a car says otherwise, and this repo has now twice mistaken a green unit suite for
+one. The suite pins `decide`'s shape exactly and was green through all three attempts, because
+every actual failure was in what surrounded it: which session the fetch used, and which paths were
+exempted from the residency check.
+
+**A third fix went in on the same report, before that drive: a failed fetch was a life sentence.**
+`unavailableArtwork` was a flat `Set<URL>`, and `clear()` — a full stop — was the only thing that
+emptied it. So a single miss during a tunnel or a dead cell marked that URL unavailable for the
+rest of the session: the policy kept treating it as advertisable (correctly — a URL we cannot
+download must not pin the previous track's cover), but `fetchArtworkIfNeeded` refused to try it
+again, so the bytes never arrived and a station whose art missed once showed nothing for the whole
+drive. Replaced with `[URL: ArtworkFailure]` carrying an attempt count and a `ContinuousClock`
+timestamp, and `NowPlayingArtworkRetryPolicy` — pure and host-testable, like
+`NowPlayingArtworkPolicy`, for the same reason: `MediaSessionNowPlayingCenter` is behind
+`canImport(NowPlaying)` and the host suite cannot reach it at all. Five attempts at 5s/15s/45s/120s
+still retries after a several-minute dead zone while bounding a genuinely dead URL (a 404 on a
+delisted favicon) to five fetches per session rather than one per track boundary forever.
+`ContinuousClock` rather than a wall clock so device sleep and a time-zone change mid-drive don't
+re-arm a retry.
+
+Recovery needed one more thing. The framework latches whatever it resolved for a content id and
+never re-pulls it, which is why `AppliedContent` deliberately excludes artwork residency — but that
+reasoning assumed a *successful* resolution. What it latched for a failed URL is a failure, so
+bytes arriving later under the same id would change nothing on screen. `recoveredArtwork` tracks
+URLs that failed before they succeeded and appends `#r` to their content id, making the flip new
+content. A URL recovers at most once, so the id is stable afterwards.
+
+The artwork machinery moved to `MediaSessionNowPlayingCenter+Artwork.swift` on the way: the main
+file was at 359 of `file_length`'s 400 and this pushed it over. Split along the seam the class
+already had — the identity decision on one side, the bytes behind it on the other — per the house
+remedy in `CLAUDE.md` rather than a `swiftlint:disable`.
 
 ## 2026-08-29 (returning the ingest `Task` instead of raising a poll timeout again)
 

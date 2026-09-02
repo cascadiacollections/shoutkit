@@ -92,3 +92,39 @@ enum NowPlayingArtworkPolicy {
         return .hold(current: held, pending: target)
     }
 }
+
+/// Whether a now-playing artwork fetch that has already failed should be tried
+/// again yet.
+///
+/// Split out pure, like ``NowPlayingArtworkPolicy``, because the class that uses
+/// it (`MediaSessionNowPlayingCenter`) is behind `canImport(NowPlaying)` and so
+/// cannot be exercised by the host test suite at all. The decision worth pinning
+/// down is this one, not the bookkeeping around it.
+enum NowPlayingArtworkRetryPolicy {
+    /// A failure is a delay, not a verdict. The case this exists for is a tunnel
+    /// or a dead cell early in a drive: before, the first failed fetch marked a
+    /// URL unavailable for the rest of the session — `clear()`, a full stop, was
+    /// the only thing that reset it — so a station whose artwork missed once
+    /// showed nothing for the whole drive.
+    static let maximumAttempts = 5
+
+    /// 5s, 15s, 45s, then 120s. Wide enough to still be retrying after a
+    /// several-minute dead zone, and with `maximumAttempts` it bounds a genuinely
+    /// dead URL (a 404 on a delisted station favicon) to five fetches per
+    /// session rather than one per track boundary forever.
+    static func retryDelay(afterAttempts attempts: Int) -> Duration {
+        let schedule = [5, 15, 45, 120]
+        let index = min(max(attempts, 1), schedule.count) - 1
+        return .seconds(schedule[index])
+    }
+
+    /// - Parameters:
+    ///   - attempts: how many times this URL's fetch has already failed. Zero
+    ///               (never attempted) is always a go.
+    ///   - elapsed:  time since the last failed attempt.
+    static func shouldAttempt(afterAttempts attempts: Int, elapsed: Duration) -> Bool {
+        guard attempts > 0 else { return true }
+        guard attempts < maximumAttempts else { return false }
+        return elapsed >= retryDelay(afterAttempts: attempts)
+    }
+}
