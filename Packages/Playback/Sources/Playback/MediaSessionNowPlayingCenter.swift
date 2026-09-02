@@ -57,7 +57,7 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
 
     /// The last `update(...)`, replayed when a background artwork fetch lands so
     /// the content identity can flip to artwork whose bytes we now hold.
-    private struct Push {
+    struct Push {
         let station: Station
         let track: NowPlayingMetadata?
         let isPlaying: Bool
@@ -78,7 +78,7 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
 
     private let state = SessionState()
     private var session: MediaSession<SessionState>?
-    private let transport: any HTTPTransporting
+    let transport: any HTTPTransporting
 
     /// Materialized artwork bytes keyed by source URL — validated (and normalized
     /// where needed) so building an `ArtworkRepresentation` from them is local
@@ -88,24 +88,45 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
     /// closure. Small and bounded: a session cycles through the station's own art
     /// plus the current track's, and this stays resident while backgrounded, which
     /// is exactly when jetsam hunts.
-    private var residentArtwork: [URL: Data] = [:]
-    private var residentOrder: [URL] = []
+    var residentArtwork: [URL: Data] = [:]
+    var residentOrder: [URL] = []
 
-    /// URLs whose fetch already failed. Treated as advertisable so a URL we can't
-    /// download can't pin a previous track's image on screen forever; the system
-    /// is free to try the lazy provider itself.
-    private var unavailableArtwork: Set<URL> = []
+    /// URLs whose fetch has failed, with how often and when last tried. Treated
+    /// as advertisable so a URL we can't download can't pin a previous track's
+    /// image on screen forever; the system is free to try the lazy provider
+    /// itself. Unlike the flat `Set` this replaced, a failure here is a delay
+    /// rather than a verdict — see ``NowPlayingArtworkRetryPolicy``.
+    var artworkFailures: [URL: ArtworkFailure] = [:]
 
-    private var artworkFetches: [URL: Task<Void, Never>] = [:]
+    /// URLs that failed at least once and then fetched successfully. Their
+    /// content identity carries a marker so the flip to resident bytes reads as
+    /// *new* content: the framework latches whatever it resolved for an id, and
+    /// what it latched for these was a failure, so re-offering a memory-backed
+    /// provider under the same id would change nothing on screen. A URL recovers
+    /// at most once — after that its bytes are resident and never re-fetched — so
+    /// the id stays stable thereafter.
+    var recoveredArtwork: Set<URL> = []
 
-    private var presentedArtworkURL: URL?
+    struct ArtworkFailure {
+        var attempts: Int
+        var lastAttempt: ContinuousClock.Instant
+    }
+
+    var artworkFetches: [URL: Task<Void, Never>] = [:]
+
+    var presentedArtworkURL: URL?
     private var presentedStationID: String?
-    private var lastPush: Push?
+    var lastPush: Push?
     private var appliedContent: AppliedContent?
 
     /// Four covers the working set (station art + current track + the track being
     /// fetched) with room to spare, and bounds what a backgrounded session pins.
-    private nonisolated static let residentArtworkCapacity = 4
+    nonisolated static let residentArtworkCapacity = 4
+
+    /// One clock for the retry bookkeeping. `ContinuousClock` rather than a wall
+    /// clock because backoff must survive the device sleeping and the user
+    /// changing time zones mid-drive, neither of which should re-arm a retry.
+    nonisolated static let clock = ContinuousClock()
 
     /// Artwork URLs are content-addressed — iTunes serves one `…600x600bb.jpg` per
     /// album and station favicons are stable — so a forced revalidation buys
@@ -113,20 +134,27 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
     /// every cover-art request. (`NowPlayingCenter` keeps
     /// `.reloadRevalidatingCacheData`: it re-fetches once per station switch, not
     /// once per surface request.)
-    private nonisolated static let artworkCachePolicy: URLRequest.CachePolicy = .returnCacheDataElseLoad
+    nonisolated static let artworkCachePolicy: URLRequest.CachePolicy = .returnCacheDataElseLoad
 
     /// Above this, re-encode rather than hand the payload over untouched. A 3 MB
     /// station favicon is a slow Bluetooth cover-art transfer for no visible gain;
     /// typical 600 px album art (~60 KB) passes through as-is.
-    private nonisolated static let maxPassthroughArtworkBytes = 512 * 1024
+    nonisolated static let maxPassthroughArtworkBytes = 512 * 1024
 
-    private nonisolated static let maxUnavailableArtworkURLs = 64
+    /// Bounds what a long drive on a bad link can accumulate. Overflow evicts the
+    /// least-recently-failed entry, one at a time, so each URL's attempt count
+    /// survives — clearing the table wholesale would hand a dead URL a fresh set
+    /// of retries every time the table filled.
+    nonisolated static let maxArtworkFailureURLs = 64
 
-    /// Defaults to `.artwork` rather than `.shared`: this artwork loads while
-    /// the station it belongs to is actively streaming, and `.artwork`'s
-    /// `.background` service type keeps it from competing with that stream on
-    /// a weak connection (see `URLSessionHTTPTransport.artworkConfiguration()`).
-    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.artwork) {
+    /// Defaults to `.nowPlayingArtwork`, not the in-app `.artwork` session.
+    /// This class refuses to advertise artwork whose bytes it does not hold, so
+    /// a deferred fetch is not a late image — it is no image at all, for the
+    /// whole track. `.artwork`'s `.background` service type is precisely the
+    /// tier the system defers behind a sustained audio stream, which is why
+    /// this path gets its own (see
+    /// `URLSessionHTTPTransport.nowPlayingArtworkConfiguration()`).
+    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.nowPlayingArtwork) {
         self.transport = transport
     }
 
@@ -147,7 +175,9 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
         artworkFetches.removeAll()
         // Resident bytes survive a stop — replaying the same station shouldn't
         // re-download — but a failed fetch must be retryable on the next play.
-        unavailableArtwork.removeAll()
+        // `recoveredArtwork` survives alongside `residentArtwork` so a replayed
+        // station keeps the identity its bytes were last advertised under.
+        artworkFailures.removeAll()
         state.content = nil
         state.playbackSnapshot = MediaPlaybackSnapshot(state: .stopped)
         // Dropping the session invalidates it and removes the entry from the
@@ -157,7 +187,7 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
 
     // MARK: - Content
 
-    private func apply(_ push: Push) {
+    func apply(_ push: Push) {
         if session == nil {
             state.commands = makeCommands()
             session = MediaSession(state)
@@ -197,7 +227,12 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
         // That makes every identity change a track-changed notification on
         // Bluetooth, which is why `advertised` only moves to artwork we already
         // hold: one change per track, with the image ready behind it.
-        let contentID = advertised.map { "\(push.station.id)#\($0.absoluteString)" } ?? push.station.id
+        let contentID = advertised.map { url in
+            // "#r" only for a URL that failed before it succeeded: the framework
+            // latched that failure against the plain id, so the identity has to
+            // move for it to pull the bytes we now hold.
+            "\(push.station.id)#\(url.absoluteString)\(recoveredArtwork.contains(url) ? "#r" : "")"
+        } ?? push.station.id
         let genre = push.station.genre.isEmpty ? nil : push.station.genre
         let applied = AppliedContent(
             contentID: contentID,
@@ -231,110 +266,6 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
     private func programName(for track: NowPlayingMetadata?) -> String? {
         let program = [track?.title, track?.artist].compactMap(\.self).joined(separator: " — ")
         return program.isEmpty ? nil : program
-    }
-
-    // MARK: - Artwork
-
-    private var readyArtworkURLs: Set<URL> {
-        Set(residentArtwork.keys).union(unavailableArtwork)
-    }
-
-    /// Hands the system an `Artwork` for `url`. Once the bytes are resident the
-    /// provider answers from memory, so nothing stands between the track-changed
-    /// notification and the head unit's cover-art request.
-    private func artwork(for url: URL?) -> Artwork? {
-        guard let url else { return nil }
-        if let residentData = residentArtwork[url] {
-            return Artwork(id: url.absoluteString) { @Sendable _ in
-                try ArtworkRepresentation(data: residentData)
-            }
-        }
-        // Not resident yet (first play, or a fetch that failed): keep the lazy
-        // provider so the lock screen still gets an image.
-        let transport = self.transport
-        return Artwork(id: url.absoluteString) { @Sendable _ in
-            let data = try await Self.artworkData(for: url, transport: transport)
-            return try ArtworkRepresentation(data: data)
-        }
-    }
-
-    private func fetchArtworkIfNeeded(_ url: URL) {
-        guard residentArtwork[url] == nil else { return }
-        guard unavailableArtwork.contains(url) == false else { return }
-        guard artworkFetches[url] == nil else { return }
-
-        let transport = self.transport
-        artworkFetches[url] = Task { [weak self] in
-            let data = try? await Self.artworkData(for: url, transport: transport)
-            guard Task.isCancelled == false, let self else { return }
-            self.artworkFetches[url] = nil
-            if let data {
-                self.storeResidentArtwork(data, for: url)
-            } else {
-                // Bounded: a long drive over a bad link must not accumulate every
-                // URL it failed. Dropping the whole set just re-arms the retries.
-                if self.unavailableArtwork.count >= Self.maxUnavailableArtworkURLs {
-                    self.unavailableArtwork.removeAll()
-                }
-                self.unavailableArtwork.insert(url)
-            }
-            // Re-run the decision: `url` is now advertisable either way, so a
-            // held identity can move on instead of waiting for the next update.
-            if let lastPush = self.lastPush {
-                self.apply(lastPush)
-            }
-        }
-    }
-
-    private func storeResidentArtwork(_ data: Data, for url: URL) {
-        if residentArtwork[url] == nil {
-            residentOrder.append(url)
-        }
-        residentArtwork[url] = data
-        while residentOrder.count > Self.residentArtworkCapacity {
-            let evicted = residentOrder.removeFirst()
-            // Never evict what is on screen; the provider for it is a memory
-            // hand-off and would otherwise silently become a network fetch.
-            guard evicted != presentedArtworkURL else {
-                residentOrder.append(evicted)
-                continue
-            }
-            residentArtwork.removeValue(forKey: evicted)
-        }
-    }
-
-    /// Downloads `url` and returns bytes `ArtworkRepresentation` accepts,
-    /// normalizing when it doesn't or when the payload is oversized. Returns the
-    /// bytes rather than the representation so the result can be cached and handed
-    /// to a `@Sendable` provider closure; rebuilding the representation from
-    /// resident bytes is local work, which is the whole point.
-    private nonisolated static func artworkData(
-        for url: URL,
-        transport: any HTTPTransporting
-    ) async throws -> Data {
-        var request = URLRequest(url: url)
-        request.cachePolicy = artworkCachePolicy
-        let data = try await transport.data(for: request)
-        if data.count <= maxPassthroughArtworkBytes, (try? ArtworkRepresentation(data: data)) != nil {
-            return data
-        }
-        guard let normalized = normalizedArtworkData(from: data) else {
-            throw URLError(.cannotDecodeContentData)
-        }
-        // Fail here rather than inside the provider, so a payload we can't turn
-        // into artwork is recorded as unavailable instead of being advertised.
-        _ = try ArtworkRepresentation(data: normalized)
-        return normalized
-    }
-
-    /// Some remote album-art payloads decode fine in ImageIO but are rejected by
-    /// `ArtworkRepresentation(data:)`, and some station favicons are far larger
-    /// than any now-playing surface needs. Normalize through a downsampling decode
-    /// + re-encode. 600 px matches what the iTunes lookup asks for and comfortably
-    /// covers the lock-screen tile; PNG rather than JPEG because favicons routinely
-    /// carry transparency that JPEG would flatten to black.
-    private nonisolated static func normalizedArtworkData(from data: Data) -> Data? {
-        ImageIODownsampler.encode(data, maxPixelSize: 600, outputType: .png)
     }
 
     // MARK: - Commands

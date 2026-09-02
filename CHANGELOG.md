@@ -12,6 +12,24 @@ All notable changes to ShoutKit are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- **Album art shows up again on Bluetooth car stereos.** In a car, artwork either stayed frozen on
+  whatever had played before ShoutKit or never appeared at all — not the track's cover, not even
+  the station's own. Two things were behind it. A change meant to stop artwork downloads from
+  competing with the audio stream put them in the queue the system deprioritizes hardest, so while
+  a station was playing the image often never arrived at all. And when you started playing, or
+  switched stations, the app told the car about artwork it hadn't downloaded yet — a car asks for
+  cover art once and doesn't ask again, so that one request was spent on an image that wasn't
+  ready. Artwork the lock screen, Dynamic Island, and car are waiting on now downloads at normal
+  priority, and the app waits until it has the image in hand before announcing it, in every case
+  rather than most of them. In-app artwork still yields to the stream, which is what that change
+  was for
+- **Artwork recovers after a tunnel or a dead cell instead of staying blank for the rest of the
+  drive.** If a cover failed to download once — no signal for a moment — the app gave up on that
+  image until you stopped playback entirely, so a station could go the whole drive with nothing.
+  It now retries a few times over a couple of minutes, and picks the artwork back up when signal
+  returns
+
 ## [0.4.0] — 2026-08-30
 
 ### Fixed

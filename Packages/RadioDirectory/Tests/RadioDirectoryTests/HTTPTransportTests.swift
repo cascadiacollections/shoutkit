@@ -76,6 +76,22 @@ struct HTTPTransportTests {
     }
 
     @Test
+    func nowPlayingArtworkConfigurationStaysOutOfTheDeferrableTier() {
+        let configuration = URLSessionHTTPTransport.nowPlayingArtworkConfiguration()
+
+        // NOT `.background`: a lock screen, Live Activity, or Bluetooth head unit
+        // is blocked on this image, and `MediaSessionNowPlayingCenter` will not
+        // advertise artwork whose bytes it doesn't hold — so a deferred fetch is
+        // no artwork for the whole track, not merely a late one. NOT
+        // `.responsiveData` either; one image per track doesn't need to contend
+        // with the audio stream for front-of-queue.
+        #expect(configuration.networkServiceType == .default)
+        #expect(configuration.allowsConstrainedNetworkAccess)
+        #expect(configuration.allowsExpensiveNetworkAccess)
+        #expect(configuration.waitsForConnectivity == false)
+    }
+
+    @Test
     func escapesPlusInQueryValues() throws {
         var components = try #require(URLComponents(string: "https://example.com/search"))
         components.queryItems = [URLQueryItem(name: "q", value: "C+C Music Factory")]

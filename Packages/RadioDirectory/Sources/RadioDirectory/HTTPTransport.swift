@@ -149,6 +149,41 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
         session: URLSession(configuration: URLSessionHTTPTransport.artworkConfiguration())
     )
 
+    /// A configuration for the single image a *system* now-playing surface is
+    /// blocked on — the lock screen, the Live Activity, and above all a Bluetooth
+    /// head unit, which over AVRCP is told the track changed and then fetches
+    /// cover art on a separate, slow channel with no retry of its own.
+    ///
+    /// `.default` rather than `.background`, which is what `artworkConfiguration()`
+    /// uses. `.background` is documented as traffic "the user is not actively
+    /// waiting for", and the system treats it accordingly: it is the tier most
+    /// readily deferred when something else is moving bytes, and in this app
+    /// something always is — a sustained audio stream that never goes idle. That
+    /// is tolerable for an in-app row thumbnail, which simply arrives late and
+    /// can be re-requested when the row is looked at again. It is fatal here,
+    /// because `MediaSessionNowPlayingCenter` will not advertise artwork whose
+    /// bytes it does not hold, and the car asks exactly once.
+    ///
+    /// `.responsiveData` is not the answer either — that was the pre-#173 setting
+    /// this deliberately does not restore. One ~60 KB image per track does not
+    /// need front-of-queue treatment; it needs to not be in the deferrable tier.
+    /// `.default` is the ordinary priority in between, which is what this traffic
+    /// actually is.
+    public static func nowPlayingArtworkConfiguration() -> URLSessionConfiguration {
+        let configuration = URLSessionConfiguration.default
+        configuration.waitsForConnectivity = false
+        configuration.networkServiceType = .default
+        return configuration
+    }
+
+    /// Shared transport for artwork the system now-playing surfaces are waiting
+    /// on. Shares `URLCache.shared` with every other session built from
+    /// `URLSessionConfiguration.default`, so art already fetched for an in-app
+    /// surface is served from cache here rather than re-downloaded.
+    public static let nowPlayingArtwork = URLSessionHTTPTransport(
+        session: URLSession(configuration: URLSessionHTTPTransport.nowPlayingArtworkConfiguration())
+    )
+
     private let session: URLSession
 
     public init(session: URLSession = .shared) {

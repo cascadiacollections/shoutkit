@@ -36,8 +36,21 @@ struct NowPlayingArtworkPolicyTests {
 
     // MARK: - Resolving
 
-    @Test func resolvingFallsBackToStationArtOnFirstPush() {
-        #expect(decide(artwork: .resolving, stationArtworkURL: stationArt) == .present(stationArt))
+    @Test func resolvingOnFirstPushFetchesStationArtBeforeAdvertisingIt() {
+        // Cold start: nothing is held and the station's bytes aren't in hand, so
+        // there is nothing to advertise yet. Advertising the URL here would spend
+        // the head unit's single cover-art request on a lazy network fetch.
+        #expect(
+            decide(artwork: .resolving, stationArtworkURL: stationArt)
+                == .hold(current: nil, pending: stationArt)
+        )
+    }
+
+    @Test func resolvingPresentsStationArtOnceItsBytesAreReady() {
+        #expect(
+            decide(artwork: .resolving, stationArtworkURL: stationArt, ready: [stationArt])
+                == .present(stationArt)
+        )
     }
 
     @Test func resolvingHoldsTheArtworkAlreadyOnScreen() {
@@ -51,12 +64,23 @@ struct NowPlayingArtworkPolicyTests {
     }
 
     @Test func resolvingAfterAStationSwitchDropsTheOldStationsArt() {
+        // Nothing from the previous station is worth holding, and the new
+        // station's art still has to be fetched before it can be advertised.
         #expect(
             decide(
                 artwork: .resolving,
                 stationArtworkURL: stationArt,
                 presented: albumArt,
                 isSameStation: false
+            ) == .hold(current: nil, pending: stationArt)
+        )
+        #expect(
+            decide(
+                artwork: .resolving,
+                stationArtworkURL: stationArt,
+                presented: albumArt,
+                isSameStation: false,
+                ready: [stationArt]
             ) == .present(stationArt)
         )
     }
@@ -119,10 +143,18 @@ struct NowPlayingArtworkPolicyTests {
         #expect(decide(artwork: .resolved(albumArt), presented: albumArt) == .present(albumArt))
     }
 
-    @Test func resolvedArtworkAfterAStationSwitchIsPresentedWithoutHolding() {
+    @Test func resolvedArtworkAfterAStationSwitchHoldsNothingButStillWaitsForBytes() {
         #expect(
             decide(artwork: .resolved(albumArt), presented: nextAlbumArt, isSameStation: false)
-                == .present(albumArt)
+                == .hold(current: nil, pending: albumArt)
+        )
+        #expect(
+            decide(
+                artwork: .resolved(albumArt),
+                presented: nextAlbumArt,
+                isSameStation: false,
+                ready: [albumArt]
+            ) == .present(albumArt)
         )
     }
 

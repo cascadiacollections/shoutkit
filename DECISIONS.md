@@ -1,5 +1,89 @@
 # Decisions
 
+## 2026-09-02 (Bluetooth artwork, twice more: `.background` is the wrong tier for it, and the station-switch carve-out was the last hole)
+
+Reported from a Tesla again — neither per-track album art nor the station's own artwork resolving
+over Bluetooth. Two causes: one a regression introduced since the 2026-08-06 fix, one the last
+remaining case of the gap 2026-08-16 closed most of.
+
+**#173 moved now-playing artwork onto `networkServiceType = .background`.** That entry (2026-08-13)
+is right about the problem it set out to solve: nothing in this repo can raise the audio stream's
+priority, because AudioStreaming owns that `URLSession`, so the only lever is to lower artwork's.
+What it missed is that it swept four different kinds of artwork into one session. A row thumbnail
+on `.background` arrives late and is re-requested the next time the row is looked at; that is the
+case the reasoning was written for and it still holds. The now-playing image is not that case.
+`.background` is documented as traffic the user is not actively waiting for, and it is the tier the
+system defers first when something else is moving bytes — which in this app is always true, because
+the stream never goes idle. Worse, `MediaSessionNowPlayingCenter` deliberately **refuses to
+advertise artwork whose bytes it does not hold**, so on this path a deferred fetch is not a late
+image, it is no image for the entire track. The 2026-08-06 fix's central invariant was routed
+through the one session guaranteed to starve it.
+
+`URLSessionHTTPTransport.nowPlayingArtwork` is a third tier, for the single image a *system*
+surface is blocked on: `NowPlayingCenter`, `MediaSessionNowPlayingCenter`, and
+`NowPlayingActivityCoordinator`. It sets `.default` — not `.responsiveData`, which is the pre-#173
+setting and is not being restored. One ~60 KB image per track does not need to contend with the
+stream for front-of-queue; it needs to not be in the deferrable tier. `.default` is the ordinary
+priority in between. The DesignSystem loaders stay on `.artwork`/`.background`, where #173's
+argument is untouched, and prefetch stays on `.speculative`. Both new-tier sessions are built from
+`URLSessionConfiguration.default`, so they share `URLCache.shared` and art already fetched for an
+in-app surface is served from cache rather than downloaded twice.
+
+**The station switch no longer skips the residency check — reversing the carve-out 2026-08-16
+deliberately preserved.** That entry fixed the same-station case and explicitly kept "a genuine
+switch still presents immediately (unchanged, still tested)", inherited from 2026-08-06. The
+trouble is which paths are a switch. `isSameStation` compares against `presentedStationID`, which
+is `nil` until something has been presented — so a **cold start is a station switch**, and the very
+first artwork of every session took the carve-out and was advertised unfetched. That is the "even
+the station artwork is wrong" half of this report, and it is also the exact symptom 2026-08-06
+opened with: the car still showing whatever had played in Apple Music before launch.
+
+The carve-out's rationale was that a switch interrupts the surface anyway, so there is nothing to
+gain by delaying the new identity behind a fetch. That reads as a cost-free simplification and
+isn't: a switch is precisely where the car is *most* likely to be holding a foreign cover, so
+spending its one request on an unready URL is where it hurts most. Against that, the cost of
+holding is an extra identity change on an event that is rare and user-initiated — it does not touch
+the one-change-per-track budget this policy exists to keep. `.resolving` was folded into the same
+gate for the same reason; it had been presenting `held ?? stationArtworkURL` eagerly. `decide` is
+now a single path: compute the target, present it if it is already advertised or servable without a
+fetch, otherwise hold with whatever is worth holding — possibly nothing — and fetch.
+
+**Verified on-device on 2026-09-02** — a Tesla, over Bluetooth, on a commute, with a debug build
+of this branch. That is the first confirmation across three attempts at this bug: 2026-08-06 and
+2026-08-16 both shipped marked "unverified", and both were wrong in ways no test here could
+observe. Recording the confirmation is the point of this paragraph — a fix for an AVRCP bug is a
+hypothesis until a car says otherwise, and this repo has now twice mistaken a green unit suite for
+one. The suite pins `decide`'s shape exactly and was green through all three attempts, because
+every actual failure was in what surrounded it: which session the fetch used, and which paths were
+exempted from the residency check.
+
+**A third fix went in on the same report, before that drive: a failed fetch was a life sentence.**
+`unavailableArtwork` was a flat `Set<URL>`, and `clear()` — a full stop — was the only thing that
+emptied it. So a single miss during a tunnel or a dead cell marked that URL unavailable for the
+rest of the session: the policy kept treating it as advertisable (correctly — a URL we cannot
+download must not pin the previous track's cover), but `fetchArtworkIfNeeded` refused to try it
+again, so the bytes never arrived and a station whose art missed once showed nothing for the whole
+drive. Replaced with `[URL: ArtworkFailure]` carrying an attempt count and a `ContinuousClock`
+timestamp, and `NowPlayingArtworkRetryPolicy` — pure and host-testable, like
+`NowPlayingArtworkPolicy`, for the same reason: `MediaSessionNowPlayingCenter` is behind
+`canImport(NowPlaying)` and the host suite cannot reach it at all. Five attempts at 5s/15s/45s/120s
+still retries after a several-minute dead zone while bounding a genuinely dead URL (a 404 on a
+delisted favicon) to five fetches per session rather than one per track boundary forever.
+`ContinuousClock` rather than a wall clock so device sleep and a time-zone change mid-drive don't
+re-arm a retry.
+
+Recovery needed one more thing. The framework latches whatever it resolved for a content id and
+never re-pulls it, which is why `AppliedContent` deliberately excludes artwork residency — but that
+reasoning assumed a *successful* resolution. What it latched for a failed URL is a failure, so
+bytes arriving later under the same id would change nothing on screen. `recoveredArtwork` tracks
+URLs that failed before they succeeded and appends `#r` to their content id, making the flip new
+content. A URL recovers at most once, so the id is stable afterwards.
+
+The artwork machinery moved to `MediaSessionNowPlayingCenter+Artwork.swift` on the way: the main
+file was at 359 of `file_length`'s 400 and this pushed it over. Split along the seam the class
+already had — the identity decision on one side, the bytes behind it on the other — per the house
+remedy in `CLAUDE.md` rather than a `swiftlint:disable`.
+
 ## 2026-08-29 (returning the ingest `Task` instead of raising a poll timeout again)
 
 `DiagnosticsServiceTests.collectionStartsWhenFlagAndOptInEnabled` reddened `main` — it polled

@@ -71,11 +71,12 @@ public final class NowPlayingCenter: NowPlayingPresenting {
     // isolated to read this on the main actor without an escape hatch.
     private var commandTargets: [(MPRemoteCommand, Any)] = []
 
-    /// Defaults to `.artwork` rather than `.shared`: lock-screen art loads
-    /// while the station it belongs to is actively streaming, and `.artwork`'s
-    /// `.background` service type keeps it from competing with that stream on
-    /// a weak connection (see `URLSessionHTTPTransport.artworkConfiguration()`).
-    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.artwork) {
+    /// Defaults to `.nowPlayingArtwork`, not the in-app `.artwork` session:
+    /// this image is one a system surface — lock screen, and over AVRCP a
+    /// Bluetooth head unit that asks once and does not retry — is blocked on,
+    /// so it must not sit in `.background`'s deferrable tier behind the audio
+    /// stream (see `URLSessionHTTPTransport.nowPlayingArtworkConfiguration()`).
+    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.nowPlayingArtwork) {
         self.transport = transport
         configureRemoteCommands()
     }
