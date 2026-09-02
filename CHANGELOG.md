@@ -13,6 +13,16 @@ All notable changes to ShoutKit are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Album art shows up again on Bluetooth car stereos.** In a car, the artwork either stayed
+  frozen on whatever had played before ShoutKit or never appeared at all — not the track's cover,
+  not even the station's own. Two things were behind it. A change meant to stop artwork downloads
+  from competing with the audio stream put them in the queue the system deprioritizes hardest, so
+  on a live connection the image often never arrived. And at the start of a session the app told
+  the car about artwork it hadn't downloaded yet — a car asks for cover art once and doesn't ask
+  again, so that one request was spent on an image that wasn't ready. Artwork the lock screen,
+  Dynamic Island, and car are waiting on now downloads at normal priority, and the app waits until
+  it has the image in hand before announcing it. In-app artwork still yields to the stream, which
+  is what that change was for
 - **Spatial Audio no longer crashes the app on launch.** The feature's head-tracking touches
   `CMHeadphoneMotionManager` at bootstrap regardless of whether Spatial Audio is turned on, but
   the app's Info.plist never declared `NSMotionUsageDescription` — iOS aborted the process on

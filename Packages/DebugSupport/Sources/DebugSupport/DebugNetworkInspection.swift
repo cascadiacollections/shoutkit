@@ -17,10 +17,12 @@ public enum DebugNetworkInspection {
     /// `shared`; `AppDependencies.bootstrap()` calls it first thing. Compiles
     /// to a no-op in Release.
     ///
-    /// Artwork traffic no longer defaults here — it runs over
+    /// Artwork traffic no longer defaults here. In-app artwork runs over
     /// `URLSessionHTTPTransport.artwork` so it doesn't compete with the audio
-    /// stream on a weak connection (see `artworkConfiguration()`), and that
-    /// session isn't currently wired through Pulse.
+    /// stream on a weak connection (see `artworkConfiguration()`); artwork the
+    /// system now-playing surfaces are blocked on runs over
+    /// `.nowPlayingArtwork` (see `nowPlayingArtworkConfiguration()`). Neither
+    /// session is currently wired through Pulse.
     public static func install() {
         #if DEBUG
         // Build from the same latency-tuned configuration the Release session

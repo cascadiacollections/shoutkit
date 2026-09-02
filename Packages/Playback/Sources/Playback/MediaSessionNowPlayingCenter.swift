@@ -122,11 +122,14 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
 
     private nonisolated static let maxUnavailableArtworkURLs = 64
 
-    /// Defaults to `.artwork` rather than `.shared`: this artwork loads while
-    /// the station it belongs to is actively streaming, and `.artwork`'s
-    /// `.background` service type keeps it from competing with that stream on
-    /// a weak connection (see `URLSessionHTTPTransport.artworkConfiguration()`).
-    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.artwork) {
+    /// Defaults to `.nowPlayingArtwork`, not the in-app `.artwork` session.
+    /// This class refuses to advertise artwork whose bytes it does not hold, so
+    /// a deferred fetch is not a late image — it is no image at all, for the
+    /// whole track. `.artwork`'s `.background` service type is precisely the
+    /// tier the system defers behind a sustained audio stream, which is why
+    /// this path gets its own (see
+    /// `URLSessionHTTPTransport.nowPlayingArtworkConfiguration()`).
+    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.nowPlayingArtwork) {
         self.transport = transport
     }
 
@@ -249,8 +252,10 @@ public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
                 try ArtworkRepresentation(data: residentData)
             }
         }
-        // Not resident yet (first play, or a fetch that failed): keep the lazy
-        // provider so the lock screen still gets an image.
+        // Not resident. Since 2026-09-02 the policy only advertises a URL whose
+        // bytes are in hand *or* whose fetch already failed, so in practice this
+        // is the failed-fetch case: keep the lazy provider so the system gets one
+        // more chance at an image rather than none.
         let transport = self.transport
         return Artwork(id: url.absoluteString) { @Sendable _ in
             let data = try await Self.artworkData(for: url, transport: transport)

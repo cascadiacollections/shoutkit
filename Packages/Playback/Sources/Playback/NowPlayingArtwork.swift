@@ -35,7 +35,14 @@ enum NowPlayingArtworkPolicy {
         /// Keep advertising `current` and fetch `pending` in the background. The
         /// surface re-runs the decision once `pending` is ready, and the identity
         /// flips exactly once — with the image already in hand.
-        case hold(current: URL, pending: URL)
+        ///
+        /// `current` is `nil` on a cold start, when there is nothing worth
+        /// holding: advertise no artwork rather than a URL whose bytes we don't
+        /// have. A head unit asks for cover art once per identity and does not
+        /// retry, so offering it a URL backed only by a lazy network fetch spends
+        /// that one request on something that usually isn't ready in time. Waiting
+        /// costs the lock screen a beat and buys the car the image.
+        case hold(current: URL?, pending: URL)
     }
 
     /// - Parameters:
@@ -58,18 +65,23 @@ enum NowPlayingArtworkPolicy {
     ) -> Decision {
         let held = isSameStation ? presented : nil
 
+        let target: URL?
         switch artwork {
         case .resolving:
             // Hold what's on screen. With nothing held — first play, or a station
-            // switch — the station's own artwork beats going blank.
-            return .present(held ?? stationArtworkURL)
-
+            // switch — the station's own artwork is what we aim at next.
+            target = held ?? stationArtworkURL
         case let .resolved(url):
-            guard let target = url ?? stationArtworkURL else { return .present(nil) }
-            guard let held, held != target, readyArtworkURLs.contains(target) == false else {
-                return .present(target)
-            }
-            return .hold(current: held, pending: target)
+            target = url ?? stationArtworkURL
         }
+
+        guard let target else { return .present(nil) }
+        // Already advertised, or servable without a fetch (bytes resident, or a
+        // fetch already tried and failed — holding a stale image hostage to a URL
+        // we cannot fetch is worse than showing the fallback).
+        guard held != target, readyArtworkURLs.contains(target) == false else {
+            return .present(target)
+        }
+        return .hold(current: held, pending: target)
     }
 }

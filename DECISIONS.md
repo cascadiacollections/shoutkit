@@ -1,5 +1,56 @@
 # Decisions
 
+## 2026-09-02 (Bluetooth artwork regressed: `.background` is the wrong tier for an image a head unit is blocked on, and the cold start never had bytes in hand)
+
+Reported from a Tesla again — neither per-track album art nor the station's own artwork
+resolving over Bluetooth. The 2026-08-06 fix for exactly this was never verified on-device (its
+own entry says so), so this is one confirmed regression plus one gap that fix left open.
+
+**The regression: #173 moved now-playing artwork onto `networkServiceType = .background`.** That
+entry (2026-08-13, below) is right about the problem it set out to solve — nothing in this repo
+can raise the audio stream's priority, because AudioStreaming owns that `URLSession`, so the only
+lever is to lower artwork's. What it missed is that it swept four different kinds of artwork into
+one session. A row thumbnail on `.background` arrives late and is re-requested the next time the
+row is looked at; that is the case the reasoning was written for and it still holds. The
+now-playing image is not that case. `.background` is documented as traffic the user is not
+actively waiting for, and it is the tier the system defers first when something else is moving
+bytes — which in this app is always true, because the stream never goes idle. Worse,
+`MediaSessionNowPlayingCenter` deliberately **refuses to advertise artwork whose bytes it does not
+hold**, so on this path a deferred fetch is not a late image, it is no image for the entire track.
+The August fix's central invariant was routed through the one session guaranteed to starve it.
+
+`URLSessionHTTPTransport.nowPlayingArtwork` is a third tier, for the single image a *system*
+surface is blocked on: `NowPlayingCenter`, `MediaSessionNowPlayingCenter`, and
+`NowPlayingActivityCoordinator`. It sets `.default` — not `.responsiveData`, which is the pre-#173
+setting and is not being restored. One ~60 KB image per track does not need to contend with the
+stream for front-of-queue; it needs to not be in the deferrable tier. `.default` is the ordinary
+priority in between. The DesignSystem loaders stay on `.artwork`/`.background`, where #173's
+argument is untouched, and prefetch stays on `.speculative`. Both new-tier sessions are built from
+`URLSessionConfiguration.default`, so they share `URLCache.shared` and art already fetched for an
+in-app surface is served from cache rather than downloaded twice.
+
+**The gap: on a cold start the policy advertised a URL it had no bytes for.** `NowPlayingArtworkPolicy`
+held only when something was *already* presented. With nothing held — first play, or a station
+switch — it advertised the target immediately and `MediaSessionNowPlayingCenter` installed its
+lazy `Artwork` provider, which starts a download when asked. The 2026-08-06 entry records this as
+deliberate ("so the lock screen never regresses"), and for the lock screen it is fine: the lock
+screen can wait. AVRCP cannot. The head unit is told the track changed, asks for cover art once
+over OBEX/BIP, and does not retry — so the first artwork of every session, station art included,
+was spending the car's single request on a fetch that had not started yet. That is precisely the
+"even the station artwork is wrong" half of the report.
+
+`Decision.hold` now carries `current: URL?`, so a cold start holds *nothing* and advertises no
+artwork until the bytes land. The identity then flips once, to a URL whose provider is a memory
+hand-off — the same shape the steady-state path already had. The cost is that the lock screen goes
+without art for one fetch instead of showing it as soon as the network answers; that is a beat on
+a surface that can wait, in exchange for the image actually arriving on one that cannot. The lazy
+provider is still installed for a URL marked unfetchable, which is unchanged: a failed fetch must
+release the hold rather than pin the previous track's cover for the next song.
+
+**Still unverified on-device**, same as August. Both changes are from the AVRCP contract and the
+code, and the check that matters is a Tesla, a station carrying ICY metadata, and artwork that
+changes once per track and lands within a few seconds of the title.
+
 ## 2026-08-15 (closing three gaps left open by the MIT API-surface review)
 
 Follow-ups to #177/#178, from a second pass over the reusable packages' public surface.
