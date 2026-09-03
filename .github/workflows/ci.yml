@@ -63,6 +63,18 @@ jobs:
       - name: Check MIT packages take no GPL-3.0 dependencies
         run: .github/scripts/check-license-boundary.sh
 
+  # Cheap, and catches a class of break that otherwise only surfaces by hand on
+  # a device: the app's registered URL scheme drifting from the one the link
+  # parser accepts. See DECISIONS.md (2026-09-03).
+  deep-links:
+    name: Deep link scheme
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check the registered URL scheme matches StationLink
+        run: .github/scripts/check-url-scheme.sh
+
   # Deliberately ungated and first: it is by far the cheapest job here, and both
   # mac jobs below `needs` it.
   lint:
