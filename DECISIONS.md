@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-09-03 (the rename missed the URL scheme, and nothing failed to build)
+
+`Info.plist` registers `holmdel` as the app's URL scheme; `StationLink.appScheme`
+still said `shoutkit`. The rename updated the plist and `handoffActivityType` on
+the line directly below `appScheme`, and missed the line between them.
+
+Nothing caught it. It compiles either way — the two values never meet at a type
+boundary, only at runtime, in the OS. `QuickPlayWidgetPublisher` went on writing
+`shoutkit://station?...` into the widget's snapshot, and iOS routes that scheme
+to whatever still claims it: nothing, or an old ShoutKit build if one is
+installed. `StationLaunchRouter` would have rejected the `holmdel://` links the
+system actually delivers. So Home Screen quick-play, Shortcuts, and promo links
+were all broken by a rename, and the only way to notice was to tap a widget on a
+device.
+
+Found while looking for a way to seed a "recently played" station from the
+command line during UX work — not by a test, which is the point.
+
+`.github/scripts/check-url-scheme.sh` now compares the two and fails CI on a
+mismatch. It parses the plist with `python3`/`plistlib` rather than PlistBuddy so
+it can run on the cheap Linux runner alongside the license-boundary check. This
+is the same habit as asserting Pulse links only into Debug and that
+`Packages/Playback` resolves no binary artifacts: a check that can fail, for
+something that was believed to be true and was not.
+
 ## 2026-09-02 (Bluetooth artwork, twice more: `.background` is the wrong tier for it, and the station-switch carve-out was the last hole)
 
 Reported from a Tesla again — neither per-track album art nor the station's own artwork resolving

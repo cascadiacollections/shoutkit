@@ -13,6 +13,12 @@ below) are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- **Stations in the Home Screen widget open the app again.** Renaming the app changed the
+  link the widget hands to iOS, but not the link the app was listening for, so tapping a
+  station in the widget opened nothing — or an older copy of the app, if one was still
+  installed. The same break affected Shortcuts and shared station links
+
 ### Changed
 - **The app is now named Holmdel.** ShoutKit remains the name of this repo's MIT-licensed radio
   SDK (`Packages/`); Holmdel is the distributed app built on it. This changes the app's bundle
