@@ -9,11 +9,25 @@ import UIKit
 /// so the decoded bitmap is sized to this view (`size` × display scale)
 /// instead of the source's native resolution, and repeated appearances in
 /// lazy lists hit a pressure-evicting `NSCache` instead of re-decoding.
+///
+/// Two sizings. A **fixed** one for rows and the mini-player, where the point
+/// size is known and is also the decode size. And a **flexible** one for poster
+/// grids, where the tile width is whatever the grid hands the cell: the view
+/// stays square and fills the width, and decoding is sized from an explicit
+/// `decodeSize` hint instead. The hint is deliberately not the exact rendered
+/// width — an adaptive grid's cell width is a fraction of the container and
+/// isn't known until layout, and a decode size that varied per device would
+/// fragment the thumbnail cache by a few points for no visible gain.
 public struct StationArtworkView: View {
     /// The point size used by station list rows (`StationRow`). Exposed so
     /// artwork prefetching can request the exact same decoded size — and thus
     /// the same cache key — the row will ask for.
     public static let listSize: CGFloat = 56
+
+    /// The decode size used by poster tiles in ``ShoutKitLayout/artworkColumns``.
+    /// Sized to the widest cell that layout produces, so the bitmap is
+    /// downscaled at worst and never upscaled.
+    public static let posterDecodeSize: CGFloat = 240
 
     /// The target decode size, in pixels, for list-row artwork at a given
     /// display scale — the value to pass to `ArtworkThumbnailLoader.prefetch`.
@@ -21,9 +35,28 @@ public struct StationArtworkView: View {
         listSize * displayScale
     }
 
+    /// The target decode size, in pixels, for poster-tile artwork.
+    public static func posterPixelSize(displayScale: CGFloat) -> CGFloat {
+        posterDecodeSize * displayScale
+    }
+
+    fileprivate enum Sizing {
+        /// A known square edge, used for both layout and decoding.
+        case fixed(CGFloat)
+        /// Fills the cell's width and stays square; decodes at `decode` points.
+        case flexible(decode: CGFloat)
+
+        var decodeSize: CGFloat {
+            switch self {
+            case let .fixed(size): size
+            case let .flexible(decode): decode
+            }
+        }
+    }
+
     private let artworkURL: URL?
     private let fallbackArtworkURL: URL?
-    private let size: CGFloat
+    private let sizing: Sizing
     private let cornerRadius: CGFloat
     private let isPlaying: Bool
 
@@ -42,61 +75,100 @@ public struct StationArtworkView: View {
     ) {
         self.artworkURL = artworkURL
         self.fallbackArtworkURL = fallbackArtworkURL
-        self.size = size
+        sizing = .fixed(size)
+        self.cornerRadius = cornerRadius
+        self.isPlaying = isPlaying
+    }
+
+    /// Square artwork that fills the width it is given — the poster-grid tile.
+    public static func filling(
+        artworkURL: URL?,
+        fallbackArtworkURL: URL? = nil,
+        cornerRadius: CGFloat = ShoutKitRadius.card,
+        isPlaying: Bool = false,
+        decodeSize: CGFloat = StationArtworkView.posterDecodeSize
+    ) -> StationArtworkView {
+        StationArtworkView(
+            artworkURL: artworkURL,
+            fallbackArtworkURL: fallbackArtworkURL,
+            sizing: .flexible(decode: decodeSize),
+            cornerRadius: cornerRadius,
+            isPlaying: isPlaying
+        )
+    }
+
+    private init(
+        artworkURL: URL?,
+        fallbackArtworkURL: URL?,
+        sizing: Sizing,
+        cornerRadius: CGFloat,
+        isPlaying: Bool
+    ) {
+        self.artworkURL = artworkURL
+        self.fallbackArtworkURL = fallbackArtworkURL
+        self.sizing = sizing
         self.cornerRadius = cornerRadius
         self.isPlaying = isPlaying
     }
 
     public var body: some View {
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        shape
             .fill(.tint.opacity(0.16))
-            .overlay {
-                if let thumbnail, thumbnailURL == artworkURL || thumbnailURL == fallbackArtworkURL {
-                    Image(uiImage: thumbnail)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } else {
-                    placeholder
-                }
-            }
-            .overlay {
-                if isPlaying {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .fill(.black.opacity(0.35))
-                        PlayingIndicator(color: .white, isAnimating: true)
-                    }
-                }
-            }
-            .frame(width: size, height: size)
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(.white.opacity(0.12), lineWidth: 0.5)
-            }
+            .overlay { artworkLayer }
+            .overlay { playingLayer }
+            .modifier(SquareSizing(sizing: sizing))
+            .clipShape(shape)
+            .overlay { shape.stroke(.white.opacity(0.12), lineWidth: 0.5) }
             .onChange(of: artworkRequest) { _, _ in
                 thumbnail = nil
                 thumbnailURL = nil
             }
-            .task(id: artworkRequest) {
-                let loaded = await ArtworkLoadPolicy.loadWithSource(artworkRequest) { url in
-                    await ArtworkThumbnailLoader.thumbnail(
-                        for: url,
-                        maxPixelSize: size * displayScale
-                    )
-                }
-                // A task cancelled by a URL change can still resume here with
-                // a stale (or nil, from a cancelled fetch) result — don't let
-                // it clobber the replacement task's image.
-                guard Task.isCancelled == false else { return }
-                thumbnail = loaded?.artwork
-                thumbnailURL = loaded?.sourceURL
+            .task(id: artworkRequest) { await loadArtwork() }
+    }
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+    }
+
+    @ViewBuilder
+    private var artworkLayer: some View {
+        if let thumbnail, thumbnailURL == artworkURL || thumbnailURL == fallbackArtworkURL {
+            Image(uiImage: thumbnail)
+                .resizable()
+                .scaledToFill()
+        } else {
+            placeholder
+        }
+    }
+
+    @ViewBuilder
+    private var playingLayer: some View {
+        if isPlaying {
+            ZStack {
+                shape.fill(.black.opacity(0.35))
+                PlayingIndicator(color: .white, isAnimating: true)
             }
+        }
+    }
+
+    private func loadArtwork() async {
+        let loaded = await ArtworkLoadPolicy.loadWithSource(artworkRequest) { url in
+            await ArtworkThumbnailLoader.thumbnail(
+                for: url,
+                maxPixelSize: sizing.decodeSize * displayScale
+            )
+        }
+        // A task cancelled by a URL change can still resume here with a stale
+        // (or nil, from a cancelled fetch) result — don't let it clobber the
+        // replacement task's image.
+        guard Task.isCancelled == false else { return }
+        thumbnail = loaded?.artwork
+        thumbnailURL = loaded?.sourceURL
     }
 
     private var placeholder: some View {
         Image(systemName: "dot.radiowaves.left.and.right")
-            .font(.system(size: size * 0.34))
+            .font(.system(size: sizing.decodeSize * 0.34))
             .foregroundStyle(.tint)
     }
 
@@ -105,10 +177,34 @@ public struct StationArtworkView: View {
     }
 }
 
+/// Applies the square geometry for either sizing. Split out because the two
+/// branches return different concrete types and can't be inlined into `body`
+/// without erasing them.
+private struct SquareSizing: ViewModifier {
+    let sizing: StationArtworkView.Sizing
+
+    func body(content: Content) -> some View {
+        switch sizing {
+        case let .fixed(size):
+            content.frame(width: size, height: size)
+        case .flexible:
+            content
+                .aspectRatio(1, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+        }
+    }
+}
+
 #Preview {
-    HStack {
-        StationArtworkView(artworkURL: nil)
-        StationArtworkView(artworkURL: nil, isPlaying: true)
+    VStack {
+        HStack {
+            StationArtworkView(artworkURL: nil)
+            StationArtworkView(artworkURL: nil, isPlaying: true)
+        }
+        LazyVGrid(columns: ShoutKitLayout.artworkColumns, spacing: ShoutKitSpacing.medium) {
+            StationArtworkView.filling(artworkURL: nil)
+            StationArtworkView.filling(artworkURL: nil, isPlaying: true)
+        }
     }
     .padding()
     .tint(.shoutKitAccent)

@@ -25,6 +25,65 @@ is the same habit as asserting Pulse links only into Debug and that
 `Packages/Playback` resolves no binary artifacts: a check that can fail, for
 something that was believed to be true and was not.
 
+## 2026-09-03 (UX pass: one poster grid on Listen Now, a wide play/pause, and the mini-player heart removed)
+
+A deliberate look at the three main panes against the HIG, with no attachment to
+what was there. Four changes, each with something it costs.
+
+**Listen Now is one poster grid instead of a carousel plus a row list.** The
+2026-08-13 entry deleted the Browse tab because it showed the same `topStations`
+fetch twice; what replaced it still showed that fetch as two shapes — ten poster
+cards in a horizontal carousel, then the remaining stations as 56 pt-thumbnail
+rows underneath. Disjoint slices, so nothing appeared twice, and that is exactly
+what made it hard to read: two presentations of one list, where the split point
+was an implementation detail (`carouselLimit = 10`) that nothing on screen
+explained. The grid gives every station the poster the top ten had to themselves.
+What this gives up is the carousel's ability to imply ranking by position — a
+grid reads as a set, not an order. That seems the right trade for a "popular
+right now" list nobody treats as a leaderboard. `StationCarousel` stays in
+`DesignSystem` as SDK surface; it is simply no longer used by this app.
+
+**`StationCard` and `StationArtworkView` grew a flexible width.** A grid tile's
+width belongs to the grid, not the tile. The wrinkle is decode size: artwork is
+decoded to an explicit pixel size so the thumbnail cache has a stable key, and an
+adaptive grid's cell width isn't known until layout. So flexible tiles decode at
+a fixed `posterDecodeSize` (240 pt) sized to the *widest* cell layout produces —
+downscaled at worst, never upscaled, and one cache key across every device.
+`prefetchStationArtwork` had `listPixelSize` hard-coded and now takes the size,
+because a prefetch at the wrong size is worse than none: it warms an entry
+nothing reads and the tile decodes again anyway.
+
+**The play/pause control is a wide capsule.** A circle sized for one glyph spends
+its width on the gaps beside it. Letting the primary control take the row between
+its two satellites roughly doubles the target on the most-pressed thing on the
+screen while favorite and sleep timer keep their 44 pt. It also matches what the
+current system players do, so it reads as primary without being the biggest
+circle on screen.
+
+**The mini-player lost its heart.** It put a 44 pt target for a rarely-urgent
+action beside the one control people reach for constantly, in an accessory only
+as tall as a row, and duplicated a heart that is one tap away in Now Playing.
+Favoriting is now Now Playing plus each station's context menu — and the poster
+tiles carry a favorited badge on the artwork, so the state is still visible where
+the rows used to show it. The cost is real: favoriting from the mini-player was
+one tap and is now two. Accepted, because it is not an action taken mid-song at
+speed, and the bar it was crowding is.
+
+**Favorites drops from four stacked lists to three and a drill-in.** Recently
+Heard was an unbounded list of every track ever seen, sitting below three bounded
+sections — so the pane's length grew with install age and buried what was above
+it. Top Tracks is the summary of that same data; the raw history moved behind a
+row into `RecentlyHeardListView`. Nothing was deleted.
+
+`NowPlayingView` crossed `type_body_length` doing this and was split along the
+sleep-timer seam (`NowPlayingView+SleepTimer.swift`) rather than given a
+`swiftlint:disable`, per `CONTRIBUTING.md`. That forced `sleepTimer` and
+`sleepTimerButton` to internal, since `private` doesn't cross files.
+
+Verified by building and driving the app in the simulator — grid, mini-player,
+Now Playing and Favorites each screenshotted — not by reading the diff.
+
+
 ## 2026-09-02 (Bluetooth artwork, twice more: `.background` is the wrong tier for it, and the station-switch carve-out was the last hole)
 
 Reported from a Tesla again — neither per-track album art nor the station's own artwork resolving

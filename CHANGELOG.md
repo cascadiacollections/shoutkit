@@ -20,6 +20,22 @@ below) are documented here. The format follows
   installed. The same break affected Shortcuts and shared station links
 
 ### Changed
+- **Listen Now shows every station as artwork.** The screen used to put ten stations in a
+  side-scrolling strip of covers and then list the rest as small rows underneath — the same
+  list twice, in two shapes. It is now one grid, and every station gets the same large cover
+  the first ten used to get to themselves
+- **The play button on the Now Playing screen is much bigger.** It was a circle with a lot of
+  empty space either side of it; it now stretches across the row between the heart and the
+  sleep timer, so the control you press most is the easiest one to hit. Favorite and sleep
+  timer are unchanged
+- **The mini player at the bottom of the screen is just the station and play/pause now.** The
+  heart moved out of it — it sat right beside play/pause in a bar the height of a single row,
+  which made both easy to hit by mistake. Favoriting is on the Now Playing screen, and in the
+  menu you get by pressing and holding any station. A favorited station now shows a small
+  heart on its cover in the grid
+- **The Favorites tab is shorter.** Recently Heard listed every track the app had ever seen,
+  below everything else, so the more you used the app the more scrolling it took to reach
+  anything. It now sits behind a row of its own, under Top Tracks. Nothing was removed
 - **The app is now named Holmdel.** ShoutKit remains the name of this repo's MIT-licensed radio
   SDK (`Packages/`); Holmdel is the distributed app built on it. This changes the app's bundle
   identifier (`com.cascadiacollections.holmdel`), its shared app group, and its `holmdel://` deep

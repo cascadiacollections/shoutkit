@@ -22,9 +22,14 @@ public struct StationCarousel: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .top, spacing: ShoutKitSpacing.medium) {
                 ForEach(stations) { station in
+                    // The fixed-width initializer: a carousel card's width is
+                    // what makes the next one peek in from the trailing edge,
+                    // so it can't be left to the container the way a grid
+                    // tile's is.
                     StationCard(
                         station: station,
                         phase: phase(station),
+                        width: 150,
                         onTap: { onTap(station) }
                     )
                 }

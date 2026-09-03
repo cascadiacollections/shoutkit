@@ -15,12 +15,6 @@ import SwiftUI
 /// carousel and the station list below it are disjoint slices of the same list
 /// rather than the same ten stations twice.
 public struct ListenNowView: View {
-    private enum Configuration {
-        /// How many of the top stations become poster cards. The rest fall
-        /// through to the list below, so nothing appears in both.
-        static let carouselLimit = 10
-    }
-
     @State private var viewModel: BrowseViewModel
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
@@ -54,6 +48,10 @@ public struct ListenNowView: View {
             .padding(.vertical, ShoutKitSpacing.medium)
         }
         .background(Color.shoutKitBackground)
+        // Content dissolves under the toolbar's glass rather than colliding
+        // with a hard edge. `.soft` because what scrolls under this bar is
+        // full-bleed artwork, which a hard cut slices visibly.
+        .scrollEdgeEffectStyle(.soft, for: .top)
         .task { await viewModel.refresh() }
         .refreshable { await viewModel.refresh(source: .userInitiated) }
         .onChange(of: recents.map(\.stationID), initial: true) { _, _ in
@@ -125,9 +123,7 @@ public struct ListenNowView: View {
 
             recentlyPlayed
 
-            popularCarousel(loaded)
-
-            moreStations(loaded)
+            popularStations(loaded)
         }
     }
 
@@ -207,36 +203,35 @@ public struct ListenNowView: View {
         dismissUndo = nil
     }
 
-    private func popularCarousel(_ loaded: BrowseContent) -> some View {
+    /// Every popular station, as one poster grid.
+    ///
+    /// This was a ten-card carousel above a list of rows holding the *rest* of
+    /// the same fetch — disjoint slices, so nothing appeared twice, but two
+    /// different shapes for one list. The split asked the reader to understand
+    /// that the horizontal strip and the vertical list were the same kind of
+    /// thing, and it capped the artwork on the larger half at a 56 pt row
+    /// thumbnail. One grid says it once, and gives every station the same
+    /// poster the top ten used to get to themselves.
+    private func popularStations(_ loaded: BrowseContent) -> some View {
         VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
             SectionHeaderView(String(localized: "Popular Stations", bundle: .module))
-            StationCarousel(
-                stations: Array(loaded.stations.prefix(Configuration.carouselLimit)),
-                phase: { playback?.phase(for: $0) ?? .idle },
-                onTap: { playback?.toggle($0) }
-            )
-        }
-    }
-
-    /// The tail of the popular list, as rows. The carousel above already showed
-    /// the head of it, so this section starts where that one stopped.
-    @ViewBuilder
-    private func moreStations(_ loaded: BrowseContent) -> some View {
-        let stations = Array(loaded.stations.dropFirst(Configuration.carouselLimit))
-        if stations.isEmpty == false {
-            VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
-                SectionHeaderView(String(localized: "More Stations", bundle: .module))
-                LazyVGrid(columns: ShoutKitLayout.stationColumns, spacing: ShoutKitSpacing.small) {
-                    ForEach(Array(stations.enumerated()), id: \.element.id) { index, station in
-                        StationRow(
-                            station: station,
-                            phase: playback?.phase(for: station) ?? .idle,
-                            isFavorite: library?.isFavorite(station) ?? false,
-                            onTap: { playback?.toggle(station) },
-                            onToggleFavorite: library.map { store in { store.toggleFavorite(station) } }
-                        )
-                        .prefetchStationArtwork(after: index, in: stations, displayScale: displayScale)
-                    }
+            LazyVGrid(columns: ShoutKitLayout.artworkColumns, spacing: ShoutKitSpacing.large) {
+                ForEach(Array(loaded.stations.enumerated()), id: \.element.id) { index, station in
+                    StationCard(
+                        station: station,
+                        phase: playback?.phase(for: station) ?? .idle,
+                        isFavorite: library?.isFavorite(station) ?? false,
+                        onTap: { playback?.toggle(station) },
+                        onToggleFavorite: library.map { store in { store.toggleFavorite(station) } }
+                    )
+                    .prefetchStationArtwork(
+                        after: index,
+                        in: loaded.stations,
+                        displayScale: displayScale,
+                        // Tiles decode at poster size; prefetching at row size
+                        // would warm a cache entry the tile never reads.
+                        maxPixelSize: StationArtworkView.posterPixelSize(displayScale: displayScale)
+                    )
                 }
             }
         }

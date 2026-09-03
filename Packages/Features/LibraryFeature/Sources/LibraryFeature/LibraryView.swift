@@ -5,8 +5,14 @@ import RadioDirectory
 import SwiftData
 import SwiftUI
 
-/// The Favorites tab: favorited stations plus a recently played section, backed by
-/// SwiftData. Rows play through the shared playback controller.
+/// The Favorites tab: favorited stations, recently played stations, and a
+/// summary of the tracks heard across them. Backed by SwiftData; rows play
+/// through the shared playback controller.
+///
+/// Three bounded sections and a drill-in, rather than four stacked lists. The
+/// full track history — every track ever seen, growing without limit — sits
+/// behind ``RecentlyHeardListView`` instead of below Top Tracks, which is the
+/// summary of the same data.
 public struct LibraryView: View {
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
@@ -76,14 +82,22 @@ public struct LibraryView: View {
                             }
                         }
 
-                        Section("Recently Heard") {
-                            ForEach(recentlyHeardTracks) { track in
-                                recentlyHeardRow(for: track)
+                        Section {
+                            NavigationLink {
+                                RecentlyHeardListView()
+                            } label: {
+                                Label {
+                                    Text(String(localized: "Recently Heard", bundle: .module))
+                                } icon: {
+                                    Image(systemName: "music.note.list")
+                                }
+                                .badge(recentlyHeardTracks.count)
                             }
                         }
                     }
                 }
                 .listStyle(.insetGrouped)
+                .scrollEdgeEffectStyle(.soft, for: .top)
                 .toolbar {
                     if favorites.isEmpty == false || recents.isEmpty == false {
                         ToolbarItem(placement: .topBarTrailing) {
@@ -147,51 +161,6 @@ public struct LibraryView: View {
                 content
             }
         }
-    }
-
-    private func recentlyHeardRow(for track: RecentlyHeardTrack) -> some View {
-        let appleMusicURL = track.appleMusicURLString.flatMap(URL.init(string:))
-        let content = recentlyHeardRowContent(
-            for: track,
-            isLinked: appleMusicURL != nil
-        )
-        return Group {
-            if let url = appleMusicURL {
-                Button {
-                    openURL(url)
-                } label: {
-                    content
-                }
-                .buttonStyle(.plain)
-            } else {
-                content
-            }
-        }
-    }
-
-    private func recentlyHeardRowContent(for track: RecentlyHeardTrack, isLinked: Bool) -> some View {
-        VStack(alignment: .leading, spacing: ShoutKitSpacing.extraSmall) {
-            Text(track.title ?? "Unknown Track")
-                .font(.headline)
-            Text(track.artist ?? "Unknown Artist")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            HStack {
-                Text(track.stationName)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text(track.heardAt, style: .relative)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                if isLinked {
-                    Image(systemName: "apple.logo")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .padding(.vertical, 4)
     }
 
     private func deleteRecents(at offsets: IndexSet) {
