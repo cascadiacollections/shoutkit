@@ -214,7 +214,13 @@ public struct ListenNowView: View {
     /// poster the top ten used to get to themselves.
     private func popularStations(_ loaded: BrowseContent) -> some View {
         VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
-            SectionHeaderView(String(localized: "Popular Stations", bundle: .module))
+            // A section header separates sections. When Recently Played is
+            // absent — every fresh install — this is the only one, so the
+            // header labels the whole screen directly under a title that
+            // already did, and costs a bold line before any station.
+            if displayedRecentStations.isEmpty == false {
+                SectionHeaderView(String(localized: "Popular Stations", bundle: .module))
+            }
             LazyVGrid(columns: ShoutKitLayout.artworkColumns, spacing: ShoutKitSpacing.large) {
                 ForEach(Array(loaded.stations.enumerated()), id: \.element.id) { index, station in
                     StationCard(

@@ -68,6 +68,15 @@ Now Playing gained a second `Spacer`, above the artwork as well as below it. Wit
 one, everything piled against the top of the sheet and left a tall void in the
 middle — most visible on a station with no track line, which is most live radio.
 
+**"Popular Stations" only appears when there is something to separate it from.**
+A section header exists to divide sections; when Recently Played is absent —
+every fresh install, and anyone who has cleared it — it was the only one, so it
+labelled the entire screen directly under a large title that had already named
+it. Three bold lines before the first station. The large title stays: it matches
+the tab, which is what Music, Podcasts and News all do, and it is both the
+pane's accessibility heading and what drives the inline-title collapse and the
+scroll-edge effect.
+
 Not touched, deliberately: `HeroArtworkView`'s glass frame around the hero
 artwork, which reads as a picture frame and is the next thing worth removing.
 Another session was editing that file at the time.
