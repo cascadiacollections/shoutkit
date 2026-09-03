@@ -23,6 +23,7 @@ public struct StationCard: View {
     private let isFavorite: Bool
     private let onTap: () -> Void
     private let onToggleFavorite: (() -> Void)?
+    private let removeAction: StationRowAction?
     /// `nil` fills the container; a value pins the tile to that width.
     @ScaledMetric(relativeTo: .headline) private var fixedWidth: CGFloat = 150
     private let hasFixedWidth: Bool
@@ -33,13 +34,15 @@ public struct StationCard: View {
         phase: StationPlaybackPhase,
         isFavorite: Bool = false,
         onTap: @escaping () -> Void,
-        onToggleFavorite: (() -> Void)? = nil
+        onToggleFavorite: (() -> Void)? = nil,
+        removeAction: StationRowAction? = nil
     ) {
         self.station = station
         self.phase = phase
         self.isFavorite = isFavorite
         self.onTap = onTap
         self.onToggleFavorite = onToggleFavorite
+        self.removeAction = removeAction
         hasFixedWidth = false
     }
 
@@ -50,13 +53,15 @@ public struct StationCard: View {
         width: CGFloat,
         isFavorite: Bool = false,
         onTap: @escaping () -> Void,
-        onToggleFavorite: (() -> Void)? = nil
+        onToggleFavorite: (() -> Void)? = nil,
+        removeAction: StationRowAction? = nil
     ) {
         self.station = station
         self.phase = phase
         self.isFavorite = isFavorite
         self.onTap = onTap
         self.onToggleFavorite = onToggleFavorite
+        self.removeAction = removeAction
         _fixedWidth = ScaledMetric(wrappedValue: width, relativeTo: .headline)
         hasFixedWidth = true
     }
@@ -86,6 +91,9 @@ public struct StationCard: View {
                     onToggleFavorite?()
                 }
             }
+            if let removeAction {
+                Button(removeAction.title, action: removeAction.perform)
+            }
         }
         .contextMenu {
             if let onToggleFavorite {
@@ -94,6 +102,11 @@ public struct StationCard: View {
                 } label: {
                     Label(isFavorite ? Self.removeFavoriteTitle : Self.addFavoriteTitle,
                           systemImage: isFavorite ? "heart.slash" : "heart")
+                }
+            }
+            if let removeAction {
+                Button(role: .destructive, action: removeAction.perform) {
+                    Label(removeAction.title, systemImage: removeAction.systemImage)
                 }
             }
         }

@@ -143,33 +143,44 @@ public struct ListenNowView: View {
         if displayed.isEmpty == false {
             VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
                 SectionHeaderView(String(localized: "Recently Played", bundle: .module))
-                // Plain rows, not a nested `List`. The `List` was here only to
-                // get swipe-to-dismiss, and it had to be given an explicit
-                // height computed from a hard-coded 76 pt row — a number that
-                // stops being true at the first Dynamic Type step up, clipping
-                // the last row or leaving a gap. Dismissal moved to the row's
-                // context menu (and a VoiceOver action), which is where iOS puts
-                // "remove this suggestion" anyway.
-                ForEach(Array(displayed.enumerated()), id: \.element.stationID) { index, recent in
-                    let station = recent.station
-                    let stationID = recent.stationID
-                    let stationName = recent.name
-                    StationRow(
-                        station: station,
-                        phase: playback?.phase(for: station) ?? .idle,
-                        isFavorite: library?.isFavorite(station) ?? false,
-                        onTap: { playback?.toggle(station) },
-                        onToggleFavorite: library.map { store in { store.toggleFavorite(station) } },
-                        removeAction: StationRowAction(
+                // A shelf of the same poster tiles the grid below uses, not
+                // full-width rows. Rows put a solid card floating above a
+                // card-less grid — the one place on this screen where two
+                // visual languages met. Distinguishing a short personal list
+                // from a long popular one by axis reads as intended; doing it
+                // by component read as unfinished.
+                //
+                // Dismissal stays in the tile's context menu (and as a
+                // VoiceOver action), which is where iOS puts "remove this
+                // suggestion" and where the row had already moved it.
+                StationCarousel(
+                    stations: displayed.map(\.station),
+                    phase: { playback?.phase(for: $0) ?? .idle },
+                    isFavorite: { library?.isFavorite($0) ?? false },
+                    onTap: { playback?.toggle($0) },
+                    onToggleFavorite: library.map { store in { store.toggleFavorite($0) } },
+                    removeAction: { station in
+                        StationRowAction(
                             title: String(localized: "Remove from Recently Played", bundle: .module),
                             systemImage: "clock.badge.xmark"
                         ) {
-                            dismissRecent(stationID: stationID, stationName: stationName, at: index)
+                            dismissRecent(station: station, in: displayed)
                         }
-                    )
-                }
+                    }
+                )
             }
         }
+    }
+
+    /// Resolves the station back to its position in the displayed shelf, so an
+    /// undo can put it back where it was rather than at the front.
+    private func dismissRecent(station: Station, in displayed: [RecentStation]) {
+        guard let index = displayed.firstIndex(where: { $0.stationID == station.id }) else { return }
+        dismissRecent(
+            stationID: station.id,
+            stationName: displayed[index].name,
+            at: index
+        )
     }
 
     private func dismissRecent(stationID: String, stationName: String, at index: Int) {
