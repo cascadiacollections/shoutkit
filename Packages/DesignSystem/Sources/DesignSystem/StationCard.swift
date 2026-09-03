@@ -112,13 +112,15 @@ public struct StationCard: View {
                 artworkURL: station.artworkURL,
                 size: fixedWidth,
                 cornerRadius: ShoutKitRadius.card,
-                isPlaying: phase == .playing
+                isPlaying: phase == .playing,
+                placeholderSeed: station.name
             )
         } else {
             StationArtworkView.filling(
                 artworkURL: station.artworkURL,
                 cornerRadius: ShoutKitRadius.card,
-                isPlaying: phase == .playing
+                isPlaying: phase == .playing,
+                placeholderSeed: station.name
             )
         }
     }
@@ -155,12 +157,15 @@ public struct StationCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// Genre, or the listener count when there is one.
+    ///
+    /// Bitrate used to appear here whenever a station reported no listeners,
+    /// which meant a grid of tiles captioned "Eclectic / Indie · 160 kbps".
+    /// A poster caption has room for one fact, and for choosing what to play
+    /// that fact is not the encoder setting.
     private var subtitle: String {
         if station.listenerCount > 0 {
             return "\(station.listenerCount.formatted()) listeners"
-        }
-        if let bitrate = station.bitrate {
-            return "\(station.genre) · \(bitrate) kbps"
         }
         return station.genre
     }

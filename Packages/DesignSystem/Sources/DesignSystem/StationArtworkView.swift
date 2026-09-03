@@ -54,11 +54,21 @@ public struct StationArtworkView: View {
         }
     }
 
+    /// How small a decoded bitmap may be, as a fraction of the pixels the tile
+    /// wants, before it is inset over a generated backdrop instead of stretched
+    /// to fill. Well below 1 on purpose: only genuinely tiny logos qualify, so a
+    /// merely-imperfect image is still shown the normal way.
+    private static let lowResolutionFraction: CGFloat = 0.7
+
     private let artworkURL: URL?
     private let fallbackArtworkURL: URL?
     private let sizing: Sizing
     private let cornerRadius: CGFloat
     private let isPlaying: Bool
+    /// Identity for the generated placeholder — the station name. `nil` keeps
+    /// the old generic glyph, which is right for surfaces with no name to show
+    /// (track artwork, previews).
+    private let placeholderSeed: String?
 
     @State private var thumbnail: UIImage?
     /// The URL `thumbnail` was loaded for, so a reused row can drop the
@@ -71,13 +81,15 @@ public struct StationArtworkView: View {
         fallbackArtworkURL: URL? = nil,
         size: CGFloat = StationArtworkView.listSize,
         cornerRadius: CGFloat = ShoutKitRadius.small,
-        isPlaying: Bool = false
+        isPlaying: Bool = false,
+        placeholderSeed: String? = nil
     ) {
         self.artworkURL = artworkURL
         self.fallbackArtworkURL = fallbackArtworkURL
         sizing = .fixed(size)
         self.cornerRadius = cornerRadius
         self.isPlaying = isPlaying
+        self.placeholderSeed = placeholderSeed
     }
 
     /// Square artwork that fills the width it is given — the poster-grid tile.
@@ -86,14 +98,16 @@ public struct StationArtworkView: View {
         fallbackArtworkURL: URL? = nil,
         cornerRadius: CGFloat = ShoutKitRadius.card,
         isPlaying: Bool = false,
-        decodeSize: CGFloat = StationArtworkView.posterDecodeSize
+        decodeSize: CGFloat = StationArtworkView.posterDecodeSize,
+        placeholderSeed: String? = nil
     ) -> StationArtworkView {
         StationArtworkView(
             artworkURL: artworkURL,
             fallbackArtworkURL: fallbackArtworkURL,
             sizing: .flexible(decode: decodeSize),
             cornerRadius: cornerRadius,
-            isPlaying: isPlaying
+            isPlaying: isPlaying,
+            placeholderSeed: placeholderSeed
         )
     }
 
@@ -102,18 +116,24 @@ public struct StationArtworkView: View {
         fallbackArtworkURL: URL?,
         sizing: Sizing,
         cornerRadius: CGFloat,
-        isPlaying: Bool
+        isPlaying: Bool,
+        placeholderSeed: String?
     ) {
         self.artworkURL = artworkURL
         self.fallbackArtworkURL = fallbackArtworkURL
         self.sizing = sizing
         self.cornerRadius = cornerRadius
         self.isPlaying = isPlaying
+        self.placeholderSeed = placeholderSeed
     }
 
     public var body: some View {
-        shape
-            .fill(.tint.opacity(0.16))
+        // `Color.clear` as the sizing base, with everything else in overlays.
+        // A `scaledToFill` image is deliberately larger than the size proposed
+        // to it, so making it the root let it drive layout and the tiles grew
+        // past the grid's padding to the screen edges. A Color accepts the
+        // proposal exactly, and an overlay is bounded by its base.
+        Color.clear
             .overlay { artworkLayer }
             .overlay { playingLayer }
             .modifier(SquareSizing(sizing: sizing))
@@ -132,12 +152,86 @@ public struct StationArtworkView: View {
 
     @ViewBuilder
     private var artworkLayer: some View {
-        if let thumbnail, thumbnailURL == artworkURL || thumbnailURL == fallbackArtworkURL {
-            Image(uiImage: thumbnail)
+        if let image = resolvedThumbnail {
+            if isLowResolution(image) {
+                lowResolutionArtwork(image)
+            } else {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            }
+        } else {
+            emptyArtwork
+        }
+    }
+
+    private var resolvedThumbnail: UIImage? {
+        guard let thumbnail, thumbnailURL == artworkURL || thumbnailURL == fallbackArtworkURL else {
+            return nil
+        }
+        return thumbnail
+    }
+
+    /// A small logo shown at a size it can actually hold, over a wash of itself.
+    ///
+    /// Stretching a 128 px favicon across a 500 px tile is what made half the
+    /// grid look out of focus — ImageIO never upscales on decode, so the blur
+    /// was this view's doing. The backdrop is a blurred copy of the same image
+    /// rather than a generated colour: it is guaranteed to harmonise, because it
+    /// *is* the artwork. A generated hue here put magenta behind one KEXP logo
+    /// and green behind the other, which looked arbitrary because it was.
+    ///
+    /// The neutral card fill underneath matters for the common case of a logo
+    /// with a transparent background, where the blurred copy contributes almost
+    /// nothing and the tile would otherwise be see-through.
+    private func lowResolutionArtwork(_ image: UIImage) -> some View {
+        ZStack {
+            Color.shoutKitCardBackground
+
+            Image(uiImage: image)
                 .resizable()
                 .scaledToFill()
+                .blur(radius: 24, opaque: false)
+                .opacity(0.55)
+
+            Image(uiImage: image)
+                .resizable()
+                .interpolation(.high)
+                .scaledToFit()
+                .padding(insetPadding)
+                .shadow(color: .black.opacity(0.22), radius: 5, y: 2)
+        }
+    }
+
+    /// No artwork at all — the only place a generated identity belongs, since
+    /// there is nothing for it to clash with.
+    @ViewBuilder
+    private var emptyArtwork: some View {
+        if let placeholderSeed {
+            ArtworkPlaceholder(seed: placeholderSeed)
         } else {
-            placeholder
+            shape
+                .fill(.tint.opacity(0.16))
+                .overlay {
+                    Image(systemName: "dot.radiowaves.left.and.right")
+                        .font(.system(size: sizing.decodeSize * 0.34))
+                        .foregroundStyle(.tint)
+                }
+        }
+    }
+
+    /// `UIImage(cgImage:)` carries scale 1, so `size` is the decoded pixel count
+    /// — directly comparable with the pixels this tile asked for.
+    private func isLowResolution(_ image: UIImage) -> Bool {
+        let wanted = sizing.decodeSize * displayScale
+        guard wanted > 0 else { return false }
+        return max(image.size.width, image.size.height) < wanted * Self.lowResolutionFraction
+    }
+
+    private var insetPadding: CGFloat {
+        switch sizing {
+        case .fixed(let size): size * 0.16
+        case .flexible: ShoutKitSpacing.large
         }
     }
 
@@ -164,12 +258,6 @@ public struct StationArtworkView: View {
         guard Task.isCancelled == false else { return }
         thumbnail = loaded?.artwork
         thumbnailURL = loaded?.sourceURL
-    }
-
-    private var placeholder: some View {
-        Image(systemName: "dot.radiowaves.left.and.right")
-            .font(.system(size: sizing.decodeSize * 0.34))
-            .foregroundStyle(.tint)
     }
 
     private var artworkRequest: ArtworkLoadRequest {

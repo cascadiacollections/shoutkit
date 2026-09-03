@@ -25,6 +25,54 @@ is the same habit as asserting Pulse links only into Debug and that
 `Packages/Playback` resolves no binary artifacts: a check that can fail, for
 something that was believed to be true and was not.
 
+## 2026-09-03 (artwork, second pass: stop upscaling tiny logos, and only generate colour where there is none)
+
+The grid from earlier today was the right shape and the wrong finish. Half the
+tiles looked out of focus, and that turned out to be this repo's doing rather
+than the directory's.
+
+**`ImageIODownsampler` never upscales** — a 128 px station favicon decodes at
+128 px. `StationArtworkView` then applied `.resizable().scaledToFill()` and
+stretched it across a ~500 px tile. The blur was introduced at render time, one
+line away from the careful decode-sizing that exists precisely to avoid this.
+Images meaningfully smaller than their tile are now inset at a size they can
+hold, over a blurred copy of themselves.
+
+**The backdrop is the artwork, not a generated colour.** The first attempt put a
+hue derived from the station name behind every tile, including tiles that had
+real artwork. It gave the two KEXP entries — same logo, different bitrate —
+clashing green and magenta mats, and put RTL's red on teal. It looked arbitrary
+because it was: a colour with no relationship to the image in front of it. A
+blurred copy of the image cannot clash with the image. The generated gradient and
+monogram survive only for stations with *no* artwork at all, which is the one
+case with nothing to harmonise against and a real problem to solve — a directory
+of a few thousand community stations otherwise renders as the same grey glyph
+repeated. `ArtworkPlaceholder` hashes with FNV-1a rather than `Hashable`, since
+Swift seeds `Hasher` per process and a generated identity that changed colour
+every launch would be worse than no identity.
+
+**A layout trap worth recording.** Making the artwork `Image` the root of
+`StationArtworkView` let it drive layout, and the tiles grew past the grid's
+padding to the screen edges — because `scaledToFill` deliberately returns a size
+larger than the one proposed to it. The base has to be something that accepts the
+proposal exactly (`Color.clear`, or a `Shape`), with the image in an `.overlay`
+that the base bounds. The original code had this right by accident of using
+`shape.fill()` as its base; it broke the moment that was removed.
+
+Also: bitrate left the poster caption. It only ever appeared when a station
+reported no listeners, so the grid read "Eclectic / Indie · 160 kbps" — for
+choosing what to play, the encoder setting is not the fact worth the one line a
+poster caption has.
+
+Now Playing gained a second `Spacer`, above the artwork as well as below it. With
+one, everything piled against the top of the sheet and left a tall void in the
+middle — most visible on a station with no track line, which is most live radio.
+
+Not touched, deliberately: `HeroArtworkView`'s glass frame around the hero
+artwork, which reads as a picture frame and is the next thing worth removing.
+Another session was editing that file at the time.
+
+
 ## 2026-09-03 (UX pass: one poster grid on Listen Now, a wide play/pause, and the mini-player heart removed)
 
 A deliberate look at the three main panes against the HIG, with no attachment to

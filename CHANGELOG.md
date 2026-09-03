@@ -20,6 +20,11 @@ below) are documented here. The format follows
   installed. The same break affected Shortcuts and shared station links
 
 ### Changed
+- **Station artwork stopped looking blurry.** Many stations publish a small logo, and the app
+  was stretching those across a full tile, which made a good half of the grid look out of
+  focus. Small logos now appear at a size they actually hold, resting on a soft wash of their
+  own colours. Stations with no artwork at all get a card in a colour of their own with their
+  initials on it, instead of the same grey radio icon every other artwork-less station had
 - **Listen Now shows every station as artwork.** The screen used to put ten stations in a
   side-scrolling strip of covers and then list the rest as small rows underneath — the same
   list twice, in two shapes. It is now one grid, and every station gets the same large cover

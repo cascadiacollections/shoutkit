@@ -66,7 +66,11 @@ public struct StationRow: View {
     public var body: some View {
         Button(action: onTap) {
             HStack(spacing: ShoutKitSpacing.medium) {
-                StationArtworkView(artworkURL: station.artworkURL, isPlaying: phase == .playing)
+                StationArtworkView(
+                    artworkURL: station.artworkURL,
+                    isPlaying: phase == .playing,
+                    placeholderSeed: station.name
+                )
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(station.name)

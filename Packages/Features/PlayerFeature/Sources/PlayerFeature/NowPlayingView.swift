@@ -94,19 +94,26 @@ public struct NowPlayingView: View {
         VStack(spacing: ShoutKitSpacing.large) {
             grabberSpacer
 
+            // Balanced, not top-anchored. With a single `Spacer` above the
+            // transport row, everything piled against the top of the sheet and
+            // left one tall void in the middle of the screen — most visible on
+            // a station with no track line, which is most live radio. A spacer
+            // on each side splits that space, so the artwork sits where the eye
+            // already is and the transport stays pinned to the bottom.
+            Spacer(minLength: 0)
+
             HeroArtworkView(
                 artworkURL: effectiveArtwork.primaryURL,
                 fallbackArtworkURL: effectiveArtwork.fallbackURL,
                 size: 272,
                 isPlaying: isPlaying(playback)
             )
-            .padding(.top, ShoutKitSpacing.medium)
 
             titleBlock(playback: playback, station: station)
 
             statusBadge(playback)
 
-            Spacer()
+            Spacer(minLength: 0)
 
             transportControls(playback: playback, station: station)
 
