@@ -284,14 +284,29 @@ struct SearchViewModelTests {
         #expect(viewModel.genreLoadError == nil)
     }
 
-    @Test func loadGenresSurfacesFailureAndClearsGenres() async {
+    @Test func genreStripIsPopulatedBeforeAnyLoad() {
+        let viewModel = SearchViewModel(directory: FakeRadioDirectory())
+
+        // The point of the seed: Search paints a usable genre strip on the
+        // first frame, without waiting on a directory call that is `async`
+        // even when the answer is already cached.
+        #expect(viewModel.genres.isEmpty == false)
+        #expect(viewModel.genres == Genre.paintTimeDefaults)
+        #expect(viewModel.genreLoadError == nil)
+    }
+
+    @Test func loadGenresSurfacesFailureAndKeepsTheExistingStrip() async {
         let directory = FakeRadioDirectory()
         await directory.setGenresResult(.failure(.invalidResponse))
         let viewModel = SearchViewModel(directory: directory)
 
         await viewModel.loadGenres()
 
-        #expect(viewModel.genres == [])
+        // Deliberately not cleared. Emptying the strip traded a working browse
+        // affordance for an error message; the seeded tags are real, so a genre
+        // is still selectable and a query that cannot reach the network reports
+        // it where the user asked for it.
+        #expect(viewModel.genres == Genre.paintTimeDefaults)
         #expect(viewModel.genreLoadError == .invalidResponse)
     }
 }

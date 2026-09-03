@@ -1,5 +1,36 @@
 # Decisions
 
+## 2026-09-03 (two things only a real device showed: cropped wordmarks, and the genre strip's empty first frame)
+
+Running the build on hardware, against the live directory, surfaced two things
+the simulator's small sample never did.
+
+**Non-square logos were being cropped in half.** `scaledToFill` on a square tile
+keeps the middle and discards both ends. Station artwork is frequently a wide
+wordmark, so "90,5 the night — Brookdale Public Radio" rendered as "0,5 the n".
+The artwork exists on the tile to say which station it is, and filling was
+throwing away exactly that. `StationArtworkView` now insets any image whose
+aspect ratio is further than 1.35:1 from square, on the same blurred-self
+backdrop the low-resolution path already used — the rule generalises from "too
+small to fill" to "filling would damage it".
+
+**The genre strip painted empty on every launch.** `SearchViewModel` started at
+`[]` and filled in from `directory.genres()`. Every route to that is `async`,
+because `CachingRadioDirectory` is an actor — so even an answer already in memory
+or on disk arrives a frame late, and Search always flashed an empty strip first.
+`Genre.paintTimeDefaults` seeds it with the tags at the top of Radio-Browser's
+list by station count, capitalised to match what `RadioBrowserDirectoryClient`
+produces so the swap to live data is not a visible reshuffle. They carry no
+`stationCount`: they are a paint-time placeholder, not a claim about the
+directory.
+
+A failed genre load now *keeps* whatever is on screen rather than clearing to
+empty. The old behavior traded a working browse affordance for an error message.
+The seeded tags are real, so a genre is still selectable, and a query that cannot
+reach the network reports it where the user asked for it. The error is still
+recorded. Asserted by `genreStripIsPopulatedBeforeAnyLoad`, which fails if the
+seed is ever removed.
+
 ## 2026-09-03 (the rename missed the URL scheme, and nothing failed to build)
 
 `Info.plist` registers `holmdel` as the app's URL scheme; `StationLink.appScheme`

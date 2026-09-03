@@ -19,6 +19,14 @@ below) are documented here. The format follows
   station in the widget opened nothing — or an older copy of the app, if one was still
   installed. The same break affected Shortcuts and shared station links
 
+- **Wide station logos are no longer cut in half.** A logo shaped like a banner rather than a
+  square was cropped to fit, which sliced the station's own name out of the middle of it. The
+  whole logo is now shown
+- **Genres appear the moment you open Search.** The list used to arrive a beat after the
+  screen did, so Search opened to an empty space that filled itself in. It now starts with a
+  set of genres already there, replaced by the live list as soon as it arrives — and if that
+  list can't be fetched, the genres you can browse stay on screen instead of vanishing
+
 ### Changed
 - **Station artwork stopped looking blurry.** Many stations publish a small logo, and the app
   was stretching those across a full tile, which made a good half of the grid look out of

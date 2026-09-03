@@ -60,6 +60,12 @@ public struct StationArtworkView: View {
     /// merely-imperfect image is still shown the normal way.
     private static let lowResolutionFraction: CGFloat = 0.7
 
+    /// How far from square artwork may be before filling would crop away too
+    /// much of it. Station logos are frequently wide wordmarks; cropping one to
+    /// a square cuts the name in half, which is the one thing on the tile the
+    /// artwork exists to say.
+    private static let maximumFillAspectRatio: CGFloat = 1.35
+
     private let artworkURL: URL?
     private let fallbackArtworkURL: URL?
     private let sizing: Sizing
@@ -153,7 +159,7 @@ public struct StationArtworkView: View {
     @ViewBuilder
     private var artworkLayer: some View {
         if let image = resolvedThumbnail {
-            if isLowResolution(image) {
+            if shouldInset(image) {
                 lowResolutionArtwork(image)
             } else {
                 Image(uiImage: image)
@@ -220,12 +226,28 @@ public struct StationArtworkView: View {
         }
     }
 
+    /// Whether filling would damage this image — either by upscaling it past
+    /// what it holds, or by cropping a non-square logo down to a square.
+    private func shouldInset(_ image: UIImage) -> Bool {
+        isLowResolution(image) || isFarFromSquare(image)
+    }
+
     /// `UIImage(cgImage:)` carries scale 1, so `size` is the decoded pixel count
     /// — directly comparable with the pixels this tile asked for.
     private func isLowResolution(_ image: UIImage) -> Bool {
         let wanted = sizing.decodeSize * displayScale
         guard wanted > 0 else { return false }
         return max(image.size.width, image.size.height) < wanted * Self.lowResolutionFraction
+    }
+
+    /// A wide wordmark in a square tile: `scaledToFill` keeps the middle and
+    /// throws away both ends, so "WXYZ 90.3 The Night" renders as "0.3 The N".
+    /// Seen on a device the moment the directory served a station whose logo
+    /// was not a square icon.
+    private func isFarFromSquare(_ image: UIImage) -> Bool {
+        let shorter = min(image.size.width, image.size.height)
+        guard shorter > 0 else { return false }
+        return max(image.size.width, image.size.height) / shorter > Self.maximumFillAspectRatio
     }
 
     private var insetPadding: CGFloat {
