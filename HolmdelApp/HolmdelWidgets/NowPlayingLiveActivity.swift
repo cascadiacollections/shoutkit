@@ -130,7 +130,7 @@ private struct ArtworkTile: View {
             if let image = stagedImage {
                 Image(uiImage: image)
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
+                    .scaledToFill()
             } else {
                 Image(systemName: fallbackSymbol)
                     .font(.system(size: size * 0.5))
