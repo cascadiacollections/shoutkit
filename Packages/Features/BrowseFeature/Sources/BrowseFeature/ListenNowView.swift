@@ -15,12 +15,6 @@ import SwiftUI
 /// carousel and the station list below it are disjoint slices of the same list
 /// rather than the same ten stations twice.
 public struct ListenNowView: View {
-    private enum Configuration {
-        /// How many of the top stations become poster cards. The rest fall
-        /// through to the list below, so nothing appears in both.
-        static let carouselLimit = 10
-    }
-
     @State private var viewModel: BrowseViewModel
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
@@ -54,6 +48,10 @@ public struct ListenNowView: View {
             .padding(.vertical, ShoutKitSpacing.medium)
         }
         .background(Color.shoutKitBackground)
+        // Content dissolves under the toolbar's glass rather than colliding
+        // with a hard edge. `.soft` because what scrolls under this bar is
+        // full-bleed artwork, which a hard cut slices visibly.
+        .scrollEdgeEffectStyle(.soft, for: .top)
         .task { await viewModel.refresh() }
         .refreshable { await viewModel.refresh(source: .userInitiated) }
         .onChange(of: recents.map(\.stationID), initial: true) { _, _ in
@@ -125,9 +123,7 @@ public struct ListenNowView: View {
 
             recentlyPlayed
 
-            popularCarousel(loaded)
-
-            moreStations(loaded)
+            popularStations(loaded)
         }
     }
 
@@ -147,33 +143,44 @@ public struct ListenNowView: View {
         if displayed.isEmpty == false {
             VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
                 SectionHeaderView(String(localized: "Recently Played", bundle: .module))
-                // Plain rows, not a nested `List`. The `List` was here only to
-                // get swipe-to-dismiss, and it had to be given an explicit
-                // height computed from a hard-coded 76 pt row — a number that
-                // stops being true at the first Dynamic Type step up, clipping
-                // the last row or leaving a gap. Dismissal moved to the row's
-                // context menu (and a VoiceOver action), which is where iOS puts
-                // "remove this suggestion" anyway.
-                ForEach(Array(displayed.enumerated()), id: \.element.stationID) { index, recent in
-                    let station = recent.station
-                    let stationID = recent.stationID
-                    let stationName = recent.name
-                    StationRow(
-                        station: station,
-                        phase: playback?.phase(for: station) ?? .idle,
-                        isFavorite: library?.isFavorite(station) ?? false,
-                        onTap: { playback?.toggle(station) },
-                        onToggleFavorite: library.map { store in { store.toggleFavorite(station) } },
-                        removeAction: StationRowAction(
+                // A shelf of the same poster tiles the grid below uses, not
+                // full-width rows. Rows put a solid card floating above a
+                // card-less grid — the one place on this screen where two
+                // visual languages met. Distinguishing a short personal list
+                // from a long popular one by axis reads as intended; doing it
+                // by component read as unfinished.
+                //
+                // Dismissal stays in the tile's context menu (and as a
+                // VoiceOver action), which is where iOS puts "remove this
+                // suggestion" and where the row had already moved it.
+                StationCarousel(
+                    stations: displayed.map(\.station),
+                    phase: { playback?.phase(for: $0) ?? .idle },
+                    isFavorite: { library?.isFavorite($0) ?? false },
+                    onTap: { playback?.toggle($0) },
+                    onToggleFavorite: library.map { store in { store.toggleFavorite($0) } },
+                    removeAction: { station in
+                        StationRowAction(
                             title: String(localized: "Remove from Recently Played", bundle: .module),
                             systemImage: "clock.badge.xmark"
                         ) {
-                            dismissRecent(stationID: stationID, stationName: stationName, at: index)
+                            dismissRecent(station: station, in: displayed)
                         }
-                    )
-                }
+                    }
+                )
             }
         }
+    }
+
+    /// Resolves the station back to its position in the displayed shelf, so an
+    /// undo can put it back where it was rather than at the front.
+    private func dismissRecent(station: Station, in displayed: [RecentStation]) {
+        guard let index = displayed.firstIndex(where: { $0.stationID == station.id }) else { return }
+        dismissRecent(
+            stationID: station.id,
+            stationName: displayed[index].name,
+            at: index
+        )
     }
 
     private func dismissRecent(stationID: String, stationName: String, at index: Int) {
@@ -207,36 +214,41 @@ public struct ListenNowView: View {
         dismissUndo = nil
     }
 
-    private func popularCarousel(_ loaded: BrowseContent) -> some View {
+    /// Every popular station, as one poster grid.
+    ///
+    /// This was a ten-card carousel above a list of rows holding the *rest* of
+    /// the same fetch — disjoint slices, so nothing appeared twice, but two
+    /// different shapes for one list. The split asked the reader to understand
+    /// that the horizontal strip and the vertical list were the same kind of
+    /// thing, and it capped the artwork on the larger half at a 56 pt row
+    /// thumbnail. One grid says it once, and gives every station the same
+    /// poster the top ten used to get to themselves.
+    private func popularStations(_ loaded: BrowseContent) -> some View {
         VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
-            SectionHeaderView(String(localized: "Popular Stations", bundle: .module))
-            StationCarousel(
-                stations: Array(loaded.stations.prefix(Configuration.carouselLimit)),
-                phase: { playback?.phase(for: $0) ?? .idle },
-                onTap: { playback?.toggle($0) }
-            )
-        }
-    }
-
-    /// The tail of the popular list, as rows. The carousel above already showed
-    /// the head of it, so this section starts where that one stopped.
-    @ViewBuilder
-    private func moreStations(_ loaded: BrowseContent) -> some View {
-        let stations = Array(loaded.stations.dropFirst(Configuration.carouselLimit))
-        if stations.isEmpty == false {
-            VStack(alignment: .leading, spacing: ShoutKitSpacing.small) {
-                SectionHeaderView(String(localized: "More Stations", bundle: .module))
-                LazyVGrid(columns: ShoutKitLayout.stationColumns, spacing: ShoutKitSpacing.small) {
-                    ForEach(Array(stations.enumerated()), id: \.element.id) { index, station in
-                        StationRow(
-                            station: station,
-                            phase: playback?.phase(for: station) ?? .idle,
-                            isFavorite: library?.isFavorite(station) ?? false,
-                            onTap: { playback?.toggle(station) },
-                            onToggleFavorite: library.map { store in { store.toggleFavorite(station) } }
-                        )
-                        .prefetchStationArtwork(after: index, in: stations, displayScale: displayScale)
-                    }
+            // A section header separates sections. When Recently Played is
+            // absent — every fresh install — this is the only one, so the
+            // header labels the whole screen directly under a title that
+            // already did, and costs a bold line before any station.
+            if displayedRecentStations.isEmpty == false {
+                SectionHeaderView(String(localized: "Popular Stations", bundle: .module))
+            }
+            LazyVGrid(columns: ShoutKitLayout.artworkColumns, spacing: ShoutKitSpacing.large) {
+                ForEach(Array(loaded.stations.enumerated()), id: \.element.id) { index, station in
+                    StationCard(
+                        station: station,
+                        phase: playback?.phase(for: station) ?? .idle,
+                        isFavorite: library?.isFavorite(station) ?? false,
+                        onTap: { playback?.toggle(station) },
+                        onToggleFavorite: library.map { store in { store.toggleFavorite(station) } }
+                    )
+                    .prefetchStationArtwork(
+                        after: index,
+                        in: loaded.stations,
+                        displayScale: displayScale,
+                        // Tiles decode at poster size; prefetching at row size
+                        // would warm a cache entry the tile never reads.
+                        maxPixelSize: StationArtworkView.posterPixelSize(displayScale: displayScale)
+                    )
                 }
             }
         }

@@ -76,6 +76,29 @@ public struct Genre: Codable, Equatable, Hashable, Identifiable, Sendable {
         self.name = name
         self.stationCount = stationCount
     }
+
+    /// A genre strip to paint with before the directory answers.
+    ///
+    /// The live list is fetched from `/json/tags`, and every path to it is
+    /// `async` — `CachingRadioDirectory` is an actor, so even a hit in memory or
+    /// on disk is a suspension. Search therefore always painted an empty strip
+    /// first and filled it in a moment later, on every single launch, including
+    /// launches where the answer was already on the device.
+    ///
+    /// These are the tags that sit at the top of Radio-Browser's list by station
+    /// count, so the seeded strip is close to what replaces it and the swap is
+    /// not a visible reshuffle. Capitalised to match `RadioBrowserDirectoryClient`,
+    /// which maps tag names through `.capitalized` — a seed in another case would
+    /// render as a different chip and then visibly change.
+    ///
+    /// No `stationCount`: these are a paint-time placeholder, not a claim about
+    /// the directory's contents. They are real tags, so selecting one before the
+    /// live list lands queries normally.
+    public static let paintTimeDefaults: [Genre] = [
+        "Pop", "Rock", "News", "Classical", "Jazz", "Talk",
+        "Dance", "Country", "Oldies", "Electronic", "Blues", "Metal",
+        "Folk", "Soul", "Reggae", "Latin", "Ambient", "Sports"
+    ].map { Genre(name: $0) }
 }
 
 public struct StreamEndpoint: Codable, Equatable, Hashable, Sendable {

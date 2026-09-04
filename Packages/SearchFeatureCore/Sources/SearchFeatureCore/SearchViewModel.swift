@@ -56,7 +56,9 @@ public final class SearchViewModel {
     }
 
     public private(set) var phase: SearchPhase = .idle
-    public private(set) var genres: [Genre] = []
+    /// Seeded rather than empty, so the genre strip is on screen at first paint
+    /// instead of a frame later. See ``Genre/paintTimeDefaults``.
+    public private(set) var genres: [Genre] = Genre.paintTimeDefaults
     public private(set) var genreLoadError: RadioDirectoryError?
     public var filters: StationSearchFilters = .none {
         didSet {
@@ -104,15 +106,21 @@ public final class SearchViewModel {
         debounceTask?.cancel()
     }
 
+    /// Replaces the seeded strip with the directory's own list.
+    ///
+    /// A failure leaves whatever is already on screen — the seed, or a list from
+    /// an earlier call — rather than clearing to empty. Emptying it was the old
+    /// behavior and it traded a usable strip for an error message: the seeded
+    /// tags are real, so browsing still works, and a genre query that cannot
+    /// reach the network reports that where the user asked for it. The error is
+    /// still recorded for any surface that wants it.
     public func loadGenres() async {
         do {
             genres = try await directory.genres()
             genreLoadError = nil
         } catch let error as RadioDirectoryError {
-            genres = []
             genreLoadError = error
         } catch {
-            genres = []
             genreLoadError = .transport(error.localizedDescription)
         }
     }

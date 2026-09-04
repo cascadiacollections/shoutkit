@@ -10,6 +10,9 @@
     "No Favorites Yet" : {
 
     },
+    "No Tracks Yet" : {
+
+    },
     "No repeated tracks yet." : {
 
     },
@@ -32,6 +35,15 @@
 
     },
     "Top Tracks" : {
+
+    },
+    "Tracks you hear while listening appear here." : {
+
+    },
+    "Unknown Artist" : {
+
+    },
+    "Unknown Track" : {
 
     }
   },

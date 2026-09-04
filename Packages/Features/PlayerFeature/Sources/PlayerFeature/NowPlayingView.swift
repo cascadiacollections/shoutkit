@@ -10,7 +10,9 @@ import SwiftUI
 public struct NowPlayingView: View {
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
-    @Environment(\.sleepTimer) private var sleepTimer
+    // Not `private`: read by the sleep-timer controls, which live in
+    // `NowPlayingView+SleepTimer.swift`.
+    @Environment(\.sleepTimer) var sleepTimer
     @Environment(\.settingsStore) private var settings
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -19,12 +21,12 @@ public struct NowPlayingView: View {
     /// controls sit in the same color world as the ambient backdrop.
     @State private var artworkAccent: Color?
 
-    /// The play/pause button grows with Dynamic Type instead of staying at a
-    /// fixed 76 pt. It is the primary control on this screen, and a listener who
-    /// has turned text up has usually turned it up because targets at the
+    /// The play/pause control's height. It grows with Dynamic Type instead of
+    /// staying fixed: it is the primary control on this screen, and a listener
+    /// who has turned text up has usually turned it up because targets at the
     /// default size are hard to hit. `.largeTitle` rather than `.body` so it
     /// scales at the rate of the display text it sits under, not body copy.
-    @ScaledMetric(relativeTo: .largeTitle) private var playPauseDiameter: CGFloat = 76
+    @ScaledMetric(relativeTo: .largeTitle) private var playPauseHeight: CGFloat = 64
 
     public init() {}
 
@@ -92,19 +94,26 @@ public struct NowPlayingView: View {
         VStack(spacing: ShoutKitSpacing.large) {
             grabberSpacer
 
+            // Balanced, not top-anchored. With a single `Spacer` above the
+            // transport row, everything piled against the top of the sheet and
+            // left one tall void in the middle of the screen — most visible on
+            // a station with no track line, which is most live radio. A spacer
+            // on each side splits that space, so the artwork sits where the eye
+            // already is and the transport stays pinned to the bottom.
+            Spacer(minLength: 0)
+
             HeroArtworkView(
                 artworkURL: effectiveArtwork.primaryURL,
                 fallbackArtworkURL: effectiveArtwork.fallbackURL,
                 size: 272,
                 isPlaying: isPlaying(playback)
             )
-            .padding(.top, ShoutKitSpacing.medium)
 
             titleBlock(playback: playback, station: station)
 
             statusBadge(playback)
 
-            Spacer()
+            Spacer(minLength: 0)
 
             transportControls(playback: playback, station: station)
 
@@ -205,25 +214,38 @@ public struct NowPlayingView: View {
 
     /// Favorite · play/pause · sleep timer. A live stream has nothing to scrub
     /// and nothing to skip to, so play/pause is the only true transport control
-    /// here; it gets the size and the center, flanked by the two things people
-    /// actually do while listening.
+    /// here; it gets the room, flanked by the two things people actually do
+    /// while listening.
     private func transportControls(playback: PlaybackController, station: Station) -> some View {
-        HStack(spacing: ShoutKitSpacing.extraLarge) {
+        HStack(spacing: ShoutKitSpacing.medium) {
             favoriteButton(station: station)
 
-            Button {
-                playback.togglePlayPause()
-            } label: {
-                playPauseIcon(playback)
-                    .font(.system(size: playPauseDiameter * 0.45, weight: .bold))
-                    .frame(width: playPauseDiameter, height: playPauseDiameter)
-            }
-            .buttonStyle(.glassProminent)
-            .buttonBorderShape(.circle)
-            .accessibilityLabel(isPlaying(playback) ? "Pause" : "Play")
+            playPauseButton(playback)
 
             sleepTimerButton
         }
+    }
+
+    /// A wide capsule rather than the circle this used to be.
+    ///
+    /// A circle sized for one glyph spends its width budget on the gaps beside
+    /// it. Letting the primary control take the whole row between its two
+    /// satellites roughly doubles the hit target on the thing people press most,
+    /// at no cost to the other two — which are still 44 pt and still where they
+    /// were. It is also what the current system players do, so the shape reads
+    /// as "the main control" without having to be the largest circle on screen.
+    private func playPauseButton(_ playback: PlaybackController) -> some View {
+        Button {
+            playback.togglePlayPause()
+        } label: {
+            playPauseIcon(playback)
+                .font(.system(size: playPauseHeight * 0.42, weight: .bold))
+                .frame(maxWidth: .infinity)
+                .frame(height: playPauseHeight)
+        }
+        .buttonStyle(.glassProminent)
+        .buttonBorderShape(.capsule)
+        .accessibilityLabel(isPlaying(playback) ? "Pause" : "Play")
     }
 
     @ViewBuilder
@@ -241,85 +263,6 @@ public struct NowPlayingView: View {
             .accessibilityLabel(library.isFavorite(station) ? "Remove favorite" : "Add favorite")
         } else {
             Color.clear.frame(width: 44, height: 44)
-        }
-    }
-
-    @ViewBuilder
-    private var sleepTimerButton: some View {
-        if let sleepTimer {
-            if sleepTimer.isActive {
-                // The countdown text and the VoiceOver value now share one
-                // clock, so they can't disagree. Mounted only while the timer
-                // runs: a 1 Hz TimelineView behind a static moon glyph is a
-                // wakeup a second for nothing, which is the same class of
-                // background waste the 2026-08-03 power review removed.
-                TimelineView(.periodic(from: .now, by: 1)) { timeline in
-                    sleepTimerMenu(sleepTimer, asOf: timeline.date)
-                }
-            } else {
-                sleepTimerMenu(sleepTimer, asOf: .now)
-            }
-        } else {
-            Color.clear.frame(width: 44, height: 44)
-        }
-    }
-
-    private func sleepTimerMenu(_ sleepTimer: SleepTimer, asOf date: Date) -> some View {
-        Menu {
-            if sleepTimer.isActive {
-                Button("Cancel Timer", systemImage: "moon.zzz", role: .destructive) {
-                    sleepTimer.cancel()
-                }
-            }
-            ForEach([15, 30, 45, 60], id: \.self) { minutes in
-                Button("\(minutes) minutes") {
-                    sleepTimer.start(duration: TimeInterval(minutes * 60))
-                }
-            }
-        } label: {
-            sleepTimerLabel(sleepTimer, asOf: date)
-                .frame(minWidth: 44, minHeight: 44)
-        }
-        .buttonStyle(.glass)
-        // Capsule, not circle: the running timer's label carries a countdown
-        // and has to be allowed to grow.
-        .buttonBorderShape(.capsule)
-        .accessibilityLabel(sleepTimer.isActive ? "Sleep timer running" : "Sleep timer")
-        .accessibilityValue(sleepTimerValue(sleepTimer, asOf: date))
-    }
-
-    /// How much of the sleep timer is left, for VoiceOver. Until this existed the
-    /// remaining time was on screen and nowhere else — the button announced
-    /// "sleep timer running" and stopped, so the one number that matters was
-    /// available only to people who could read the countdown.
-    ///
-    /// Minute-granular, and rounded up, on purpose. The visible label ticks every
-    /// second; an accessibility value that did the same would make VoiceOver
-    /// re-announce a focused button once a second, which is worse than saying
-    /// nothing. Rounding up also stops it reporting "0 minutes" while audio is
-    /// still playing.
-    private func sleepTimerValue(_ sleepTimer: SleepTimer, asOf date: Date) -> Text {
-        guard let remaining = sleepTimer.remaining(asOf: date) else {
-            // Not localized because it is never spoken: an empty value is
-            // omitted by VoiceOver, which is what an idle timer should read as.
-            return Text(verbatim: "")
-        }
-        let minutes = max(1, Int((remaining / 60).rounded(.up)))
-        return Text("\(minutes) minutes remaining")
-    }
-
-    @ViewBuilder
-    private func sleepTimerLabel(_ sleepTimer: SleepTimer, asOf date: Date) -> some View {
-        if let remaining = sleepTimer.remaining(asOf: date) {
-            HStack(spacing: 4) {
-                Image(systemName: "moon.zzz.fill")
-                Text(Duration.seconds(remaining).formatted(.time(pattern: .minuteSecond)))
-                    .font(.footnote.monospacedDigit())
-            }
-            .foregroundStyle(.tint)
-        } else {
-            Image(systemName: "moon.zzz")
-                .foregroundStyle(.secondary)
         }
     }
 

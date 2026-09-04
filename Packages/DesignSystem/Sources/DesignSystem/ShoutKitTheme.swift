@@ -31,6 +31,25 @@ public enum ShoutKitLayout {
             alignment: .top
         )
     ]
+
+    /// Adaptive columns for poster tiles — square artwork with a name and one
+    /// line of metadata under it.
+    ///
+    /// The minimum is what makes this a *grid* rather than a list: two columns
+    /// on every supported iPhone width, three or more as the window widens. It
+    /// is deliberately below the smallest iPhone half-width (a 320 pt Split View
+    /// pane less 32 pt of padding leaves 144 per column at two columns), because
+    /// an adaptive grid honors its minimum even when the container is narrower
+    /// and would otherwise overflow. The maximum stops a tile from ballooning
+    /// into a poster on iPad, where the answer to more width is more stations
+    /// on screen, not larger ones.
+    public static let artworkColumns = [
+        GridItem(
+            .adaptive(minimum: 140, maximum: 220),
+            spacing: ShoutKitSpacing.medium,
+            alignment: .top
+        )
+    ]
 }
 
 public extension Color {

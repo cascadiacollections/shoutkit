@@ -1,5 +1,36 @@
 # Decisions
 
+## 2026-09-03 (two things only a real device showed: cropped wordmarks, and the genre strip's empty first frame)
+
+Running the build on hardware, against the live directory, surfaced two things
+the simulator's small sample never did.
+
+**Non-square logos were being cropped in half.** `scaledToFill` on a square tile
+keeps the middle and discards both ends. Station artwork is frequently a wide
+wordmark, so "90,5 the night — Brookdale Public Radio" rendered as "0,5 the n".
+The artwork exists on the tile to say which station it is, and filling was
+throwing away exactly that. `StationArtworkView` now insets any image whose
+aspect ratio is further than 1.35:1 from square, on the same blurred-self
+backdrop the low-resolution path already used — the rule generalises from "too
+small to fill" to "filling would damage it".
+
+**The genre strip painted empty on every launch.** `SearchViewModel` started at
+`[]` and filled in from `directory.genres()`. Every route to that is `async`,
+because `CachingRadioDirectory` is an actor — so even an answer already in memory
+or on disk arrives a frame late, and Search always flashed an empty strip first.
+`Genre.paintTimeDefaults` seeds it with the tags at the top of Radio-Browser's
+list by station count, capitalised to match what `RadioBrowserDirectoryClient`
+produces so the swap to live data is not a visible reshuffle. They carry no
+`stationCount`: they are a paint-time placeholder, not a claim about the
+directory.
+
+A failed genre load now *keeps* whatever is on screen rather than clearing to
+empty. The old behavior traded a working browse affordance for an error message.
+The seeded tags are real, so a genre is still selectable, and a query that cannot
+reach the network reports it where the user asked for it. The error is still
+recorded. Asserted by `genreStripIsPopulatedBeforeAnyLoad`, which fails if the
+seed is ever removed.
+
 ## 2026-09-03 (the rename missed the URL scheme, and nothing failed to build)
 
 `Info.plist` registers `holmdel` as the app's URL scheme; `StationLink.appScheme`
@@ -24,6 +55,122 @@ it can run on the cheap Linux runner alongside the license-boundary check. This
 is the same habit as asserting Pulse links only into Debug and that
 `Packages/Playback` resolves no binary artifacts: a check that can fail, for
 something that was believed to be true and was not.
+
+## 2026-09-03 (artwork, second pass: stop upscaling tiny logos, and only generate colour where there is none)
+
+The grid from earlier today was the right shape and the wrong finish. Half the
+tiles looked out of focus, and that turned out to be this repo's doing rather
+than the directory's.
+
+**`ImageIODownsampler` never upscales** — a 128 px station favicon decodes at
+128 px. `StationArtworkView` then applied `.resizable().scaledToFill()` and
+stretched it across a ~500 px tile. The blur was introduced at render time, one
+line away from the careful decode-sizing that exists precisely to avoid this.
+Images meaningfully smaller than their tile are now inset at a size they can
+hold, over a blurred copy of themselves.
+
+**The backdrop is the artwork, not a generated colour.** The first attempt put a
+hue derived from the station name behind every tile, including tiles that had
+real artwork. It gave the two KEXP entries — same logo, different bitrate —
+clashing green and magenta mats, and put RTL's red on teal. It looked arbitrary
+because it was: a colour with no relationship to the image in front of it. A
+blurred copy of the image cannot clash with the image. The generated gradient and
+monogram survive only for stations with *no* artwork at all, which is the one
+case with nothing to harmonise against and a real problem to solve — a directory
+of a few thousand community stations otherwise renders as the same grey glyph
+repeated. `ArtworkPlaceholder` hashes with FNV-1a rather than `Hashable`, since
+Swift seeds `Hasher` per process and a generated identity that changed colour
+every launch would be worse than no identity.
+
+**A layout trap worth recording.** Making the artwork `Image` the root of
+`StationArtworkView` let it drive layout, and the tiles grew past the grid's
+padding to the screen edges — because `scaledToFill` deliberately returns a size
+larger than the one proposed to it. The base has to be something that accepts the
+proposal exactly (`Color.clear`, or a `Shape`), with the image in an `.overlay`
+that the base bounds. The original code had this right by accident of using
+`shape.fill()` as its base; it broke the moment that was removed.
+
+Also: bitrate left the poster caption. It only ever appeared when a station
+reported no listeners, so the grid read "Eclectic / Indie · 160 kbps" — for
+choosing what to play, the encoder setting is not the fact worth the one line a
+poster caption has.
+
+Now Playing gained a second `Spacer`, above the artwork as well as below it. With
+one, everything piled against the top of the sheet and left a tall void in the
+middle — most visible on a station with no track line, which is most live radio.
+
+**"Popular Stations" only appears when there is something to separate it from.**
+A section header exists to divide sections; when Recently Played is absent —
+every fresh install, and anyone who has cleared it — it was the only one, so it
+labelled the entire screen directly under a large title that had already named
+it. Three bold lines before the first station. The large title stays: it matches
+the tab, which is what Music, Podcasts and News all do, and it is both the
+pane's accessibility heading and what drives the inline-title collapse and the
+scroll-edge effect.
+
+Not touched, deliberately: `HeroArtworkView`'s glass frame around the hero
+artwork, which reads as a picture frame and is the next thing worth removing.
+Another session was editing that file at the time.
+
+
+## 2026-09-03 (UX pass: one poster grid on Listen Now, a wide play/pause, and the mini-player heart removed)
+
+A deliberate look at the three main panes against the HIG, with no attachment to
+what was there. Four changes, each with something it costs.
+
+**Listen Now is one poster grid instead of a carousel plus a row list.** The
+2026-08-13 entry deleted the Browse tab because it showed the same `topStations`
+fetch twice; what replaced it still showed that fetch as two shapes — ten poster
+cards in a horizontal carousel, then the remaining stations as 56 pt-thumbnail
+rows underneath. Disjoint slices, so nothing appeared twice, and that is exactly
+what made it hard to read: two presentations of one list, where the split point
+was an implementation detail (`carouselLimit = 10`) that nothing on screen
+explained. The grid gives every station the poster the top ten had to themselves.
+What this gives up is the carousel's ability to imply ranking by position — a
+grid reads as a set, not an order. That seems the right trade for a "popular
+right now" list nobody treats as a leaderboard. `StationCarousel` stays in
+`DesignSystem` as SDK surface; it is simply no longer used by this app.
+
+**`StationCard` and `StationArtworkView` grew a flexible width.** A grid tile's
+width belongs to the grid, not the tile. The wrinkle is decode size: artwork is
+decoded to an explicit pixel size so the thumbnail cache has a stable key, and an
+adaptive grid's cell width isn't known until layout. So flexible tiles decode at
+a fixed `posterDecodeSize` (240 pt) sized to the *widest* cell layout produces —
+downscaled at worst, never upscaled, and one cache key across every device.
+`prefetchStationArtwork` had `listPixelSize` hard-coded and now takes the size,
+because a prefetch at the wrong size is worse than none: it warms an entry
+nothing reads and the tile decodes again anyway.
+
+**The play/pause control is a wide capsule.** A circle sized for one glyph spends
+its width on the gaps beside it. Letting the primary control take the row between
+its two satellites roughly doubles the target on the most-pressed thing on the
+screen while favorite and sleep timer keep their 44 pt. It also matches what the
+current system players do, so it reads as primary without being the biggest
+circle on screen.
+
+**The mini-player lost its heart.** It put a 44 pt target for a rarely-urgent
+action beside the one control people reach for constantly, in an accessory only
+as tall as a row, and duplicated a heart that is one tap away in Now Playing.
+Favoriting is now Now Playing plus each station's context menu — and the poster
+tiles carry a favorited badge on the artwork, so the state is still visible where
+the rows used to show it. The cost is real: favoriting from the mini-player was
+one tap and is now two. Accepted, because it is not an action taken mid-song at
+speed, and the bar it was crowding is.
+
+**Favorites drops from four stacked lists to three and a drill-in.** Recently
+Heard was an unbounded list of every track ever seen, sitting below three bounded
+sections — so the pane's length grew with install age and buried what was above
+it. Top Tracks is the summary of that same data; the raw history moved behind a
+row into `RecentlyHeardListView`. Nothing was deleted.
+
+`NowPlayingView` crossed `type_body_length` doing this and was split along the
+sleep-timer seam (`NowPlayingView+SleepTimer.swift`) rather than given a
+`swiftlint:disable`, per `CONTRIBUTING.md`. That forced `sleepTimer` and
+`sleepTimerButton` to internal, since `private` doesn't cross files.
+
+Verified by building and driving the app in the simulator — grid, mini-player,
+Now Playing and Favorites each screenshotted — not by reading the diff.
+
 
 ## 2026-09-02 (Bluetooth artwork, twice more: `.background` is the wrong tier for it, and the station-switch carve-out was the last hole)
 

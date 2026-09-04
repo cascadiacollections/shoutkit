@@ -13,13 +13,28 @@ below) are documented here. The format follows
 
 ## [Unreleased]
 
-### Fixed
-- **Stations in the Home Screen widget open the app again.** Renaming the app changed the
-  link the widget hands to iOS, but not the link the app was listening for, so tapping a
-  station in the widget opened nothing — or an older copy of the app, if one was still
-  installed. The same break affected Shortcuts and shared station links
-
 ### Changed
+- **Station artwork stopped looking blurry.** Many stations publish a small logo, and the app
+  was stretching those across a full tile, which made a good half of the grid look out of
+  focus. Small logos now appear at a size they actually hold, resting on a soft wash of their
+  own colours. Stations with no artwork at all get a card in a colour of their own with their
+  initials on it, instead of the same grey radio icon every other artwork-less station had
+- **Listen Now shows every station as artwork.** The screen used to put ten stations in a
+  side-scrolling strip of covers and then list the rest as small rows underneath — the same
+  list twice, in two shapes. It is now one grid, and every station gets the same large cover
+  the first ten used to get to themselves
+- **The play button on the Now Playing screen is much bigger.** It was a circle with a lot of
+  empty space either side of it; it now stretches across the row between the heart and the
+  sleep timer, so the control you press most is the easiest one to hit. Favorite and sleep
+  timer are unchanged
+- **The mini player at the bottom of the screen is just the station and play/pause now.** The
+  heart moved out of it — it sat right beside play/pause in a bar the height of a single row,
+  which made both easy to hit by mistake. Favoriting is on the Now Playing screen, and in the
+  menu you get by pressing and holding any station. A favorited station now shows a small
+  heart on its cover in the grid
+- **The Favorites tab is shorter.** Recently Heard listed every track the app had ever seen,
+  below everything else, so the more you used the app the more scrolling it took to reach
+  anything. It now sits behind a row of its own, under Top Tracks. Nothing was removed
 - **The app is now named Holmdel.** ShoutKit remains the name of this repo's MIT-licensed radio
   SDK (`Packages/`); Holmdel is the distributed app built on it. This changes the app's bundle
   identifier (`com.cascadiacollections.holmdel`), its shared app group, and its `holmdel://` deep
@@ -27,6 +42,17 @@ below) are documented here. The format follows
   See `DECISIONS.md` (2026-08-24) and `TRADEMARK.md`.
 
 ### Fixed
+- **Stations in the Home Screen widget open the app again.** Renaming the app changed the
+  link the widget hands to iOS, but not the link the app was listening for, so tapping a
+  station in the widget opened nothing — or an older copy of the app, if one was still
+  installed. The same break affected Shortcuts and shared station links
+- **Wide station logos are no longer cut in half.** A logo shaped like a banner rather than a
+  square was cropped to fit, which sliced the station's own name out of the middle of it. The
+  whole logo is now shown
+- **Genres appear the moment you open Search.** The list used to arrive a beat after the
+  screen did, so Search opened to an empty space that filled itself in. It now starts with a
+  set of genres already there, replaced by the live list as soon as it arrives — and if that
+  list can't be fetched, the genres you can browse stay on screen instead of vanishing
 - **Album art shows up again on Bluetooth car stereos.** In a car, artwork either stayed frozen on
   whatever had played before ShoutKit or never appeared at all — not the track's cover, not even
   the station's own. Two things were behind it. A change meant to stop artwork downloads from
