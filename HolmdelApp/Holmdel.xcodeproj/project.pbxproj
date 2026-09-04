@@ -1,0 +1,1372 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 71;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		000000000000000000000020 /* HolmdelApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000010 /* HolmdelApp.swift */; };
+		000000000000000000000021 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000011 /* RootView.swift */; };
+		000000000000000000000022 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000012 /* AppDependencies.swift */; };
+		000000000000000000000110 /* AppDependencies+Networking.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000100 /* AppDependencies+Networking.swift */; };
+		000000000000000000000111 /* AppDependencies+Factories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000101 /* AppDependencies+Factories.swift */; };
+		000000000000000000000112 /* AppDependencies+Callbacks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000102 /* AppDependencies+Callbacks.swift */; };
+		000000000000000000000113 /* AppDependencies+Warmups.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000103 /* AppDependencies+Warmups.swift */; };
+		0000000000000000000000B1 /* GeoStationLocationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000B0 /* GeoStationLocationCoordinator.swift */; };
+		0000000000000000000000B3 /* HolmdelAudioIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000B2 /* HolmdelAudioIntents.swift */; };
+		000000000000000000000023 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000014 /* Assets.xcassets */; };
+		000000000000000000000024 /* HolmdelShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000018 /* HolmdelShortcuts.swift */; };
+		000000000000000000000025 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000019 /* PrivacyInfo.xcprivacy */; };
+		0000000000000000000000FC /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000FA /* PrivacyInfo.xcprivacy */; };
+		7C0FE00000000000000000FD /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000FB /* PrivacyInfo.xcprivacy */; };
+		000000000000000000000026 /* WelcomeOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000001A /* WelcomeOverlayView.swift */; };
+		000000000000000000000060 /* DesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000050 /* DesignSystem */; };
+		000000000000000000000061 /* RadioDirectory in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000051 /* RadioDirectory */; };
+		000000000000000000000062 /* Playback in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000052 /* Playback */; };
+		000000000000000000000063 /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000053 /* Persistence */; };
+		000000000000000000000064 /* BrowseFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000054 /* BrowseFeature */; };
+		000000000000000000000065 /* PlayerFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000055 /* PlayerFeature */; };
+		000000000000000000000066 /* SearchFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000056 /* SearchFeature */; };
+		000000000000000000000067 /* LibraryFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000057 /* LibraryFeature */; };
+		000000000000000000000068 /* NowPlayingActivityKit in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000058 /* NowPlayingActivityKit */; };
+		000000000000000000000069 /* NowPlayingActivityCore in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000059 /* NowPlayingActivityCore */; };
+		00000000000000000000006A /* PlaybackEngineAudioStreaming in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005C /* PlaybackEngineAudioStreaming */; };
+		0000000000000000000000C0 /* NowPlayingActivityCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0000000000000000000000CA /* NowPlayingActivityCore */; };
+		0000000000000000000000C1 /* QuickPlayWidgetPublisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000D0 /* QuickPlayWidgetPublisher.swift */; };
+		0000000000000000000000C2 /* QuickPlayWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000D1 /* QuickPlayWidget.swift */; };
+		0000000000000000000000ED /* IntentSupportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000EB /* IntentSupportTests.swift */; };
+		0000000000000000000000EE /* AppIntentsPathwayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000EC /* AppIntentsPathwayTests.swift */; };
+		000000000000000000000079 /* HolmdelWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000071 /* HolmdelWidgetsBundle.swift */; };
+		00000000000000000000007A /* NowPlayingLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000072 /* NowPlayingLiveActivity.swift */; };
+		00000000000000000000007F /* HolmdelWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 000000000000000000000070 /* HolmdelWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		000000000000000000000082 /* SettingsFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005A /* SettingsFeature */; };
+		000000000000000000000084 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000083 /* Localizable.xcstrings */; };
+		000000000000000000000086 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000085 /* Localizable.xcstrings */; };
+		000000000000000000000091 /* StationLaunchRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000090 /* StationLaunchRouter.swift */; };
+		0000000000000000000000A0 /* DebugSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005B /* DebugSupport */; };
+		075A8F60A66D5127E26C4DEB /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = 2D4800AE052B864E256ECF8D /* Persistence */; };
+		1DF3672E3142619ED2DEC250 /* Playback in Frameworks */ = {isa = PBXBuildFile; productRef = 8B073E7348A344E13C862E72 /* Playback */; };
+		2773E334725730DA1E536505 /* PlayLastComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88B8C3C84CECA7AD66E9AADF /* PlayLastComplication.swift */; };
+		2D6A2840BC577AE65242D67A /* HolmdelWatchWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 527EB18BB224C165EBEC1F94 /* HolmdelWatchWidgetsBundle.swift */; };
+		38613E1E1ECB6074AE2DC345 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4C18DB35ABB3A91A0D192E75 /* Assets.xcassets */; };
+		414EDC8DD0E322F7B7890A27 /* WatchAppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA49F89063497CAB19069B1 /* WatchAppDependencies.swift */; };
+		44AC2BEF222DBA0CBE89A887 /* WatchRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50B4E5649B9B1DA06B5FB1FC /* WatchRootView.swift */; };
+		5C8848F67AAA9BDD99B2E1BB /* HolmdelWatchWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 2CF7489050D38CAD0C9BCAD5 /* HolmdelWatchWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		0000000000000000000000F0 /* HolmdelWatchApp.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 1F9BBE8DA0AFDC04C965EF42 /* HolmdelWatchApp.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		61FB9A2F94033357F15F6F86 /* WatchLaunchRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1963A2095C47924C91C127EB /* WatchLaunchRoute.swift */; };
+		7AD926606E1286C3F3BD7E74 /* HolmdelWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA8362D31F84827046BAEF74 /* HolmdelWatchApp.swift */; };
+		80A56DAB6BC23378D22C1A6E /* WatchLaunchRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1963A2095C47924C91C127EB /* WatchLaunchRoute.swift */; };
+		9D52CF8A7CDD14BCBB9A413E /* RadioDirectory in Frameworks */ = {isa = PBXBuildFile; productRef = 4189EFE6C4EF862614B0FA3C /* RadioDirectory */; };
+		A4639EED234138D3C20E4C2D /* WatchNoopNowPlayingCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059363CD6EA08810681C100A /* WatchNoopNowPlayingCenter.swift */; };
+		D43AAC581B5812399D25D827 /* WatchRadioPlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C61FAF4CF10B67D240EFD1F /* WatchRadioPlaybackEngine.swift */; };
+		000000000000000000000095 /* HolmdelCarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000094 /* HolmdelCarPlaySceneDelegate.swift */; };
+		0000000000000000000000A1 /* BackgroundRefreshController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A2 /* BackgroundRefreshController.swift */; };
+		7C0FE00000000000000000A1 /* HolmdelTVApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000B1 /* HolmdelTVApp.swift */; };
+		7C0FE00000000000000000A2 /* TVAppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000B2 /* TVAppDependencies.swift */; };
+		7C0FE00000000000000000A3 /* TVNowPlayingCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000B3 /* TVNowPlayingCenter.swift */; };
+		7C0FE00000000000000000A5 /* TVRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000B5 /* TVRootView.swift */; };
+		7C0FE00000000000000000A6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000B7 /* Assets.xcassets */; };
+		7C0FE00000000000000000A7 /* RadioDirectory in Frameworks */ = {isa = PBXBuildFile; productRef = 7C0FE00000000000000000D1 /* RadioDirectory */; };
+		7C0FE00000000000000000A8 /* Playback in Frameworks */ = {isa = PBXBuildFile; productRef = 7C0FE00000000000000000D2 /* Playback */; };
+		7C0FE00000000000000000A9 /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = 7C0FE00000000000000000D3 /* Persistence */; };
+		7C0FE00000000000000000AA /* PlaybackEngineAudioStreaming in Frameworks */ = {isa = PBXBuildFile; productRef = 7C0FE00000000000000000D4 /* PlaybackEngineAudioStreaming */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		000000000000000000000080 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 000000000000000000000075;
+			remoteInfo = HolmdelWidgets;
+		};
+		D07E3ADCCC456E2132BA60D8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DA0B84EF0EC6D1665CAD9441;
+			remoteInfo = HolmdelWatchWidgets;
+		};
+		0000000000000000000000E9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 000000000000000000000002;
+			remoteInfo = Holmdel;
+		};
+		0000000000000000000000F1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3A593819EC2EC0E4966C890C;
+			remoteInfo = HolmdelWatchApp;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		00000000000000000000007E /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				00000000000000000000007F /* HolmdelWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2C3B5D8EBDBA5EF6BB3B5BB7 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				5C8848F67AAA9BDD99B2E1BB /* HolmdelWatchWidgets.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0000000000000000000000F3 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				0000000000000000000000F0 /* HolmdelWatchApp.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		000000000000000000000008 /* Holmdel.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Holmdel.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		000000000000000000000010 /* HolmdelApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolmdelApp.swift; sourceTree = "<group>"; };
+		000000000000000000000011 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		000000000000000000000012 /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
+		000000000000000000000100 /* AppDependencies+Networking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDependencies+Networking.swift"; sourceTree = "<group>"; };
+		000000000000000000000101 /* AppDependencies+Factories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDependencies+Factories.swift"; sourceTree = "<group>"; };
+		000000000000000000000102 /* AppDependencies+Callbacks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDependencies+Callbacks.swift"; sourceTree = "<group>"; };
+		000000000000000000000103 /* AppDependencies+Warmups.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDependencies+Warmups.swift"; sourceTree = "<group>"; };
+		0000000000000000000000B0 /* GeoStationLocationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoStationLocationCoordinator.swift; sourceTree = "<group>"; };
+		0000000000000000000000B2 /* HolmdelAudioIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolmdelAudioIntents.swift; sourceTree = "<group>"; };
+		000000000000000000000013 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		000000000000000000000014 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		000000000000000000000015 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		000000000000000000000016 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		000000000000000000000017 /* Secrets.xcconfig.template */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig.template; sourceTree = "<group>"; };
+		000000000000000000000018 /* HolmdelShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolmdelShortcuts.swift; sourceTree = "<group>"; };
+		000000000000000000000019 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		0000000000000000000000FA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		7C0FE00000000000000000FB /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		00000000000000000000001A /* WelcomeOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeOverlayView.swift; sourceTree = "<group>"; };
+		000000000000000000000070 /* HolmdelWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HolmdelWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		000000000000000000000071 /* HolmdelWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolmdelWidgetsBundle.swift; sourceTree = "<group>"; };
+		000000000000000000000072 /* NowPlayingLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingLiveActivity.swift; sourceTree = "<group>"; };
+		000000000000000000000073 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		000000000000000000000083 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		000000000000000000000085 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		000000000000000000000090 /* StationLaunchRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationLaunchRouter.swift; sourceTree = "<group>"; };
+		0000000000000000000000D0 /* QuickPlayWidgetPublisher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPlayWidgetPublisher.swift; sourceTree = "<group>"; };
+		0000000000000000000000D1 /* QuickPlayWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPlayWidget.swift; sourceTree = "<group>"; };
+		0000000000000000000000E1 /* HolmdelTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HolmdelTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0000000000000000000000EB /* IntentSupportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentSupportTests.swift; sourceTree = "<group>"; };
+		0000000000000000000000EC /* AppIntentsPathwayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntentsPathwayTests.swift; sourceTree = "<group>"; };
+		000000000000000000000092 /* Holmdel.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Holmdel.entitlements; sourceTree = "<group>"; };
+		000000000000000000000093 /* Holmdel.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Holmdel.entitlements; sourceTree = "<group>"; };
+		059363CD6EA08810681C100A /* WatchNoopNowPlayingCenter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchNoopNowPlayingCenter.swift; sourceTree = "<group>"; };
+		0C61FAF4CF10B67D240EFD1F /* WatchRadioPlaybackEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchRadioPlaybackEngine.swift; sourceTree = "<group>"; };
+		1963A2095C47924C91C127EB /* WatchLaunchRoute.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLaunchRoute.swift; sourceTree = "<group>"; };
+		1F9BBE8DA0AFDC04C965EF42 /* HolmdelWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HolmdelWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2CF7489050D38CAD0C9BCAD5 /* HolmdelWatchWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HolmdelWatchWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		32EABE18A3349085EED4DCB3 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		4C18DB35ABB3A91A0D192E75 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		50B4E5649B9B1DA06B5FB1FC /* WatchRootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchRootView.swift; sourceTree = "<group>"; };
+		527EB18BB224C165EBEC1F94 /* HolmdelWatchWidgetsBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HolmdelWatchWidgetsBundle.swift; sourceTree = "<group>"; };
+		5CA49F89063497CAB19069B1 /* WatchAppDependencies.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAppDependencies.swift; sourceTree = "<group>"; };
+		88B8C3C84CECA7AD66E9AADF /* PlayLastComplication.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlayLastComplication.swift; sourceTree = "<group>"; };
+		D56E30839D19FB3015F6195A /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		DA8362D31F84827046BAEF74 /* HolmdelWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HolmdelWatchApp.swift; sourceTree = "<group>"; };
+		000000000000000000000094 /* HolmdelCarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolmdelCarPlaySceneDelegate.swift; sourceTree = "<group>"; };
+		0000000000000000000000A2 /* BackgroundRefreshController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefreshController.swift; sourceTree = "<group>"; };
+		7C0FE00000000000000000B1 /* HolmdelTVApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HolmdelTVApp.swift; sourceTree = "<group>"; };
+		7C0FE00000000000000000B2 /* TVAppDependencies.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TVAppDependencies.swift; sourceTree = "<group>"; };
+		7C0FE00000000000000000B3 /* TVNowPlayingCenter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TVNowPlayingCenter.swift; sourceTree = "<group>"; };
+		7C0FE00000000000000000B5 /* TVRootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TVRootView.swift; sourceTree = "<group>"; };
+		7C0FE00000000000000000B6 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7C0FE00000000000000000B7 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		7C0FE00000000000000000B8 /* HolmdelTVApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HolmdelTVApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		00000000000000000000000B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000060 /* DesignSystem in Frameworks */,
+				000000000000000000000061 /* RadioDirectory in Frameworks */,
+				000000000000000000000062 /* Playback in Frameworks */,
+				00000000000000000000006A /* PlaybackEngineAudioStreaming in Frameworks */,
+				000000000000000000000063 /* Persistence in Frameworks */,
+				000000000000000000000064 /* BrowseFeature in Frameworks */,
+				000000000000000000000065 /* PlayerFeature in Frameworks */,
+				000000000000000000000066 /* SearchFeature in Frameworks */,
+				000000000000000000000067 /* LibraryFeature in Frameworks */,
+				000000000000000000000082 /* SettingsFeature in Frameworks */,
+				0000000000000000000000A0 /* DebugSupport in Frameworks */,
+				000000000000000000000068 /* NowPlayingActivityKit in Frameworks */,
+				0000000000000000000000C0 /* NowPlayingActivityCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		000000000000000000000077 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000069 /* NowPlayingActivityCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F07FA2C384C984FBFF5F4D4A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9D52CF8A7CDD14BCBB9A413E /* RadioDirectory in Frameworks */,
+				1DF3672E3142619ED2DEC250 /* Playback in Frameworks */,
+				075A8F60A66D5127E26C4DEB /* Persistence in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FDA308BF9FEF7645519F8BCE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0000000000000000000000E6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7C0FE00000000000000000C4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7C0FE00000000000000000A7 /* RadioDirectory in Frameworks */,
+				7C0FE00000000000000000A8 /* Playback in Frameworks */,
+				7C0FE00000000000000000AA /* PlaybackEngineAudioStreaming in Frameworks */,
+				7C0FE00000000000000000A9 /* Persistence in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		000000000000000000000003 = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000005 /* Holmdel */,
+				0000000000000000000000EA /* HolmdelTests */,
+				000000000000000000000074 /* HolmdelWidgets */,
+				000000000000000000000006 /* Config */,
+				000000000000000000000007 /* Packages */,
+				000000000000000000000004 /* Products */,
+				04CAAC3EA79D10542025D07C /* HolmdelWatchShared */,
+				FDCA08F1A81EA89B4162FCA7 /* HolmdelWatchApp */,
+				9C7B7DC836C5443BAF108187 /* HolmdelWatchWidgets */,
+				7C0FE00000000000000000C1 /* HolmdelTVApp */,
+			);
+			sourceTree = "<group>";
+		};
+		000000000000000000000004 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000008 /* Holmdel.app */,
+				0000000000000000000000E1 /* HolmdelTests.xctest */,
+				000000000000000000000070 /* HolmdelWidgets.appex */,
+				1F9BBE8DA0AFDC04C965EF42 /* HolmdelWatchApp.app */,
+				2CF7489050D38CAD0C9BCAD5 /* HolmdelWatchWidgets.appex */,
+				7C0FE00000000000000000B8 /* HolmdelTVApp.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		000000000000000000000005 /* Holmdel */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000010 /* HolmdelApp.swift */,
+				000000000000000000000011 /* RootView.swift */,
+				000000000000000000000012 /* AppDependencies.swift */,
+				000000000000000000000100 /* AppDependencies+Networking.swift */,
+				000000000000000000000101 /* AppDependencies+Factories.swift */,
+				000000000000000000000102 /* AppDependencies+Callbacks.swift */,
+				000000000000000000000103 /* AppDependencies+Warmups.swift */,
+				0000000000000000000000A2 /* BackgroundRefreshController.swift */,
+				0000000000000000000000B0 /* GeoStationLocationCoordinator.swift */,
+				0000000000000000000000B2 /* HolmdelAudioIntents.swift */,
+				000000000000000000000018 /* HolmdelShortcuts.swift */,
+				000000000000000000000090 /* StationLaunchRouter.swift */,
+				000000000000000000000094 /* HolmdelCarPlaySceneDelegate.swift */,
+				0000000000000000000000D0 /* QuickPlayWidgetPublisher.swift */,
+				000000000000000000000013 /* Info.plist */,
+				000000000000000000000014 /* Assets.xcassets */,
+				000000000000000000000019 /* PrivacyInfo.xcprivacy */,
+				00000000000000000000001A /* WelcomeOverlayView.swift */,
+				000000000000000000000083 /* Localizable.xcstrings */,
+				000000000000000000000092 /* Holmdel.entitlements */,
+			);
+			path = Holmdel;
+			sourceTree = "<group>";
+		};
+		0000000000000000000000EA /* HolmdelTests */ = {
+			isa = PBXGroup;
+			children = (
+				0000000000000000000000EB /* IntentSupportTests.swift */,
+				0000000000000000000000EC /* AppIntentsPathwayTests.swift */,
+			);
+			path = HolmdelTests;
+			sourceTree = "<group>";
+		};
+		000000000000000000000006 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000015 /* Debug.xcconfig */,
+				000000000000000000000016 /* Release.xcconfig */,
+				000000000000000000000017 /* Secrets.xcconfig.template */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		000000000000000000000007 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Packages;
+			path = ../Packages;
+			sourceTree = "<group>";
+		};
+		000000000000000000000074 /* HolmdelWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000071 /* HolmdelWidgetsBundle.swift */,
+				000000000000000000000072 /* NowPlayingLiveActivity.swift */,
+				0000000000000000000000D1 /* QuickPlayWidget.swift */,
+				000000000000000000000073 /* Info.plist */,
+				000000000000000000000085 /* Localizable.xcstrings */,
+				000000000000000000000093 /* Holmdel.entitlements */,
+			);
+			path = HolmdelWidgets;
+			sourceTree = "<group>";
+		};
+		04CAAC3EA79D10542025D07C /* HolmdelWatchShared */ = {
+			isa = PBXGroup;
+			children = (
+				1963A2095C47924C91C127EB /* WatchLaunchRoute.swift */,
+			);
+			path = HolmdelWatchShared;
+			sourceTree = "<group>";
+		};
+		9C7B7DC836C5443BAF108187 /* HolmdelWatchWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				527EB18BB224C165EBEC1F94 /* HolmdelWatchWidgetsBundle.swift */,
+				88B8C3C84CECA7AD66E9AADF /* PlayLastComplication.swift */,
+				D56E30839D19FB3015F6195A /* Info.plist */,
+			);
+			path = HolmdelWatchWidgets;
+			sourceTree = "<group>";
+		};
+		FDCA08F1A81EA89B4162FCA7 /* HolmdelWatchApp */ = {
+			isa = PBXGroup;
+			children = (
+				DA8362D31F84827046BAEF74 /* HolmdelWatchApp.swift */,
+				5CA49F89063497CAB19069B1 /* WatchAppDependencies.swift */,
+				059363CD6EA08810681C100A /* WatchNoopNowPlayingCenter.swift */,
+				0C61FAF4CF10B67D240EFD1F /* WatchRadioPlaybackEngine.swift */,
+				50B4E5649B9B1DA06B5FB1FC /* WatchRootView.swift */,
+				32EABE18A3349085EED4DCB3 /* Info.plist */,
+				0000000000000000000000FA /* PrivacyInfo.xcprivacy */,
+				4C18DB35ABB3A91A0D192E75 /* Assets.xcassets */,
+			);
+			path = HolmdelWatchApp;
+			sourceTree = "<group>";
+		};
+		7C0FE00000000000000000C1 /* HolmdelTVApp */ = {
+			isa = PBXGroup;
+			children = (
+				7C0FE00000000000000000B1 /* HolmdelTVApp.swift */,
+				7C0FE00000000000000000B2 /* TVAppDependencies.swift */,
+				7C0FE00000000000000000B3 /* TVNowPlayingCenter.swift */,
+				7C0FE00000000000000000B5 /* TVRootView.swift */,
+				7C0FE00000000000000000B6 /* Info.plist */,
+				7C0FE00000000000000000FB /* PrivacyInfo.xcprivacy */,
+				7C0FE00000000000000000B7 /* Assets.xcassets */,
+			);
+			path = HolmdelTVApp;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		000000000000000000000002 /* Holmdel */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 000000000000000000000031 /* Build configuration list for PBXNativeTarget "Holmdel" */;
+			buildPhases = (
+				000000000000000000000009 /* Sources */,
+				00000000000000000000000B /* Frameworks */,
+				00000000000000000000000A /* Resources */,
+				00000000000000000000007E /* Embed Foundation Extensions */,
+				0000000000000000000000F3 /* Embed Watch Content */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				000000000000000000000081 /* PBXTargetDependency */,
+				0000000000000000000000F2 /* PBXTargetDependency */,
+			);
+			name = Holmdel;
+			packageProductDependencies = (
+				000000000000000000000050 /* DesignSystem */,
+				000000000000000000000051 /* RadioDirectory */,
+				000000000000000000000052 /* Playback */,
+				00000000000000000000005C /* PlaybackEngineAudioStreaming */,
+				000000000000000000000053 /* Persistence */,
+				000000000000000000000054 /* BrowseFeature */,
+				000000000000000000000055 /* PlayerFeature */,
+				000000000000000000000056 /* SearchFeature */,
+				000000000000000000000057 /* LibraryFeature */,
+				00000000000000000000005A /* SettingsFeature */,
+				00000000000000000000005B /* DebugSupport */,
+				000000000000000000000058 /* NowPlayingActivityKit */,
+				0000000000000000000000CA /* NowPlayingActivityCore */,
+			);
+			productName = Holmdel;
+			productReference = 000000000000000000000008 /* Holmdel.app */;
+			productType = "com.apple.product-type.application";
+		};
+		000000000000000000000075 /* HolmdelWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 00000000000000000000007B /* Build configuration list for PBXNativeTarget "HolmdelWidgets" */;
+			buildPhases = (
+				000000000000000000000076 /* Sources */,
+				000000000000000000000077 /* Frameworks */,
+				000000000000000000000078 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = HolmdelWidgets;
+			packageProductDependencies = (
+				000000000000000000000059 /* NowPlayingActivityCore */,
+			);
+			productName = HolmdelWidgets;
+			productReference = 000000000000000000000070 /* HolmdelWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		3A593819EC2EC0E4966C890C /* HolmdelWatchApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EA61E6D65F8B98FD3E08D931 /* Build configuration list for PBXNativeTarget "HolmdelWatchApp" */;
+			buildPhases = (
+				3F87AAFBA8D008814CD4AF8C /* Sources */,
+				F07FA2C384C984FBFF5F4D4A /* Frameworks */,
+				6A7AFAC2A946C3D4ADBC3777 /* Resources */,
+				2C3B5D8EBDBA5EF6BB3B5BB7 /* Embed App Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5392856C1011F90BFB51403B /* PBXTargetDependency */,
+			);
+			name = HolmdelWatchApp;
+			packageProductDependencies = (
+				4189EFE6C4EF862614B0FA3C /* RadioDirectory */,
+				8B073E7348A344E13C862E72 /* Playback */,
+				2D4800AE052B864E256ECF8D /* Persistence */,
+			);
+			productName = HolmdelWatchApp;
+			productReference = 1F9BBE8DA0AFDC04C965EF42 /* HolmdelWatchApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+		DA0B84EF0EC6D1665CAD9441 /* HolmdelWatchWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 379AFE0CE62312E7926A96F6 /* Build configuration list for PBXNativeTarget "HolmdelWatchWidgets" */;
+			buildPhases = (
+				3C3554BC61DCDBEA85B6ADDD /* Sources */,
+				FDA308BF9FEF7645519F8BCE /* Frameworks */,
+				9D02CBBEE047CF84ED24BB8F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = HolmdelWatchWidgets;
+			productName = HolmdelWatchWidgets;
+			productReference = 2CF7489050D38CAD0C9BCAD5 /* HolmdelWatchWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		0000000000000000000000E0 /* HolmdelTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0000000000000000000000E2 /* Build configuration list for PBXNativeTarget "HolmdelTests" */;
+			buildPhases = (
+				0000000000000000000000E5 /* Sources */,
+				0000000000000000000000E6 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0000000000000000000000E8 /* PBXTargetDependency */,
+			);
+			name = HolmdelTests;
+			productName = HolmdelTests;
+			productReference = 0000000000000000000000E1 /* HolmdelTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		7C0FE00000000000000000C2 /* HolmdelTVApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7C0FE00000000000000000C8 /* Build configuration list for PBXNativeTarget "HolmdelTVApp" */;
+			buildPhases = (
+				7C0FE00000000000000000C3 /* Sources */,
+				7C0FE00000000000000000C4 /* Frameworks */,
+				7C0FE00000000000000000C5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = HolmdelTVApp;
+			packageProductDependencies = (
+				7C0FE00000000000000000D1 /* RadioDirectory */,
+				7C0FE00000000000000000D2 /* Playback */,
+				7C0FE00000000000000000D4 /* PlaybackEngineAudioStreaming */,
+				7C0FE00000000000000000D3 /* Persistence */,
+			);
+			productName = HolmdelTVApp;
+			productReference = 7C0FE00000000000000000B8 /* HolmdelTVApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		000000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					000000000000000000000002 = {
+						CreatedOnToolsVersion = 26.0;
+						ProvisioningStyle = Automatic;
+					};
+					000000000000000000000075 = {
+						CreatedOnToolsVersion = 26.0;
+						ProvisioningStyle = Automatic;
+					};
+					3A593819EC2EC0E4966C890C = {
+						CreatedOnToolsVersion = 26.0;
+						ProvisioningStyle = Automatic;
+					};
+					DA0B84EF0EC6D1665CAD9441 = {
+						CreatedOnToolsVersion = 26.0;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 000000000000000000000030 /* Build configuration list for PBXProject "HolmdelApp" */;
+			compatibilityVersion = "Xcode 16.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 000000000000000000000003;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				000000000000000000000040 /* XCLocalSwiftPackageReference "DesignSystem" */,
+				000000000000000000000041 /* XCLocalSwiftPackageReference "RadioDirectory" */,
+				000000000000000000000042 /* XCLocalSwiftPackageReference "Playback" */,
+				000000000000000000000043 /* XCLocalSwiftPackageReference "Persistence" */,
+				000000000000000000000044 /* XCLocalSwiftPackageReference "BrowseFeature" */,
+				000000000000000000000045 /* XCLocalSwiftPackageReference "PlayerFeature" */,
+				000000000000000000000046 /* XCLocalSwiftPackageReference "SearchFeature" */,
+				000000000000000000000047 /* XCLocalSwiftPackageReference "LibraryFeature" */,
+				000000000000000000000049 /* XCLocalSwiftPackageReference "SettingsFeature" */,
+				00000000000000000000004A /* XCLocalSwiftPackageReference "DebugSupport" */,
+				00000000000000000000004B /* XCLocalSwiftPackageReference "PlaybackEngineAudioStreaming" */,
+				000000000000000000000048 /* XCLocalSwiftPackageReference "LiveActivity" */,
+			);
+			productRefGroup = 000000000000000000000004 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				000000000000000000000002 /* Holmdel */,
+				0000000000000000000000E0 /* HolmdelTests */,
+				000000000000000000000075 /* HolmdelWidgets */,
+				3A593819EC2EC0E4966C890C /* HolmdelWatchApp */,
+				DA0B84EF0EC6D1665CAD9441 /* HolmdelWatchWidgets */,
+				7C0FE00000000000000000C2 /* HolmdelTVApp */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		00000000000000000000000A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000023 /* Assets.xcassets in Resources */,
+				000000000000000000000025 /* PrivacyInfo.xcprivacy in Resources */,
+				000000000000000000000084 /* Localizable.xcstrings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		000000000000000000000078 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000086 /* Localizable.xcstrings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6A7AFAC2A946C3D4ADBC3777 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				38613E1E1ECB6074AE2DC345 /* Assets.xcassets in Resources */,
+				0000000000000000000000FC /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9D02CBBEE047CF84ED24BB8F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7C0FE00000000000000000C5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7C0FE00000000000000000A6 /* Assets.xcassets in Resources */,
+				7C0FE00000000000000000FD /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		000000000000000000000009 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000020 /* HolmdelApp.swift in Sources */,
+				000000000000000000000021 /* RootView.swift in Sources */,
+				000000000000000000000026 /* WelcomeOverlayView.swift in Sources */,
+				000000000000000000000022 /* AppDependencies.swift in Sources */,
+				000000000000000000000110 /* AppDependencies+Networking.swift in Sources */,
+				000000000000000000000111 /* AppDependencies+Factories.swift in Sources */,
+				000000000000000000000112 /* AppDependencies+Callbacks.swift in Sources */,
+				000000000000000000000113 /* AppDependencies+Warmups.swift in Sources */,
+				0000000000000000000000A1 /* BackgroundRefreshController.swift in Sources */,
+				0000000000000000000000B1 /* GeoStationLocationCoordinator.swift in Sources */,
+				0000000000000000000000B3 /* HolmdelAudioIntents.swift in Sources */,
+				000000000000000000000024 /* HolmdelShortcuts.swift in Sources */,
+				000000000000000000000091 /* StationLaunchRouter.swift in Sources */,
+				000000000000000000000095 /* HolmdelCarPlaySceneDelegate.swift in Sources */,
+				0000000000000000000000C1 /* QuickPlayWidgetPublisher.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		000000000000000000000076 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000079 /* HolmdelWidgetsBundle.swift in Sources */,
+				00000000000000000000007A /* NowPlayingLiveActivity.swift in Sources */,
+				0000000000000000000000C2 /* QuickPlayWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3C3554BC61DCDBEA85B6ADDD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				80A56DAB6BC23378D22C1A6E /* WatchLaunchRoute.swift in Sources */,
+				2D6A2840BC577AE65242D67A /* HolmdelWatchWidgetsBundle.swift in Sources */,
+				2773E334725730DA1E536505 /* PlayLastComplication.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3F87AAFBA8D008814CD4AF8C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				61FB9A2F94033357F15F6F86 /* WatchLaunchRoute.swift in Sources */,
+				7AD926606E1286C3F3BD7E74 /* HolmdelWatchApp.swift in Sources */,
+				414EDC8DD0E322F7B7890A27 /* WatchAppDependencies.swift in Sources */,
+				A4639EED234138D3C20E4C2D /* WatchNoopNowPlayingCenter.swift in Sources */,
+				D43AAC581B5812399D25D827 /* WatchRadioPlaybackEngine.swift in Sources */,
+				44AC2BEF222DBA0CBE89A887 /* WatchRootView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0000000000000000000000E5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0000000000000000000000ED /* IntentSupportTests.swift in Sources */,
+				0000000000000000000000EE /* AppIntentsPathwayTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7C0FE00000000000000000C3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7C0FE00000000000000000A1 /* HolmdelTVApp.swift in Sources */,
+				7C0FE00000000000000000A2 /* TVAppDependencies.swift in Sources */,
+				7C0FE00000000000000000A3 /* TVNowPlayingCenter.swift in Sources */,
+				7C0FE00000000000000000A5 /* TVRootView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		000000000000000000000081 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 000000000000000000000075 /* HolmdelWidgets */;
+			targetProxy = 000000000000000000000080 /* PBXContainerItemProxy */;
+		};
+		5392856C1011F90BFB51403B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = HolmdelWatchWidgets;
+			target = DA0B84EF0EC6D1665CAD9441 /* HolmdelWatchWidgets */;
+			targetProxy = D07E3ADCCC456E2132BA60D8 /* PBXContainerItemProxy */;
+		};
+		0000000000000000000000E8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 000000000000000000000002 /* Holmdel */;
+			targetProxy = 0000000000000000000000E9 /* PBXContainerItemProxy */;
+		};
+		0000000000000000000000F2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = HolmdelWatchApp;
+			target = 3A593819EC2EC0E4966C890C /* HolmdelWatchApp */;
+			targetProxy = 0000000000000000000000F1 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0000000000000000000000E3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9L45FNA7XM;
+				ENABLE_TESTING_SEARCH_PATHS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cascadiacollections.holmdel.HolmdelTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Holmdel.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Holmdel";
+			};
+			name = Debug;
+		};
+		0000000000000000000000E4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9L45FNA7XM;
+				ENABLE_TESTING_SEARCH_PATHS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cascadiacollections.holmdel.HolmdelTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Holmdel.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Holmdel";
+			};
+			name = Release;
+		};
+		000000000000000000000032 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 9L45FNA7XM;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_STRICT_CONCURRENCY = complete;
+			};
+			name = Debug;
+		};
+		000000000000000000000033 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 9L45FNA7XM;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		000000000000000000000034 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 000000000000000000000015 /* Debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_ENTITLEMENTS = Holmdel/Holmdel.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Holmdel/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.4.0;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		000000000000000000000035 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 000000000000000000000016 /* Release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_ENTITLEMENTS = Holmdel/Holmdel.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Holmdel/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.4.0;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		00000000000000000000007C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = HolmdelWidgets/Holmdel.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = HolmdelWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cascadiacollections.holmdel.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		00000000000000000000007D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = HolmdelWidgets/Holmdel.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = HolmdelWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cascadiacollections.holmdel.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		0E582ABFB5981CFE25328710 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9L45FNA7XM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = HolmdelWatchWidgets/Info.plist;
+				MARKETING_VERSION = 0.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cascadiacollections.holmdel.watch.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		780E9A9DDA2CFCAD30203AF9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9L45FNA7XM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = HolmdelWatchApp/Info.plist;
+				MARKETING_VERSION = 0.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cascadiacollections.holmdel.watch;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		C91488E64C6644C03E9EB10F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9L45FNA7XM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = HolmdelWatchApp/Info.plist;
+				MARKETING_VERSION = 0.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cascadiacollections.holmdel.watch;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+		EA81BA795C4EA01E3CEE7880 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9L45FNA7XM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = HolmdelWatchWidgets/Info.plist;
+				MARKETING_VERSION = 0.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cascadiacollections.holmdel.watch.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+		7C0FE00000000000000000C6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9L45FNA7XM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = HolmdelTVApp/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cascadiacollections.holmdel.tv;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SKIP_INSTALL = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		7C0FE00000000000000000C7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9L45FNA7XM;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = HolmdelTVApp/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cascadiacollections.holmdel.tv;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SKIP_INSTALL = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 26.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		000000000000000000000030 /* Build configuration list for PBXProject "HolmdelApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000000000032 /* Debug */,
+				000000000000000000000033 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		000000000000000000000031 /* Build configuration list for PBXNativeTarget "Holmdel" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000000000034 /* Debug */,
+				000000000000000000000035 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		00000000000000000000007B /* Build configuration list for PBXNativeTarget "HolmdelWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				00000000000000000000007C /* Debug */,
+				00000000000000000000007D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		379AFE0CE62312E7926A96F6 /* Build configuration list for PBXNativeTarget "HolmdelWatchWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EA81BA795C4EA01E3CEE7880 /* Release */,
+				0E582ABFB5981CFE25328710 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EA61E6D65F8B98FD3E08D931 /* Build configuration list for PBXNativeTarget "HolmdelWatchApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C91488E64C6644C03E9EB10F /* Release */,
+				780E9A9DDA2CFCAD30203AF9 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0000000000000000000000E2 /* Build configuration list for PBXNativeTarget "HolmdelTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0000000000000000000000E3 /* Debug */,
+				0000000000000000000000E4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7C0FE00000000000000000C8 /* Build configuration list for PBXNativeTarget "HolmdelTVApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7C0FE00000000000000000C6 /* Debug */,
+				7C0FE00000000000000000C7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		000000000000000000000040 /* XCLocalSwiftPackageReference "DesignSystem" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/DesignSystem;
+		};
+		000000000000000000000041 /* XCLocalSwiftPackageReference "RadioDirectory" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/RadioDirectory;
+		};
+		000000000000000000000042 /* XCLocalSwiftPackageReference "Playback" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/Playback;
+		};
+		000000000000000000000043 /* XCLocalSwiftPackageReference "Persistence" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/Persistence;
+		};
+		000000000000000000000044 /* XCLocalSwiftPackageReference "BrowseFeature" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/Features/BrowseFeature;
+		};
+		000000000000000000000045 /* XCLocalSwiftPackageReference "PlayerFeature" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/Features/PlayerFeature;
+		};
+		000000000000000000000046 /* XCLocalSwiftPackageReference "SearchFeature" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/Features/SearchFeature;
+		};
+		000000000000000000000047 /* XCLocalSwiftPackageReference "LibraryFeature" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/Features/LibraryFeature;
+		};
+		000000000000000000000048 /* XCLocalSwiftPackageReference "LiveActivity" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/LiveActivity;
+		};
+		000000000000000000000049 /* XCLocalSwiftPackageReference "SettingsFeature" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/Features/SettingsFeature;
+		};
+		00000000000000000000004A /* XCLocalSwiftPackageReference "DebugSupport" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/DebugSupport;
+		};
+		00000000000000000000004B /* XCLocalSwiftPackageReference "PlaybackEngineAudioStreaming" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/PlaybackEngineAudioStreaming;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		000000000000000000000050 /* DesignSystem */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000040 /* XCLocalSwiftPackageReference "DesignSystem" */;
+			productName = DesignSystem;
+		};
+		000000000000000000000051 /* RadioDirectory */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000041 /* XCLocalSwiftPackageReference "RadioDirectory" */;
+			productName = RadioDirectory;
+		};
+		000000000000000000000052 /* Playback */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000042 /* XCLocalSwiftPackageReference "Playback" */;
+			productName = Playback;
+		};
+		000000000000000000000053 /* Persistence */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000043 /* XCLocalSwiftPackageReference "Persistence" */;
+			productName = Persistence;
+		};
+		000000000000000000000054 /* BrowseFeature */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000044 /* XCLocalSwiftPackageReference "BrowseFeature" */;
+			productName = BrowseFeature;
+		};
+		000000000000000000000055 /* PlayerFeature */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000045 /* XCLocalSwiftPackageReference "PlayerFeature" */;
+			productName = PlayerFeature;
+		};
+		000000000000000000000056 /* SearchFeature */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000046 /* XCLocalSwiftPackageReference "SearchFeature" */;
+			productName = SearchFeature;
+		};
+		000000000000000000000057 /* LibraryFeature */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000047 /* XCLocalSwiftPackageReference "LibraryFeature" */;
+			productName = LibraryFeature;
+		};
+		000000000000000000000058 /* NowPlayingActivityKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000048 /* XCLocalSwiftPackageReference "LiveActivity" */;
+			productName = NowPlayingActivityKit;
+		};
+		000000000000000000000059 /* NowPlayingActivityCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000048 /* XCLocalSwiftPackageReference "LiveActivity" */;
+			productName = NowPlayingActivityCore;
+		};
+		0000000000000000000000CA /* NowPlayingActivityCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000048 /* XCLocalSwiftPackageReference "LiveActivity" */;
+			productName = NowPlayingActivityCore;
+		};
+		00000000000000000000005A /* SettingsFeature */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000049 /* XCLocalSwiftPackageReference "SettingsFeature" */;
+			productName = SettingsFeature;
+		};
+		00000000000000000000005C /* PlaybackEngineAudioStreaming */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 00000000000000000000004B /* XCLocalSwiftPackageReference "PlaybackEngineAudioStreaming" */;
+			productName = PlaybackEngineAudioStreaming;
+		};
+		00000000000000000000005B /* DebugSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 00000000000000000000004A /* XCLocalSwiftPackageReference "DebugSupport" */;
+			productName = DebugSupport;
+		};
+		2D4800AE052B864E256ECF8D /* Persistence */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000043 /* XCLocalSwiftPackageReference "Persistence" */;
+			productName = Persistence;
+		};
+		4189EFE6C4EF862614B0FA3C /* RadioDirectory */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000041 /* XCLocalSwiftPackageReference "RadioDirectory" */;
+			productName = RadioDirectory;
+		};
+		8B073E7348A344E13C862E72 /* Playback */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000042 /* XCLocalSwiftPackageReference "Playback" */;
+			productName = Playback;
+		};
+		7C0FE00000000000000000D1 /* RadioDirectory */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000041 /* XCLocalSwiftPackageReference "RadioDirectory" */;
+			productName = RadioDirectory;
+		};
+		7C0FE00000000000000000D2 /* Playback */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000042 /* XCLocalSwiftPackageReference "Playback" */;
+			productName = Playback;
+		};
+		7C0FE00000000000000000D3 /* Persistence */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000043 /* XCLocalSwiftPackageReference "Persistence" */;
+			productName = Persistence;
+		};
+		7C0FE00000000000000000D4 /* PlaybackEngineAudioStreaming */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 00000000000000000000004B /* XCLocalSwiftPackageReference "PlaybackEngineAudioStreaming" */;
+			productName = PlaybackEngineAudioStreaming;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 000000000000000000000001 /* Project object */;
+}

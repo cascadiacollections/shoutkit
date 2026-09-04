@@ -25,7 +25,7 @@ Two paths, and they cover different code:
 cd Packages/RadioDirectory && swift test --disable-xctest
 
 # 2. Simulator — the only way to run the iOS-only suites and the app target.
-xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
+xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
   -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
@@ -57,7 +57,7 @@ xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
 - **`swiftformat --lint` is currently non-blocking** because most of the tree predates it.
   Don't reformat files you're otherwise not touching; the one-time run is its own task with
   its own workflow (`.github/workflows/format.yml`).
-- **The app target is not a SwiftPM package.** New files under `ShoutKitApp/` need
+- **The app target is not a SwiftPM package.** New files under `HolmdelApp/` need
   `PBXFileReference`, `PBXBuildFile`, group-child, and Sources entries hand-added to
   `project.pbxproj`. A file that fails to register still builds green — it just silently
   isn't in the binary. Verify the `.o` lands in the build directory.
@@ -73,7 +73,7 @@ xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
 
 ## Architecture in one pass
 
-`ShoutKitApp/` holds thin app, widget, and watch targets; everything else is a local
+`HolmdelApp/` holds thin app, widget, and watch targets; everything else is a local
 package under `Packages/`. Dependency wiring goes through Factory, so tests and previews
 substitute fakes without touching production call sites.
 

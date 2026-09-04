@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-09-03 (the rename missed the URL scheme, and nothing failed to build)
+
+`Info.plist` registers `holmdel` as the app's URL scheme; `StationLink.appScheme`
+still said `shoutkit`. The rename updated the plist and `handoffActivityType` on
+the line directly below `appScheme`, and missed the line between them.
+
+Nothing caught it. It compiles either way — the two values never meet at a type
+boundary, only at runtime, in the OS. `QuickPlayWidgetPublisher` went on writing
+`shoutkit://station?...` into the widget's snapshot, and iOS routes that scheme
+to whatever still claims it: nothing, or an old ShoutKit build if one is
+installed. `StationLaunchRouter` would have rejected the `holmdel://` links the
+system actually delivers. So Home Screen quick-play, Shortcuts, and promo links
+were all broken by a rename, and the only way to notice was to tap a widget on a
+device.
+
+Found while looking for a way to seed a "recently played" station from the
+command line during UX work — not by a test, which is the point.
+
+`.github/scripts/check-url-scheme.sh` now compares the two and fails CI on a
+mismatch. It parses the plist with `python3`/`plistlib` rather than PlistBuddy so
+it can run on the cheap Linux runner alongside the license-boundary check. This
+is the same habit as asserting Pulse links only into Debug and that
+`Packages/Playback` resolves no binary artifacts: a check that can fail, for
+something that was believed to be true and was not.
+
 ## 2026-09-02 (Bluetooth artwork, twice more: `.background` is the wrong tier for it, and the station-switch carve-out was the last hole)
 
 Reported from a Tesla again — neither per-track album art nor the station's own artwork resolving
@@ -116,6 +141,44 @@ Verified rather than assumed: the full 83-test suite passed 3× under 8-way CPU 
 original failure mode), `swiftlint --strict` is clean on both files, and `Persistence` builds
 for `iOS Simulator` — the only configuration that compiles the `MXMetricManagerSubscriber`
 extension where the returned task is discarded.
+
+## 2026-08-24 (splitting the app name from the SDK name: Holmdel app, ShoutKit library)
+
+Renamed the distributed app from ShoutKit to **Holmdel**, while `Packages/` — the SDK layer
+(`RadioDirectory`, `Playback`, `PlaybackEngineAudioStreaming`, `Persistence`, `DesignSystem`,
+`FeatureFlags`, `ImageIODownsample`, plus the GPL feature packages) — keeps the **ShoutKit**
+name. Considered several app names (Aircheck, Skywave, Holmdel among them); Aircheck had a real
+collision with NetScout's established "AirCheck" Wi-Fi tester product line, while "Holmdel" (a
+nod to the Bell Labs Holmdel site and its Horn Antenna) had no App Store or trademark collision
+found. Done pre-1.0/TestFlight-only, before any public App Store listing exists under the old
+identity, which is the cheapest point to change a bundle ID.
+
+**What changed**: `ShoutKit.xcworkspace` → `Holmdel.xcworkspace`, `ShoutKitApp/` →
+`HolmdelApp/`, every app/widget/watch/tv target and scheme, `com.cascadiacollections.shoutkit` →
+`com.cascadiacollections.holmdel` (bundle IDs, the shared app group, the Handoff activity type,
+internal dispatch-queue labels), the `holmdel://` deep-link scheme, and the
+`RadioBrowserDirectoryClient` User-Agent the app passes (`Holmdel/0.1`, overriding the SDK's own
+generic `ShoutKit/0.1` default — see `RadioBrowserDirectoryClient.defaultUserAgent`). `TRADEMARK.md`
+now reserves both names separately. See `docs/RELEASING.md` and `CONTRIBUTING.md` for the
+updated paths.
+
+**What deliberately did not change**: every package-level `ShoutKit`-prefixed symbol
+(`ShoutKitTheme`, `shoutKitAccent`/`shoutKitSpotlight`/etc. in `DesignSystem`,
+`ShoutKitModelContainer` in `Persistence`, `ShoutKitSpacing`/`ShoutKitRadius`/`ShoutKitLayout`) —
+those are the SDK's own brand and are unrelated to the app's identity.
+
+**Landmine for future agents editing `project.pbxproj` by hand**: a mechanical text substitution
+(`ShoutKit` → `Holmdel`) across the project file is *not* safe on its own whenever a renamed
+folder's new name diverges from what the substitution would produce. The app's main source
+folder was renamed `ShoutKitApp` → `Holmdel` (dropping "App"), not the `HolmdelApp` a blind
+substitution implies — so every `PBXGroup.path`, `CODE_SIGN_ENTITLEMENTS`, and `INFOPLIST_FILE`
+build setting pointing into that folder silently carried the wrong (`HolmdelApp/…`) prefix after
+substitution, and each surfaced only as a distinct build failure (missing entitlements file,
+then a missing `Info.plist`) rather than all at once. A renamed `PBXFileReference.path` that no
+longer matches its new filename is the same failure mode one level down. The fix each time was
+mechanical once found — grep the pbxproj for the specific stale path and correct it — but finding
+it needed an actual `xcodebuild` run per fix; `-list`-only or comment-text checks would have
+missed it.
 
 ## 2026-08-20 (fading a rejoin in, instead of trying to buffer around it)
 

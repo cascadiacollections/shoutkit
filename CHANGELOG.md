@@ -1,6 +1,7 @@
 # Changelog
 
-All notable changes to ShoutKit are documented here. The format follows
+All notable changes to Holmdel (this app; previously named ShoutKit — see the 2026-08-24 entry
+below) are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org).
 
@@ -11,6 +12,19 @@ All notable changes to ShoutKit are documented here. The format follows
 > numbering continues rather than restarting at 1.0.0.
 
 ## [Unreleased]
+
+### Fixed
+- **Stations in the Home Screen widget open the app again.** Renaming the app changed the
+  link the widget hands to iOS, but not the link the app was listening for, so tapping a
+  station in the widget opened nothing — or an older copy of the app, if one was still
+  installed. The same break affected Shortcuts and shared station links
+
+### Changed
+- **The app is now named Holmdel.** ShoutKit remains the name of this repo's MIT-licensed radio
+  SDK (`Packages/`); Holmdel is the distributed app built on it. This changes the app's bundle
+  identifier (`com.cascadiacollections.holmdel`), its shared app group, and its `holmdel://` deep
+  link scheme — a fresh install, not an update, for anyone who had a build under the old identity.
+  See `DECISIONS.md` (2026-08-24) and `TRADEMARK.md`.
 
 ### Fixed
 - **Album art shows up again on Bluetooth car stereos.** In a car, artwork either stayed frozen on

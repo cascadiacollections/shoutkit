@@ -100,7 +100,7 @@ public actor StationConnectionPrewarmer {
     private static func warm(_ target: Target, timeout: TimeInterval) async {
         let parameters: NWParameters = target.useTLS ? .tls : .tcp
         let connection = NWConnection(host: target.host, port: target.port, using: parameters)
-        let queue = DispatchQueue(label: "com.cascadiacollections.shoutkit.prewarm")
+        let queue = DispatchQueue(label: "com.cascadiacollections.holmdel.prewarm")
 
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             // The state handler and the timeout can both fire; the lock makes
