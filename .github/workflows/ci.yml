@@ -480,6 +480,19 @@ jobs:
             exit 1
           fi
           echo "Confirmed: watch companion embedded at Watch/HolmdelWatchApp.app, companion id $COMPANION."
+          # WKBackgroundModes takes only watchOS session types (workout-processing,
+          # location, self-care, mindfulness, physical-therapy, alarm). Putting
+          # `audio` there builds and installs fine locally and is rejected only at
+          # App Store upload validation — the slowest possible place to find out.
+          if /usr/libexec/PlistBuddy -c "Print :WKBackgroundModes" "$WATCH_APP/Info.plist" >/dev/null 2>&1; then
+            echo "::error::Embedded watch app declares WKBackgroundModes. That key takes only watchOS session types; background audio belongs in UIBackgroundModes. Upload validation rejects the invalid value."
+            exit 1
+          fi
+          if ! /usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "$WATCH_APP/Info.plist" 2>/dev/null | grep -q '^ *audio$'; then
+            echo "::error::Embedded watch app is missing UIBackgroundModes -> audio. Without it the watch companion stops playing when the app leaves the foreground."
+            exit 1
+          fi
+          echo "Confirmed: watch background audio declared via UIBackgroundModes."
 
   # Release-configuration and watchOS compiles, split out of `build` and off the
   # per-push path. Both are compile-only — neither runs a test — and together

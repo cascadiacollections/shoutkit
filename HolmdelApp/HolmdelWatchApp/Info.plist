@@ -59,7 +59,17 @@
 	     PRODUCT_BUNDLE_IDENTIFIER in Config/{Debug,Release}.xcconfig. -->
 	<key>WKCompanionAppBundleIdentifier</key>
 	<string>com.cascadiacollections.holmdel</string>
-	<key>WKBackgroundModes</key>
+	<!-- UIBackgroundModes, not WKBackgroundModes. WKBackgroundModes takes only
+	     watchOS *session* types — workout-processing, location, self-care,
+	     mindfulness, physical-therapy, alarm — and background audio is not one
+	     of them. Declaring `audio` there is accepted by the compiler and by a
+	     local build, and is rejected at upload validation:
+
+	         Invalid Info.plist value. The value for the key 'WKBackgroundModes'
+	         in bundle Holmdel.app/Watch/HolmdelWatchApp.app is invalid.
+
+	     watchOS uses the same UIBackgroundModes key as iOS for audio. -->
+	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
 	</array>
