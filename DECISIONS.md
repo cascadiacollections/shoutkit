@@ -51,12 +51,28 @@ circle in the title block with no neighbours to cluster with, and a
 "public wrapper with no callers" that got `GlassActionCluster` deleted in the
 2026-08-24 pass. Its menu already morphs from its own `.glass` button style.
 
-**Unverified on device.** All four files were changed in an environment with no Swift
-toolchain, so none of this has been compiled, let alone seen. The claims above about
-what the morph looks like are claims about what the API is documented to do; the
-shapes and radii are the parts that are checkable by reading. Worth a look on hardware
-before this is believed — the 2026-09-03 entry above is about two things only a real
-device showed.
+**`TransportGlassID` is `nonisolated`, and has to be.** This package builds with
+`.defaultIsolation(MainActor.self)`, which isolates a bare file-scope `enum` to the
+main actor *and its `Hashable` conformance with it*. `glassEffectID` takes its ID as
+`Hashable & Sendable`, and a main-actor-isolated conformance cannot satisfy a
+`Sendable` requirement — all three call sites failed with `[#IsolatedConformances]`.
+Worth knowing generally: any type in these six UI packages that exists to be handed
+*to* a SwiftUI API as a generic parameter, rather than to be used from the main actor,
+wants `nonisolated` on the declaration.
+
+**The draft gate meant CI initially proved nothing about this change.** `ci.yml` skips
+the simulator job on draft PRs, and the macOS host job cannot build `DesignSystem` or
+anything depending on it — so the first run went green with seven successful checks
+without a compiler having seen any of the four changed files. The isolation error above
+surfaced only once the PR was marked ready for review. Nothing to fix in the workflow;
+the draft gate is deliberate and documented in its own header comment. It is worth
+knowing that on a change confined to `DesignSystem` and the feature packages, a green
+draft is not evidence the change compiles.
+
+**Still unseen.** CI compiles this and runs the suites; nobody has watched the
+animation. Everything above about what the morph looks like is a claim about what the
+API is documented to do, not an observation — and the 2026-09-03 entry above is about
+two things only a real device showed.
 
 ## 2026-09-03 (two things only a real device showed: cropped wordmarks, and the genre strip's empty first frame)
 

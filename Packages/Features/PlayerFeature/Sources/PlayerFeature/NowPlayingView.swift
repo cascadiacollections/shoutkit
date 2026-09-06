@@ -315,7 +315,15 @@ public struct NowPlayingView: View {
 /// The transport row's glass shapes, named rather than spelled as string
 /// literals — the sleep timer's is applied from another file, and a typo in a
 /// `glassEffectID` fails by quietly doing nothing.
-enum TransportGlassID: Hashable {
+///
+/// `nonisolated` is load-bearing. This package builds with
+/// `.defaultIsolation(MainActor.self)`, so a bare `enum` here is MainActor-
+/// isolated and so is its `Hashable` conformance — and `glassEffectID` takes
+/// its ID as `Hashable & Sendable`, which a main-actor-isolated conformance
+/// cannot satisfy. Without this the three call sites fail to compile with
+/// `[#IsolatedConformances]`, and only in the iOS build: none of the host
+/// package tests build this target.
+nonisolated enum TransportGlassID: Hashable {
     case favorite
     case playPause
     case sleepTimer
