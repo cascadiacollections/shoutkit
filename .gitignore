@@ -12,3 +12,8 @@ HolmdelApp/Config/Secrets.xcconfig
 # stays tracked; site/api/docs/ is the merged archive built by
 # .github/scripts/build-docs.sh).
 site/api/*/
+
+# Organizer archive exports. `Distribute App` writes these next to the repo
+# root as "Holmdel <date> <time>/Products/...", which is inside the working
+# tree and would otherwise show up as untracked on every archive.
+Holmdel */

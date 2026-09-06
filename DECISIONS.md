@@ -1,5 +1,57 @@
 # Decisions
 
+## 2026-09-06 (local Xcode work synced forward; 0.5.0; CarPlay's plist surface goes too)
+
+A working tree in the primary checkout had accumulated IDE-only changes on a base
+15 commits behind `main`. Committing it as-is would have reverted #190 through
+#197 — most concretely its `project.pbxproj` still carried `SKIP_INSTALL = NO`,
+which would have reintroduced the Generic Archive bug fixed hours earlier.
+
+So the changes were **ported forward file by file onto `main`** rather than
+merged. What made that tractable: of the eight modified files, only
+`project.pbxproj` had also changed on `main`. Everything else applied cleanly.
+
+Taken verbatim, because these are generated inside the Xcode IDE and cannot be
+reproduced from a command-line build (the `.xcstrings` sync trap in `CLAUDE.md`):
+
+- six `Localizable.xcstrings` catalogs,
+- `Packages/Features/SettingsFeature/Package.resolved`,
+- `HolmdelApp/Holmdel.xcodeproj/xcshareddata/xcodecloud/manifest.json`.
+
+Reconstructed by hand on top of `main` instead of copied, because the local copy
+was 15 commits stale:
+
+- `project.pbxproj` — only `MARKETING_VERSION` 0.4.0 → **0.5.0** and
+  `CURRENT_PROJECT_VERSION` back to `1`. A new marketing version restarts build
+  numbering, so the bump to `2` from #195 is spent and irrelevant. The local
+  file's `../Packages/…` package-path normalization was **not** taken; it is
+  cosmetic, and the risk of disturbing workspace resolution for no gain is real.
+
+`Info.plist` was taken from the local copy, with one thing put back: Xcode
+rewrites the file alphabetically and **strips XML comments**, which silently ate
+the 17-line explanation of why `NSAllowsArbitraryLoads` is the global key rather
+than the media-only one. The key itself survived; only the reasoning was lost.
+Restored, because that comment is the entire defence against someone "tidying"
+the relaxation into `NSAllowsArbitraryLoadsForMedia` and breaking every http
+stream. **Anything a plist comment explains is one IDE save away from
+disappearing** — worth knowing before relying on one.
+
+The other `Info.plist` delta was kept as Xcode left it: toggling the CarPlay
+capability off removed `UISupportsCarPlay` and
+`UISupportedInterfaceOrientations~carplay`. That narrows what the entry below
+claimed about restoring CarPlay in one key — the scene configuration and
+`HolmdelCarPlaySceneDelegate.swift` still stand, so restoring is a small diff, no
+longer a one-key one. That entry is annotated rather than rewritten.
+
+Not committed: the two `Holmdel <date> <time>/` directories Organizer writes at
+the repo root on export. `.gitignore` now covers them — the pattern is
+`Holmdel */`, whose space is load-bearing, since `HolmdelApp/` must stay tracked.
+
+Still open, deliberately: `CHANGELOG.md` has not been cut over to `## [0.5.0]`.
+Per `docs/RELEASING.md` that is a release step and the tag comes last; the version
+bump here exists to give TestFlight a fresh build-number namespace, not to cut
+0.5.0.
+
 ## 2026-09-06 (`SKIP_INSTALL = NO` on the watch app made every archive Generic)
 
 Organizer showed the first TestFlight archive as **Generic Xcode Archive** — no
@@ -51,14 +103,18 @@ Removed the key so the app can be signed and uploaded at all. Everything else
 stays:
 
 - `HolmdelCarPlaySceneDelegate.swift` remains in the target.
-- The `CPTemplateApplicationSceneSessionRoleApplication` scene configuration,
-  `UISupportsCarPlay`, and `UISupportedInterfaceOrientations~carplay` remain in
-  `Info.plist`.
+- The `CPTemplateApplicationSceneSessionRoleApplication` scene configuration
+  remains in `Info.plist`.
 
 Without the entitlement none of that is reachable — CarPlay will not offer the app
-to a head unit — but leaving it in place means restoring CarPlay is a one-key diff
+to a head unit — but leaving it in place means restoring CarPlay is a small diff
 once the grant lands, rather than a re-implementation. The cost is dead code in the
 binary, which is the cheaper side of the trade.
+
+**Narrowed the same day** — see the 2026-09-06 entry on syncing local Xcode work.
+Toggling the CarPlay capability off in the IDE also stripped `UISupportsCarPlay`
+and `UISupportedInterfaceOrientations~carplay`, and that removal was kept. This
+entry originally said those two keys stayed; they did not.
 
 **This is a user-facing regression from what `README.md` claimed**, so both it and
 the roadmap are corrected in the same change rather than left to drift.
