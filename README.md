@@ -150,10 +150,11 @@ promos, notifications, and other launch entry points; the app also publishes an 
 for the current station so Handoff can resume it on another signed-in device; and long-pressing
 Now Playing artwork
 surfaces a "View in Apple Music" link when a track match is found. A small/medium Home Screen
-widget plays a chosen favorite in one tap, and **CarPlay** ships as a `CPListTemplate` of
-favorites and recents over `CPNowPlayingTemplate`, driven by the same `PlaybackController` (the
-`com.apple.developer.carplay-audio` entitlement is declared in
-`HolmdelApp/Holmdel/Holmdel.entitlements`). What's still ahead is in
+widget plays a chosen favorite in one tap. **CarPlay** is implemented as a `CPListTemplate` of
+favorites and recents over `CPNowPlayingTemplate`, driven by the same `PlaybackController`, but is
+**not currently reachable**: `com.apple.developer.carplay-audio` is a restricted entitlement Apple
+grants per-team on request, this team has not been granted it, and declaring it broke signing
+outright (see `DECISIONS.md`, 2026-09-06). What's still ahead is in
 [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Privacy
