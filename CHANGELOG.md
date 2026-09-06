@@ -18,6 +18,9 @@ below) are documented here. The format follows
   fade in as a panel over the top of its own button, and long-pressing a station squared off
   the corners of the card under your finger before its menu appeared. Both now animate out of
   the control you touched and settle back into it
+- **Picking a genre slides the highlight across.** In Search, the selected genre chip used to
+  blink off one chip and on at another. The highlight now travels to the chip you tapped. The
+  "removed" banner on Listen Now also forms in place instead of sliding up the screen
 - **Station artwork stopped looking blurry.** Many stations publish a small logo, and the app
   was stretching those across a full tile, which made a good half of the grid look out of
   focus. Small logos now appear at a size they actually hold, resting on a soft wash of their

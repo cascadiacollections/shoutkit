@@ -199,15 +199,34 @@ private struct GenreChips: View {
     let selected: Genre?
     let onSelect: (Genre) -> Void
 
+    /// Identity for the one prominent chip, so the selection can travel.
+    @Namespace private var chipGlass
+
     private let columns = [GridItem(.adaptive(minimum: 110), spacing: ShoutKitSpacing.small)]
 
+    /// The grid is a `GlassEffectContainer` so the chips are one piece of glass
+    /// to the system rather than a dozen unrelated ones. That is what lets the
+    /// selected chip's glass *move* to the chip you tapped instead of one
+    /// fading out while another fades in — see `chip(_:)`.
+    ///
+    /// `spacing: 0`, not the grid's own `ShoutKitSpacing.small`. A container
+    /// merges glass shapes that fall within `spacing` of each other, and these
+    /// chips sit 10 pt apart: at the grid's own spacing a row of them would fuse
+    /// into one bar. Same call, and the same reason, as the Now Playing
+    /// transport row.
     var body: some View {
-        LazyVGrid(columns: columns, alignment: .leading, spacing: ShoutKitSpacing.small) {
-            ForEach(genres) { genre in
-                chip(genre)
-                    .accessibilityAddTraits(genre == selected ? .isSelected : [])
+        GlassEffectContainer(spacing: 0) {
+            LazyVGrid(columns: columns, alignment: .leading, spacing: ShoutKitSpacing.small) {
+                ForEach(genres) { genre in
+                    chip(genre)
+                        .accessibilityAddTraits(genre == selected ? .isSelected : [])
+                }
             }
         }
+        // Without this the glass arrives at the new chip instantly and there is
+        // nothing to see. The morph is the point, so it gets an explicit curve
+        // rather than inheriting whatever the caller happens to be animating.
+        .animation(.smooth(duration: 0.3), value: selected)
     }
 
     // Two branches rather than one style value: `ButtonStyle` has no type-erased
@@ -222,6 +241,13 @@ private struct GenreChips: View {
         if genre == selected {
             Button { onSelect(genre) } label: { label }
                 .buttonStyle(.glassProminent)
+                // Exactly one chip carries this at a time, which is the whole
+                // mechanism: when `selected` changes the same glass identity
+                // turns up at a different place in the grid, so the container
+                // moves the glass there rather than drawing a second one. A
+                // bare literal because it appears once — an ID that has one
+                // call site cannot disagree with itself.
+                .glassEffectID("genre-selection", in: chipGlass)
         } else {
             Button { onSelect(genre) } label: { label }
                 .buttonStyle(.glass)
