@@ -1,5 +1,79 @@
 # Decisions
 
+## 2026-09-06 (menus that fly out of the control, not over it)
+
+Three glass menus in the app opened as panels that cross-faded over the button that
+summoned them, rather than growing out of it. None of it was a missing effect to
+invent — iOS 26 does the morph itself — it was three separate cases of the system not
+being told what shape to morph from.
+
+**The transport row is now a `GlassEffectContainer`.** Favorite, play/pause and the
+sleep timer each carried their own `.glass` button style and were, as far as the
+system was concerned, three unrelated pieces of glass that happened to sit near one
+another. Inside a container with `glassEffectID`s from a shared namespace they are one
+cluster: they sample the backdrop together, and the sleep timer's duration menu grows
+out of a registered shape instead of appearing on top of one.
+
+`spacing: 0`, deliberately, not the row's own `ShoutKitSpacing.medium`. A container
+merges glass shapes that fall within `spacing` of each other, and at 16 pt apart that
+would fuse a circle, a wide capsule and a capsule into one pill. That is a redesign,
+and this change is not one — zero buys the shared rendering context and the morph and
+nothing else.
+
+The namespace is declared on `NowPlayingView` but the sleep timer's glass is applied
+in `NowPlayingView+SleepTimer.swift`, so `transportGlass` and `TransportGlassID` are
+both internal rather than private. `TransportGlassID` is an enum and not three string
+literals for the reason a typo in a `glassEffectID` deserves: it fails by silently
+doing nothing, in a file that isn't the one you'd be reading.
+
+The ID has to be stable across the `TimelineView` that ticks the running countdown
+once a second. It is — it depends on neither the tick date nor whether the timer is
+running — and the tick was left as it was rather than restructured around the new
+identity.
+
+**`StationCard` and `StationRow` now declare a `.contextMenuPreview` content shape.**
+Left to the system the preview is the view's bounds, which is a square-cornered
+rectangle. `StationRow`'s background is a 16 pt continuous rounded rectangle and
+`StationCard`'s artwork is a 20 pt one, so both squared their corners off for the
+duration of the long-press: the menu flew out of a shape that had not been on screen a
+moment earlier. The row traces its own background exactly, same radius and same
+`.continuous` style, because the preview *is* that background.
+
+The card outsets its shape by `ShoutKitSpacing.small` instead of tracing its bounds.
+The caption runs to the leading edge and sits inside the bottom 20 pt of the tile, so
+a corner radius drawn on the bounds would have clipped the first glyph of the
+subtitle. The outset also leaves the lifted platter a margin, which is what the system
+players' poster previews look like.
+
+**Deliberately not touched: the Now Playing overflow menu.** It is a single glass
+circle in the title block with no neighbours to cluster with, and a
+`GlassEffectContainer` around one shape is a wrapper that does nothing — the same
+"public wrapper with no callers" that got `GlassActionCluster` deleted in the
+2026-08-24 pass. Its menu already morphs from its own `.glass` button style.
+
+**`TransportGlassID` is `nonisolated`, and has to be.** This package builds with
+`.defaultIsolation(MainActor.self)`, which isolates a bare file-scope `enum` to the
+main actor *and its `Hashable` conformance with it*. `glassEffectID` takes its ID as
+`Hashable & Sendable`, and a main-actor-isolated conformance cannot satisfy a
+`Sendable` requirement — all three call sites failed with `[#IsolatedConformances]`.
+Worth knowing generally: any type in these six UI packages that exists to be handed
+*to* a SwiftUI API as a generic parameter, rather than to be used from the main actor,
+wants `nonisolated` on the declaration.
+
+**The draft gate meant CI initially proved nothing about this change.** `ci.yml` skips
+the simulator job on draft PRs, and the macOS host job cannot build `DesignSystem` or
+anything depending on it — so the first run went green with seven successful checks
+without a compiler having seen any of the four changed files. The isolation error above
+surfaced only once the PR was marked ready for review. Nothing to fix in the workflow;
+the draft gate is deliberate and documented in its own header comment. It is worth
+knowing that on a change confined to `DesignSystem` and the feature packages, a green
+draft is not evidence the change compiles.
+
+**Still unseen.** CI compiles this and runs the suites; nobody has watched the
+animation. Everything above about what the morph looks like is a claim about what the
+API is documented to do, not an observation — and the 2026-09-03 entry above is about
+two things only a real device showed.
+
 ## 2026-09-03 (two things only a real device showed: cropped wordmarks, and the genre strip's empty first frame)
 
 Running the build on hardware, against the live directory, surfaced two things

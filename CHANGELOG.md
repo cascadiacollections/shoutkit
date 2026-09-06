@@ -14,6 +14,10 @@ below) are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- **Menus now grow out of the button you pressed.** The sleep timer's duration list used to
+  fade in as a panel over the top of its own button, and long-pressing a station squared off
+  the corners of the card under your finger before its menu appeared. Both now animate out of
+  the control you touched and settle back into it
 - **Station artwork stopped looking blurry.** Many stations publish a small logo, and the app
   was stretching those across a full tile, which made a good half of the grid look out of
   focus. Small logos now appear at a size they actually hold, resting on a soft wash of their

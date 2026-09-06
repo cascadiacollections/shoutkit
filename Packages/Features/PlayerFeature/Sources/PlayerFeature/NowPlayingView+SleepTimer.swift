@@ -52,6 +52,14 @@ extension NowPlayingView {
         // Capsule, not circle: the running timer's label carries a countdown
         // and has to be allowed to grow.
         .buttonBorderShape(.capsule)
+        // Shares the transport row's namespace, declared on `NowPlayingView`.
+        // This is the control the whole change is for: with the button's glass
+        // registered in the row's container, the duration menu grows out of the
+        // capsule and settles back into it, instead of cross-fading a separate
+        // panel over the top of it. The ID has to be stable across the
+        // `TimelineView` ticks above — it is, because it doesn't depend on
+        // `date` or on whether the timer is running.
+        .glassEffectID(TransportGlassID.sleepTimer, in: transportGlass)
         .accessibilityLabel(sleepTimer.isActive ? "Sleep timer running" : "Sleep timer")
         .accessibilityValue(sleepTimerValue(sleepTimer, asOf: date))
     }
