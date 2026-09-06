@@ -1,5 +1,31 @@
 # Decisions
 
+## 2026-09-06 (`SKIP_INSTALL = NO` on the watch app made every archive Generic)
+
+Organizer showed the first TestFlight archive as **Generic Xcode Archive** — no
+"Distribute App", no upload path, no error explaining why.
+
+`HolmdelWatchApp` had `SKIP_INSTALL = NO` in both configurations. It is also
+embedded in the phone app through the `Embed Watch Content` copy phase
+(`dstSubfolderSpec = 16`), which is the correct and only place it should land.
+`SKIP_INSTALL = NO` *additionally* installs it into the archive's
+`Products/Applications/`, so the archive contained two top-level `.app` bundles.
+Xcode identifies an iOS App Archive by finding exactly one; with two it cannot
+choose, falls back to the generic type, and says nothing about the cause.
+
+Set to `YES` on both watch configurations. The tvOS target keeps `NO` — it is not
+in the `Holmdel` scheme, archives standalone, and needs to install its own product.
+
+The embed itself is already load-bearing and already asserted: `ci.yml` fails the
+build if `Watch/HolmdelWatchApp.app` is missing from the built `.app` or if its
+`WKCompanionAppBundleIdentifier` is wrong. That check is what makes this change
+safe to state rather than hope for — if `SKIP_INSTALL = YES` had broken embedding,
+CI would go red rather than the watch quietly vanishing from the payload.
+
+Worth noting for the next reader: nothing about the symptom points at the watch
+app. "Generic Xcode Archive" reads like a scheme or product-type problem, and the
+setting at fault is on a target the archive is not even nominally about.
+
 ## 2026-09-06 (CarPlay entitlement removed: it was never granted to the team)
 
 Automatic signing failed on the first TestFlight archive attempt:
