@@ -275,11 +275,27 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
     // MARK: - Pass-through calls
 
     public func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
-        try await base.searchStations(matching: query, limit: limit)
+        try await searchStations(matching: query, limit: limit, filters: .none)
+    }
+
+    public func searchStations(
+        matching query: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ) async throws(RadioDirectoryError) -> [Station] {
+        try await base.searchStations(matching: query, limit: limit, filters: filters)
     }
 
     public func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
-        try await base.stations(inGenre: genre, limit: limit)
+        try await stations(inGenre: genre, limit: limit, filters: .none)
+    }
+
+    public func stations(
+        inGenre genre: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ) async throws(RadioDirectoryError) -> [Station] {
+        try await base.stations(inGenre: genre, limit: limit, filters: filters)
     }
 
     public func station(id: String) async throws(RadioDirectoryError) -> Station? {

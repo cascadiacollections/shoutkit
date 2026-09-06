@@ -4,7 +4,7 @@ import Testing
 
 struct StationLinkTests {
     @Test
-    func roundTripsShoutKitStationURL() {
+    func roundTripsStationURL() {
         let station = Station(
             id: "npr-newscast",
             name: "NPR News Now",
@@ -48,7 +48,7 @@ struct StationLinkTests {
 
     @Test
     func parsesMinimalStationLinks() throws {
-        let url = try #require(URL(string: "shoutkit://station?name=KEXP&streamURL=https://example.com/live.mp3"))
+        let url = try #require(URL(string: "holmdel://station?name=KEXP&streamURL=https://example.com/live.mp3"))
 
         let parsed = StationLink(url: url)
 
@@ -62,7 +62,7 @@ struct StationLinkTests {
 
     @Test
     func parsesPlayRouteWithExplicitFlags() throws {
-        let url = try #require(URL(string: "shoutkit://play?id=kexp&name=KEXP&autoPlay=0&presentNowPlaying=false"))
+        let url = try #require(URL(string: "holmdel://play?id=kexp&name=KEXP&autoPlay=0&presentNowPlaying=false"))
 
         let parsed = StationLink(url: url)
 
@@ -77,12 +77,12 @@ struct StationLinkTests {
         "https://example.com/station?id=kexp&name=KEXP",
         "file:///station?id=kexp&name=KEXP",
         // Unknown route hosts must not parse.
-        "shoutkit://settings?id=kexp&name=KEXP",
+        "holmdel://settings?id=kexp&name=KEXP",
         // A station identified only by a cleartext stream URL has no usable
         // id or playable stream, so the whole link is rejected.
-        "shoutkit://station?name=KEXP&streamURL=http://example.com/live.mp3",
+        "holmdel://station?name=KEXP&streamURL=http://example.com/live.mp3",
         // No id and no name.
-        "shoutkit://station?genre=News"
+        "holmdel://station?genre=News"
     ])
     func rejectsUntrustedOrMalformedLinks(urlString: String) throws {
         let url = try #require(URL(string: urlString))
@@ -93,7 +93,7 @@ struct StationLinkTests {
     @Test
     func dropsCleartextRemoteURLsButKeepsIdentifiedStation() throws {
         let url = try #require(URL(
-            string: "shoutkit://station?id=kexp&streamURL=http://x.example/s.mp3&artworkURL=http://x.example/a.png"
+            string: "holmdel://station?id=kexp&streamURL=http://x.example/s.mp3&artworkURL=http://x.example/a.png"
         ))
 
         let parsed = StationLink(url: url)

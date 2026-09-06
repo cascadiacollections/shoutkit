@@ -1,22 +1,25 @@
-# Contributing to ShoutKit
+# Contributing to Holmdel
 
-Thanks for your interest! ShoutKit is a native iOS 27 SwiftUI internet-radio client built in the
-open. This document covers everything you need to build, test, and land a change.
+Thanks for your interest! Holmdel is a native iOS SwiftUI internet-radio client built in the
+open, supporting iOS 26 and newer, built on ShoutKit — this repo's MIT-licensed radio SDK
+(`Packages/`). This document covers everything you need to build, test, and land a change.
 
 ## Building
 
-Requirements: Xcode 27 with the iOS 27 SDK (the package manifests are `swift-tools-version: 6.4`
-and the deployment floor is iOS 27, so an earlier Xcode can't open or build the project — see
-`DECISIONS.md`).
+Requirements: Xcode 27 with the iOS 27 SDK. Note this is a *build* requirement, not the
+deployment floor: the manifests are `swift-tools-version: 6.4` and the MediaSession
+now-playing path needs the iOS 27 SDK to compile, so an earlier Xcode can't open or build the
+project. The app itself ships a deployment floor of **iOS 26.0** and runs there — see
+`DECISIONS.md`.
 
 ```sh
-xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
+xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
   -destination 'generic/platform=iOS Simulator' build
 ```
 
 No API key or account is needed — station discovery defaults to the keyless
 [Radio-Browser](https://www.radio-browser.info) community directory. (An optional SHOUTcast key
-can be supplied via `ShoutKitApp/Config/Secrets.xcconfig`; see the README.)
+can be supplied via `HolmdelApp/Config/Secrets.xcconfig`; see the README.)
 
 ## Running tests
 
@@ -37,15 +40,15 @@ The iOS-only production types (`AudioStreamingPlaybackEngine`, `NowPlayingCenter
 `#if canImport(UIKit)`, so the Playback controller/state-machine tests execute against fakes on
 any platform; the gated types compile as part of the app build.
 
-The remaining suites — `ShoutKitTests` plus the iOS-only packages `DesignSystemTests` and
+The remaining suites — `HolmdelTests` plus the iOS-only packages `DesignSystemTests` and
 `NowPlayingActivityCoreTests` — can't build for the mac host at all, so they run on a simulator
-through the `ShoutKit.xctestplan` test plan. That's what CI's `build` job runs, and it's the only
+through the `Holmdel.xctestplan` test plan. That's what CI's `build` job runs, and it's the only
 place those three execute:
 
 ```sh
 # Pick any installed iPhone simulator — `xcrun simctl list devices available`
 # shows what you have; the model doesn't matter.
-xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
+xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
   -destination "platform=iOS Simulator,name=$(xcrun simctl list devices available \
     | grep -o 'iPhone [^(]*' | head -1 | sed 's/ *$//')" test
 ```
@@ -89,7 +92,7 @@ swift test --skip-build
   SwiftLint **0.65.0** with `--strict` (warnings fail the build), pinned in `.github/workflows/ci.yml`;
   install that version locally (e.g. `mise use swiftlint@0.65.0`) so your results match CI. CI also
   runs `swiftformat --lint` (currently non-blocking — the tree isn't fully conformant yet, see
-  `DECISIONS.md`) — run `swiftformat ShoutKitApp Packages` locally before pushing to help close
+  `DECISIONS.md`) — run `swiftformat HolmdelApp Packages` locally before pushing to help close
   that gap. Without a local toolchain, run the **Reformat** workflow
   (`.github/workflows/format.yml`) from the Actions tab instead; it runs the same command on a
   macOS runner and can push the result to your branch.
@@ -122,11 +125,11 @@ new localizable strings, resync every catalog from the command line with the exp
 round-trip:
 
 ```sh
-xcodebuild -exportLocalizations -project ShoutKitApp/ShoutKitApp.xcodeproj \
-  -localizationPath /tmp/shoutkit_locexport -exportLanguage en
-xcodebuild -importLocalizations -project ShoutKitApp/ShoutKitApp.xcodeproj \
-  -localizationPath /tmp/shoutkit_locexport/en.xcloc
-rm -rf /tmp/shoutkit_locexport
+xcodebuild -exportLocalizations -project HolmdelApp/Holmdel.xcodeproj \
+  -localizationPath /tmp/holmdel_locexport -exportLanguage en
+xcodebuild -importLocalizations -project HolmdelApp/Holmdel.xcodeproj \
+  -localizationPath /tmp/holmdel_locexport/en.xcloc
+rm -rf /tmp/holmdel_locexport
 ```
 
 Then diff the affected `Localizable.xcstrings` files before committing.
@@ -147,7 +150,10 @@ without a heavyweight CLA.
 
 By contributing, you agree your changes are licensed under the license of the component they
 touch: GPL-3.0 for the app and feature packages, MIT for `RadioDirectory`, `Playback`,
-`Persistence`, and `DesignSystem` (see the Licensing table in the README).
+`PlaybackEngineAudioStreaming`, `Persistence`, `DesignSystem`, `FeatureFlags`, and
+`ImageIODownsample` (see the Licensing table in the README — the authoritative rule is that a
+package with its own `LICENSE` file is MIT, and CI enforces that those never depend on a
+GPL-3.0 package).
 
 ## Pull requests
 
@@ -155,7 +161,7 @@ touch: GPL-3.0 for the app and feature packages, MIT for `RadioDirectory`, `Play
 - Add or update tests for anything testable — especially playback state transitions and
   directory parsing/caching.
 - CI must pass: app build, host test suites, and lint.
-- The ShoutKit name and icon are trademark-reserved (see `TRADEMARK.md`) — forks are welcome and
+- The Holmdel name and icon are trademark-reserved (see `TRADEMARK.md`) — forks are welcome and
   must rebrand; contributions here need no special permission.
 
 ## Releasing

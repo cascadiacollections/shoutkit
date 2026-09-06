@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
+    # `ready_for_review` is not in the default type set, and the draft gates on
+    # the mac jobs below make it load-bearing: without it, marking a draft ready
+    # fires no event and the jobs a draft skipped would never run at all.
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
 
 # Least privilege: CI only needs to read the checked-out code. No job here
 # writes to the repo, comments, or publishes.
@@ -20,15 +25,112 @@ env:
   # version contributors run locally (see CONTRIBUTING).
   SWIFTLINT_VERSION: "0.65.0"
 
+# Every job below that says `runs-on: xcode-27` is billed. This repo is public,
+# so GitHub's *standard* hosted runners — including `macos-26` — are free, but
+# `xcode-27` is a larger-runner label and larger runners are billed on public
+# repos too. That one label is essentially the entire Actions bill, which is why
+# the job graph here is shaped around minimising time on it rather than around
+# convenience. Three rules, in order of how much they save:
+#
+#   1. Nothing expensive starts until `lint` passes. Lint is ~15s of work and
+#      catches a real share of failures; before this gate a lint-only failure
+#      still burned the full ~19 mac-minutes of the two jobs beside it. Run
+#      31275068736 is the worked example: lint went red 7 seconds in and `build`
+#      carried on for another 14 minutes on a tree that could not merge.
+#   2. Draft PRs get the cheap signal, not the expensive one. `host-tests`
+#      (~4 min) covers eight packages and runs on drafts; the simulator job
+#      (~15 min) waits for `ready_for_review`. Agent-authored branches push many
+#      times per PR, and that is where the minutes were going.
+#   3. Compile-only checks that rarely fail independently of the Debug build —
+#      Release config and the watch app — run on `main` rather than per push.
+#      See the `release-checks` job for the trade-off that buys.
+#
+# The standing lever nobody should forget: when Xcode 27 reaches the free
+# `macos-26` image, flipping `runs-on` takes this bill to approximately zero.
+# That is what .github/workflows/runner-image-watch.yml exists to notice.
 jobs:
+  # Pure shell over the package manifests, so it runs on Linux rather than
+  # burning an `xcode-27` slot. Asserts the Licensing rule in README.md: an MIT
+  # package may not depend on a GPL-3.0 one. This is a real regression guard —
+  # `Playback` and `DesignSystem` both linked the then-GPL `ImageIODownsample`
+  # while the docs site listed it as excluded-because-GPL.
+  license-boundary:
+    name: License boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check MIT packages take no GPL-3.0 dependencies
+        run: .github/scripts/check-license-boundary.sh
+
+  # Cheap, and catches a class of break that otherwise only surfaces by hand on
+  # a device: the app's registered URL scheme drifting from the one the link
+  # parser accepts. See DECISIONS.md (2026-09-03).
+  deep-links:
+    name: Deep link scheme
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check the registered URL scheme matches StationLink
+        run: .github/scripts/check-url-scheme.sh
+
+  # Deliberately ungated and first: it is by far the cheapest job here, and both
+  # mac jobs below `needs` it.
+  lint:
+    name: Lint & format
+    runs-on: xcode-27
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      # Download the pinned portable binary rather than `brew install` (faster,
+      # version-pinned, and no Homebrew tap-trust noise in the log).
+      - name: Install SwiftLint ${{ env.SWIFTLINT_VERSION }}
+        run: |
+          curl -fsSL -o swiftlint.zip \
+            "https://github.com/realm/SwiftLint/releases/download/${SWIFTLINT_VERSION}/portable_swiftlint.zip"
+          unzip -q swiftlint.zip -d swiftlint-bin
+          echo "$PWD/swiftlint-bin" >> "$GITHUB_PATH"
+
+      # --strict promotes warnings to errors: the tree is lint-clean today, and
+      # this keeps it that way (new warnings fail the build instead of rotting).
+      - name: Lint
+        run: swiftlint lint --strict --reporter github-actions-logging
+
+      # Homebrew ships current SwiftFormat and is preinstalled on GitHub-hosted
+      # macOS runners; --lint fails instead of rewriting, so drift from the
+      # checked-in `.swiftformat` config shows up as a CI failure.
+      - name: Install SwiftFormat
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+        run: brew install swiftformat
+
+      # continue-on-error: the tree has never had swiftformat enforced (58/90
+      # files fail --lint today, mostly indent/brace-wrap rules), and fixing
+      # that needs a byte-exact `swiftformat` run from a real toolchain, which
+      # isn't available in every contributor's environment. Surfaces drift
+      # without blocking merges until a one-time reformat lands (see
+      # DECISIONS.md); drop continue-on-error once the tree is clean.
+      - name: Format check
+        continue-on-error: true
+        run: swiftformat HolmdelApp Packages --lint
+
   host-tests:
     name: Package tests (macOS host)
-    # Needs Xcode 27 / Swift 6.4 (the deployment floor is iOS 27 and the
-    # manifests are swift-tools-version 6.4 — see DECISIONS.md 2026-07-13).
+    # Needs Xcode 27 / Swift 6.4 because the manifests are
+    # swift-tools-version 6.4 and the MediaSession now-playing path needs the
+    # iOS 27 SDK to compile. This is a *toolchain* requirement and not the
+    # deployment floor, which is iOS 26 — lowering the floor did not lower what
+    # CI has to build with (see DECISIONS.md 2026-07-13 and 2026-08-12).
     # `xcode-27` is GitHub's dedicated Xcode 27 beta image (arm64, macOS 26
     # base); switch back to plain `macos-26` once Xcode 27 GA lands there.
     runs-on: xcode-27
-    timeout-minutes: 30
+    needs: lint
+    # Runs on drafts, unlike `build`: at ~4 minutes this is the cheap signal,
+    # and it is the only job covering the eight host-testable packages.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -166,15 +268,19 @@ jobs:
             | tee -a "$GITHUB_STEP_SUMMARY"
 
   build:
-    name: Test + build app (iOS Simulator, watchOS)
+    name: Test app (iOS Simulator)
     runs-on: xcode-27
-    # Debug + Release builds share one DerivedData root (package resolution
-    # and unchanged modules are reused across the pair), but building the app
-    # twice still roughly doubles this job's time versus the single-config
-    # baseline. The Debug half now runs the test plan rather than a bare
-    # build, which adds the simulator boot and the test run on top, and the
-    # watch app is a third compile of the shared packages for a third platform.
-    timeout-minutes: 75
+    needs: lint
+    # Skipped on draft PRs — the expensive half of rule 2 in the header comment.
+    # `github.event.pull_request.draft` is null on a push, hence the explicit
+    # event check rather than a bare negation.
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    # Was 75 when this job also built Release and the watch app. The Debug test
+    # run alone is ~8-9 minutes observed, so 30 is generous headroom while
+    # capping what a wedged simulator can cost: a hung job bills its full
+    # timeout, and 75 billed minutes is a real amount of money to lose to a
+    # runner that stopped making progress.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
@@ -201,7 +307,7 @@ jobs:
           path: |
             ~/Library/Caches/org.swift.swiftpm
             DerivedData/SourcePackages
-          key: spm-app-${{ steps.toolchain.outputs.id }}-${{ hashFiles('ShoutKit.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: spm-app-${{ steps.toolchain.outputs.id }}-${{ hashFiles('Holmdel.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: |
             spm-app-${{ steps.toolchain.outputs.id }}-
 
@@ -243,7 +349,7 @@ jobs:
           echo "Using simulator $UDID"
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
 
-      # `test`, not `build`: this is the only job that runs ShoutKitTests and
+      # `test`, not `build`: this is the only job that runs HolmdelTests and
       # the iOS-only package suites (DesignSystemTests,
       # NowPlayingActivityCoreTests) — none of them can run on the macOS host,
       # so before this they were maintained but never executed. It also still
@@ -255,7 +361,7 @@ jobs:
       - name: Test app (Debug)
         run: |
           set -o pipefail
-          xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
+          xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
             -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
             -derivedDataPath DerivedData \
             -resultBundlePath TestResults.xcresult \
@@ -298,7 +404,7 @@ jobs:
       # the iOS-only code can be measured at all: DesignSystem,
       # NowPlayingActivityCore and the app target never run on the mac host.
       # Baseline only, same as there — reported, never gated. Enabled by
-      # `codeCoverage` in ShoutKit.xctestplan rather than a flag here, so a
+      # `codeCoverage` in Holmdel.xctestplan rather than a flag here, so a
       # local Cmd+U run produces the same data.
       - name: Coverage baseline (iOS targets)
         if: always()
@@ -327,7 +433,7 @@ jobs:
 
       - name: Verify Pulse symbols are present in the Debug build
         run: |
-          APP_BINARY="DerivedData/Build/Products/Debug-iphonesimulator/ShoutKit.app/ShoutKit"
+          APP_BINARY="DerivedData/Build/Products/Debug-iphonesimulator/Holmdel.app/Holmdel"
           if [ ! -f "$APP_BINARY" ]; then
             echo "::error::Debug app binary not found at $APP_BINARY"
             exit 1
@@ -338,10 +444,90 @@ jobs:
           fi
           echo "Confirmed: Pulse symbols are present in the Debug binary."
 
+      # Hard check, and it was a warning until 2026-08-12 because until then it
+      # was failing: there was no Embed Watch Content copy phase, so the watchOS
+      # companion that README advertises never installed alongside the phone app.
+      # The embed now exists; this asserts it stays. Nothing else in CI would
+      # notice its removal — the watch target compiles from its own scheme in
+      # `release-checks` whether or not anything embeds the product.
+      #
+      # Inspects the built bundle rather than grepping project.pbxproj on
+      # purpose: the copy phase can be present and still produce no payload (a
+      # wrong dstPath puts it somewhere the installer ignores), and the original
+      # bug was found precisely because a claim read off the project file was
+      # checked against a real build.
+      #
+      # Lives here rather than beside the watch build in `release-checks`: it
+      # inspects the *phone* app's Debug bundle, which is this job's product.
+      - name: Check the watch app is embedded in the phone app
+        run: |
+          APP="DerivedData/Build/Products/Debug-iphonesimulator/Holmdel.app"
+          if [ ! -d "$APP" ]; then
+            echo "::error::No Debug app bundle at $APP to inspect."
+            exit 1
+          fi
+          WATCH_APP="$APP/Watch/HolmdelWatchApp.app"
+          if [ ! -d "$WATCH_APP" ]; then
+            echo "::error::No Watch/HolmdelWatchApp.app payload in Holmdel.app — the watchOS companion is not embedded in the phone app. Check the Embed Watch Content copy phase on the Holmdel target."
+            exit 1
+          fi
+          # The companion key is what makes the payload installable rather than
+          # merely present; a standalone watch app copied into Watch/ is the
+          # shape this bug originally had.
+          COMPANION=$(/usr/libexec/PlistBuddy -c "Print :WKCompanionAppBundleIdentifier" "$WATCH_APP/Info.plist" 2>/dev/null || true)
+          if [ "$COMPANION" != "com.cascadiacollections.holmdel" ]; then
+            echo "::error::Embedded watch app's WKCompanionAppBundleIdentifier is '${COMPANION:-<missing>}', expected com.cascadiacollections.holmdel."
+            exit 1
+          fi
+          echo "Confirmed: watch companion embedded at Watch/HolmdelWatchApp.app, companion id $COMPANION."
+
+  # Release-configuration and watchOS compiles, split out of `build` and off the
+  # per-push path. Both are compile-only — neither runs a test — and together
+  # they were ~5.5 of that job's ~14 minutes, on every push to every branch.
+  #
+  # The trade-off, stated plainly because it is a real one: a change that builds
+  # in Debug for iOS but breaks Release or watchOS now goes red on `main` rather
+  # than on the PR that introduced it. That is a worse place to find out. It is
+  # accepted here because the failure mode is narrow (Release-only breakage is
+  # almost always `#if DEBUG` drift; watch breakage is almost always a shared
+  # package API change), because it always surfaces as a compile error rather
+  # than as something subtle, and because it is cheap to fix forward — whereas
+  # the cost of checking it on every push was not. `workflow_dispatch` is the
+  # escape hatch for a PR that expects to touch either.
+  release-checks:
+    name: Build app (Release, watchOS)
+    runs-on: xcode-27
+    needs: lint
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Select latest Xcode
+        id: toolchain
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
+          xcodebuild -version
+          echo "id=$(xcodebuild -version | shasum -a 256 | cut -c1-12)" >> "$GITHUB_OUTPUT"
+
+      # Shares the `spm-app-` key space with the `build` job deliberately: same
+      # workspace, same Package.resolved, same toolchain, so whichever of the two
+      # runs first on a given commit warms the store for the other instead of
+      # each paying its own cold resolve.
+      - name: Cache SwiftPM clones and binary artifacts
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/Library/Caches/org.swift.swiftpm
+            DerivedData/SourcePackages
+          key: spm-app-${{ steps.toolchain.outputs.id }}-${{ hashFiles('Holmdel.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: |
+            spm-app-${{ steps.toolchain.outputs.id }}-
+
       - name: Build app (Release)
         run: |
           set -o pipefail
-          xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit \
+          xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
             -configuration Release \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath DerivedData \
@@ -354,11 +540,11 @@ jobs:
           grep -E "(error|fatal error): " build-release.log | sort -u | head -10 | sed 's/^/::error::/' || true
 
       # The watch app is a separate top-level target, not an extension embedded
-      # in ShoutKit: it is absent from ShoutKit's `dependencies` and from its
-      # Embed Foundation Extensions phase (which carries ShoutKitWidgets.appex
-      # and nothing else). So the ShoutKit scheme never compiles it, and until
+      # in Holmdel: it is absent from Holmdel's `dependencies` and from its
+      # Embed Foundation Extensions phase (which carries HolmdelWidgets.appex
+      # and nothing else). So the Holmdel scheme never compiles it, and until
       # this step the watch app and its complication — ~670 lines across
-      # ShoutKitWatchApp and ShoutKitWatchWidgets — could break without any
+      # HolmdelWatchApp and HolmdelWatchWidgets — could break without any
       # check going red. Built via its own shared scheme, added alongside this.
       #
       # `generic/platform=watchOS Simulator`: this is a compile check, not a
@@ -366,7 +552,7 @@ jobs:
       - name: Build watch app (Debug)
         run: |
           set -o pipefail
-          xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKitWatchApp \
+          xcodebuild -workspace Holmdel.xcworkspace -scheme HolmdelWatchApp \
             -destination 'generic/platform=watchOS Simulator' \
             -derivedDataPath DerivedData \
             CODE_SIGNING_ALLOWED=NO \
@@ -382,30 +568,94 @@ jobs:
           grep -E "[^ /]+\.(swift|h|m|mm):[0-9]+:[0-9]+: (error|fatal error): |^error: " build-watch.log \
             | sort -u | head -20 | sed 's/^/::error::/' || true
 
-      # Diagnostic, deliberately non-failing. Nothing in project.pbxproj embeds
-      # ShoutKitWatchApp.app into ShoutKit.app — there is no Embed Watch Content
-      # copy phase — which reads as though the watch companion never installs
-      # alongside the phone app. That is a claim about a shipping product made
-      # from the project file alone, so this step reports what the built bundle
-      # actually contains rather than asserting an answer. Turn it into a hard
-      # check (or fix the embed) once the output has been read once.
-      - name: Report whether the watch app is embedded in the phone app
-        if: always()
+      # Same reasoning as the watch step above, and the same blind spot it closed:
+      # HolmdelTVApp is a separate top-level target, absent from Holmdel's
+      # `dependencies` and from its Embed phase, so no other check compiles it.
+      # It lives here rather than on every PR because `xcode-27` is a billed
+      # larger runner and this job was restructured to cut that spend — a third
+      # compile on the per-push path would give some of it straight back.
+      #
+      # `generic/platform=tvOS Simulator` keeps this a compile check with no
+      # booted device, and CODE_SIGNING_ALLOWED=NO keeps it off the provisioning
+      # path: the tvOS profile only exists because a real Apple TV was registered
+      # locally, and CI has no device to register.
+      - name: Build tvOS app (Debug)
         run: |
-          APP="DerivedData/Build/Products/Debug-iphonesimulator/ShoutKit.app"
-          if [ ! -d "$APP" ]; then
-            echo "No Debug app bundle to inspect."
-            exit 0
-          fi
-          if [ -d "$APP/Watch" ]; then
-            echo "Watch payload present: $(ls "$APP/Watch")"
-          else
-            echo "::warning::No Watch/ payload in ShoutKit.app — the watchOS companion is not embedded in the phone app. See docs/ROADMAP.md."
+          set -o pipefail
+          xcodebuild -workspace Holmdel.xcworkspace -scheme HolmdelTVApp \
+            -destination 'generic/platform=tvOS Simulator' \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tee build-tv.log
+
+      # actool reports a malformed layered app icon *and still exits zero*, so the
+      # tvOS build goes green with an icon that fails later at install or App Store
+      # validation. That happened on the first build of this target. Grepping the
+      # log is the check that turns it back into a failure.
+      - name: Fail on asset-catalog errors in the tvOS build
+        run: |
+          [ -f build-tv.log ] || exit 0
+          if grep -qE "^.*(imagestack|brandassets|app icon|App Icon).*: error: " build-tv.log; then
+            grep -E "^.*(imagestack|brandassets|app icon|App Icon).*: error: " build-tv.log \
+              | sort -u | head -10 | sed 's/^/::error::/'
+            echo "::error::tvOS asset catalog reported an error; actool exits 0 on these, so this step is the gate."
+            exit 1
           fi
 
+      - name: Emit tvOS compile errors as annotations
+        if: failure()
+        run: |
+          [ -f build-tv.log ] || exit 0
+          grep -E "[^ /]+\.(swift|h|m|mm):[0-9]+:[0-9]+: (error|fatal error): |^error: " build-tv.log \
+            | sort -u | head -20 | sed 's/^/::error::/' || true
+
+      # Every submitted bundle needs its own PrivacyInfo.xcprivacy: `UserDefaults`
+      # is a required-reason API, and Apple's ITMS-91053 check inspects each bundle
+      # in the upload rather than inheriting the host app's declaration. Until
+      # 2026-08-13 only Holmdel.app had one, so the watch app (embedded since
+      # #166) and the tvOS app (its own submission) would both have been flagged.
+      #
+      # Inspects the built bundles rather than the repo, for the reason this file
+      # keeps repeating: a resource that fails to register in project.pbxproj still
+      # builds green. Nothing else here would notice its removal — no test, no
+      # lint, and the failure otherwise waits for a real App Store upload.
+      - name: Check watch and tvOS bundles carry a privacy manifest
+        run: |
+          # Named `failed` rather than `status`: `status` is read-only in zsh, so a
+          # copy-paste of this loop into a local macOS shell would fail confusingly.
+          failed=0
+          for bundle in \
+            "DerivedData/Build/Products/Debug-watchsimulator/HolmdelWatchApp.app" \
+            "DerivedData/Build/Products/Debug-appletvsimulator/HolmdelTVApp.app"
+          do
+            name=$(basename "$bundle")
+            if [ ! -d "$bundle" ]; then
+              echo "::warning::$name was not built in this job; skipping its privacy-manifest check."
+              continue
+            fi
+            if [ ! -f "$bundle/PrivacyInfo.xcprivacy" ]; then
+              echo "::error::$name has no PrivacyInfo.xcprivacy. Each submitted bundle needs its own — the iOS app's does not cover it."
+              failed=1
+              continue
+            fi
+            reason=$(/usr/libexec/PlistBuddy \
+              -c "Print :NSPrivacyAccessedAPITypes:0:NSPrivacyAccessedAPIType" \
+              "$bundle/PrivacyInfo.xcprivacy" 2>/dev/null || true)
+            if [ "$reason" != "NSPrivacyAccessedAPICategoryUserDefaults" ]; then
+              echo "::error::$name's privacy manifest does not declare UserDefaults (got '${reason:-<none>}'). Both targets link Persistence, which reaches UserDefaults."
+              failed=1
+              continue
+            fi
+            echo "Confirmed: $name declares $reason."
+          done
+          exit $failed
+
+      # The Debug-bundle counterpart to this — "is the watch app embedded in the
+      # phone app" — lives in the `build` job, which is the one that produces a
+      # Debug-iphonesimulator bundle to inspect.
       - name: Report Pulse symbol status in the Release build
         run: |
-          APP_BINARY="DerivedData/Build/Products/Release-iphonesimulator/ShoutKit.app/ShoutKit"
+          APP_BINARY="DerivedData/Build/Products/Release-iphonesimulator/Holmdel.app/Holmdel"
           if [ ! -f "$APP_BINARY" ]; then
             echo "::error::Release app binary not found at $APP_BINARY"
             exit 1
@@ -415,43 +665,3 @@ jobs:
           else
             echo "Pulse symbols are absent from the Release binary."
           fi
-
-  lint:
-    name: Lint & format
-    runs-on: xcode-27
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-
-      # Download the pinned portable binary rather than `brew install` (faster,
-      # version-pinned, and no Homebrew tap-trust noise in the log).
-      - name: Install SwiftLint ${{ env.SWIFTLINT_VERSION }}
-        run: |
-          curl -fsSL -o swiftlint.zip \
-            "https://github.com/realm/SwiftLint/releases/download/${SWIFTLINT_VERSION}/portable_swiftlint.zip"
-          unzip -q swiftlint.zip -d swiftlint-bin
-          echo "$PWD/swiftlint-bin" >> "$GITHUB_PATH"
-
-      # --strict promotes warnings to errors: the tree is lint-clean today, and
-      # this keeps it that way (new warnings fail the build instead of rotting).
-      - name: Lint
-        run: swiftlint lint --strict --reporter github-actions-logging
-
-      # Homebrew ships current SwiftFormat and is preinstalled on GitHub-hosted
-      # macOS runners; --lint fails instead of rewriting, so drift from the
-      # checked-in `.swiftformat` config shows up as a CI failure.
-      - name: Install SwiftFormat
-        env:
-          HOMEBREW_NO_AUTO_UPDATE: "1"
-          HOMEBREW_NO_INSTALL_CLEANUP: "1"
-        run: brew install swiftformat
-
-      # continue-on-error: the tree has never had swiftformat enforced (58/90
-      # files fail --lint today, mostly indent/brace-wrap rules), and fixing
-      # that needs a byte-exact `swiftformat` run from a real toolchain, which
-      # isn't available in every contributor's environment. Surfaces drift
-      # without blocking merges until a one-time reformat lands (see
-      # DECISIONS.md); drop continue-on-error once the tree is clean.
-      - name: Format check
-        continue-on-error: true
-        run: swiftformat ShoutKitApp Packages --lint

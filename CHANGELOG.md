@@ -1,10 +1,106 @@
 # Changelog
 
-All notable changes to ShoutKit are documented here. The format follows
+All notable changes to Holmdel (this app; previously named ShoutKit — see the 2026-08-24 entry
+below) are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org).
 
+> **0.1.0 through 0.3.0 were internal milestones, not releases.** None was ever tagged, and
+> no build from them reached a user — the repo had zero git tags until `v0.4.0`. Their
+> sections are kept as the development record. `v0.4.0` is the first real release; see
+> `docs/RELEASING.md` for how one is cut and `DECISIONS.md` (2026-08-13) for why the
+> numbering continues rather than restarting at 1.0.0.
+
 ## [Unreleased]
+
+### Changed
+- **Menus now grow out of the button you pressed.** The sleep timer's duration list used to
+  fade in as a panel over the top of its own button, and long-pressing a station squared off
+  the corners of the card under your finger before its menu appeared. Both now animate out of
+  the control you touched and settle back into it
+- **Station artwork stopped looking blurry.** Many stations publish a small logo, and the app
+  was stretching those across a full tile, which made a good half of the grid look out of
+  focus. Small logos now appear at a size they actually hold, resting on a soft wash of their
+  own colours. Stations with no artwork at all get a card in a colour of their own with their
+  initials on it, instead of the same grey radio icon every other artwork-less station had
+- **Listen Now shows every station as artwork.** The screen used to put ten stations in a
+  side-scrolling strip of covers and then list the rest as small rows underneath — the same
+  list twice, in two shapes. It is now one grid, and every station gets the same large cover
+  the first ten used to get to themselves
+- **The play button on the Now Playing screen is much bigger.** It was a circle with a lot of
+  empty space either side of it; it now stretches across the row between the heart and the
+  sleep timer, so the control you press most is the easiest one to hit. Favorite and sleep
+  timer are unchanged
+- **The mini player at the bottom of the screen is just the station and play/pause now.** The
+  heart moved out of it — it sat right beside play/pause in a bar the height of a single row,
+  which made both easy to hit by mistake. Favoriting is on the Now Playing screen, and in the
+  menu you get by pressing and holding any station. A favorited station now shows a small
+  heart on its cover in the grid
+- **The Favorites tab is shorter.** Recently Heard listed every track the app had ever seen,
+  below everything else, so the more you used the app the more scrolling it took to reach
+  anything. It now sits behind a row of its own, under Top Tracks. Nothing was removed
+- **The app is now named Holmdel.** ShoutKit remains the name of this repo's MIT-licensed radio
+  SDK (`Packages/`); Holmdel is the distributed app built on it. This changes the app's bundle
+  identifier (`com.cascadiacollections.holmdel`), its shared app group, and its `holmdel://` deep
+  link scheme — a fresh install, not an update, for anyone who had a build under the old identity.
+  See `DECISIONS.md` (2026-08-24) and `TRADEMARK.md`.
+
+### Fixed
+- **Stations in the Home Screen widget open the app again.** Renaming the app changed the
+  link the widget hands to iOS, but not the link the app was listening for, so tapping a
+  station in the widget opened nothing — or an older copy of the app, if one was still
+  installed. The same break affected Shortcuts and shared station links
+- **Wide station logos are no longer cut in half.** A logo shaped like a banner rather than a
+  square was cropped to fit, which sliced the station's own name out of the middle of it. The
+  whole logo is now shown
+- **Genres appear the moment you open Search.** The list used to arrive a beat after the
+  screen did, so Search opened to an empty space that filled itself in. It now starts with a
+  set of genres already there, replaced by the live list as soon as it arrives — and if that
+  list can't be fetched, the genres you can browse stay on screen instead of vanishing
+- **Album art shows up again on Bluetooth car stereos.** In a car, artwork either stayed frozen on
+  whatever had played before ShoutKit or never appeared at all — not the track's cover, not even
+  the station's own. Two things were behind it. A change meant to stop artwork downloads from
+  competing with the audio stream put them in the queue the system deprioritizes hardest, so while
+  a station was playing the image often never arrived at all. And when you started playing, or
+  switched stations, the app told the car about artwork it hadn't downloaded yet — a car asks for
+  cover art once and doesn't ask again, so that one request was spent on an image that wasn't
+  ready. Artwork the lock screen, Dynamic Island, and car are waiting on now downloads at normal
+  priority, and the app waits until it has the image in hand before announcing it, in every case
+  rather than most of them. In-app artwork still yields to the stream, which is what that change
+  was for
+- **Artwork recovers after a tunnel or a dead cell instead of staying blank for the rest of the
+  drive.** If a cover failed to download once — no signal for a moment — the app gave up on that
+  image until you stopped playback entirely, so a station could go the whole drive with nothing.
+  It now retries a few times over a couple of minutes, and picks the artwork back up when signal
+  returns
+
+## [0.4.0] — 2026-08-30
+
+### Fixed
+- **Playback no longer pops when it rejoins a station after Siri, a TTS announcement, or a
+  phone call interrupts it.** Live radio has no position to resume from, so every rejoin
+  reconnects at the live edge — but it used to do that at full volume, which read as an
+  audible click or jump-cut. It now fades in over a third of a second instead
+- **Album art no longer shows as a broken/undefined image on Tesla right after the first
+  track of a stream starts.** A station with no artwork of its own had nothing on screen yet
+  when the first track's album art resolved, and that "nothing yet" state was mistaken for the
+  one case where advertising unfetched art immediately is fine (switching stations). The art is
+  now held back until its bytes are actually in hand, same as every other track boundary
+- **Spatial Audio no longer crashes the app on launch.** The feature's head-tracking touches
+  `CMHeadphoneMotionManager` at bootstrap regardless of whether Spatial Audio is turned on, but
+  the app's Info.plist never declared `NSMotionUsageDescription` — iOS aborted the process on
+  every launch as a result. The missing usage-description key is added
+- **The Apple Watch app now actually installs with the phone app.** It has been built, tested,
+  and listed in the README for a month, and no one could get it: nothing bundled it into the
+  iPhone app, so there was nothing for your watch to install. It ships inside the app now,
+  along with its "Play Last" complication
+- **Stations that broadcast a fixed-length programme no longer repeat themselves.** A station
+  like NPR's hourly newscast played through to the end and then started over — several times,
+  before stopping with an error. The app treated the end of a broadcast the same way it treats a
+  live stream dropping, because to a player those look identical. It can tell them apart now: a
+  programme that finishes stops, and the play button replays it. If you *want* it to start over,
+  Settings → Playback → **Loop Finished Broadcasts** does that; it's off by default, and it has
+  no effect on continuous stations, which never end on their own
 
 ### Changed
 - **VoiceOver now reads the sleep timer's remaining time.** The button announced only that a
@@ -66,6 +162,15 @@ All notable changes to ShoutKit are documented here. The format follows
   visible row never fetch the same image twice
 
 ### Added
+- **Top Tracks**: the Library tab now shows your most-played songs — over the last week, the
+  last month, or all time — with cover art where it's available, right alongside Recently
+  Heard
+- **Apple TV app**: ShoutKit on tvOS, built for the Siri Remote — a now-playing banner over
+  Recent and Popular station shelves, with play/pause and stop, and the system Now Playing panel
+  (TV button) showing artwork and responding to the remote's transport controls. It runs the same
+  audio engine as the iPhone app, so the current track's title and artist appear alongside the
+  station name; stations that send no track information show their genre instead. Recents come
+  from the Apple TV itself — there is no sync with your phone
 - **Home Screen quick-play widget**: a small/medium Home Screen widget that plays a favorite
   station in one tap. Long-press → **Edit Widget** to choose which favorite it plays (it falls back
   to your first favorite until you pick one); tapping the tile opens ShoutKit straight onto that
@@ -253,7 +358,7 @@ All notable changes to ShoutKit are documented here. The format follows
 - Resuming after a stream failure (or after pausing while a station was still loading) no longer
   re-logs the station to recents and re-reports the play to Radio-Browser
 
-## [0.2.0] — in progress (first TestFlight beta)
+## [0.2.0] — milestone, never released (planned as the first TestFlight beta)
 
 ### Added
 - **Sleep timer** in Now Playing (15/30/45/60 minutes) with a live countdown; pauses playback
@@ -303,7 +408,7 @@ All notable changes to ShoutKit are documented here. The format follows
   timed-metadata group
 - ICY titles with an empty artist (`" - Title"`) no longer parse the separator into the title
 
-## [0.1.0] — 2026-06-25
+## [0.1.0] — milestone, never released (dated 2026-06-25)
 
 ### Added
 - Initial scaffold: iOS 26 SwiftUI app shell, modular Swift packages, SHOUTcast directory

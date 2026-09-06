@@ -6,8 +6,9 @@ let package = Package(
     name: "RadioDirectory",
     defaultLocalization: "en",
     platforms: [
-        .iOS(.v27),
-        .watchOS(.v27),
+        .iOS(.v26),
+        .tvOS(.v26),
+        .watchOS(.v26),
         .macOS(.v13)
     ],
     products: [

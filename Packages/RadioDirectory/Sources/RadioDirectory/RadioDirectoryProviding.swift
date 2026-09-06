@@ -5,9 +5,19 @@ public protocol RadioDirectoryProviding: Sendable {
     func genres() async throws(RadioDirectoryError) -> [Genre]
     func topStations(limit: Int) async throws(RadioDirectoryError) -> [Station]
     func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station]
+    func searchStations(
+        matching query: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ) async throws(RadioDirectoryError) -> [Station]
     /// Stations belonging to a genre/tag, ordered by popularity where the
     /// directory supports it. Distinct from `searchStations`, which matches names.
     func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station]
+    func stations(
+        inGenre genre: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ) async throws(RadioDirectoryError) -> [Station]
     /// Looks up a station by identifier for consumers (like App Intents) that
     /// need to rehydrate a previously saved entity id.
     func station(id: String) async throws(RadioDirectoryError) -> Station?
@@ -15,17 +25,51 @@ public protocol RadioDirectoryProviding: Sendable {
 }
 
 public extension RadioDirectoryProviding {
+    func searchStations(
+        matching query: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ) async throws(RadioDirectoryError) -> [Station] {
+        let stations = try await searchStations(matching: query, limit: limit)
+        return Array(filters.normalized.apply(to: stations).prefix(limit))
+    }
+
     /// Fallback for directories without a dedicated genre query: a plain search,
     /// which for the simple directories here also matches the genre field.
     func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
         try await searchStations(matching: genre, limit: limit)
     }
 
+    func stations(
+        inGenre genre: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ) async throws(RadioDirectoryError) -> [Station] {
+        let stations = try await stations(inGenre: genre, limit: limit)
+        return Array(filters.normalized.apply(to: stations).prefix(limit))
+    }
+
+    /// - Warning: This default always returns `nil`. It exists so a directory
+    ///   with no lookup-by-id endpoint still conforms, but the effect is silent:
+    ///   a station saved by an App Intent or a Home Screen widget will
+    ///   fail to rehydrate against this directory, with no compiler warning
+    ///   and no thrown error to signal it — `nil` is also the correct answer
+    ///   for "not found." An implementation backed by a real directory should
+    ///   override this rather than inherit it.
     func station(id: String) async throws(RadioDirectoryError) -> Station? {
         nil
     }
 }
 
+/// ShoutKit's own editorial curation (KEXP), not part of the directory
+/// abstraction — an adopter implementing ``RadioDirectoryProviding`` for a
+/// different service has no reason to reference this type. It lives in this
+/// package, rather than an app target, because it is the one module all
+/// three app targets (iOS, watchOS, tvOS) and the shortcut provider already
+/// share; `Persistence` and `Playback` are the only other candidates and fit
+/// this data less than `RadioDirectory` does. See ``PreferredRadioDirectory``
+/// and ``BundledRadioDirectory``, which take stations as a parameter rather
+/// than defaulting to this so the curation stays visible at each call site.
 public enum PreferredStations {
     public static let all: [Station] = [
         kexpHighBandwidth,
@@ -57,9 +101,15 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
     private let base: any RadioDirectoryProviding
     private let preferredStations: [Station]
 
+    /// - Parameters:
+    ///   - base: The directory to decorate.
+    ///   - preferredStations: Stations pinned ahead of `base`'s results. No
+    ///     default: ``PreferredStations`` is ShoutKit's own editorial choice, and
+    ///     inheriting it silently is not something a library should do to an
+    ///     adopter. Pass `PreferredStations.all` to opt into it.
     public init(
         base: any RadioDirectoryProviding,
-        preferredStations: [Station] = PreferredStations.all
+        preferredStations: [Station]
     ) {
         self.base = base
         self.preferredStations = preferredStations
@@ -78,6 +128,14 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
     }
 
     public func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        try await searchStations(matching: query, limit: limit, filters: .none)
+    }
+
+    public func searchStations(
+        matching query: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ) async throws(RadioDirectoryError) -> [Station] {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmedQuery.isEmpty == false else {
             return []
@@ -87,22 +145,32 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
             station.name.localizedStandardContains(trimmedQuery)
                 || station.genre.localizedStandardContains(trimmedQuery)
         }
+        .filter(filters.normalized.matches)
 
         let baseLimit = max(limit - preferredMatches.count, 0)
-        let stations = try await base.searchStations(matching: query, limit: baseLimit)
+        let stations = try await base.searchStations(matching: query, limit: baseLimit, filters: filters)
         return Array((preferredMatches + stations).uniqued { $0.name.lowercased() }.prefix(limit))
     }
 
     public func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        try await stations(inGenre: genre, limit: limit, filters: .none)
+    }
+
+    public func stations(
+        inGenre genre: String,
+        limit: Int,
+        filters: StationSearchFilters
+    ) async throws(RadioDirectoryError) -> [Station] {
         // Forward to the base's real genre query (the protocol default would
         // degrade this into a name search), layering matching preferred stations
         // on top as everywhere else.
         let preferredMatches = preferredStations.filter { station in
             station.genre.localizedCaseInsensitiveContains(genre)
         }
+        .filter(filters.normalized.matches)
 
         let baseLimit = max(limit - preferredMatches.count, 0)
-        let stations = try await base.stations(inGenre: genre, limit: baseLimit)
+        let stations = try await base.stations(inGenre: genre, limit: baseLimit, filters: filters)
         return Array((preferredMatches + stations).uniqued { $0.name.lowercased() }.prefix(limit))
     }
 
@@ -129,7 +197,10 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
 public struct BundledRadioDirectory: RadioDirectoryProviding {
     private let stations: [Station]
 
-    public init(stations: [Station] = PreferredStations.all) {
+    /// - Parameter stations: The fixed station list to serve. No default, for
+    ///   the same reason as ``PreferredRadioDirectory``: the curated set is this
+    ///   app's, not every adopter's.
+    public init(stations: [Station]) {
         self.stations = stations
     }
 

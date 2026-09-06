@@ -268,6 +268,7 @@ extension AudioStreamingPlaybackEngine {
         player.delegate = self
         configureSession()
         reattachEqualizerIfNeeded()
+        reattachSpatialAudioIfNeeded()
         // Nothing was playing: there is nothing to recover, and reporting a
         // failure would surface an error the listener never provoked.
         guard didRequestStop == false, currentURL != nil else { return }

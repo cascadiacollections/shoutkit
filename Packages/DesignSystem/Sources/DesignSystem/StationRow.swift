@@ -25,6 +25,17 @@ public struct StationRowAction {
 /// second, separate `Button` — nesting a button inside a tappable region produces
 /// ambiguous hit-testing and collapses to one confusing VoiceOver element.
 public struct StationRow: View {
+    // `String(localized:bundle: .module)`, not bare literals: a `LocalizedStringKey`
+    // built from a literal in a package resolves against `Bundle.main` — the *app's*
+    // bundle — so the keys in this package's catalog are never consulted and the
+    // strings ship untranslated. Same reasoning as DirectoryUnavailableView's
+    // "Try Again". These four keys already existed in Localizable.xcstrings and were
+    // dead entries until now.
+    private static let pausesPlaybackHint = String(localized: "Pauses playback", bundle: .module)
+    private static let playsStationHint = String(localized: "Plays this station", bundle: .module)
+    private static let removeFavoriteTitle = String(localized: "Remove Favorite", bundle: .module)
+    private static let addFavoriteTitle = String(localized: "Add to Favorites", bundle: .module)
+
     private let station: Station
     private let phase: StationPlaybackPhase
     private let isFavorite: Bool
@@ -55,7 +66,11 @@ public struct StationRow: View {
     public var body: some View {
         Button(action: onTap) {
             HStack(spacing: ShoutKitSpacing.medium) {
-                StationArtworkView(artworkURL: station.artworkURL, isPlaying: phase == .playing)
+                StationArtworkView(
+                    artworkURL: station.artworkURL,
+                    isPlaying: phase == .playing,
+                    placeholderSeed: station.name
+                )
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(station.name)
@@ -81,12 +96,12 @@ public struct StationRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint(phase == .playing ? "Pauses playback" : "Plays this station")
+        .accessibilityHint(phase == .playing ? Self.pausesPlaybackHint : Self.playsStationHint)
         // The context menu is invisible to VoiceOver, so expose the same actions
         // as custom actions too.
         .accessibilityActions {
             if onToggleFavorite != nil {
-                Button(isFavorite ? "Remove Favorite" : "Add to Favorites") {
+                Button(isFavorite ? Self.removeFavoriteTitle : Self.addFavoriteTitle) {
                     onToggleFavorite?()
                 }
             }
@@ -94,12 +109,23 @@ public struct StationRow: View {
                 Button(removeAction.title, action: removeAction.perform)
             }
         }
+        // The shape the row lifts out of when the context menu opens. Without
+        // it the system uses the view's bounds — a square-cornered rectangle
+        // around a row whose background is a 16 pt continuous rounded
+        // rectangle, so the corners squared off for the duration of the
+        // long-press and the menu appeared to fly out of a different view than
+        // the one under the finger. Same radius and style as the background
+        // above, deliberately: the preview *is* that background.
+        .contentShape(
+            .contextMenuPreview,
+            RoundedRectangle(cornerRadius: ShoutKitRadius.medium, style: .continuous)
+        )
         .contextMenu {
             if let onToggleFavorite {
                 Button {
                     onToggleFavorite()
                 } label: {
-                    Label(isFavorite ? "Remove Favorite" : "Add to Favorites",
+                    Label(isFavorite ? Self.removeFavoriteTitle : Self.addFavoriteTitle,
                           systemImage: isFavorite ? "heart.slash" : "heart")
                 }
             }

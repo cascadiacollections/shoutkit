@@ -56,8 +56,16 @@ public final class SearchViewModel {
     }
 
     public private(set) var phase: SearchPhase = .idle
-    public private(set) var genres: [Genre] = []
+    /// Seeded rather than empty, so the genre strip is on screen at first paint
+    /// instead of a frame later. See ``Genre/paintTimeDefaults``.
+    public private(set) var genres: [Genre] = Genre.paintTimeDefaults
     public private(set) var genreLoadError: RadioDirectoryError?
+    public var filters: StationSearchFilters = .none {
+        didSet {
+            guard filters != oldValue else { return }
+            rerunCurrentQueryForFilterChange()
+        }
+    }
     /// The genre chip whose stations are on screen, if the current results came
     /// from a chip rather than from typing. Drives the chip's selected state and
     /// picks the genre query over the name search below.
@@ -98,15 +106,21 @@ public final class SearchViewModel {
         debounceTask?.cancel()
     }
 
+    /// Replaces the seeded strip with the directory's own list.
+    ///
+    /// A failure leaves whatever is already on screen — the seed, or a list from
+    /// an earlier call — rather than clearing to empty. Emptying it was the old
+    /// behavior and it traded a usable strip for an error message: the seeded
+    /// tags are real, so browsing still works, and a genre query that cannot
+    /// reach the network reports that where the user asked for it. The error is
+    /// still recorded for any surface that wants it.
     public func loadGenres() async {
         do {
             genres = try await directory.genres()
             genreLoadError = nil
         } catch let error as RadioDirectoryError {
-            genres = []
             genreLoadError = error
         } catch {
-            genres = []
             genreLoadError = .transport(error.localizedDescription)
         }
     }
@@ -142,6 +156,10 @@ public final class SearchViewModel {
         runSearch(trimmed)
     }
 
+    public func clearFilters() {
+        filters = .none
+    }
+
     private func runSearch(_ query: String) {
         searchTask?.cancel()
         // Only show the spinner once the debounce actually fires; setting it
@@ -167,9 +185,29 @@ public final class SearchViewModel {
     /// what's *named* like the query. Same phase either way — two different
     /// questions with the same shape of answer.
     private func fetchStations(matching query: String) async throws(RadioDirectoryError) -> [Station] {
+        let normalizedFilters = filters.normalized
         if let activeGenreQuery, activeGenreQuery == query {
-            return try await directory.stations(inGenre: activeGenreQuery, limit: Configuration.resultLimit)
+            return try await directory.stations(
+                inGenre: activeGenreQuery,
+                limit: Configuration.resultLimit,
+                filters: normalizedFilters
+            )
         }
-        return try await directory.searchStations(matching: query, limit: Configuration.resultLimit)
+        return try await directory.searchStations(
+            matching: query,
+            limit: Configuration.resultLimit,
+            filters: normalizedFilters
+        )
+    }
+
+    private func rerunCurrentQueryForFilterChange() {
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedQuery.isEmpty == false {
+            runSearch(trimmedQuery)
+            return
+        }
+        if let activeGenreQuery {
+            runSearch(activeGenreQuery)
+        }
     }
 }

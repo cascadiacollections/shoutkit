@@ -63,7 +63,11 @@ public final class NowPlayingActivityCoordinator {
     /// so the off-main staging path can read it.
     private nonisolated static let artworkMaxPixelSize = 256
 
-    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.shared) {
+    /// Defaults to `.nowPlayingArtwork` for the same reason the now-playing
+    /// centers do: this is the one image per track a system surface is waiting
+    /// on, not in-app art that can arrive late and be re-requested (see
+    /// `URLSessionHTTPTransport.nowPlayingArtworkConfiguration()`).
+    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.nowPlayingArtwork) {
         self.transport = transport
     }
 

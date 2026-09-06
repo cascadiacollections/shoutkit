@@ -1,23 +1,32 @@
-# ShoutKit
+# Holmdel
 
-ShoutKit is a native SwiftUI internet-radio client for iOS and iPadOS 27+. It ships with real,
+Holmdel is a native SwiftUI internet-radio client for iOS and iPadOS 26+, with companion apps
+for watchOS and tvOS, built on **ShoutKit** — this repo's MIT-licensed radio SDK (`Packages/`).
+See [TRADEMARK.md](TRADEMARK.md) for how the two names split: ShoutKit is the reusable library
+layer, Holmdel is this app's name. Holmdel ships with real,
 keyless station discovery out of the box via [Radio-Browser](https://www.radio-browser.info) — a
 free, open-source community radio directory — plus an Apple Music-style persistent player: a Liquid
 Glass mini-player docked above the tab bar, a full-screen Now Playing surface with live ICY track
 metadata, lock-screen/Control Center controls, favorites and recents backed by SwiftData, and
-Siri/Shortcuts support ("Play KEXP on ShoutKit"). On iPad the tab bar becomes a sidebar and
+Siri/Shortcuts support ("Play KEXP on Holmdel"). On iPad the tab bar becomes a sidebar and
 browsing surfaces flow into adaptive multi-column layouts, including Split View and Stage Manager.
+
+The name is a nod to the Bell Labs site in Holmdel, New Jersey, where in 1964 Arno Penzias and
+Robert Wilson used the Holmdel Horn Antenna to detect the cosmic microwave background — proof of
+the Big Bang, and one of the most consequential radio signals ever received. Felt fitting for an
+app whose entire job is picking up signals and letting you listen.
 
 ## Requirements
 
-- Xcode 27 with the iOS 27 SDK
+- Xcode 27 with the iOS 27 SDK (to build — the MediaSession path needs the iOS 27 SDK
+  to compile, even though it only runs on iOS 27 devices)
 - Swift 6 strict concurrency
-- iOS / iPadOS 27.0+ deployment target
+- iOS / iPadOS 26.0+ deployment target; watchOS 26.0+ and tvOS 26.0+ for the companion apps
 
 If your active developer directory points at Command Line Tools, build with:
 
 ```sh
-DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer xcodebuild -workspace ShoutKit.xcworkspace -scheme ShoutKit -destination 'generic/platform=iOS Simulator' build
+DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel -destination 'generic/platform=iOS Simulator' build
 ```
 
 ## Station discovery
@@ -57,7 +66,7 @@ and deliberately not persisted.
 To use SHOUTcast's own directory instead of Radio-Browser, supply a developer key. The app reads
 `SHOUTCAST_DEV_KEY` from build settings into `Info.plist`; do not hard-code this value.
 
-1. Copy `ShoutKitApp/Config/Secrets.xcconfig.template` to `ShoutKitApp/Config/Secrets.xcconfig`.
+1. Copy `HolmdelApp/Config/Secrets.xcconfig.template` to `HolmdelApp/Config/Secrets.xcconfig`.
 2. Set:
 
 ```xcconfig
@@ -71,7 +80,7 @@ SHOUTCAST_DEV_KEY = your_key_here
 
 ## Architecture
 
-- `ShoutKitApp`: thin SwiftUI app targets — the iPhone/iPad app keeps app-level wiring in
+- `HolmdelApp`: thin SwiftUI app targets — the iPhone/iPad app keeps app-level wiring in
   `AppDependencies.bootstrap()` (shared between the scene and App Intents), while the watch app
   carries a separate minimal service graph for native watch playback. The phone app provides the
   3-tab root shell (Listen Now · Search · Favorites) with the persistent mini-player and
@@ -107,8 +116,9 @@ SHOUTCAST_DEV_KEY = your_key_here
 - `Packages/Features/*`: one package per tab surface.
 - `Packages/BrowseFeatureCore`, `SearchFeatureCore`, `PlayerFeatureCore`: the platform-free
   half of those surfaces — view-model logic and decision rules, split out because the feature
-  packages depend on `DesignSystem`, whose UIKit-only sources don't build for the mac host, so
-  nothing inside them can be reached by `swift test`. This is where their tests live.
+  packages depend on `DesignSystem`, which declares `.iOS(.v26)` alone and so doesn't build for
+  the mac host, meaning nothing inside them can be reached by `swift test`. This is where their
+  tests live.
 
 Dependency wiring across these packages goes through [Factory](https://github.com/hmlongco/Factory)
 (`Container`-based DI) rather than direct instantiation, so tests and previews can substitute fakes
@@ -125,13 +135,17 @@ implementation details stay behind protocol or actor boundaries.
 
 The phone app `Info.plist` declares `UIBackgroundModes = audio` for streaming playback and
 `NSSupportsLiveActivities` for the lock screen / Dynamic Island now-playing Live Activity (the
-`ShoutKitWidgets` extension target, driven by `NowPlayingActivityCoordinator` from playback
+`HolmdelWidgets` extension target, driven by `NowPlayingActivityCoordinator` from playback
 state, with synced album/station artwork). The watch app adds a native watchOS now-playing +
-recents surface plus a one-tap "Play Last" complication that deep-links into watch playback.
-App Intents power Siri/Shortcuts with headless background playback (no app foregrounding);
+recents surface plus a one-tap "Play Last" complication that deep-links into watch playback, and
+ships embedded in the phone app's bundle. **Apple TV** (`HolmdelTVApp`, tvOS 26+) is a separate
+submission with its own bundle id: Recent and Popular station shelves built for the Siri Remote,
+over the same `AudioStreamingPlaybackEngine` the phone uses, so live ICY track titles appear on
+the big screen too. App Intents power Siri/Shortcuts with headless background playback (no app
+foregrounding);
 `StationEntity` also conforms to `IndexedEntity` so favorited, curated, and recently-played
 stations land in Spotlight's semantic index, letting Siri resolve "play ⟨station⟩" for a station
-from a previous session. `shoutkit://station?...` deep links open the phone app to a station for
+from a previous session. `holmdel://station?...` deep links open the phone app to a station for
 promos, notifications, and other launch entry points; the app also publishes an `NSUserActivity`
 for the current station so Handoff can resume it on another signed-in device; and long-pressing
 Now Playing artwork
@@ -139,12 +153,12 @@ surfaces a "View in Apple Music" link when a track match is found. A small/mediu
 widget plays a chosen favorite in one tap, and **CarPlay** ships as a `CPListTemplate` of
 favorites and recents over `CPNowPlayingTemplate`, driven by the same `PlaybackController` (the
 `com.apple.developer.carplay-audio` entitlement is declared in
-`ShoutKitApp/ShoutKitApp.entitlements`). What's still ahead is in
+`HolmdelApp/Holmdel/Holmdel.entitlements`). What's still ahead is in
 [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Privacy
 
-ShoutKit collects nothing and tracks nothing. There are no analytics, no ads, and no accounts.
+Holmdel collects nothing and tracks nothing. There are no analytics, no ads, and no accounts.
 The app's privacy manifest (`PrivacyInfo.xcprivacy`) declares zero collected data types and no
 tracking. The complete list of network traffic the app produces:
 
@@ -154,7 +168,7 @@ tracking. The complete list of network traffic the app produces:
 - **Play reports** to Radio-Browser (`/json/url/{stationuuid}`) when you play a
   Radio-Browser-sourced station, per that project's etiquette, so the community directory can
   rank station popularity. Only the station's public UUID is sent — nothing about you or your
-  device beyond a generic `ShoutKit/x.y` User-Agent.
+  device beyond a generic `Holmdel/x.y` User-Agent.
 - **Stream and artwork fetches** directly from the stations you choose to play.
 
 Favorites and recents live in a local SwiftData store on your device, alongside a small snapshot of
@@ -177,20 +191,28 @@ codesign workaround.
 
 | Component | License |
 |---|---|
-| App target (`ShoutKitApp`, incl. the debug-only `DebugSupport` package), feature packages (`Packages/Features/*` and their `*FeatureCore` counterparts), `Packages/LiveActivity`, `Packages/ImageIODownsample` | [GPL-3.0](LICENSE) |
-| `Packages/RadioDirectory`, `Packages/Playback`, `Packages/PlaybackEngineAudioStreaming`, `Packages/Persistence`, `Packages/DesignSystem`, `Packages/FeatureFlags` | [MIT](Packages/RadioDirectory/LICENSE) (per-package `LICENSE` files) |
+| App target (`HolmdelApp`, incl. the debug-only `DebugSupport` package), feature packages (`Packages/Features/*` and their `*FeatureCore` counterparts), `Packages/LiveActivity` | [GPL-3.0](LICENSE) |
+| `Packages/RadioDirectory`, `Packages/Playback`, `Packages/PlaybackEngineAudioStreaming`, `Packages/Persistence`, `Packages/DesignSystem`, `Packages/FeatureFlags`, `Packages/ImageIODownsample` | [MIT](Packages/RadioDirectory/LICENSE) (per-package `LICENSE` files) |
 
 The rule, if you're adding a package: a per-package `LICENSE` file makes it MIT and means it
 must stay adoptable — no app-specific or heavyweight dependencies. Everything else inherits
 GPL-3.0 from the root `LICENSE`.
 
+That rule is enforced, not just documented: CI fails if an MIT package takes a dependency on a
+GPL-3.0 one (`.github/workflows/ci.yml`, the `license-boundary` job). `ImageIODownsample` is MIT
+for exactly this reason — `Playback` and `DesignSystem` both link it, so a GPL-3.0
+`ImageIODownsample` would have made those two packages undistributable under MIT.
+
+DocC-generated API reference for the six MIT packages above is published at
+[cascadiacollections.github.io/shoutkit/api](https://cascadiacollections.github.io/shoutkit/api/).
+
 The reusable infrastructure packages are MIT so they can be adopted anywhere; the app itself is
-GPL-3.0 so distributed forks must remain open source. The **ShoutKit name and branding are not
-covered by the code licenses** — see [TRADEMARK.md](TRADEMARK.md). Contributions require a DCO
-sign-off; see [CONTRIBUTING.md](CONTRIBUTING.md).
+GPL-3.0 so distributed forks must remain open source. The **Holmdel name/branding and the ShoutKit
+name/branding are not covered by the code licenses** — see [TRADEMARK.md](TRADEMARK.md).
+Contributions require a DCO sign-off; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Supporting the project
 
-ShoutKit is free software built in the open. If it's useful to you, support development via the
+Holmdel is free software built in the open. If it's useful to you, support development via the
 funding links in [`.github/FUNDING.yml`](.github/FUNDING.yml) (GitHub's Sponsor button). The app
 itself contains no paywalls — everything works whether or not you donate.

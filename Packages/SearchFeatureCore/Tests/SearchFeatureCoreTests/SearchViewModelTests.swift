@@ -232,6 +232,47 @@ struct SearchViewModelTests {
         #expect(callCount == 0)
     }
 
+    @Test func activeFiltersArePassedToNameSearches() async {
+        let directory = FakeRadioDirectory()
+        await directory.setSearchStationsResult(.success([.fixture(id: "a", name: "Station A")]))
+        let viewModel = SearchViewModel(directory: directory)
+        viewModel.filters = StationSearchFilters(bitrateMin: 128, tag: "jazz", countryCode: "us")
+
+        viewModel.query = "kexp"
+        await waitUntil { viewModel.phase != .idle && viewModel.phase != .searching }
+
+        let filters = await directory.searchedFilters
+        #expect(filters == [StationSearchFilters(bitrateMin: 128, tag: "jazz", countryCode: "US")])
+    }
+
+    @Test func activeFiltersArePassedToGenreSearches() async {
+        let directory = FakeRadioDirectory()
+        await directory.setSearchStationsResult(.success([.fixture(id: "a", name: "Blue Note")]))
+        let viewModel = SearchViewModel(directory: directory)
+        viewModel.filters = StationSearchFilters(bitrateMax: 192, tag: "live")
+
+        viewModel.selectGenre(Genre(name: "Jazz"))
+        await waitUntil { viewModel.phase != .idle && viewModel.phase != .searching }
+
+        let filters = await directory.genreStationFilters
+        #expect(filters == [StationSearchFilters(bitrateMax: 192, tag: "live")])
+    }
+
+    @Test func changingFiltersRerunsTheCurrentSearchQuery() async {
+        let directory = FakeRadioDirectory()
+        await directory.setSearchStationsResult(.success([.fixture(id: "a", name: "Station A")]))
+        let viewModel = SearchViewModel(directory: directory)
+
+        viewModel.query = "jazz"
+        await waitUntil { viewModel.phase != .idle && viewModel.phase != .searching }
+
+        viewModel.filters = StationSearchFilters(bitrateMin: 128)
+        await waitUntilAsync { await directory.searchCallCount == 2 }
+
+        let queries = await directory.searchedQueries
+        #expect(queries == ["jazz", "jazz"])
+    }
+
     @Test func loadGenresPopulatesGenresOnSuccess() async {
         let directory = FakeRadioDirectory()
         await directory.setGenresResult(.success([Genre(name: "Jazz"), Genre(name: "Rock")]))
@@ -243,14 +284,29 @@ struct SearchViewModelTests {
         #expect(viewModel.genreLoadError == nil)
     }
 
-    @Test func loadGenresSurfacesFailureAndClearsGenres() async {
+    @Test func genreStripIsPopulatedBeforeAnyLoad() {
+        let viewModel = SearchViewModel(directory: FakeRadioDirectory())
+
+        // The point of the seed: Search paints a usable genre strip on the
+        // first frame, without waiting on a directory call that is `async`
+        // even when the answer is already cached.
+        #expect(viewModel.genres.isEmpty == false)
+        #expect(viewModel.genres == Genre.paintTimeDefaults)
+        #expect(viewModel.genreLoadError == nil)
+    }
+
+    @Test func loadGenresSurfacesFailureAndKeepsTheExistingStrip() async {
         let directory = FakeRadioDirectory()
         await directory.setGenresResult(.failure(.invalidResponse))
         let viewModel = SearchViewModel(directory: directory)
 
         await viewModel.loadGenres()
 
-        #expect(viewModel.genres == [])
+        // Deliberately not cleared. Emptying the strip traded a working browse
+        // affordance for an error message; the seeded tags are real, so a genre
+        // is still selectable and a query that cannot reach the network reports
+        // it where the user asked for it.
+        #expect(viewModel.genres == Genre.paintTimeDefaults)
         #expect(viewModel.genreLoadError == .invalidResponse)
     }
 }

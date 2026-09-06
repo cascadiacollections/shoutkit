@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "BrowseFeatureCore",
     platforms: [
-        .iOS(.v27),
+        .iOS(.v26),
         // Declared so the view-model test suite can run on the mac host
         // (`swift test`), same pattern as RadioDirectory/Playback/Persistence.
         .macOS(.v15)

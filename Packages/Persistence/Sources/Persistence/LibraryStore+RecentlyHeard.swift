@@ -12,6 +12,7 @@ public extension LibraryStore {
         title: String?,
         artist: String?,
         heardAt: Date = .now,
+        artworkURL: URL? = nil,
         appleMusicURL: URL? = nil
     ) {
         guard title != nil || artist != nil else { return }
@@ -35,6 +36,9 @@ public extension LibraryStore {
             if heardAt > latest.heardAt {
                 latest.heardAt = heardAt
             }
+            if let artworkURL {
+                latest.artworkURLString = artworkURL.absoluteString
+            }
             if let appleMusicURL {
                 latest.appleMusicURLString = appleMusicURL.absoluteString
             }
@@ -45,7 +49,8 @@ public extension LibraryStore {
                 title: title,
                 artist: artist,
                 heardAt: heardAt,
-                appleMusicURLString: appleMusicURL?.absoluteString
+                appleMusicURLString: appleMusicURL?.absoluteString,
+                artworkURLString: artworkURL?.absoluteString
             )
             context.insert(track)
         }
