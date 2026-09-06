@@ -21,6 +21,13 @@ public struct NowPlayingView: View {
     /// controls sit in the same color world as the ambient backdrop.
     @State private var artworkAccent: Color?
 
+    /// Identity for the transport row's glass shapes.
+    ///
+    /// Not `private`: the sleep timer's own glass lives in
+    /// `NowPlayingView+SleepTimer.swift`, and a namespace only does anything if
+    /// every shape in the cluster shares it.
+    @Namespace var transportGlass
+
     /// The play/pause control's height. It grows with Dynamic Type instead of
     /// staying fixed: it is the primary control on this screen, and a listener
     /// who has turned text up has usually turned it up because targets at the
@@ -216,13 +223,26 @@ public struct NowPlayingView: View {
     /// and nothing to skip to, so play/pause is the only true transport control
     /// here; it gets the room, flanked by the two things people actually do
     /// while listening.
+    ///
+    /// The row is a `GlassEffectContainer` so the three controls are one glass
+    /// cluster to the system rather than three unrelated ones: they sample the
+    /// backdrop together, and — the reason this is here — the sleep timer's menu
+    /// flies out of a registered glass shape instead of appearing over it.
+    ///
+    /// `spacing: 0`, not the row's own spacing. A container merges glass shapes
+    /// that fall within `spacing` of each other, and at the 16 pt these controls
+    /// sit apart that would fuse a circle, a wide capsule and a capsule into a
+    /// single pill. Zero buys the shared rendering context and the morph without
+    /// buying a redesign.
     private func transportControls(playback: PlaybackController, station: Station) -> some View {
-        HStack(spacing: ShoutKitSpacing.medium) {
-            favoriteButton(station: station)
+        GlassEffectContainer(spacing: 0) {
+            HStack(spacing: ShoutKitSpacing.medium) {
+                favoriteButton(station: station)
 
-            playPauseButton(playback)
+                playPauseButton(playback)
 
-            sleepTimerButton
+                sleepTimerButton
+            }
         }
     }
 
@@ -245,6 +265,7 @@ public struct NowPlayingView: View {
         }
         .buttonStyle(.glassProminent)
         .buttonBorderShape(.capsule)
+        .glassEffectID(TransportGlassID.playPause, in: transportGlass)
         .accessibilityLabel(isPlaying(playback) ? "Pause" : "Play")
     }
 
@@ -259,6 +280,7 @@ public struct NowPlayingView: View {
             }
             .buttonStyle(.glass)
             .buttonBorderShape(.circle)
+            .glassEffectID(TransportGlassID.favorite, in: transportGlass)
             .tint(library.isFavorite(station) ? (artworkAccent ?? .shoutKitHighlight) : .primary)
             .accessibilityLabel(library.isFavorite(station) ? "Remove favorite" : "Add favorite")
         } else {
@@ -288,4 +310,13 @@ public struct NowPlayingView: View {
         if let artist = track.artist { return "\(title) — \(artist)" }
         return title
     }
+}
+
+/// The transport row's glass shapes, named rather than spelled as string
+/// literals — the sleep timer's is applied from another file, and a typo in a
+/// `glassEffectID` fails by quietly doing nothing.
+enum TransportGlassID: Hashable {
+    case favorite
+    case playPause
+    case sleepTimer
 }

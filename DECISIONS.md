@@ -1,5 +1,63 @@
 # Decisions
 
+## 2026-09-06 (menus that fly out of the control, not over it)
+
+Three glass menus in the app opened as panels that cross-faded over the button that
+summoned them, rather than growing out of it. None of it was a missing effect to
+invent — iOS 26 does the morph itself — it was three separate cases of the system not
+being told what shape to morph from.
+
+**The transport row is now a `GlassEffectContainer`.** Favorite, play/pause and the
+sleep timer each carried their own `.glass` button style and were, as far as the
+system was concerned, three unrelated pieces of glass that happened to sit near one
+another. Inside a container with `glassEffectID`s from a shared namespace they are one
+cluster: they sample the backdrop together, and the sleep timer's duration menu grows
+out of a registered shape instead of appearing on top of one.
+
+`spacing: 0`, deliberately, not the row's own `ShoutKitSpacing.medium`. A container
+merges glass shapes that fall within `spacing` of each other, and at 16 pt apart that
+would fuse a circle, a wide capsule and a capsule into one pill. That is a redesign,
+and this change is not one — zero buys the shared rendering context and the morph and
+nothing else.
+
+The namespace is declared on `NowPlayingView` but the sleep timer's glass is applied
+in `NowPlayingView+SleepTimer.swift`, so `transportGlass` and `TransportGlassID` are
+both internal rather than private. `TransportGlassID` is an enum and not three string
+literals for the reason a typo in a `glassEffectID` deserves: it fails by silently
+doing nothing, in a file that isn't the one you'd be reading.
+
+The ID has to be stable across the `TimelineView` that ticks the running countdown
+once a second. It is — it depends on neither the tick date nor whether the timer is
+running — and the tick was left as it was rather than restructured around the new
+identity.
+
+**`StationCard` and `StationRow` now declare a `.contextMenuPreview` content shape.**
+Left to the system the preview is the view's bounds, which is a square-cornered
+rectangle. `StationRow`'s background is a 16 pt continuous rounded rectangle and
+`StationCard`'s artwork is a 20 pt one, so both squared their corners off for the
+duration of the long-press: the menu flew out of a shape that had not been on screen a
+moment earlier. The row traces its own background exactly, same radius and same
+`.continuous` style, because the preview *is* that background.
+
+The card outsets its shape by `ShoutKitSpacing.small` instead of tracing its bounds.
+The caption runs to the leading edge and sits inside the bottom 20 pt of the tile, so
+a corner radius drawn on the bounds would have clipped the first glyph of the
+subtitle. The outset also leaves the lifted platter a margin, which is what the system
+players' poster previews look like.
+
+**Deliberately not touched: the Now Playing overflow menu.** It is a single glass
+circle in the title block with no neighbours to cluster with, and a
+`GlassEffectContainer` around one shape is a wrapper that does nothing — the same
+"public wrapper with no callers" that got `GlassActionCluster` deleted in the
+2026-08-24 pass. Its menu already morphs from its own `.glass` button style.
+
+**Unverified on device.** All four files were changed in an environment with no Swift
+toolchain, so none of this has been compiled, let alone seen. The claims above about
+what the morph looks like are claims about what the API is documented to do; the
+shapes and radii are the parts that are checkable by reading. Worth a look on hardware
+before this is believed — the 2026-09-03 entry above is about two things only a real
+device showed.
+
 ## 2026-09-03 (two things only a real device showed: cropped wordmarks, and the genre strip's empty first frame)
 
 Running the build on hardware, against the live directory, surfaced two things

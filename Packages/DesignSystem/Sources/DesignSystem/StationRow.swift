@@ -109,6 +109,17 @@ public struct StationRow: View {
                 Button(removeAction.title, action: removeAction.perform)
             }
         }
+        // The shape the row lifts out of when the context menu opens. Without
+        // it the system uses the view's bounds — a square-cornered rectangle
+        // around a row whose background is a 16 pt continuous rounded
+        // rectangle, so the corners squared off for the duration of the
+        // long-press and the menu appeared to fly out of a different view than
+        // the one under the finger. Same radius and style as the background
+        // above, deliberately: the preview *is* that background.
+        .contentShape(
+            .contextMenuPreview,
+            RoundedRectangle(cornerRadius: ShoutKitRadius.medium, style: .continuous)
+        )
         .contextMenu {
             if let onToggleFavorite {
                 Button {

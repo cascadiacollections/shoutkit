@@ -95,6 +95,22 @@ public struct StationCard: View {
                 Button(removeAction.title, action: removeAction.perform)
             }
         }
+        // The shape the tile lifts out of when the context menu opens. Left to
+        // the system it is the view's bounds — square corners around a tile
+        // whose artwork is a 20 pt continuous rounded rectangle, so a poster
+        // grid squared itself off under the finger and the menu flew out of a
+        // shape that wasn't on screen a moment earlier.
+        //
+        // Outset by a small step rather than tracing the bounds exactly: the
+        // caption runs to the leading edge and sits inside the bottom 20 pt,
+        // so a corner radius drawn *on* the bounds would cut the first glyph of
+        // the subtitle. The outset also gives the lifted platter a margin, which
+        // is what the system players' poster previews look like.
+        .contentShape(
+            .contextMenuPreview,
+            RoundedRectangle(cornerRadius: ShoutKitRadius.card, style: .continuous)
+                .inset(by: -ShoutKitSpacing.small)
+        )
         .contextMenu {
             if let onToggleFavorite {
                 Button {
