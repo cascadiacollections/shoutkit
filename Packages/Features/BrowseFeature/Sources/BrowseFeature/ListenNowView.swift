@@ -64,25 +64,40 @@ public struct ListenNowView: View {
         .animation(.default, value: dismissUndo?.stationID)
     }
 
+    /// The banner is glass, so it should form rather than arrive.
+    ///
+    /// It used to slide up from the bottom edge and cross-fade, which is a
+    /// transition for an opaque panel: the capsule travelled across the screen
+    /// as a half-transparent rectangle before settling. `.materialize` inside a
+    /// `GlassEffectContainer` is the glass-native equivalent — it condenses into
+    /// its capsule in place, which is what the system's own transient glass
+    /// (the volume HUD, the AirPods banner) does.
+    ///
+    /// Under Reduce Transparency `GlassControlSurface` renders an opaque
+    /// material instead of glass, and the transition is inert there — which is
+    /// the correct outcome, not a gap: that setting exists to stop exactly this
+    /// kind of motion-plus-translucency.
     @ViewBuilder
     private var dismissUndoBanner: some View {
         if let dismissUndo {
-            GlassControlSurface(in: Capsule()) {
-                HStack(spacing: ShoutKitSpacing.small) {
-                    Text(String(localized: "\(dismissUndo.stationName) removed", bundle: .module))
-                        .font(.subheadline)
-                        .lineLimit(1)
-                    Spacer(minLength: ShoutKitSpacing.small)
-                    Button(String(localized: "Undo", bundle: .module)) {
-                        undoDismiss(dismissUndo)
+            GlassEffectContainer(spacing: 0) {
+                GlassControlSurface(in: Capsule()) {
+                    HStack(spacing: ShoutKitSpacing.small) {
+                        Text(String(localized: "\(dismissUndo.stationName) removed", bundle: .module))
+                            .font(.subheadline)
+                            .lineLimit(1)
+                        Spacer(minLength: ShoutKitSpacing.small)
+                        Button(String(localized: "Undo", bundle: .module)) {
+                            undoDismiss(dismissUndo)
+                        }
+                        .font(.subheadline.weight(.semibold))
                     }
-                    .font(.subheadline.weight(.semibold))
+                    .padding(.horizontal, ShoutKitSpacing.small)
                 }
-                .padding(.horizontal, ShoutKitSpacing.small)
+                .glassEffectTransition(.materialize)
             }
             .padding(.horizontal, ShoutKitSpacing.medium)
             .padding(.bottom, ShoutKitSpacing.small)
-            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
 

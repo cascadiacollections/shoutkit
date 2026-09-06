@@ -1,5 +1,58 @@
 # Decisions
 
+## 2026-09-06 (the rest of the glass: a selection that travels, a banner that forms)
+
+The follow-on to the entry below. That one made three menus grow out of their
+controls; this applies the same idea to the two remaining places where glass was
+being cross-faded rather than moved. Both were found by searching for the pattern
+rather than by noticing them: `.contextMenu` turned out to exist in exactly two
+places in the tree (both already fixed), so what was left was glass that
+*animates*.
+
+**The genre chips are one piece of glass, and the selection moves through it.**
+`GenreChips` renders a dozen independent glass buttons, one `.glassProminent` and
+the rest `.glass`. Tapping a genre faded the prominent one out and a different one
+in. Inside a `GlassEffectContainer`, with a single `glassEffectID` carried by
+whichever chip is selected, the same glass identity turns up at a new place in the
+grid and the container moves it there instead of drawing a second one.
+
+`spacing: 0` again, and for the reason the transport row established: a container
+merges glass within `spacing`, and these chips sit 10 pt apart, so the grid's own
+spacing would fuse a row of them into a bar.
+
+The morph needs a curve of its own — `.animation(.smooth(duration: 0.3), value:
+selected)`. Without it the glass is simply at the new chip on the next frame, which
+is the same nothing the cross-fade was.
+
+The ID is a bare string literal, not the named enum `TransportGlassID` got. It has
+one call site: only the selected branch applies it. An identifier that appears once
+cannot disagree with itself, and a one-case enum to protect a single literal is
+machinery, not safety. It also sidesteps the isolation trap recorded below —
+`String`'s `Hashable` conformance comes from the stdlib and is already nonisolated,
+so nothing here needs the `nonisolated` keyword despite `SearchFeature` building
+with `.defaultIsolation(MainActor.self)`.
+
+**The undo banner materializes instead of sliding.** It entered on
+`.move(edge: .bottom).combined(with: .opacity)` — a transition for an opaque panel,
+which had a translucent capsule travelling up the screen before settling.
+`.glassEffectTransition(.materialize)` inside a container is the glass-native
+equivalent: it condenses into its capsule in place, the way the system's own
+transient glass does.
+
+Under Reduce Transparency `GlassControlSurface` renders an opaque material and the
+transition is inert. That is the right outcome rather than a gap to close — the
+setting exists to suppress exactly this pairing of motion and translucency.
+
+**Deliberately not touched.** `StationRow`'s glass play indicator (one shape per
+row; a container around a single shape is the wrapper that got `GlassActionCluster`
+deleted), and the lone `.glassProminent` buttons in `DirectoryUnavailableView` and
+`WelcomeOverlayView`, for the same reason.
+
+**Unseen, again.** CI compiles this and runs the suites; the whole change is once
+more an animation nobody has watched. The `spacing: 0` call is the one to check
+first — it is the same judgement as the transport row's, made the same way, and
+still unverified by eye at the time of writing.
+
 ## 2026-09-06 (menus that fly out of the control, not over it)
 
 Three glass menus in the app opened as panels that cross-faded over the button that
