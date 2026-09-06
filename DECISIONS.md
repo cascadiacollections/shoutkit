@@ -1,5 +1,42 @@
 # Decisions
 
+## 2026-09-06 (CarPlay entitlement removed: it was never granted to the team)
+
+Automatic signing failed on the first TestFlight archive attempt:
+
+```
+Entitlement com.apple.developer.carplay-audio not found and could not be
+included in profile.
+```
+
+`com.apple.developer.carplay-audio` is a **restricted** entitlement. It is not a
+capability you enable on an identifier in the portal — Apple grants it per-team
+through the CarPlay app request form, after review. Xcode's wording ("this likely
+is not a valid entitlement") is misleading: the key is valid, this team simply
+does not hold it.
+
+The 2026-07 entry that shipped CarPlay recorded the entitlement as *declared*, and
+`docs/ROADMAP.md` moved CarPlay from "blocked on the entitlement" to "shipped" on
+that basis. Declaring it in `Holmdel.entitlements` was mistaken for holding it.
+Nobody appears to have filed the request, so the gate that entry was waiting on
+never actually opened — it was only removed from the roadmap.
+
+Removed the key so the app can be signed and uploaded at all. Everything else
+stays:
+
+- `HolmdelCarPlaySceneDelegate.swift` remains in the target.
+- The `CPTemplateApplicationSceneSessionRoleApplication` scene configuration,
+  `UISupportsCarPlay`, and `UISupportedInterfaceOrientations~carplay` remain in
+  `Info.plist`.
+
+Without the entitlement none of that is reachable — CarPlay will not offer the app
+to a head unit — but leaving it in place means restoring CarPlay is a one-key diff
+once the grant lands, rather than a re-implementation. The cost is dead code in the
+binary, which is the cheaper side of the trade.
+
+**This is a user-facing regression from what `README.md` claimed**, so both it and
+the roadmap are corrected in the same change rather than left to drift.
+
 ## 2026-09-06 (the rest of the glass: a selection that travels, a banner that forms)
 
 The follow-on to the entry below. That one made three menus grow out of their

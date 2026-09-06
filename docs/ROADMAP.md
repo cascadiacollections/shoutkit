@@ -29,9 +29,11 @@ Recorded here once so the next reader doesn't have to reconstruct it from `git l
 for each is in `DECISIONS.md` under its date.
 
 - **CarPlay** — `CPListTemplate` (favorites + recents) over `CPNowPlayingTemplate`, on the
-  existing `PlaybackController`, with the `com.apple.developer.carplay-audio` entitlement
-  declared. This was "backlog, blocked on the entitlement" here for two sprints after it
-  had already shipped.
+  existing `PlaybackController`. **The code shipped; the feature did not.** Declaring
+  `com.apple.developer.carplay-audio` was mistaken for holding it — it is granted per-team by
+  Apple on request, this team was never granted it, and the declaration broke automatic signing
+  on the first TestFlight archive. The entitlement is removed and CarPlay is unreachable until
+  the request is filed and approved. See `DECISIONS.md`, 2026-09-06.
 - **watchOS companion** — native now-playing and recents, plus a "Play Last" complication,
   with its own minimal service graph and `AVPlayer`-backed engine.
 - **Equalizer** — preset curves ported from the Android client's band math, attached to
@@ -250,6 +252,11 @@ they are not exclusive:
 
 ## Backlog (unscheduled, revisit each sprint)
 
+- **File the CarPlay entitlement request with Apple.** Not a commit — a form
+  (developer.apple.com/contact/carplay), reviewed by Apple, measured in weeks. The
+  implementation and the `Info.plist` scene configuration are already in the tree, so a grant
+  turns CarPlay back on by re-adding one key to `Holmdel.entitlements`. Until then the code is
+  dead weight in the binary. See `DECISIONS.md`, 2026-09-06.
 - Self-hosted static libogg/libvorbis xcframeworks (#124). Evaluation is complete and parked
   (see `DECISIONS.md`, 2026-08-07): AudioStreaming hardcodes `exact: "0.1.2"` on the sbooth
   packages, so this needs a fork or SwiftPM substitution scoped first, and the rest is moot
