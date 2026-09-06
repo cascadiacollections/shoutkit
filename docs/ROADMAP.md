@@ -250,10 +250,10 @@ they are not exclusive:
 
 ## Backlog (unscheduled, revisit each sprint)
 
-- Self-hosted static libogg/libvorbis xcframeworks (#124). Parked on its own
-  recommendation: AudioStreaming hardcodes `exact: "0.1.2"` on the sbooth packages, so this
-  needs a fork or SwiftPM substitution scoped first, and the rest is moot until that is
-  answered. Revisit if app size or the provenance concession actually bites.
+- Self-hosted static libogg/libvorbis xcframeworks (#124). Evaluation is complete and parked
+  (see `DECISIONS.md`, 2026-08-07): AudioStreaming hardcodes `exact: "0.1.2"` on the sbooth
+  packages, so this needs a fork or SwiftPM substitution scoped first, and the rest is moot
+  until that is answered. Revisit if app size or the provenance concession actually bites.
 - On-device ambient-noise generation for the ad-detection feature, only after the
   bundled-loop v1 proves the feature earns its complexity.
 - Home Screen widget variants beyond quick-play (recents, currently playing).

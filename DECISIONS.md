@@ -1545,6 +1545,28 @@ warning in `Task` closures", but every manifest was already at
   bounds (e.g. known bitrate below the minimum), to avoid collapsing discovery
   on sparse community data.
 
+## 2026-08-07 (evaluate self-hosted static libogg/libvorbis xcframeworks, then park it) (#124)
+
+The proposal was to replace AudioStreaming's transitive sbooth ogg/vorbis binaries with
+self-hosted **static** xcframeworks built directly from Xiph source, and to exclude
+`libvorbisenc` from what we ship.
+
+- **The finding is real:** the current `sbooth/ogg-binary-xcframework` and
+  `sbooth/vorbis-binary-xcframework` 0.1.2 artifacts are dynamic frameworks. That means two
+  extra embedded/signed dylibs in the app bundle, and it means dead-strip/LTO cannot discard
+  unreferenced encoder code paths from inside those dylibs.
+- **The upside of self-hosting would be meaningful** if/when this becomes painful: static
+  linking would let the linker strip unused paths (including encoder-only sections), remove two
+  embedded dylibs from the payload, close the stated provenance concession from 2026-07-13, and
+  decouple us from third-party release-asset availability during resolves.
+- **The blocker is integration shape, not C toolchain mechanics.** AudioStreaming pins
+  `sbooth/{ogg,vorbis}-binary-xcframework` with `exact: "0.1.2"` in its own manifest, so
+  consuming replacements requires either an AudioStreaming fork or an explicit SwiftPM
+  substitution strategy. Until that path is scoped and acceptable, build-pipeline work is moot.
+
+**Decision:** do not start the self-hosted xcframework work now. Keep it parked, revisit only if
+app size pressure or the provenance/availability concession turns into an active problem.
+
 ## 2026-08-07 (the codec dependency leaves Playback; CI starts measuring itself)
 
 Three gaps that were gaps because nothing reported them, closed together because
