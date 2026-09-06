@@ -1,5 +1,37 @@
 # Decisions
 
+## 2026-09-06 (watch background audio is `UIBackgroundModes`, not `WKBackgroundModes`)
+
+The archive built, signed, and reached App Store upload validation, which
+rejected it:
+
+```
+Invalid Info.plist value. The value for the key 'WKBackgroundModes' in bundle
+Holmdel.app/Watch/HolmdelWatchApp.app is invalid.
+```
+
+`WKBackgroundModes` accepts only watchOS **session** types —
+`workout-processing`, `location`, `self-care`, `mindfulness`,
+`physical-therapy`, `alarm`. Background audio is not among them. watchOS uses
+the same `UIBackgroundModes` key as iOS for that, and the watch app had `audio`
+under the wrong one.
+
+The failure mode is the expensive kind: the wrong key builds, installs, and runs
+on a device, and is caught only by upload validation. Nothing local disagrees
+with it. `WatchRadioPlaybackEngine` would also simply stop on backgrounding with
+neither key present, which is a quiet symptom rather than a loud one.
+
+So the fix comes with a check. `ci.yml`'s existing "watch app is embedded"
+step now also asserts, against the built bundle, that `WKBackgroundModes` is
+absent and that `UIBackgroundModes` contains `audio`. That step already existed
+for the same reason — a claim read off the project file turning out not to hold
+in a real build — and this is the same shape of mistake one key over.
+
+Reference for the next reader, since the two keys look interchangeable and are
+not: `WKBackgroundModes` answers "what kind of extended runtime session does
+this app run?", `UIBackgroundModes` answers "what does this app keep doing in
+the background?" Audio is the second question on every platform.
+
 ## 2026-09-06 (local Xcode work synced forward; 0.5.0; CarPlay's plist surface goes too)
 
 A working tree in the primary checkout had accumulated IDE-only changes on a base
