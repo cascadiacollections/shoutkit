@@ -1,5 +1,72 @@
 # Decisions
 
+## 2026-09-07 (a media-services reset must stop the player it discards: AudioStreaming's timer `deinit` aborts the process)
+
+`handleMediaServicesReset()` replaced `player` with a fresh `AudioPlayer` and let the old
+one go. That is one reachable path to a libdispatch process abort, and it is now closed by
+calling `stop()` on the discarded player and holding it alive for a second while
+AudioStreaming's own teardown runs.
+
+**The mechanism, read out of the pinned 1.4.4 checkout (`a729ee28`).**
+`AudioPlayer.deinit` closes `playerContext.audioPlayingEntry` and nothing else — never
+`audioReadingEntry`. A reading entry that goes unclosed takes its `RemoteAudioSource` with
+it, and with that the `Retrier` that `handleFailedStreamEvent` arms on every stream error.
+`Retrier.internalRetry()` leaves its `DispatchTimerSource` in `.activated` until somebody
+calls `cancel()`, and `DispatchTimerSource.deinit` is:
+
+```swift
+deinit {
+    timer.setEventHandler(handler: nil)
+    timer.cancel()
+    // balance called of cancel/resume to avoid crashes
+    timer.resume()
+}
+```
+
+That `resume()` is right for a *suspended* source, which is the state a timer that was never
+activated is in. For an activated one it is an over-resume, and libdispatch aborts —
+`_dispatch_source_dispose`, "BUG IN CLIENT OF LIBDISPATCH". Uncatchable, and invisible to
+anything but a crash report.
+
+**Why we are barely exposed, and why it was still worth fixing.** The engine is a
+`.singleton` (`Container+Playback.swift`), and every ordinary path — station switch, stop,
+`replayCurrentStream()` — goes through `AudioPlayer.play(url:)`/`stop()`, both of which
+close the reading entry and cancel the retrier. So exactly one path in this app drops an
+`AudioPlayer` outright, and it needs a media-services reset to land while a stream is
+mid-retry (a dead station, a timeout) to bite. That is rare. It is also free to close, and
+the failure it produces is a hard crash rather than a degraded stream, so the asymmetry
+settles it.
+
+**Why `stop()` alone is not enough.** `AudioPlayer.stop()` closes the reading entry on its
+own `sourceQueue`, in a block that captures the player weakly. Reassign `player` on the
+next line and the discarded one is gone before the block runs; the block finds `nil` and
+does nothing — the same crash, one queue hop later. Hence the one-second
+`discardedPlayerTeardownGrace` and the `withExtendedLifetime` that spends it. A queue hop
+needs microseconds; the second is slack, and it costs one dead player's buffers for that
+long, once, after an event that already tore down the audio stack.
+
+Calling `stop()` into a post-reset player is safe: `stopEngine` only calls
+`audioEngine.stop()` and `auAudioUnit.stopHardware()`, neither of which throws, and the
+delegate callbacks it provokes are dropped by the identity check in
+`executeOnMainActor(for:)` — the same check the pre-existing comment relied on.
+
+**Upstream.** <https://github.com/dimitris-c/AudioStreaming/pull/138> makes the balancing
+resume conditional on the source actually being suspended, and takes `UnfairLock` around
+the check-and-change so `activate()`/`suspend()` from different queues cannot tear the
+suspend count (`Retrier` builds its timer with `underlyingQueue: nil`, so that race is
+real). If it lands and a release carries it, pin the release in
+`Packages/PlaybackEngineAudioStreaming/Package.swift` and this reduces back to a bare
+reassignment. **Not a reason to fork** — see the 2026-08-07 entry "evaluate self-hosted
+static libogg/libvorbis xcframeworks, then park it" (#124), whose blocker was exactly the
+fork-or-explicit-`binaryTarget` shape a fork here would re-open.
+
+**Not verified against a real crash.** The claim here is read out of the dependency's
+source, not observed. `DiagnosticsService` does persist `MXDiagnosticPayload` JSON
+(`diagnostic_payloads`, `kind = 'diagnostic'`, 30-day retention), so the evidence would be
+an `MXCrashDiagnostic` with `_dispatch_source_dispose` in its call stack — but that store
+lives in the app container on device, and the simulator's copies are empty because
+MetricKit does not deliver there. Worth a look next time the phone is attached.
+
 ## 2026-09-06 (the `leaks` report's AudioToolbox bindings are an AVFAudio artifact, not ours)
 
 A simulator memory graph of 0.5.0 (1) reports leaks, and the next person to run
