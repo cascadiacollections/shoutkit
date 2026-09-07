@@ -3,13 +3,20 @@ import FeatureFlags
 import Persistence
 import Playback
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Settings + About, presented as a sheet from the Listen Now toolbar.
 public struct SettingsView: View {
     @Environment(\.settingsStore) private var settings
+    @Environment(\.libraryStore) private var library
     @Environment(\.playbackController) private var playbackController
     @Environment(\.dismiss) private var dismiss
     private let featureFlags: any FeatureFlagProviding
+    @State private var favoritesExportFile: FavoritesExportFile?
+    @State private var isExportingFavorites = false
+    @State private var isImportingFavorites = false
+    @State private var transferAlertMessage: String?
+    @State private var isShowingTransferAlert = false
 
     public init(featureFlags: (any FeatureFlagProviding)? = nil) {
         // Default to the Factory singleton so this view and every other
@@ -31,6 +38,7 @@ public struct SettingsView: View {
                 #if DEBUG || TESTFLIGHT
                 featureFlagsSection
                 #endif
+                favoritesTransferSection
                 supportSection
                 aboutSection
             }
@@ -40,6 +48,27 @@ public struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
+            }
+            .fileExporter(
+                isPresented: $isExportingFavorites,
+                document: favoritesExportFile,
+                contentType: .json,
+                defaultFilename: "shoutkit-favorites"
+            ) { result in
+                if case .failure(let error) = result {
+                    presentTransferAlert(error.localizedDescription)
+                }
+            }
+            .fileImporter(
+                isPresented: $isImportingFavorites,
+                allowedContentTypes: [.json]
+            ) { result in
+                handleFavoritesImport(result)
+            }
+            .alert("Favorites", isPresented: $isShowingTransferAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(transferAlertMessage ?? "An unknown error occurred.")
             }
         }
     }
@@ -201,6 +230,26 @@ public struct SettingsView: View {
         }
     }
 
+    private var favoritesTransferSection: some View {
+        Section {
+            Button("Export Favorites", systemImage: "square.and.arrow.up") {
+                startFavoritesExport()
+            }
+            Button("Import Favorites", systemImage: "square.and.arrow.down") {
+                isImportingFavorites = true
+            }
+        } header: {
+            Text("Favorites Backup")
+        } footer: {
+            Text("""
+            Export and import favorites as a plain JSON file. Recents and recently heard tracks are \
+            intentionally not included. Import merges by station ID: existing favorites keep their \
+            order, and new favorites append at the end.
+            """)
+        }
+        .disabled(library == nil)
+    }
+
     #if DEBUG || TESTFLIGHT
     private var featureFlagsSection: some View {
         Section {
@@ -244,9 +293,84 @@ public struct SettingsView: View {
             """)
         }
     }
+
+    private func startFavoritesExport() {
+        guard let library else {
+            presentTransferAlert("Favorites storage is unavailable right now.")
+            return
+        }
+        do {
+            favoritesExportFile = try FavoritesExportFile(data: library.exportFavoritesJSONData())
+            isExportingFavorites = true
+        } catch {
+            presentTransferAlert(error.localizedDescription)
+        }
+    }
+
+    private func handleFavoritesImport(_ result: Result<URL, Error>) {
+        guard let library else {
+            presentTransferAlert("Favorites storage is unavailable right now.")
+            return
+        }
+
+        switch result {
+        case .success(let url):
+            do {
+                let data = try readImportedFileData(from: url)
+                let importResult = try library.importFavoritesJSONData(data)
+                if importResult.addedCount == 0 {
+                    presentTransferAlert("No new favorites were imported.")
+                } else {
+                    presentTransferAlert(
+                        "Imported \(importResult.addedCount) favorite\(importResult.addedCount == 1 ? "" : "s")."
+                    )
+                }
+            } catch {
+                presentTransferAlert(error.localizedDescription)
+            }
+        case .failure(let error):
+            presentTransferAlert(error.localizedDescription)
+        }
+    }
+
+    private func readImportedFileData(from url: URL) throws -> Data {
+        let isSecurityScoped = url.startAccessingSecurityScopedResource()
+        defer {
+            if isSecurityScoped {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        return try Data(contentsOf: url)
+    }
+
+    private func presentTransferAlert(_ message: String) {
+        transferAlertMessage = message
+        isShowingTransferAlert = true
+    }
 }
 
 #Preview {
     SettingsView()
         .settingsStore(SettingsStore())
+}
+
+private struct FavoritesExportFile: FileDocument {
+    static var readableContentTypes: [UTType] { [.json] }
+
+    let data: Data
+
+    init(data: Data) {
+        self.data = data
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        guard let data = configuration.file.regularFileContents else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        self.data = data
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: data)
+    }
 }
