@@ -2,6 +2,7 @@ import DesignSystem
 import FeatureFlags
 import Persistence
 import Playback
+import SettingsFeatureCore
 import SwiftUI
 
 /// Settings + About, presented as a sheet from the Listen Now toolbar.
@@ -144,7 +145,11 @@ public struct SettingsView: View {
                     Picker(
                         "Equalizer",
                         selection: Binding(
-                            get: { EqualizerPreset(rawValue: settings.equalizerPresetRawValue) ?? .normal },
+                            get: {
+                                SettingsPresentation.resolvedEqualizerPreset(
+                                    storedRawValue: settings.equalizerPresetRawValue
+                                )
+                            },
                             set: { preset in
                                 settings.equalizerPresetRawValue = preset.rawValue
                                 playbackController.setEqualizerPreset(preset)

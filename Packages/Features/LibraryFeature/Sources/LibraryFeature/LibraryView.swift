@@ -1,4 +1,5 @@
 import DesignSystem
+import LibraryFeatureCore
 import Persistence
 import Playback
 import RadioDirectory
@@ -54,7 +55,7 @@ public struct LibraryView: View {
 
                     if recents.isEmpty == false {
                         Section("Recently Played") {
-                            ForEach(recents.prefix(15)) { recent in
+                            ForEach(recents.prefix(LibraryListEditing.recentDisplayLimit)) { recent in
                                 row(for: recent.station)
                             }
                             .onDelete(perform: deleteRecents)
@@ -164,19 +165,20 @@ public struct LibraryView: View {
     }
 
     private func deleteRecents(at offsets: IndexSet) {
-        // Materialise the displayed slice before any removal so that offset
-        // resolution is not affected by live-query updates during deletion.
-        let displayed = Array(recents.prefix(15))
-        let stationIDs = offsets.map { displayed[$0].stationID }
+        let stationIDs = LibraryListEditing.stationIDsForRecentDeletion(
+            recentStationIDsNewestFirst: recents.map(\.stationID),
+            offsets: offsets
+        )
         for stationID in stationIDs {
             library?.removeRecent(stationID: stationID)
         }
     }
 
     private func deleteFavorites(at offsets: IndexSet) {
-        // Resolve every offset before the first removal — deleting while
-        // indexing into the live query result would shift later offsets.
-        let stationIDs = offsets.map { favorites[$0].stationID }
+        let stationIDs = LibraryListEditing.stationIDsForFavoriteDeletion(
+            favoriteStationIDs: favorites.map(\.stationID),
+            offsets: offsets
+        )
         for stationID in stationIDs {
             library?.removeFavorite(stationID: stationID)
         }
