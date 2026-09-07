@@ -48,6 +48,7 @@
 		000000000000000000000111 /* AppDependencies+Factories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000101 /* AppDependencies+Factories.swift */; };
 		000000000000000000000112 /* AppDependencies+Callbacks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000102 /* AppDependencies+Callbacks.swift */; };
 		000000000000000000000113 /* AppDependencies+Warmups.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000103 /* AppDependencies+Warmups.swift */; };
+		000000000000000000000114 /* Squan-AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000115 /* Squan-AppIcon.icon */; };
 		075A8F60A66D5127E26C4DEB /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = 2D4800AE052B864E256ECF8D /* Persistence */; };
 		1DF3672E3142619ED2DEC250 /* Playback in Frameworks */ = {isa = PBXBuildFile; productRef = 8B073E7348A344E13C862E72 /* Playback */; };
 		2773E334725730DA1E536505 /* PlayLastComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88B8C3C84CECA7AD66E9AADF /* PlayLastComplication.swift */; };
@@ -177,6 +178,7 @@
 		000000000000000000000101 /* AppDependencies+Factories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDependencies+Factories.swift"; sourceTree = "<group>"; };
 		000000000000000000000102 /* AppDependencies+Callbacks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDependencies+Callbacks.swift"; sourceTree = "<group>"; };
 		000000000000000000000103 /* AppDependencies+Warmups.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDependencies+Warmups.swift"; sourceTree = "<group>"; };
+		000000000000000000000115 /* Squan-AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Squan-AppIcon.icon"; sourceTree = "<group>"; };
 		059363CD6EA08810681C100A /* WatchNoopNowPlayingCenter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchNoopNowPlayingCenter.swift; sourceTree = "<group>"; };
 		0C61FAF4CF10B67D240EFD1F /* WatchRadioPlaybackEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchRadioPlaybackEngine.swift; sourceTree = "<group>"; };
 		1963A2095C47924C91C127EB /* WatchLaunchRoute.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLaunchRoute.swift; sourceTree = "<group>"; };
@@ -315,6 +317,7 @@
 				0000000000000000000000D0 /* QuickPlayWidgetPublisher.swift */,
 				000000000000000000000013 /* Info.plist */,
 				000000000000000000000014 /* Assets.xcassets */,
+				000000000000000000000115 /* Squan-AppIcon.icon */,
 				000000000000000000000019 /* PrivacyInfo.xcprivacy */,
 				00000000000000000000001A /* WelcomeOverlayView.swift */,
 				000000000000000000000083 /* Localizable.xcstrings */,
@@ -622,6 +625,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				000000000000000000000023 /* Assets.xcassets in Resources */,
+				000000000000000000000114 /* Squan-AppIcon.icon in Resources */,
 				000000000000000000000025 /* PrivacyInfo.xcprivacy in Resources */,
 				000000000000000000000084 /* Localizable.xcstrings in Resources */,
 			);
@@ -876,7 +880,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 000000000000000000000015 /* Debug.xcconfig */;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "Squan-AppIcon";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CODE_SIGN_ENTITLEMENTS = Holmdel/Holmdel.entitlements;
 				CODE_SIGN_STYLE = Automatic;
@@ -900,7 +904,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 000000000000000000000016 /* Release.xcconfig */;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "Squan-AppIcon";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CODE_SIGN_ENTITLEMENTS = Holmdel/Holmdel.entitlements;
 				CODE_SIGN_STYLE = Automatic;
