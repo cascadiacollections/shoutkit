@@ -49,6 +49,11 @@ below) are documented here. The format follows
   See `DECISIONS.md` (2026-08-24) and `TRADEMARK.md`.
 
 ### Fixed
+- **The app no longer quits if the audio system restarts while a station is failing to
+  connect.** iOS occasionally restarts its audio system out from under an app, and Holmdel
+  rebuilds its player when that happens. If a station happened to be in the middle of
+  retrying a dead or timing-out stream at that moment, the app closed itself instead of
+  recovering
 - **Stations in the Home Screen widget open the app again.** Renaming the app changed the
   link the widget hands to iOS, but not the link the app was listening for, so tapping a
   station in the widget opened nothing — or an older copy of the app, if one was still

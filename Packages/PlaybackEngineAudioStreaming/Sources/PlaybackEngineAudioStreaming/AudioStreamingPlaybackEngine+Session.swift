@@ -16,6 +16,13 @@ import Playback
 extension AudioStreamingPlaybackEngine {
     private static let sessionDeactivationRetryDelay: Duration = .milliseconds(150)
 
+    /// How long a player discarded by a media-services reset is kept alive after
+    /// `stop()`, so AudioStreaming's own asynchronous teardown can reach it —
+    /// see `handleMediaServicesReset()`. Long enough for a queue hop, short
+    /// enough that the dead player's buffers aren't held for any perceptible
+    /// time.
+    private static let discardedPlayerTeardownGrace: Duration = .seconds(1)
+
     /// Backoff between reactivation attempts. `setActive(true)` legitimately fails
     /// for a moment either side of an OS disruption — the tail of a phone call,
     /// Siri still holding the session, a route still settling — and the failure
@@ -266,7 +273,32 @@ extension AudioStreamingPlaybackEngine {
         sessionDeactivationTask?.cancel()
         sessionDeactivationTask = nil
         // Late callbacks from the discarded player are ignored by the identity
-        // check in the delegate methods, so it can be dropped without ceremony.
+        // check in the delegate methods, but it can't be dropped *silently*:
+        // `AudioPlayer.deinit` closes only `audioPlayingEntry`, never
+        // `audioReadingEntry`, and an abandoned reading entry takes its
+        // `RemoteAudioSource` — and that source's pending retry timer — down with
+        // it. AudioStreaming 1.4.4's `DispatchTimerSource.deinit` resumes the
+        // timer unconditionally, which for a timer still activated by a pending
+        // retry is an over-resume that aborts the process inside libdispatch. So
+        // a reset arriving while a stream is mid-retry (a dead station, a
+        // timeout) crashes on the way out.
+        //
+        // `stop()` closes the reading entry, but it does so asynchronously on
+        // AudioStreaming's source queue, capturing the player weakly — reassign
+        // `player` straight away and that block finds nil and does nothing.
+        // Hence the grace period: ask for the teardown, then keep the discarded
+        // player alive long enough for the teardown to actually run.
+        //
+        // Upstream fix: https://github.com/dimitris-c/AudioStreaming/pull/138.
+        // Once a release carrying it is pinned in
+        // `Packages/PlaybackEngineAudioStreaming/Package.swift`, this reduces
+        // back to a bare reassignment.
+        let discarded = player
+        discarded.stop()
+        Task { @MainActor in
+            try? await Task.sleep(for: Self.discardedPlayerTeardownGrace)
+            withExtendedLifetime(discarded) {}
+        }
         player = AudioPlayer()
         player.delegate = self
         configureSession()
