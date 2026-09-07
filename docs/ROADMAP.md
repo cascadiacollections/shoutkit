@@ -95,8 +95,8 @@ The sprint this document scheduled twice and skipped twice. Landing in PR #138.
       `swiftc -typecheck -warnings-as-errors /tmp/task-unhandled-error-probe.swift`.
       The audited call sites left as `try?` are now explicitly marked best-effort
       where the intent was ambiguous.
-- [ ] Extract cores for `LibraryFeature` and `SettingsFeature` (#144), as `PlayerFeatureCore` did
-      for the player. Both still have zero tests.
+- [x] Extracted `LibraryFeatureCore` and `SettingsFeatureCore` (#144), as `PlayerFeatureCore` did
+      for the player. Both now run host-test suites in CI.
 - [ ] `StationCard` is a fixed 150 pt wide while its labels scale with Dynamic Type (#145). Fixing
       it moves every adaptive grid that lays cards out, so it needs a simulator, not a diff.
 

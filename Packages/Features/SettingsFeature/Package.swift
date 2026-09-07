@@ -13,6 +13,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../../DesignSystem"),
+        .package(path: "../../SettingsFeatureCore"),
         .package(path: "../../Persistence"),
         .package(path: "../../FeatureFlags"),
         .package(path: "../../Playback")
@@ -22,6 +23,7 @@ let package = Package(
             name: "SettingsFeature",
             dependencies: [
                 "DesignSystem",
+                "SettingsFeatureCore",
                 "Persistence",
                 "FeatureFlags",
                 "Playback"

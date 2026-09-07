@@ -1805,6 +1805,36 @@ warning in `Task` closures", but every manifest was already at
   intent next to the `try?`, so an unexplained `try?` regains signal as a
   likely oversight.
 
+## 2026-08-07 (extracting LibraryFeatureCore + SettingsFeatureCore for host-test coverage)
+
+Two feature packages still had zero host-test reachability because both depend on
+`DesignSystem`, which declares `.iOS(.v26)` alone and so does not build for the mac host. Any
+logic in them is invisible to CI's fast `swift test` path — the exact gap already closed for
+browse/search/player.
+
+- **Added `LibraryFeatureCore` and moved list-editing decisions there.** `LibraryView` now adapts
+  its live SwiftData queries to plain station-ID arrays and delegates offset resolution to
+  `LibraryListEditing`. That keeps SwiftUI/SwiftData in the feature package while making the
+  off-by-one-prone part testable by host — including the recents display limit, which the view
+  and the deletion mapping now both take from `LibraryListEditing.recentDisplayLimit` rather than
+  each spelling `15` and being free to drift apart.
+- **Out-of-range delete offsets are now dropped rather than trapped.** The rendered rows and the
+  live query can disagree for a frame; a stale offset should cost the deletion, not the process.
+- **Added `SettingsFeatureCore` for the equalizer raw-value fallback.** The stored preset is a
+  bare `Int`, so it can name a case that no longer exists; it resolves to `.normal` because that
+  is flat, not because it is the first case. The core depends on `Playback` for `EqualizerPreset`
+  itself — the enum is plain `Int`-backed with no platform audio dependency, and `Playback`
+  already runs on the host — so the function returns a preset and the view has no `?? .normal`
+  of its own left to drift.
+- **Deliberately *not* extracted: the precise-location toggle's visibility.** It is
+  `isGeoStationsEnabled` and nothing else. A wrapper around an identity function is a test that
+  can only ever pass, and it puts a package boundary between the flag and its one reader.
+- **Both new Core packages are wired into `host-tests` and the package coverage baseline list.**
+  This keeps the extraction from becoming "tests that run only locally" and preserves the same
+  CI contract the earlier core packages follow.
+- **No default main-actor isolation in the new Core packages.** Like `PlayerFeatureCore`, both are
+  pure helpers with no observable state and no UI work.
+
 ## 2026-08-07 (Search filters over Radio-Browser)
 
 - Added a dedicated `StationSearchFilters` model (bitrate min/max, tag, country
