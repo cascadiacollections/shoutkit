@@ -1,5 +1,80 @@
 # Decisions
 
+## 2026-09-06 (the `leaks` report's AudioToolbox bindings are an AVFAudio artifact, not ours)
+
+A simulator memory graph of 0.5.0 (1) reports leaks, and the next person to run
+`leaks` will see them too, so here is what they are before someone spends an
+afternoon on them.
+
+```
+Process 11727: 74 leaks for 4480 total leaked bytes.
+```
+
+All 74 are `ListenerBinding` (64 B) and `ParameterListenerBinding` (64 B) from
+**AudioToolboxCore**, plus a handful of untyped 32-byte blocks. None are app
+code. They are the parameter-tree observer bindings AVFAudio creates when it
+bridges a v2 AudioUnit into `AVAudioEngine` via `AUAudioUnitV2Bridge`.
+
+The reason to believe this is fixed setup cost rather than per-playback growth
+is that the *total* does not move. Two graphs, two separate process launches —
+one idle, one captured mid-stream after several minutes of playback:
+
+| | idle (pid 11727) | streaming (pid 20339) |
+|---|---|---|
+| `ListenerBinding` total | 184 | 184 |
+| `ParameterListenerBinding` total | 58 | 58 |
+| of those, reported leaked | 65 | 240 |
+
+Identical totals. What changes is only how many are *reachable*: once the engine
+is torn down the owner goes away and the bindings become unreferenced, so the
+leak count rises while nothing new is allocated. A leak count that climbs
+without the total climbing is a teardown artifact, not an accumulation.
+
+Corroborating that the engine is reused rather than rebuilt per station: the
+whole graph holds exactly one `AVAudioEngine`, one `AVAudioUnitEQ`, one
+`AVAudioUnitTimePitch`, one `AVAudioMixerNode`, one `AVAudioSession`, and three
+`AUAudioUnitV2Bridge`. If `AudioStreamingPlaybackEngine` were leaking engines
+per play, that is where it would show first.
+
+The app-owned half of the graph is clean in both captures. Every singleton is
+singular — `PlaybackController`, `AudioStreamingPlaybackEngine`, `AudioPlayer`,
+`MediaSessionNowPlayingCenter`, `NowPlayingActivityCoordinator`,
+`BrowseViewModel`, `SearchViewModel`, `CachingRadioDirectory`,
+`StationLaunchRouter`, `SleepTimer`, `LibraryStore`, `SettingsStore`,
+`Database`, `Container` — all at count 1. The Factory wiring and the
+engine-reuse path are both doing what they claim.
+
+Baseline footprint, so future reports have something to compare against:
+**48.8 MB idle** (peak 49.2), **74.9 MB streaming** (peak 106.2). The delta is
+live stream state — `AudioEntry`, `RemoteAudioSource`, `MetadataStreamProcessor`,
+two `NetworkDataStream` — present in the streaming graph and absent from the
+idle one, which is the expected shape. The one 3,456 KB `Malloc Large` region is
+the AudioStreaming ring buffer, allocated once.
+
+**One thread left hanging.** `NSKeyValueMethodGetter` counts 34 in the idle
+graph and 2,767 in the streaming one, while the actual observer objects stay
+flat (`NSKeyValueObservance` 23 in both). Only 221 KB, so not a footprint
+problem, but an 81× spread wants an explanation. It is probably not ours: the
+app has no dynamic KVC, and the only `NSKeyValueObservation` in the tree is in
+`WatchRadioPlaybackEngine`, which is not in this graph. UIKit/SwiftUI animation
+machinery is the likely source. This was **not** settled, because the two graphs
+are different processes and therefore not a controlled comparison.
+
+Settling it needs a same-process diff, which is what to run next:
+
+```sh
+leaks <pid> --outputGraph=A.memgraph     # idle, before playback
+# switch stations ~15x, favorite, open/dismiss player, search, background/foreground
+leaks <pid> --outputGraph=B.memgraph
+leaks B.memgraph --diffFrom=A.memgraph
+```
+
+Pass criteria: the singletons above stay at 1, and `ListenerBinding` *total*
+stays at 184. If `NSKeyValueMethodGetter` grows again across a controlled diff,
+re-run with `MallocStackLogging=1` in the scheme — the graphs behind this entry
+carry no backtraces, which is the only reason those untyped 32-byte blocks have
+no name.
+
 ## 2026-09-06 (watch background audio is `UIBackgroundModes`, not `WKBackgroundModes`)
 
 The archive built, signed, and reached App Store upload validation, which
