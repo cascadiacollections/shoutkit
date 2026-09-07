@@ -223,6 +223,9 @@ extension AudioStreamingPlaybackEngine {
                     self.onStatusChange?(.routeLost)
                 case .newDeviceAvailable:
                     self.onStatusChange?(.routeAvailable)
+                case .unknown, .categoryChange, .override, .wakeFromSleep,
+                     .noSuitableRouteForCategory, .routeConfigurationChange:
+                    break
                 @unknown default:
                     break
                 }

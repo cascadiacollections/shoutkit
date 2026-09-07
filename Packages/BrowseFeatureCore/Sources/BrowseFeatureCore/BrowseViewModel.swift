@@ -207,10 +207,8 @@ public final class BrowseViewModel {
     ) async -> ([Genre], RadioDirectoryError?) {
         do {
             return (try await directory.genres(), nil)
-        } catch let error as RadioDirectoryError {
-            return ([], error)
         } catch {
-            return ([], .transport(error.localizedDescription))
+            return ([], error)
         }
     }
 

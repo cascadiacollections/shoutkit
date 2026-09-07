@@ -238,7 +238,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
                 if filteredStations.isEmpty == false || index == lastGeoFilterIndex {
                     return filteredStations
                 }
-            } catch let error as RadioDirectoryError {
+            } catch let error {
                 if index == lastGeoFilterIndex {
                     throw error
                 }

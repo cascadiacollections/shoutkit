@@ -34,7 +34,7 @@ final class HolmdelCarPlaySceneDelegate: UIResponder, CPTemplateApplicationScene
         )
         topStationsState = .loading
         listTemplate = template
-        interfaceController.setRootTemplate(template, animated: false)
+        interfaceController.setRootTemplate(template, animated: false, completion: nil)
         observeLibraryChanges(using: services)
         loadTopStations(using: services)
     }
@@ -193,7 +193,7 @@ final class HolmdelCarPlaySceneDelegate: UIResponder, CPTemplateApplicationScene
                 playback.play(station)
             }
 
-            self.interfaceController?.presentTemplate(self.nowPlayingTemplate, animated: true)
+            self.interfaceController?.presentTemplate(self.nowPlayingTemplate, animated: true, completion: nil)
             completion()
         }
         return item

@@ -1,6 +1,7 @@
 import CoreLocation
 import FeatureFlags
 import Foundation
+import MapKit
 import Observation
 import OSLog
 import Persistence
@@ -16,7 +17,6 @@ final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationM
     private let featureFlags: any FeatureFlagProviding
     private let geoFilterProvider: MutableRadioBrowserGeoFilterProvider
     private let locationManager = CLLocationManager()
-    private let geocoder = CLGeocoder()
     private let logger = Logger(subsystem: "Holmdel.App", category: "GeoStationLocationCoordinator")
     private let geoStationsFeature = FeatureCatalog.geoStations
     private var observationTask: Task<Void, Never>?
@@ -135,21 +135,29 @@ final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationM
         guard let location = locations.last else { return }
         let generation = preciseLocationGeneration
 
-        geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, error in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                guard self.preciseLocationGeneration == generation,
-                      self.featureFlags.isEnabled(self.geoStationsFeature),
-                      self.settings.isPreciseGeoStationLocationEnabled else {
-                    return
-                }
-                if let error {
-                    self.logger.error("Reverse geocoding failed: \(error.localizedDescription, privacy: .public)")
-                } else {
-                    self.preciseCountryCode = placemarks?.first?.isoCountryCode
-                }
-                await self.pushCurrentGeoFilter()
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            guard let request = MKReverseGeocodingRequest(location: location) else { return }
+
+            var resolvedCountryCode: String?
+            var geocodingError: (any Error)?
+            do {
+                resolvedCountryCode = try await request.mapItems.first?.addressRepresentations?.region?.identifier
+            } catch {
+                geocodingError = error
             }
+
+            guard self.preciseLocationGeneration == generation,
+                  self.featureFlags.isEnabled(self.geoStationsFeature),
+                  self.settings.isPreciseGeoStationLocationEnabled else {
+                return
+            }
+            if let geocodingError {
+                self.logger.error("Reverse geocoding failed: \(geocodingError.localizedDescription, privacy: .public)")
+            } else {
+                self.preciseCountryCode = resolvedCountryCode
+            }
+            await self.pushCurrentGeoFilter()
         }
     }
 

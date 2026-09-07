@@ -160,18 +160,11 @@ final class BackgroundRefreshController {
                     didRefreshAnySnapshot = true
                 }
                 store.refreshStreamURLSnapshot(stationID: favorite.id, streamURL: endpoint.url)
-            } catch let error as RadioDirectoryError {
-                logger.debug(
-                    """
-                    Background refresh skipped station \(favorite.id, privacy: .public): \
-                    \(String(describing: error), privacy: .public)
-                    """
-                )
             } catch {
                 logger.debug(
                     """
                     Background refresh skipped station \(favorite.id, privacy: .public): \
-                    \(error.localizedDescription, privacy: .public)
+                    \(String(describing: error), privacy: .public)
                     """
                 )
             }
@@ -184,14 +177,9 @@ final class BackgroundRefreshController {
         do {
             _ = try await directory.topStations(limit: Self.topStationsLimit)
             return true
-        } catch let error as RadioDirectoryError {
-            logger.debug(
-                "Background refresh failed to warm top stations: \(String(describing: error), privacy: .public)"
-            )
-            return false
         } catch {
             logger.debug(
-                "Background refresh failed to warm top stations: \(error.localizedDescription, privacy: .public)"
+                "Background refresh failed to warm top stations: \(String(describing: error), privacy: .public)"
             )
             return false
         }
@@ -200,10 +188,8 @@ final class BackgroundRefreshController {
     private func warmGenresCache(using directory: any RadioDirectoryProviding) async {
         do {
             _ = try await directory.genres()
-        } catch let error as RadioDirectoryError {
-            logger.debug("Background refresh failed to warm genres: \(String(describing: error), privacy: .public)")
         } catch {
-            logger.debug("Background refresh failed to warm genres: \(error.localizedDescription, privacy: .public)")
+            logger.debug("Background refresh failed to warm genres: \(String(describing: error), privacy: .public)")
         }
     }
 

@@ -118,10 +118,8 @@ public final class SearchViewModel {
         do {
             genres = try await directory.genres()
             genreLoadError = nil
-        } catch let error as RadioDirectoryError {
-            genreLoadError = error
         } catch {
-            genreLoadError = .transport(error.localizedDescription)
+            genreLoadError = error
         }
     }
 
