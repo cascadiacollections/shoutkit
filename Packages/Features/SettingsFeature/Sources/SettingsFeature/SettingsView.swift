@@ -21,9 +21,11 @@ public struct SettingsView: View {
     public var body: some View {
         NavigationStack {
             Form {
+                playbackSection
                 privacySection
-                if let playbackController, playbackController.supportsEqualizer {
-                    equalizerSection
+                if let playbackController,
+                   playbackController.supportsEqualizer || playbackController.supportsSpatialAudio {
+                    soundSection
                 }
                 // Debug and TestFlight builds only: the catalog is all internal
                 // placeholder flags, so App Store users have nothing actionable here.
@@ -45,12 +47,38 @@ public struct SettingsView: View {
 
     // MARK: - Sections
 
+    /// The one playback behaviour a listener has to be able to choose, because
+    /// either answer is wrong for half the stations: a continuous live stream
+    /// never ends, while a station that broadcasts a fixed-length programme does.
+    /// Off by default — a finished broadcast stops, the way every other player
+    /// treats it.
+    @ViewBuilder
+    private var playbackSection: some View {
+        if let settings {
+            Section {
+                Toggle(
+                    "Loop Finished Broadcasts",
+                    isOn: Binding(
+                        get: { settings.isStreamLoopingEnabled },
+                        set: { settings.isStreamLoopingEnabled = $0 }
+                    )
+                )
+            } header: {
+                Text("Playback")
+            } footer: {
+                Text("""
+                Most stations stream continuously and never end, so this changes nothing for \
+                them. A station that broadcasts a fixed-length programme — an hourly newscast, \
+                say — stops when it reaches the end; turn this on to have it start over instead.
+                """)
+            }
+        }
+    }
+
     @ViewBuilder
     private var privacySection: some View {
         if let settings {
-            let showsPreciseLocationToggle = SettingsPresentation.shouldShowPreciseGeoLocationToggle(
-                isGeoStationsEnabled: featureFlags.isEnabled(FeatureCatalog.geoStations)
-            )
+            let isGeoStationsEnabled = featureFlags.isEnabled(FeatureCatalog.geoStations)
 
             Section {
                 Toggle(
@@ -74,7 +102,7 @@ public struct SettingsView: View {
                         set: { settings.isDiagnosticsSharingEnabled = $0 }
                     )
                 )
-                if showsPreciseLocationToggle {
+                if isGeoStationsEnabled {
                     Toggle(
                         "Use Precise Location for Geo Stations",
                         isOn: Binding(
@@ -98,41 +126,64 @@ public struct SettingsView: View {
                 prompt; the optional precise-location toggle asks Apple for location permission \
                 only after you turn it on, and falls back to that locale region if permission \
                 is denied. \
-                ShoutKit has no analytics, no ads, and no accounts.
+                Holmdel has no analytics, no ads, and no accounts.
                 """)
             }
         }
     }
 
-    /// Only shown when ``PlaybackController/supportsEqualizer`` is true —
-    /// `AVPlayer`-backed engines (the watch companion) have no supported way
-    /// to insert a filter into their render chain, so there is nothing here
-    /// to offer rather than a control that silently does nothing.
+    /// Equalizer picker and/or spatial audio toggle, each shown only when the
+    /// active engine reports it can back it — `AVPlayer`-backed engines (the
+    /// watch companion) have no supported way to insert either into their
+    /// render chain, so there is nothing here to offer rather than a control
+    /// that silently does nothing.
     @ViewBuilder
-    private var equalizerSection: some View {
+    private var soundSection: some View {
         if let settings, let playbackController {
-            let selectedRawValue = SettingsPresentation.resolvedEqualizerPresetRawValue(
-                storedRawValue: settings.equalizerPresetRawValue,
-                availablePresetRawValues: EqualizerPreset.allCases.map(\.rawValue),
-                fallbackRawValue: EqualizerPreset.normal.rawValue
-            )
             Section {
-                Picker(
-                    "Equalizer",
-                    selection: Binding(
-                        get: { EqualizerPreset(rawValue: selectedRawValue) ?? .normal },
-                        set: { preset in
-                            settings.equalizerPresetRawValue = preset.rawValue
-                            playbackController.setEqualizerPreset(preset)
+                if playbackController.supportsEqualizer {
+                    Picker(
+                        "Equalizer",
+                        selection: Binding(
+                            get: {
+                                SettingsPresentation.resolvedEqualizerPreset(
+                                    storedRawValue: settings.equalizerPresetRawValue
+                                )
+                            },
+                            set: { preset in
+                                settings.equalizerPresetRawValue = preset.rawValue
+                                playbackController.setEqualizerPreset(preset)
+                            }
+                        )
+                    ) {
+                        ForEach(EqualizerPreset.allCases, id: \.self) { preset in
+                            Text(preset.displayName).tag(preset)
                         }
-                    )
-                ) {
-                    ForEach(EqualizerPreset.allCases, id: \.self) { preset in
-                        Text(preset.displayName).tag(preset)
                     }
+                }
+                if playbackController.supportsSpatialAudio {
+                    Toggle(
+                        "Spatial Audio",
+                        isOn: Binding(
+                            get: { settings.isSpatialAudioEnabled },
+                            set: { isEnabled in
+                                settings.isSpatialAudioEnabled = isEnabled
+                                playbackController.setSpatialAudioEnabled(isEnabled)
+                            }
+                        )
+                    )
                 }
             } header: {
                 Text("Sound")
+            } footer: {
+                if playbackController.supportsSpatialAudio {
+                    Text("""
+                    Spatial Audio renders the stream through a head-tracked virtual sound stage on \
+                    AirPods and other supported headphones. It's a stereo effect Holmdel applies to \
+                    every station, not Dolby Atmos content from the broadcaster — radio streams carry \
+                    no object-based audio to spatialize.
+                    """)
+                }
             }
         }
     }
@@ -143,13 +194,13 @@ public struct SettingsView: View {
                 Label("Report an Issue", systemImage: "ladybug")
             }
             Link(destination: ProjectLinks.sponsors) {
-                Label("Support ShoutKit", systemImage: "heart")
+                Label("Support Holmdel", systemImage: "heart")
             }
         } header: {
             Text("Feedback & Support")
         } footer: {
             Text("""
-            ShoutKit is free software — everything works whether or not you donate. \
+            Holmdel is free software — everything works whether or not you donate. \
             On beta builds you can also send feedback by taking a screenshot in TestFlight.
             """)
         }
@@ -189,7 +240,13 @@ public struct SettingsView: View {
         } header: {
             Text("About")
         } footer: {
-            Text("Station discovery is powered by Radio-Browser, a free, community-run directory.")
+            Text("""
+            Holmdel is named for the Bell Labs site in Holmdel, New Jersey, where in 1964 Arno \
+            Penzias and Robert Wilson used the Holmdel Horn Antenna to detect the cosmic \
+            microwave background — proof of the Big Bang, and one of the most consequential \
+            radio signals ever received. Station discovery here is powered by Radio-Browser, a \
+            free, community-run directory.
+            """)
         }
     }
 }

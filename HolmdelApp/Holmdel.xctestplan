@@ -1,0 +1,59 @@
+{
+  "configurations" : [
+    {
+      "id" : "8F0C2B44-2C3A-4C1B-9E64-1A2B3C4D5E6F",
+      "name" : "Default",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:Holmdel.xcodeproj",
+        "identifier" : "0000000000000000000000E0",
+        "name" : "HolmdelTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Packages/RadioDirectory",
+        "identifier" : "RadioDirectoryTests",
+        "name" : "RadioDirectoryTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Packages/Playback",
+        "identifier" : "PlaybackTests",
+        "name" : "PlaybackTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Packages/Persistence",
+        "identifier" : "PersistenceTests",
+        "name" : "PersistenceTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Packages/DesignSystem",
+        "identifier" : "DesignSystemTests",
+        "name" : "DesignSystemTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Packages/LiveActivity",
+        "identifier" : "NowPlayingActivityCoreTests",
+        "name" : "NowPlayingActivityCoreTests"
+      }
+    }
+  ],
+  "version" : 1
+}

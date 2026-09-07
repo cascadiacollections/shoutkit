@@ -1,30 +1,22 @@
+import Playback
 import Testing
 
 @testable import SettingsFeatureCore
 
 struct SettingsPresentationTests {
-    @Test func preciseLocationToggleTracksFeatureFlag() {
-        #expect(SettingsPresentation.shouldShowPreciseGeoLocationToggle(isGeoStationsEnabled: true))
-        #expect(SettingsPresentation.shouldShowPreciseGeoLocationToggle(isGeoStationsEnabled: false) == false)
+    @Test(arguments: EqualizerPreset.allCases)
+    func everyStoredPresetRoundTrips(preset: EqualizerPreset) {
+        #expect(SettingsPresentation.resolvedEqualizerPreset(storedRawValue: preset.rawValue) == preset)
     }
 
-    @Test func validEqualizerRawValueIsPreserved() {
-        let rawValue = SettingsPresentation.resolvedEqualizerPresetRawValue(
-            storedRawValue: 2,
-            availablePresetRawValues: [0, 1, 2, 3],
-            fallbackRawValue: 0
-        )
-
-        #expect(rawValue == 2)
+    @Test(arguments: [-1, 999, Int.max])
+    func unrecognisedRawValueFallsBackToFlat(rawValue: Int) {
+        #expect(SettingsPresentation.resolvedEqualizerPreset(storedRawValue: rawValue) == .normal)
     }
 
-    @Test func invalidEqualizerRawValueFallsBack() {
-        let rawValue = SettingsPresentation.resolvedEqualizerPresetRawValue(
-            storedRawValue: 999,
-            availablePresetRawValues: [0, 1, 2, 3],
-            fallbackRawValue: 0
-        )
-
-        #expect(rawValue == 0)
+    /// `.normal` is the fallback because it is flat, not because it is the
+    /// first case — see `EqualizerPreset`'s note on asymmetric gain ranges.
+    @Test func fallbackPresetHasNoCurve() {
+        #expect(SettingsPresentation.resolvedEqualizerPreset(storedRawValue: 999).curve == nil)
     }
 }

@@ -83,7 +83,7 @@ public struct AmbientArtworkBackdrop: View {
             .overlay {
                 Image(uiImage: image)
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
+                    .scaledToFill()
                     // Overscan so the blur has no vignetted edges.
                     .scaleEffect(1.4)
                     .blur(radius: 60, opaque: true)

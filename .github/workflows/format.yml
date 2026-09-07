@@ -54,7 +54,7 @@ jobs:
       # Same paths as the ci.yml check, so this run and that check cannot
       # disagree about what is in scope.
       - name: Reformat
-        run: swiftformat ShoutKitApp Packages
+        run: swiftformat HolmdelApp Packages
 
       - name: Summarize the diff
         run: |
@@ -84,7 +84,7 @@ jobs:
           git add -A
           git commit -m "Reformat with SwiftFormat
 
-          Mechanical \`swiftformat ShoutKitApp Packages\` run against the
+          Mechanical \`swiftformat HolmdelApp Packages\` run against the
           checked-in .swiftformat config. No behavior change — add this SHA to
           .git-blame-ignore-revs."
           git push origin "HEAD:${GITHUB_REF_NAME}"

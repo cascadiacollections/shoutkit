@@ -64,6 +64,19 @@ struct LibraryStoreRecentlyHeardTests {
         #expect(rows.first?.appleMusicURLString == link.absoluteString)
     }
 
+    @Test func artworkURLBackfillsMostRecentMatchingTrack() throws {
+        let (store, context) = makeStoreAndContext()
+        let station = station("kexp")
+        let art = try #require(URL(string: "https://example.com/art/600x600bb.jpg"))
+
+        store.logRecentlyHeardTrack(station: station, title: "Song", artist: "Band")
+        store.logRecentlyHeardTrack(station: station, title: "Song", artist: "Band", artworkURL: art)
+
+        let rows = try recentlyHeard(context)
+        #expect(rows.count == 1)
+        #expect(rows.first?.artworkURLString == art.absoluteString)
+    }
+
     @Test func outOfOrderConsecutiveDuplicateDoesNotRegressHeardAt() throws {
         let (store, context) = makeStoreAndContext()
         let station = station("kexp")

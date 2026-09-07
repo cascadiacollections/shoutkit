@@ -9,9 +9,14 @@ import SwiftUI
 /// Tapping the bar (outside the controls) expands the full Now Playing screen.
 /// Shows a "Not Playing" placeholder when idle so the accessory can stay attached
 /// (detaching it resets the TabView's structural identity).
+///
+/// One control, not two. The bar also carried a favorite heart, which put a
+/// 44 pt target for a rarely-urgent action next to the one control people reach
+/// for constantly, inside an accessory only as tall as a row — and duplicated
+/// the heart that Now Playing is one tap away with. Favoriting lives in Now
+/// Playing and in each station's context menu; this bar is transport only.
 public struct MiniPlayerView: View {
     @Environment(\.playbackController) private var playback
-    @Environment(\.libraryStore) private var library
     @Environment(\.settingsStore) private var settings
 
     private let onExpand: () -> Void
@@ -46,22 +51,6 @@ public struct MiniPlayerView: View {
     }
 
     @ViewBuilder
-    private func favoriteButton(station: Station) -> some View {
-        if let library {
-            Button {
-                library.toggleFavorite(station)
-            } label: {
-                Image(systemName: library.isFavorite(station) ? "heart.fill" : "heart")
-                    .foregroundStyle(library.isFavorite(station) ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(library.isFavorite(station) ? "Remove favorite" : "Add favorite")
-        }
-    }
-
-    @ViewBuilder
     private func content(playback: PlaybackController, station: Station) -> some View {
         let artworkSelection = effectiveArtworkSelection(
             settings: settings,
@@ -93,8 +82,6 @@ public struct MiniPlayerView: View {
             .accessibilityElement(children: .combine)
 
             Spacer(minLength: ShoutKitSpacing.small)
-
-            favoriteButton(station: station)
 
             Button {
                 playback.togglePlayPause()

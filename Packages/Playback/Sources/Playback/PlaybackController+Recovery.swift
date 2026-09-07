@@ -79,6 +79,47 @@ extension PlaybackController {
         }
     }
 
+    /// A stream that played through to the end of its content: the station was
+    /// a finite programme, not an endless one.
+    ///
+    /// The default is to stop there — park as `.paused` so the mini-player and
+    /// the lock screen stay put with a play button that replays the programme
+    /// (`resume()` takes the `outputStarted == false` path and starts the stream
+    /// again). This is the one behaviour a finished broadcast must *not* have:
+    /// reaching this through `.failed` instead sent it into
+    /// ``attemptReconnect(for:fallback:)``, which rejoined the stream from the
+    /// top — a newscast that played itself four times over before giving up.
+    ///
+    /// With looping opted in, the restart is exactly that reconnect path minus
+    /// the failure: an internal restart, so `onStationPlayed` stays silent (this
+    /// is not a new listening choice) and the resolved endpoint is reused.
+    func handleEndOfStream(for station: Station) {
+        pausedReleaseTimer.cancel()
+        stallCeilingTimer.cancel()
+        reconnectTimer.cancel()
+        resumeWatchdogTimer.cancel()
+        tapToAudioTrace?.cancel()
+        tapToAudioTrace = nil
+        // The content is spent either way, so the engine holds nothing worth
+        // resuming; tear it down so `resume()` restarts rather than resuming a
+        // player parked at the end of its stream.
+        output.stop()
+        outputStarted = false
+        // Ending cleanly is a success, not a drop: the next real failure gets a
+        // full budget rather than whatever this play-through left behind.
+        reconnectAttempts = 0
+
+        guard isStreamLoopingEnabledProvider() else {
+            state = .paused(station)
+            pushNowPlaying(for: station, isPlaying: false)
+            // No paused-release to schedule — the player and audio session are
+            // already gone, which is what that timer exists to accomplish.
+            return
+        }
+
+        startPlayback(of: station, isReconnect: true)
+    }
+
     /// Bounded, backed-off automatic reconnect. A "reconnect" for live radio is
     /// just a fresh ``startPlayback(of:isReconnect:)`` (there's no position to
     /// resume), preserving the last-known track so the lock screen stays put

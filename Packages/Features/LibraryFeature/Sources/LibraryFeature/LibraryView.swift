@@ -6,8 +6,14 @@ import RadioDirectory
 import SwiftData
 import SwiftUI
 
-/// The Favorites tab: favorited stations plus a recently played section, backed by
-/// SwiftData. Rows play through the shared playback controller.
+/// The Favorites tab: favorited stations, recently played stations, and a
+/// summary of the tracks heard across them. Backed by SwiftData; rows play
+/// through the shared playback controller.
+///
+/// Three bounded sections and a drill-in, rather than four stacked lists. The
+/// full track history — every track ever seen, growing without limit — sits
+/// behind ``RecentlyHeardListView`` instead of below Top Tracks, which is the
+/// summary of the same data.
 public struct LibraryView: View {
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
@@ -23,7 +29,13 @@ public struct LibraryView: View {
     @Query(sort: \RecentlyHeardTrack.heardAt, order: .reverse)
     private var recentlyHeardTracks: [RecentlyHeardTrack]
 
+    @State private var topTracksTimeframe: TopTracksTimeframe = .week
+
     public init() {}
+
+    private var topTracks: [TopTrack] {
+        TopTracksAggregator.aggregate(recentlyHeardTracks, timeframe: topTracksTimeframe)
+    }
 
     public var body: some View {
         Group {
@@ -43,7 +55,7 @@ public struct LibraryView: View {
 
                     if recents.isEmpty == false {
                         Section("Recently Played") {
-                            ForEach(recents.prefix(15)) { recent in
+                            ForEach(recents.prefix(LibraryListEditing.recentDisplayLimit)) { recent in
                                 row(for: recent.station)
                             }
                             .onDelete(perform: deleteRecents)
@@ -51,14 +63,42 @@ public struct LibraryView: View {
                     }
 
                     if recentlyHeardTracks.isEmpty == false {
-                        Section("Recently Heard") {
-                            ForEach(recentlyHeardTracks) { track in
-                                recentlyHeardRow(for: track)
+                        Section(String(localized: "Top Tracks", bundle: .module)) {
+                            Picker(String(localized: "Timeframe", bundle: .module), selection: $topTracksTimeframe) {
+                                Text(String(localized: "This Week", bundle: .module)).tag(TopTracksTimeframe.week)
+                                Text(String(localized: "This Month", bundle: .module)).tag(TopTracksTimeframe.month)
+                                Text(String(localized: "All Time", bundle: .module)).tag(TopTracksTimeframe.allTime)
+                            }
+                            .pickerStyle(.segmented)
+                            .listRowSeparator(.hidden)
+
+                            if topTracks.isEmpty {
+                                Text(String(localized: "No repeated tracks yet.", bundle: .module))
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                ForEach(topTracks) { track in
+                                    topTrackRow(for: track)
+                                }
+                            }
+                        }
+
+                        Section {
+                            NavigationLink {
+                                RecentlyHeardListView()
+                            } label: {
+                                Label {
+                                    Text(String(localized: "Recently Heard", bundle: .module))
+                                } icon: {
+                                    Image(systemName: "music.note.list")
+                                }
+                                .badge(recentlyHeardTracks.count)
                             }
                         }
                     }
                 }
                 .listStyle(.insetGrouped)
+                .scrollEdgeEffectStyle(.soft, for: .top)
                 .toolbar {
                     if favorites.isEmpty == false || recents.isEmpty == false {
                         ToolbarItem(placement: .topBarTrailing) {
@@ -91,14 +131,27 @@ public struct LibraryView: View {
         }
     }
 
-    private func recentlyHeardRow(for track: RecentlyHeardTrack) -> some View {
-        let appleMusicURL = track.appleMusicURLString.flatMap(URL.init(string:))
-        let content = recentlyHeardRowContent(
-            for: track,
-            isLinked: appleMusicURL != nil
-        )
+    private func topTrackRow(for track: TopTrack) -> some View {
+        let content = HStack(spacing: ShoutKitSpacing.small) {
+            StationArtworkView(artworkURL: track.artworkURL, size: 44)
+            VStack(alignment: .leading, spacing: ShoutKitSpacing.extraSmall) {
+                Text(track.title)
+                    .font(.headline)
+                    .lineLimit(1)
+                Text(track.artist)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Text("\(track.playCount)×")
+                .font(.footnote.monospacedDigit())
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 4)
+
         return Group {
-            if let url = appleMusicURL {
+            if let url = track.appleMusicURL {
                 Button {
                     openURL(url)
                 } label: {
@@ -109,31 +162,6 @@ public struct LibraryView: View {
                 content
             }
         }
-    }
-
-    private func recentlyHeardRowContent(for track: RecentlyHeardTrack, isLinked: Bool) -> some View {
-        VStack(alignment: .leading, spacing: ShoutKitSpacing.extraSmall) {
-            Text(track.title ?? "Unknown Track")
-                .font(.headline)
-            Text(track.artist ?? "Unknown Artist")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            HStack {
-                Text(track.stationName)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text(track.heardAt, style: .relative)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                if isLinked {
-                    Image(systemName: "apple.logo")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .padding(.vertical, 4)
     }
 
     private func deleteRecents(at offsets: IndexSet) {

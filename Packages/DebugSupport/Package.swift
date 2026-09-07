@@ -9,7 +9,7 @@ import PackageDescription
 let package = Package(
     name: "DebugSupport",
     platforms: [
-        .iOS(.v27),
+        .iOS(.v26),
         .macOS(.v13)
     ],
     products: [

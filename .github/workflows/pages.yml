@@ -1,12 +1,41 @@
-name: Deploy marketing site
+name: Deploy site and API docs
 
-# Publishes the static marketing site in `site/` to GitHub Pages. The site is
-# plain HTML with no build step, so we just upload the folder as-is.
+# Publishes the static marketing site in `site/` plus the generated DocC
+# reference for the MIT-licensed packages (the Holmdel SDK surface) to GitHub
+# Pages. The marketing site is plain HTML with no build step; the API docs are
+# built fresh on every run by `.github/scripts/build-docs.sh` and never
+# committed.
 on:
   push:
     branches: [main]
+    # Kept in sync with the `pull_request` list below by hand — GitHub Actions
+    # does not support YAML anchors.
     paths:
       - "site/**"
+      - "Packages/DesignSystem/**"
+      - "Packages/FeatureFlags/**"
+      - "Packages/ImageIODownsample/**"
+      - "Packages/Persistence/**"
+      - "Packages/Playback/**"
+      - "Packages/PlaybackEngineAudioStreaming/**"
+      - "Packages/RadioDirectory/**"
+      - ".github/scripts/build-docs.sh"
+      - ".github/workflows/pages.yml"
+  # Build-only validation before merge. `pages.yml` used to run on `main`
+  # exclusively, so a PR that broke `docbuild` — a renamed scheme, an
+  # unresolvable symbol link, a package added to the loop but not to the
+  # workspace — was only discovered after merge, on the branch that deploys.
+  pull_request:
+    paths:
+      - "site/**"
+      - "Packages/DesignSystem/**"
+      - "Packages/FeatureFlags/**"
+      - "Packages/ImageIODownsample/**"
+      - "Packages/Persistence/**"
+      - "Packages/Playback/**"
+      - "Packages/PlaybackEngineAudioStreaming/**"
+      - "Packages/RadioDirectory/**"
+      - ".github/scripts/build-docs.sh"
       - ".github/workflows/pages.yml"
   # Allow manual runs from the Actions tab (e.g. first deploy).
   workflow_dispatch:
@@ -18,21 +47,56 @@ permissions:
   pages: write
   id-token: write
 
-# Only one Pages deploy at a time; don't cancel an in-flight publish.
+# Only one Pages deploy at a time; don't cancel an in-flight publish. PR
+# validation is keyed by ref so pushes to a branch supersede each other.
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: pages-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # PRs prove the docs still build; they never deploy, and they declare no
+  # `environment:`, so a fork PR can't reach the Pages environment.
+  validate:
+    name: Build API docs (validation)
+    if: github.event_name == 'pull_request'
+    runs-on: xcode-27
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
+
+      - name: Build documentation
+        run: .github/scripts/build-docs.sh
+
   deploy:
-    name: Build and deploy
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    name: Build API docs and deploy Pages
+    if: github.event_name != 'pull_request'
+    # DocC generation goes through `xcodebuild docbuild`, so this needs the
+    # same pinned Xcode as the rest of CI (see ci.yml's cost comment on this
+    # label). Building and deploying in one job also sidesteps a real bug:
+    # `actions/upload-artifact` rejects filenames containing `:`, and DocC's
+    # JSON output encodes Swift parameter labels straight into filenames
+    # (`start(url:streamGeneration:).json`), so handing the built docs to a
+    # separate deploy job via upload-artifact/download-artifact fails outright.
+    # `upload-pages-artifact` doesn't have this problem — it tars the whole
+    # site into one archive rather than validating each entry's name.
+    runs-on: xcode-27
+    timeout-minutes: 20
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
+
+      - name: Build documentation
+        run: .github/scripts/build-docs.sh
 
       - name: Configure Pages
         uses: actions/configure-pages@v6

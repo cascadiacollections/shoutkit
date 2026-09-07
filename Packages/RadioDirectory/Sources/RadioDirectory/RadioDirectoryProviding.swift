@@ -49,11 +49,27 @@ public extension RadioDirectoryProviding {
         return Array(filters.normalized.apply(to: stations).prefix(limit))
     }
 
+    /// - Warning: This default always returns `nil`. It exists so a directory
+    ///   with no lookup-by-id endpoint still conforms, but the effect is silent:
+    ///   a station saved by an App Intent or a Home Screen widget will
+    ///   fail to rehydrate against this directory, with no compiler warning
+    ///   and no thrown error to signal it — `nil` is also the correct answer
+    ///   for "not found." An implementation backed by a real directory should
+    ///   override this rather than inherit it.
     func station(id: String) async throws(RadioDirectoryError) -> Station? {
         nil
     }
 }
 
+/// ShoutKit's own editorial curation (KEXP), not part of the directory
+/// abstraction — an adopter implementing ``RadioDirectoryProviding`` for a
+/// different service has no reason to reference this type. It lives in this
+/// package, rather than an app target, because it is the one module all
+/// three app targets (iOS, watchOS, tvOS) and the shortcut provider already
+/// share; `Persistence` and `Playback` are the only other candidates and fit
+/// this data less than `RadioDirectory` does. See ``PreferredRadioDirectory``
+/// and ``BundledRadioDirectory``, which take stations as a parameter rather
+/// than defaulting to this so the curation stays visible at each call site.
 public enum PreferredStations {
     public static let all: [Station] = [
         kexpHighBandwidth,
@@ -85,9 +101,15 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
     private let base: any RadioDirectoryProviding
     private let preferredStations: [Station]
 
+    /// - Parameters:
+    ///   - base: The directory to decorate.
+    ///   - preferredStations: Stations pinned ahead of `base`'s results. No
+    ///     default: ``PreferredStations`` is ShoutKit's own editorial choice, and
+    ///     inheriting it silently is not something a library should do to an
+    ///     adopter. Pass `PreferredStations.all` to opt into it.
     public init(
         base: any RadioDirectoryProviding,
-        preferredStations: [Station] = PreferredStations.all
+        preferredStations: [Station]
     ) {
         self.base = base
         self.preferredStations = preferredStations
@@ -175,7 +197,10 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
 public struct BundledRadioDirectory: RadioDirectoryProviding {
     private let stations: [Station]
 
-    public init(stations: [Station] = PreferredStations.all) {
+    /// - Parameter stations: The fixed station list to serve. No default, for
+    ///   the same reason as ``PreferredRadioDirectory``: the curated set is this
+    ///   app's, not every adopter's.
+    public init(stations: [Station]) {
         self.stations = stations
     }
 

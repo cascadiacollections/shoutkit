@@ -13,7 +13,20 @@ private enum DiagnosticsPayloadKind: String, Codable {
     case diagnostic
 }
 
-private enum DiagnosticsPayloadStoreError: Error {
+/// A failure raised by ``DiagnosticsPayloadStore`` itself.
+///
+/// Public because it escapes through public `throws` signatures
+/// (``DiagnosticsPayloadStore/persist(metricPayloads:diagnosticPayloads:receivedAt:)``);
+/// a caller cannot catch by type an error it cannot name. Failures originating
+/// in GRDB are propagated unwrapped and are not part of this enum.
+/// No `LocalizedError` conformance, unlike `RadioDirectoryError` and
+/// `PlaybackError`: this package declares no resources, so it has no string
+/// catalog to localize against, and nothing here is shown to a listener —
+/// diagnostics failures are swallowed into `LibraryStore.lastErrorMessage` or
+/// logged. Adding one would mean adding a catalog to the target first.
+public enum DiagnosticsPayloadStoreError: Error, Equatable, Sendable {
+    /// The retention cutoff could not be derived from the supplied date —
+    /// `Calendar.date(byAdding:value:to:)` returned `nil`.
     case invalidRetentionCutoffDate
 }
 

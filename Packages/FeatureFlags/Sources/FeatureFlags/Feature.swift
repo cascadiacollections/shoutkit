@@ -51,14 +51,6 @@ public enum FeatureCatalog {
         defaultEnabled: false
     )
 
-    public static let recommendations = Feature(
-        key: "recommendations",
-        title: "Recommendations",
-        summary: "On-device \u{201C}More Like This\u{201D} station recommendations from play history.",
-        stage: .internalOnly,
-        defaultEnabled: false
-    )
-
     public static let prewarmStations = Feature(
         key: "prewarmStations",
         title: "Prewarm Stations",
@@ -80,7 +72,6 @@ public enum FeatureCatalog {
     public static let all: [Feature] = [
         diagnosticsFeature,
         geoStations,
-        recommendations,
         prewarmStations,
         liveActivity
     ]
