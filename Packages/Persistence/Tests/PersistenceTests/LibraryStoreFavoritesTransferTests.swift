@@ -57,13 +57,13 @@ struct LibraryStoreFavoritesTransferTests {
         #expect(favorites.map(\.sortIndex) == [0, 1, 2, 3])
     }
 
-    @Test func importingIntoEmptyStorePreservesSortIndexOrder() throws {
+    @Test func importingIntoEmptyStorePreservesSortIndexOrderWithRebasedIndices() throws {
         let (store, context) = makeTransferStoreAndContext()
         let document = FavoritesTransferDocument(
             favorites: [
                 .init(id: "x", name: "X", streamURL: nil, genre: "Genre", artworkURL: nil, sortIndex: 7),
-                .init(id: "y", name: "Y", streamURL: nil, genre: "Genre", artworkURL: nil, sortIndex: 1),
-                .init(id: "z", name: "Z", streamURL: nil, genre: "Genre", artworkURL: nil, sortIndex: 3)
+                .init(id: "y", name: "Y", streamURL: nil, genre: "Genre", artworkURL: nil, sortIndex: -1),
+                .init(id: "z", name: "Z", streamURL: nil, genre: "Genre", artworkURL: nil, sortIndex: -1)
             ]
         )
 
@@ -75,7 +75,7 @@ struct LibraryStoreFavoritesTransferTests {
             )
         )
         #expect(favorites.map(\.stationID) == ["y", "z", "x"])
-        #expect(favorites.map(\.sortIndex) == [1, 3, 7])
+        #expect(favorites.map(\.sortIndex) == [0, 1, 2])
     }
 
     @Test func importRejectsUnsupportedSchemaVersion() throws {

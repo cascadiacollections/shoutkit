@@ -98,7 +98,6 @@ public extension LibraryStore {
 
         let existingFavorites = orderedFavorites()
         var existingIDs = Set(existingFavorites.map(\.stationID))
-        let hasExistingFavorites = existingFavorites.isEmpty == false
         let nextSortIndexStart = (existingFavorites.map(\.sortIndex).max() ?? -1) + 1
 
         let sortedImportedFavorites = normalizeImportedFavorites(document.favorites)
@@ -119,7 +118,7 @@ public extension LibraryStore {
                     genre: favorite.genre,
                     artworkURLString: favorite.artworkURL,
                     streamURLString: favorite.streamURL,
-                    sortIndex: hasExistingFavorites ? nextSortIndexStart + addedCount : favorite.sortIndex
+                    sortIndex: nextSortIndexStart + addedCount
                 )
             )
             existingIDs.insert(favorite.id)
