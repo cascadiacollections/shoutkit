@@ -32,6 +32,7 @@ public struct SettingsView: View {
                 #if DEBUG || TESTFLIGHT
                 featureFlagsSection
                 #endif
+                FavoritesBackupSection()
                 supportSection
                 aboutSection
             }
