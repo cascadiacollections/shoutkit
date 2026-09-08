@@ -1,48 +1,20 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "Add SHOUTCAST_DEV_KEY to Secrets.xcconfig to fetch live stations." : {
-
-    },
-    "Can't reach the station. Check your connection." : {
-
-    },
-    "No connection" : {
-
-    },
-    "Station error" : {
-
-    },
-    "The Radio-Browser response could not be parsed." : {
-
-    },
-    "The SHOUTcast XML response could not be parsed." : {
-
-    },
-    "The station did not return a playable stream." : {
-
-    },
-    "The station directory could not be reached. Check your connection." : {
-
-    },
-    "The station directory returned an invalid response." : {
-
-    },
-    "The station directory returned HTTP %lld." : {
-
-    },
-    "The station directory URL could not be built." : {
-
-    },
-    "The station has a configuration problem." : {
-
-    },
-    "The station isn't available right now." : {
-
-    },
-    "Unavailable" : {
-
-    }
+  "sourceLanguage": "en",
+  "strings": {
+    "Can't reach the station. Check your connection.": {},
+    "Live stations are unavailable right now.": {},
+    "No connection": {},
+    "Station error": {},
+    "The Radio-Browser response could not be parsed.": {},
+    "The SHOUTcast XML response could not be parsed.": {},
+    "The station did not return a playable stream.": {},
+    "The station directory URL could not be built.": {},
+    "The station directory could not be reached. Check your connection.": {},
+    "The station directory returned HTTP %lld.": {},
+    "The station directory returned an invalid response.": {},
+    "The station has a configuration problem.": {},
+    "The station isn't available right now.": {},
+    "Unavailable": {}
   },
-  "version" : "1.1"
+  "version": "1.1"
 }

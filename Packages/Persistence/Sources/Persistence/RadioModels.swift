@@ -134,6 +134,11 @@ public final class RecentlyHeardTrack {
     public var artist: String?
     public var heardAt: Date
     public var appleMusicURLString: String?
+    /// Cover art resolved for this track by `AlbumArtLookup`, or `nil` when
+    /// album art is disabled or the lookup found none. Added alongside
+    /// `appleMusicURLString`'s existing pattern — a default keeps this a
+    /// lightweight, additive migration for pre-existing rows.
+    public var artworkURLString: String?
 
     public init(
         stationID: String,
@@ -141,7 +146,8 @@ public final class RecentlyHeardTrack {
         title: String?,
         artist: String?,
         heardAt: Date = .now,
-        appleMusicURLString: String? = nil
+        appleMusicURLString: String? = nil,
+        artworkURLString: String? = nil
     ) {
         self.stationID = stationID
         self.stationName = stationName
@@ -149,5 +155,6 @@ public final class RecentlyHeardTrack {
         self.artist = artist
         self.heardAt = heardAt
         self.appleMusicURLString = appleMusicURLString
+        self.artworkURLString = artworkURLString
     }
 }

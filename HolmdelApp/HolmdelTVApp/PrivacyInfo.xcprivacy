@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The tvOS app is its own App Store submission with its own bundle id
+	     (com.cascadiacollections.holmdel.tv), so it needs its own manifest —
+	     nothing about the iOS app's declaration carries over to it. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<!-- Declared on link, not on a direct call: TVAppDependencies stores
+			     favorites and recents through Persistence's LibraryStore (SwiftData),
+			     and no tvOS source touches UserDefaults itself — but Persistence is
+			     statically linked and its SettingsStore/DefaultsKey do. Apple's
+			     check is symbol-based rather than reachability-based, so the
+			     declaration belongs here regardless of whether the path runs.
+			     App-local data only, never shared off-device. -->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

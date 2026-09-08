@@ -22,7 +22,7 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
 
     private static let diagnosticsFeature = FeatureCatalog.diagnostics
     #if canImport(OSLog)
-    private nonisolated(unsafe) static let logger = Logger(
+    private nonisolated static let logger = Logger(
         subsystem: "ShoutKit.Persistence",
         category: "DiagnosticsService"
     )
@@ -72,13 +72,18 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
         }
     }
 
-    func ingest(metricPayloads: [Data], diagnosticPayloads: [Data]) {
-        guard shouldCollectDiagnostics else { return }
+    /// Returns the `Task` doing the off-main persist work, or nil when
+    /// collection is disabled. Production callers discard it — persistence is
+    /// fire-and-forget from MetricKit's perspective — but returning it lets
+    /// tests `await` the work instead of polling for its side effects.
+    @discardableResult
+    func ingest(metricPayloads: [Data], diagnosticPayloads: [Data]) -> Task<Void, Never>? {
+        guard shouldCollectDiagnostics else { return nil }
         let receivedAt = Date()
         let metricPayloadsToPersist = metricPayloads
         let diagnosticPayloadsToPersist = diagnosticPayloads
         let worker = ingestWorker
-        Task(priority: .utility) {
+        return Task(priority: .utility) {
             await worker.persistAndLogSummaries(
                 metricPayloads: metricPayloadsToPersist,
                 diagnosticPayloads: diagnosticPayloadsToPersist,

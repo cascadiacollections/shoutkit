@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-ShoutKit is pre-1.0 and ships as TestFlight betas (see `docs/releases/`). Only
+Holmdel is pre-1.0 and ships as TestFlight betas (see `docs/releases/`). Only
 the most recent release line receives security fixes.
 
 ## Reporting a Vulnerability
@@ -22,7 +22,7 @@ timeline once triaged.
 
 ## Scope
 
-This policy covers the ShoutKit app, its Swift packages under `Packages/`,
+This policy covers the Holmdel app, its Swift packages under `Packages/`,
 and CI/CD configuration in `.github/`. Third-party dependencies should be
 reported upstream; see `THIRD_PARTY_LICENSES.md` for the list this project
 consumes directly.

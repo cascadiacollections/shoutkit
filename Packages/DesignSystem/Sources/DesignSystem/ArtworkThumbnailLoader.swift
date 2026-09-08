@@ -35,10 +35,15 @@ public nonisolated enum ArtworkThumbnailLoader {
     /// `maxPixelSize`, returning a cached thumbnail when one exists.
     /// Runs off the main actor; returns `nil` on any failure — callers show
     /// their placeholder, matching the `AsyncImage` contract this replaces.
+    ///
+    /// Defaults to `.artwork` rather than `.shared`: a row's thumbnail loads
+    /// while the station is streaming, and `.artwork`'s `.background` service
+    /// type keeps it from competing with that stream on a weak connection
+    /// (see `URLSessionHTTPTransport.artworkConfiguration()`).
     public static func thumbnail(
         for url: URL?,
         maxPixelSize: CGFloat,
-        transport: any HTTPTransporting = URLSessionHTTPTransport.shared
+        transport: any HTTPTransporting = URLSessionHTTPTransport.artwork
     ) async -> UIImage? {
         guard let url, maxPixelSize > 0 else { return nil }
 
@@ -68,7 +73,7 @@ public nonisolated enum ArtworkThumbnailLoader {
     /// Low Data Mode and cellular suppress it too. Both are deliberate: this is
     /// the one artwork path nobody is waiting on, so it's the first thing that
     /// should stop when the device is trying to conserve. A row that scrolls
-    /// into view still loads its own artwork over the interactive session — the
+    /// into view still loads its own artwork over the `.artwork` session — the
     /// listener just pays the decode at that moment instead of ahead of time.
     public static func prefetch(
         _ urls: [URL?],

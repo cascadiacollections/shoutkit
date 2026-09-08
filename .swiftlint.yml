@@ -1,5 +1,5 @@
 included:
-  - ShoutKitApp
+  - HolmdelApp
   - Packages
 excluded:
   - .build

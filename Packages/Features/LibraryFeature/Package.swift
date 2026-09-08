@@ -6,13 +6,14 @@ let package = Package(
     name: "LibraryFeature",
     defaultLocalization: "en",
     platforms: [
-        .iOS(.v27)
+        .iOS(.v26)
     ],
     products: [
         .library(name: "LibraryFeature", targets: ["LibraryFeature"])
     ],
     dependencies: [
         .package(path: "../../DesignSystem"),
+        .package(path: "../../LibraryFeatureCore"),
         .package(path: "../../Playback"),
         .package(path: "../../Persistence"),
         .package(path: "../../RadioDirectory")
@@ -22,6 +23,7 @@ let package = Package(
             name: "LibraryFeature",
             dependencies: [
                 "DesignSystem",
+                "LibraryFeatureCore",
                 "Playback",
                 "Persistence",
                 "RadioDirectory"

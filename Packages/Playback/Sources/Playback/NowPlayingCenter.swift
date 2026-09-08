@@ -35,7 +35,13 @@ public protocol NowPlayingPresenting: AnyObject {
     func clear()
 }
 
-#if canImport(UIKit) && !os(watchOS)
+// `os(iOS)`, not `canImport(UIKit) && !os(watchOS)`: this type is genuinely
+// iOS-specific (`UIImage`/`UIGraphicsImageRenderer` artwork, lock-screen and
+// Control Center transport), and the UIKit spelling would also drag it onto tvOS
+// and visionOS, which want their own now-playing surface. ``NowPlayingPresenting``
+// above stays ungated, so a new platform implements the protocol rather than
+// inheriting this implementation.
+#if os(iOS)
 
 /// Bridges playback to the system Now Playing info center and remote command center
 /// (lock screen + Control Center). Commands are forwarded to the supplied closures.
@@ -65,7 +71,12 @@ public final class NowPlayingCenter: NowPlayingPresenting {
     // isolated to read this on the main actor without an escape hatch.
     private var commandTargets: [(MPRemoteCommand, Any)] = []
 
-    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.shared) {
+    /// Defaults to `.nowPlayingArtwork`, not the in-app `.artwork` session:
+    /// this image is one a system surface — lock screen, and over AVRCP a
+    /// Bluetooth head unit that asks once and does not retry — is blocked on,
+    /// so it must not sit in `.background`'s deferrable tier behind the audio
+    /// stream (see `URLSessionHTTPTransport.nowPlayingArtworkConfiguration()`).
+    public init(transport: any HTTPTransporting = URLSessionHTTPTransport.nowPlayingArtwork) {
         self.transport = transport
         configureRemoteCommands()
     }

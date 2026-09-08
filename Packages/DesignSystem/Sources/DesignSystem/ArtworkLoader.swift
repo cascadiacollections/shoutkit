@@ -47,9 +47,14 @@ public enum ArtworkLoader {
     /// for the same URL. The Now Playing surface asks for the same artwork
     /// from several views at once (backdrop, hero, tint) — the store hands
     /// them one shared decode + palette pass instead of three.
+    ///
+    /// Runs over `.artwork` rather than `.shared`: this hero art loads
+    /// alongside an active audio stream, and `.artwork`'s `.background`
+    /// service type keeps it from competing with the stream for priority on
+    /// a weak connection (see `URLSessionHTTPTransport.artworkConfiguration()`).
     public nonisolated static func load(
         _ url: URL?,
-        transport: any HTTPTransporting = URLSessionHTTPTransport.shared
+        transport: any HTTPTransporting = URLSessionHTTPTransport.artwork
     ) async -> LoadedArtwork? {
         guard let url else { return nil }
         return await ArtworkStore.shared.artwork(for: url, transport: transport)

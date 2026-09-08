@@ -6,8 +6,9 @@ let package = Package(
     name: "Playback",
     defaultLocalization: "en",
     platforms: [
-        .iOS(.v27),
-        .watchOS(.v27),
+        .iOS(.v26),
+        .tvOS(.v26),
+        .watchOS(.v26),
         // Declared so the controller/state-machine test suite can run on the mac
         // host (`swift test`); the AVPlayer/UIKit-backed production types are
         // gated behind canImport(UIKit) and the app product remains iOS-only.

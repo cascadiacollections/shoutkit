@@ -8,8 +8,13 @@ import Foundation
 /// emits, and https remote URLs. In-process callers construct the payload
 /// directly and never round-trip through a URL.
 public struct StationLink: Equatable, Sendable {
-    public static let appScheme = "shoutkit"
-    public static let handoffActivityType = "com.cascadiacollections.shoutkit.station"
+    /// Must match `CFBundleURLSchemes` in the app's `Info.plist`. The rename
+    /// updated that to `holmdel` and `handoffActivityType` on the line below,
+    /// but missed this one — so the quick-play widget emitted `shoutkit://`
+    /// links the app no longer registers, and the router rejected the
+    /// `holmdel://` links the system would actually deliver.
+    public static let appScheme = "holmdel"
+    public static let handoffActivityType = "com.cascadiacollections.holmdel.station"
 
     public let station: Station
     public let autoPlay: Bool

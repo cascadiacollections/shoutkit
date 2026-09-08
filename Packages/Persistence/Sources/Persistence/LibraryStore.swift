@@ -13,7 +13,12 @@ import SwiftData
 @Observable
 public final class LibraryStore {
     public static let recentsLimit = 25
-    public static let recentlyHeardLimit = 250
+    /// Raised from 250 (2026-08-20, see DECISIONS.md): the Top Tracks report
+    /// aggregates over this same table, and 250 rows total across every
+    /// station was too shallow a window to answer "most played this week/month"
+    /// once a listener has more than a handful of repeats. Rows are tiny
+    /// (two strings, two optional URLs, a date), so 4x the retention is cheap.
+    public static let recentlyHeardLimit = 1000
     static let recentsTrimHeadroom = 50
     /// Fetch/deletion headroom for bounded-history trimming batches. Repeated
     /// passes ensure deep backlogs are fully drained while keeping each fetch

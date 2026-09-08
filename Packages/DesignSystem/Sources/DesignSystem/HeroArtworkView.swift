@@ -78,7 +78,7 @@ public struct HeroArtworkView: View {
                 if let artwork {
                     Image(uiImage: artwork.image)
                         .resizable()
-                        .aspectRatio(contentMode: .fill)
+                        .scaledToFill()
                 } else {
                     placeholder
                 }

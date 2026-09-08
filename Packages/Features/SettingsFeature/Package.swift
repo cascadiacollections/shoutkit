@@ -6,13 +6,14 @@ let package = Package(
     name: "SettingsFeature",
     defaultLocalization: "en",
     platforms: [
-        .iOS(.v27)
+        .iOS(.v26)
     ],
     products: [
         .library(name: "SettingsFeature", targets: ["SettingsFeature"])
     ],
     dependencies: [
         .package(path: "../../DesignSystem"),
+        .package(path: "../../SettingsFeatureCore"),
         .package(path: "../../Persistence"),
         .package(path: "../../FeatureFlags"),
         .package(path: "../../Playback")
@@ -22,6 +23,7 @@ let package = Package(
             name: "SettingsFeature",
             dependencies: [
                 "DesignSystem",
+                "SettingsFeatureCore",
                 "Persistence",
                 "FeatureFlags",
                 "Playback"
