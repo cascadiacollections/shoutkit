@@ -38,9 +38,18 @@ struct LibraryStoreFavoritesTransferTests {
 
         let document = FavoritesTransferDocument(
             favorites: [
-                .init(id: "b", name: "B", streamURL: "https://b.example/stream", genre: "Jazz", artworkURL: nil, sortIndex: 0),
-                .init(id: "c", name: "C", streamURL: "https://c.example/stream", genre: "Rock", artworkURL: nil, sortIndex: 1),
-                .init(id: "d", name: "D", streamURL: "https://d.example/stream", genre: "Talk", artworkURL: nil, sortIndex: 2)
+                .init(
+                    id: "b", name: "B", streamURL: "https://b.example/stream",
+                    genre: "Jazz", artworkURL: nil, sortIndex: 0
+                ),
+                .init(
+                    id: "c", name: "C", streamURL: "https://c.example/stream",
+                    genre: "Rock", artworkURL: nil, sortIndex: 1
+                ),
+                .init(
+                    id: "d", name: "D", streamURL: "https://d.example/stream",
+                    genre: "Talk", artworkURL: nil, sortIndex: 2
+                )
             ]
         )
 
