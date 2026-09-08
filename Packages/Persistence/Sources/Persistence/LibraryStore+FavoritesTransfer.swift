@@ -122,7 +122,6 @@ public extension LibraryStore {
                 )
             )
             existingIDs.insert(favorite.id)
-            favoriteIDs.insert(favorite.id)
             addedCount += 1
         }
 
@@ -132,6 +131,10 @@ public extension LibraryStore {
                     lastErrorMessage ?? "Could not save imported favorites."
                 )
             }
+            // Resync from what actually persisted rather than tracking inserts as we
+            // go, so a failed save can't leave the cache claiming favorites the store
+            // does not have.
+            reloadFavoriteIDs()
         }
 
         return FavoritesImportResult(

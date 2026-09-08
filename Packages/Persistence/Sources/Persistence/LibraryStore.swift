@@ -274,7 +274,10 @@ public final class LibraryStore {
 // MARK: - Helpers
 
 extension LibraryStore {
-    private func reloadFavoriteIDs() {
+    /// Internal rather than private so the favorites-transfer extension can resync
+    /// the cache after a bulk import: `favoriteIDs` is `private(set)`, so a file
+    /// outside this one cannot mutate it directly.
+    func reloadFavoriteIDs() {
         let descriptor = FetchDescriptor<FavoriteStation>()
         guard let favorites = fetch(descriptor, operation: "reload favorites") else {
             favoriteIDs = []
