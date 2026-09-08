@@ -191,9 +191,10 @@ something a user receives.
       validation for an embedded watch app. All twelve sites now read `0.4.0`.
 - [ ] **Cut `v0.4.0`.** The changelog cut-over and the tag, per `docs/RELEASING.md`. Blocked
       only on the in-flight PRs that still write to `[Unreleased]`.
-- [ ] Build-number (`CURRENT_PROJECT_VERSION`) handling. It is `1` everywhere and has never
-      been incremented; TestFlight rejects a duplicate build number for a given version, so
-      this bites on the *second* upload of a version, not the first.
+- [ ] Build-number (`CURRENT_PROJECT_VERSION`) handling. It is now shared at the project
+      level, but has never been incremented automatically; TestFlight rejects a duplicate
+      build number for a given version, so this bites on the *second* upload of a version,
+      not the first.
 - [ ] A CI check that the pushed tag matches `MARKETING_VERSION`. Nothing currently catches
       `v0.5.0` tagged against a tree reading `0.4.0`, and this repo's habit is to assert the
       things it believes (Pulse symbols, the watch payload) rather than trust them.

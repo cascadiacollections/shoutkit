@@ -90,9 +90,10 @@ roadmap has a habit of drifting on things nobody re-checks:
 
 - **No signing secrets, so no automated TestFlight or App Store upload.** Every binary that
   has ever reached a device was built by hand from Xcode.
-- **No `CURRENT_PROJECT_VERSION` (build number) automation.** It is `1` everywhere and has
-  never been incremented. TestFlight rejects a duplicate build number for the same version,
-  so this bites the second time a version is uploaded, not the first.
+- **No `CURRENT_PROJECT_VERSION` (build number) automation.** It is now defined once at the
+  project level, but still has to be incremented manually. TestFlight rejects a duplicate
+  build number for the same version, so this bites the second time a version is uploaded,
+  not the first.
 - **No professional app icon.** Flagged swap-before-public-release since 0.2.0.
 - **No verification that the tag matches `MARKETING_VERSION`.** Pushing `v0.5.0` against a
   tree that still reads `0.4.0` produces a release whose notes and binary disagree, and
