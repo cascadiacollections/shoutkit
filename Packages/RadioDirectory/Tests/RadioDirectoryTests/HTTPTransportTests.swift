@@ -20,8 +20,9 @@ private actor SequenceTransport: HTTPTransporting {
 struct HTTPTransportTests {
     @Test
     func `retries through transient failures`() async throws {
+        let url = try #require(URL(string: "https://example.com"))
         let response = try #require(try HTTPURLResponse(
-            url: #require(URL(string: "https://example.com")),
+            url: url,
             statusCode: 200,
             httpVersion: nil,
             headerFields: nil,
@@ -45,8 +46,9 @@ struct HTTPTransportTests {
 
     @Test
     func `validates HTTP status codes`() async throws {
+        let url = try #require(URL(string: "https://example.com"))
         let response = try #require(try HTTPURLResponse(
-            url: #require(URL(string: "https://example.com")),
+            url: url,
             statusCode: 503,
             httpVersion: nil,
             headerFields: nil,
