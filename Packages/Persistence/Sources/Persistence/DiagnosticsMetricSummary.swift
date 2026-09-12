@@ -412,7 +412,7 @@ enum DiagnosticsMetricSummaryExtractor {
         var multiplierToMilliseconds: Double {
             switch self {
             case .seconds:
-                1_000
+                1000
             case .milliseconds:
                 1
             case .microseconds:

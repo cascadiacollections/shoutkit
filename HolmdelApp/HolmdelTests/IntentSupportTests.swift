@@ -110,7 +110,7 @@ struct IntentSupportTests {
         // Re-remembering an existing id must not create a duplicate.
         IntentStationCache.remember([batch[0]], defaults: defaults)
         #expect(
-            IntentStationCache.load(defaults: defaults).filter { $0.id == "fresh-0" }.count == 1,
+            IntentStationCache.load(defaults: defaults).count { $0.id == "fresh-0" } == 1,
         )
     }
 
