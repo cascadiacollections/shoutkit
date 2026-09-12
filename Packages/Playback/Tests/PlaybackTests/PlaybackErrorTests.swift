@@ -98,4 +98,11 @@ struct PlaybackErrorTests {
     @Test func `stream failed is retryable`() {
         #expect(PlaybackError.streamFailed("AVFoundation error").isRetryable == true)
     }
+
+    @Test func `stall is recoverable and reset requires listener action`() {
+        #expect(PlaybackError.streamStalled.userMessage == "The stream stopped responding. Tap to retry.")
+        #expect(PlaybackError.streamStalled.isRetryable)
+        #expect(PlaybackError.audioServicesReset.userMessage == "Audio restarted. Tap to resume.")
+        #expect(PlaybackError.audioServicesReset.isRetryable == false)
+    }
 }

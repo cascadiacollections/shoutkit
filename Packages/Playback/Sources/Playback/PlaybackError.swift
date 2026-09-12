@@ -12,6 +12,11 @@ public enum PlaybackError: Error, Equatable, LocalizedError, Sendable {
     case stationNotAvailable(errorCode: Int)
     /// The stream itself failed after starting (`AVPlayerItem.status == .failed`).
     case streamFailed(String)
+    /// The stream stopped making progress after bounded recovery attempts.
+    case streamStalled
+    /// The operating system restarted audio services. Playback is deliberately
+    /// left stopped until the listener asks to resume.
+    case audioServicesReset
     /// Resolving the station's stream endpoint failed for a reason the
     /// directory layer already typed.
     case directory(RadioDirectoryError)
@@ -24,6 +29,10 @@ public enum PlaybackError: Error, Equatable, LocalizedError, Sendable {
             String(localized: "This station isn't available right now. Try again later.", bundle: .module)
         case let .streamFailed(message):
             message
+        case .streamStalled:
+            String(localized: "The stream stopped responding.", bundle: .module)
+        case .audioServicesReset:
+            String(localized: "Audio services restarted.", bundle: .module)
         case let .directory(error):
             error.errorDescription
         }
@@ -40,6 +49,10 @@ public enum PlaybackError: Error, Equatable, LocalizedError, Sendable {
             String(localized: "This station isn't available right now. Try again later.", bundle: .module)
         case .streamFailed:
             String(localized: "The stream stopped unexpectedly. Tap to retry.", bundle: .module)
+        case .streamStalled:
+            String(localized: "The stream stopped responding. Tap to retry.", bundle: .module)
+        case .audioServicesReset:
+            String(localized: "Audio restarted. Tap to resume.", bundle: .module)
         case let .directory(error):
             error.userMessage
         }
@@ -55,6 +68,10 @@ public enum PlaybackError: Error, Equatable, LocalizedError, Sendable {
             String(localized: "Unavailable", bundle: .module)
         case .streamFailed:
             String(localized: "Stream error", bundle: .module)
+        case .streamStalled:
+            String(localized: "Stream stalled", bundle: .module)
+        case .audioServicesReset:
+            String(localized: "Tap to resume", bundle: .module)
         case let .directory(error):
             error.shortUserMessage
         }
@@ -85,9 +102,9 @@ public enum PlaybackError: Error, Equatable, LocalizedError, Sendable {
     /// failure or a lost internet connection is treated as transient.
     public var isRetryable: Bool {
         switch self {
-        case .noInternet, .streamFailed:
+        case .noInternet, .streamFailed, .streamStalled:
             true
-        case .stationNotAvailable:
+        case .stationNotAvailable, .audioServicesReset:
             false
         case let .directory(error):
             error.isRetryable

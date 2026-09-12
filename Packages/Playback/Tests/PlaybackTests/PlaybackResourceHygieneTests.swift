@@ -141,7 +141,7 @@ struct PlaybackResourceHygieneTests {
 
     // MARK: - Stall ceiling
 
-    @Test func `stalled buffering parks as paused after ceiling`() async {
+    @Test func `stalled buffering surfaces retry after ceiling`() async {
         let output = FakeAudioOutput()
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(
@@ -155,9 +155,9 @@ struct PlaybackResourceHygieneTests {
 
         await waitUntil { output.stopCount == 1 }
         #expect(output.stopCount == 1)
-        #expect(controller.state == .paused(station()))
+        #expect(controller.state == .failed(.streamStalled))
         // Teardown suppresses the player's own status callback, so the
-        // controller must have pushed the paused surface itself.
+        // controller must have pushed the stopped surface itself.
         #expect(presenter.lastUpdate == .update(
             stationID: "kexp", trackTitle: nil, isPlaying: false, artwork: .resolved(nil),
         ))

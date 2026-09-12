@@ -10,10 +10,47 @@ import RadioDirectory
 // than a branch in `handleStatusChange`.
 
 extension PlaybackController {
+    /// Handles session-wide observations, which intentionally carry no stream
+    /// generation. Returns whether the event was consumed.
+    func handleSystemStatus(_ status: AudioStatus, station: Station) -> Bool {
+        switch status {
+        case .interruptionBegan:
+            handleInterruptionBegan(station: station)
+        case let .interruptionEnded(shouldResume, otherAudioIsPlaying):
+            handleInterruptionEnded(shouldResume: shouldResume, otherAudioIsPlaying: otherAudioIsPlaying)
+        case .routeLost:
+            handleRouteLost()
+        case .routeAvailable:
+            handleRouteAvailable()
+        case .mediaServicesReset:
+            handleMediaServicesReset(for: station)
+        default:
+            return false
+        }
+        return true
+    }
+
+    /// Rebuilt audio objects stay dormant until the listener taps Retry.
+    private func handleMediaServicesReset(for station: Station) {
+        resolveTask?.cancel()
+        reconnectTimer.cancel()
+        resumeWatchdogTimer.cancel()
+        stallCeilingTimer.cancel()
+        playbackRequested = false
+        isReconnecting = false
+        resumeAfterRouteChange = false
+        disarmInterruptionResume()
+        retireActiveStreamGeneration()
+        outputStarted = false
+        state = .failed(.audioServicesReset)
+        pushNowPlaying(for: station, isPlaying: false)
+    }
+
     func handleRouteLost() {
         switch state {
         case .playing, .buffering:
             resumeAfterRouteChange = true
+            playbackRequested = false
             output.pause()
         default:
             break
@@ -26,6 +63,8 @@ extension PlaybackController {
     }
 
     func handleInterruptionBegan(station: Station) {
+        playbackRequested = false
+        isReconnecting = false
         // A reconnect must not fire mid-interruption: it would try to grab the
         // audio session during the call and clobber the arming below in
         // `startPlayback`, killing the auto-resume when the call ends.

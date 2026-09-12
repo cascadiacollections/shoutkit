@@ -7,7 +7,30 @@ import RadioDirectory
 
 @MainActor
 final class FakeAudioOutput: AudioOutput {
-    var onStatusChange: ((AudioStatus) -> Void)?
+    private var statusHandler: ((AudioStatusUpdate) -> Void)?
+    var onStatusChange: ((AudioStatusUpdate) -> Void)? {
+        get {
+            guard let statusHandler else { return nil }
+            return { [weak self] update in
+                guard let self else { return }
+                switch update.status {
+                case .interruptionBegan, .interruptionEnded, .routeLost, .routeAvailable, .mediaServicesReset:
+                    statusHandler(update)
+                case .buffering, .playing, .paused, .failed, .endOfStream:
+                    guard update.streamGeneration == nil,
+                          let generation = self.startedStreamGenerations.last else {
+                        statusHandler(update)
+                        return
+                    }
+                    statusHandler(AudioStatusUpdate(update.status, streamGeneration: generation))
+                }
+            }
+        }
+        set {
+            statusHandler = newValue
+        }
+    }
+
     var onTrackInfo: ((AudioTrackInfo) -> Void)?
 
     private(set) var startedURLs: [URL] = []
@@ -54,6 +77,10 @@ final class FakeAudioOutput: AudioOutput {
     func emitTrackInfo(_ title: String?, _ artist: String?) {
         let generation = startedStreamGenerations.last ?? 0
         onTrackInfo?(AudioTrackInfo(title: title, artist: artist, streamGeneration: generation))
+    }
+
+    func emit(_ status: AudioStatus, generation: UInt64? = nil) {
+        onStatusChange?(AudioStatusUpdate(status, streamGeneration: generation))
     }
 }
 
@@ -171,7 +198,7 @@ func makeController(
     output: FakeAudioOutput,
     presenter: NowPlayingPresenterSpy = NowPlayingPresenterSpy(),
     pausedReleaseTimeout: Duration = .seconds(10 * 60),
-    stallTimeout: Duration = .seconds(90),
+    stallTimeout: Duration = .seconds(30),
     maxReconnectAttempts: Int = 3,
     reconnectBaseDelay: Duration = .seconds(2),
     resumeWatchdogTimeout: Duration = .seconds(2),

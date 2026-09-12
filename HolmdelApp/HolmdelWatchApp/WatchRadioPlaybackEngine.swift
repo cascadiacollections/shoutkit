@@ -4,7 +4,7 @@ import Playback
 
 @MainActor
 final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
-    var onStatusChange: ((AudioStatus) -> Void)?
+    var onStatusChange: ((AudioStatusUpdate) -> Void)?
     var onTrackInfo: ((AudioTrackInfo) -> Void)?
 
     private var player: AVPlayer?
@@ -14,6 +14,9 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     private var playedToEndObserver: NSObjectProtocol?
     private var interruptionObserver: NSObjectProtocol?
     private var routeChangeObserver: NSObjectProtocol?
+    private var mediaServicesResetObserver: NSObjectProtocol?
+    private var activeStreamGeneration: UInt64 = 0
+    private var activationToken: UInt64 = 0
 
     override init() {
         super.init()
@@ -28,14 +31,19 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         if let routeChangeObserver {
             NotificationCenter.default.removeObserver(routeChangeObserver)
         }
+        if let mediaServicesResetObserver {
+            NotificationCenter.default.removeObserver(mediaServicesResetObserver)
+        }
     }
 
     /// `streamGeneration` tags ICY metadata so the controller can discard track
     /// callbacks from a superseded stream after a fast station switch (see
     /// AudioStreamingPlaybackEngine). This engine emits no track info, so it only
     /// needs to satisfy the `AudioOutput` signature.
-    func start(url: URL, streamGeneration _: UInt64) {
+    func start(url: URL, streamGeneration: UInt64) {
         tearDownPlayer()
+        activeStreamGeneration = streamGeneration
+        let token = nextActivationToken()
 
         let item = AVPlayerItem(url: url)
         let player = AVPlayer(playerItem: item)
@@ -44,27 +52,34 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         observe(player: player, item: item)
 
         self.player = player
-        onStatusChange?(.buffering)
+        reportStatus(.buffering)
         activateAudioSession { [weak self] in
-            guard let self, self.player === player else { return }
+            guard let self,
+                  self.player === player,
+                  self.activationToken == token else { return }
             player.play()
         }
     }
 
     func pause() {
+        invalidateActivation()
         player?.pause()
-        onStatusChange?(.paused)
+        reportStatus(.paused)
     }
 
     func resume() {
         guard let player else { return }
+        let token = nextActivationToken()
         activateAudioSession { [weak self] in
-            guard let self, self.player === player else { return }
+            guard let self,
+                  self.player === player,
+                  self.activationToken == token else { return }
             player.play()
         }
     }
 
     func stop() {
+        invalidateActivation()
         player?.pause()
         tearDownPlayer()
         deactivateAudioSession()
@@ -113,10 +128,10 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
                 guard let self,
                       let failedItem,
                       self.player?.currentItem === failedItem else { return }
-                let message = reportedError?.localizedDescription
-                    ?? failedItem.error?.localizedDescription
-                    ?? "The stream stopped unexpectedly."
-                self.onStatusChange?(.failed(.streamFailed(message)))
+                let error = reportedError ?? failedItem.error
+                let playbackError = error.map(PlaybackError.classifying)
+                    ?? .streamFailed("The stream stopped unexpectedly.")
+                self.reportStatus(.failed(playbackError))
             }
         }
         observePlaythroughToEnd(of: item)
@@ -142,7 +157,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
                 guard let self,
                       let endedItem,
                       self.player?.currentItem === endedItem else { return }
-                self.onStatusChange?(.endOfStream)
+                self.reportStatus(.endOfStream)
             }
         }
     }
@@ -151,11 +166,11 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         switch status {
         case .paused:
             guard player?.currentItem != nil else { return }
-            onStatusChange?(.paused)
+            reportStatus(.paused)
         case .waitingToPlayAtSpecifiedRate:
-            onStatusChange?(.buffering)
+            reportStatus(.buffering)
         case .playing:
-            onStatusChange?(.playing)
+            reportStatus(.playing)
         @unknown default:
             break
         }
@@ -163,13 +178,27 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
 
     private func handleItemStatus(_ status: AVPlayerItem.Status, item: AVPlayerItem) {
         if status == .failed {
-            onStatusChange?(.failed(.streamFailed(
-                item.error?.localizedDescription ?? "The stream stopped unexpectedly.",
-            )))
+            let error = item.error.map(PlaybackError.classifying)
+                ?? .streamFailed("The stream stopped unexpectedly.")
+            reportStatus(.failed(error))
         }
     }
 
+    private func reportStatus(_ status: AudioStatus) {
+        onStatusChange?(AudioStatusUpdate(status, streamGeneration: activeStreamGeneration))
+    }
+
+    private func nextActivationToken() -> UInt64 {
+        activationToken &+= 1
+        return activationToken
+    }
+
+    private func invalidateActivation() {
+        _ = nextActivationToken()
+    }
+
     private func tearDownPlayer() {
+        invalidateActivation()
         timeControlObservation?.invalidate()
         itemStatusObservation?.invalidate()
         timeControlObservation = nil
@@ -206,6 +235,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         let session = AVAudioSession.sharedInstance()
         observeInterruptions(on: session, with: center)
         observeRouteChanges(on: session, with: center)
+        observeMediaServicesReset(with: center)
     }
 
     private func observeInterruptions(on session: AVAudioSession, with center: NotificationCenter) {
@@ -277,5 +307,21 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         // Best effort: deactivation can legitimately fail during interruption
         // races and should not block local teardown.
         try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+    }
+}
+
+private extension WatchRadioPlaybackEngine {
+    func observeMediaServicesReset(with center: NotificationCenter) {
+        mediaServicesResetObserver = center.addObserver(
+            forName: AVAudioSession.mediaServicesWereResetNotification,
+            object: nil,
+            queue: nil,
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.tearDownPlayer()
+                self.onStatusChange?(.mediaServicesReset)
+            }
+        }
     }
 }

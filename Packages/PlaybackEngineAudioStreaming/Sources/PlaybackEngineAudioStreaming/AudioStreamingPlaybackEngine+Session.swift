@@ -16,11 +16,10 @@ import Playback
 extension AudioStreamingPlaybackEngine {
     private static let sessionDeactivationRetryDelay: Duration = .milliseconds(150)
 
-    /// How long a player discarded by a media-services reset is kept alive after
-    /// `stop()`, so AudioStreaming's own asynchronous teardown can reach it —
-    /// see `handleMediaServicesReset()`. Long enough for a queue hop, short
-    /// enough that the dead player's buffers aren't held for any perceptible
-    /// time.
+    /// How long a replaced player is kept alive after `stop()`, so
+    /// AudioStreaming's own asynchronous teardown can reach it. Long enough for
+    /// a queue hop, short enough that the dead player's buffers aren't held for
+    /// any perceptible time.
     private static let discardedPlayerTeardownGrace: Duration = .seconds(1)
 
     /// Backoff between reactivation attempts. `setActive(true)` legitimately fails
@@ -189,7 +188,7 @@ extension AudioStreamingPlaybackEngine {
                     // A pending activation retry belongs to the state before the
                     // interruption, and the session isn't ours to take during one.
                     self.cancelPendingSessionActivation()
-                    self.onStatusChange?(.interruptionBegan)
+                    self.onStatusChange?(AudioStatusUpdate(.interruptionBegan))
                 case .ended:
                     // Read live rather than captured: `AVAudioSession` isn't
                     // Sendable, and this is the moment the answer matters.
@@ -200,10 +199,10 @@ extension AudioStreamingPlaybackEngine {
                         otherAudioIsPlaying: \(otherAudioIsPlaying, privacy: .public))
                         """,
                     )
-                    self.onStatusChange?(.interruptionEnded(
+                    self.onStatusChange?(AudioStatusUpdate(.interruptionEnded(
                         shouldResume: shouldResume,
                         otherAudioIsPlaying: otherAudioIsPlaying,
-                    ))
+                    )))
                 @unknown default:
                     break
                 }
@@ -229,9 +228,9 @@ extension AudioStreamingPlaybackEngine {
                 case .oldDeviceUnavailable:
                     // Headphones unplugged: pause rather than continue on the speaker.
                     guard self.isPlayerActive else { return }
-                    self.onStatusChange?(.routeLost)
+                    self.onStatusChange?(AudioStatusUpdate(.routeLost))
                 case .newDeviceAvailable:
-                    self.onStatusChange?(.routeAvailable)
+                    self.onStatusChange?(AudioStatusUpdate(.routeAvailable))
                 case .unknown, .categoryChange, .override, .wakeFromSleep,
                      .noSuitableRouteForCategory, .routeConfigurationChange:
                     break
@@ -274,7 +273,22 @@ extension AudioStreamingPlaybackEngine {
         cancelPendingSessionActivation()
         sessionDeactivationTask?.cancel()
         sessionDeactivationTask = nil
-        // Late callbacks from the discarded player are ignored by the identity
+        replacePlayer()
+        configureSession()
+        reattachEqualizerIfNeeded()
+        reattachSpatialAudioIfNeeded()
+        // Always announce the reset without restarting playback. The engine's
+        // currentURL is still nil while the controller resolves an initial
+        // endpoint, but the controller may already own an active selection that
+        // must be cancelled before it can start against the rebuilt session.
+        // With no active selection the controller safely ignores this event.
+        onStatusChange?(AudioStatusUpdate(.mediaServicesReset))
+    }
+
+    /// Replaces the player while allowing its asynchronous teardown to finish.
+    /// Callers reattach enabled effects after any required session setup.
+    func replacePlayer() {
+        // Late callbacks from the replaced player are ignored by the identity
         // check in the delegate methods, but it can't be dropped *silently*:
         // `AudioPlayer.deinit` closes only `audioPlayingEntry`, never
         // `audioReadingEntry`, and an abandoned reading entry takes its
@@ -303,12 +317,5 @@ extension AudioStreamingPlaybackEngine {
         }
         player = AudioPlayer()
         player.delegate = self
-        configureSession()
-        reattachEqualizerIfNeeded()
-        reattachSpatialAudioIfNeeded()
-        // Nothing was playing: there is nothing to recover, and reporting a
-        // failure would surface an error the listener never provoked.
-        guard didRequestStop == false, currentURL != nil else { return }
-        reportFailure(.streamFailed("Audio services restarted."))
     }
 }

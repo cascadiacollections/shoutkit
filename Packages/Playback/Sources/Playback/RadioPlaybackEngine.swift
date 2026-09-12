@@ -77,7 +77,7 @@ public final class StubRadioPlaybackEngine: RadioPlaybackEngine {
     /// retry, and a fault per retry buries the first one.
     private var hasLoggedNoEngineFault = false
 
-    public var onStatusChange: ((AudioStatus) -> Void)?
+    public var onStatusChange: ((AudioStatusUpdate) -> Void)?
     public var onTrackInfo: ((AudioTrackInfo) -> Void)?
 
     public init() {}

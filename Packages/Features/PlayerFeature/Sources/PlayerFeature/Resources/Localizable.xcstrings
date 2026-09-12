@@ -13,6 +13,9 @@
     "AirPlay and output devices" : {
 
     },
+    "Cancel connection" : {
+
+    },
     "Cancel Timer" : {
 
     },
@@ -45,6 +48,18 @@
 
     },
     "Remove favorite" : {
+
+    },
+    "Reconnecting" : {
+
+    },
+    "Reconnecting…" : {
+
+    },
+    "Resume" : {
+
+    },
+    "Retry" : {
 
     },
     "Sleep timer" : {

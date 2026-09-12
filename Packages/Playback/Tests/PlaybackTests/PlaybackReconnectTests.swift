@@ -24,7 +24,11 @@ struct PlaybackReconnectTests {
         output.onStatusChange?(.playing)
 
         // A mid-play failure retries rather than surfacing `.failed` at once.
+        let failedGeneration = output.startedStreamGenerations[0]
         output.onStatusChange?(.failed(.streamFailed("drop")))
+        output.emit(.playing, generation: failedGeneration)
+        #expect(controller.isReconnecting)
+        #expect(controller.state == .buffering(station()))
         await waitUntil { output.startedURLs.count == 2 }
         #expect(output.startedURLs.count == 2)
 
@@ -94,8 +98,10 @@ struct PlaybackReconnectTests {
         output.onStatusChange?(.playing)
 
         output.onStatusChange?(.failed(.streamFailed("drop")))
+        #expect(controller.isReconnecting)
         await waitUntil { output.startedURLs.count == 2 }
         output.onStatusChange?(.playing) // recovered → budget refreshes
+        #expect(controller.isReconnecting == false)
         output.onStatusChange?(.failed(.streamFailed("drop")))
         await waitUntil { output.startedURLs.count == 3 }
 
@@ -134,6 +140,11 @@ struct PlaybackReconnectTests {
         output.onStatusChange?(.buffering) // arms the stall ceiling
 
         // Ceiling fires: the stalled player is torn down and the stream retried.
+        let stalledGeneration = output.startedStreamGenerations[0]
+        await waitUntil { output.stopCount == 1 }
+        output.emit(.playing, generation: stalledGeneration)
+        #expect(controller.isReconnecting)
+        #expect(controller.state == .buffering(station()))
         await waitUntil { output.startedURLs.count == 2 }
         #expect(output.stopCount == 1)
 
