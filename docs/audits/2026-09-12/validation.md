@@ -18,8 +18,8 @@ The original reproduction source and failure output remain beside this file as
 
 | Check | Result |
 |---|---|
-| Playback: `swift test --disable-xctest` | PASS — 194 tests, 21 suites |
-| Permanent intent-boundary regressions | PASS — 6 tests |
+| Playback: `swift test --disable-xctest` | PASS — 199 tests, 21 suites |
+| Permanent intent-boundary regressions | PASS — 11 tests |
 | RadioDirectory: `swift test --disable-xctest` | PASS — 71 tests, 9 suites |
 | `swiftlint --strict` | PASS — 222 Swift files |
 | Localization catalogs parsed as JSON | PASS |

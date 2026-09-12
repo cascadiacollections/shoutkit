@@ -192,6 +192,12 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     /// minus the switch. Used when the player can't be resumed.
     private func replayCurrentStream() {
         guard let currentURL else { return }
+        // A replay is a new AudioStreaming entry. Give it a new player as well
+        // so entry callbacks queued by the dead stream fail the delegate's
+        // player-identity check instead of being attributed to this rejoin.
+        replacePlayer()
+        reattachEqualizerIfNeeded()
+        reattachSpatialAudioIfNeeded()
         didRequestStop = false
         hasReportedFailure = false
         hasReportedEndOfStream = false

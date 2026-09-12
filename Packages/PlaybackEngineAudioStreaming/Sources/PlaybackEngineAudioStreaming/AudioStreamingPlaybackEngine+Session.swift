@@ -277,12 +277,11 @@ extension AudioStreamingPlaybackEngine {
         configureSession()
         reattachEqualizerIfNeeded()
         reattachSpatialAudioIfNeeded()
-        // Nothing had been selected: there is no listener-visible state to
-        // update. Otherwise announce the reset without restarting playback;
-        // Apple requires a new user action before media processing resumes.
-        // `didRequestStop` may reflect controller-internal teardown, so listener
-        // intent is decided by the controller rather than suppressed here.
-        guard currentURL != nil else { return }
+        // Always announce the reset without restarting playback. The engine's
+        // currentURL is still nil while the controller resolves an initial
+        // endpoint, but the controller may already own an active selection that
+        // must be cancelled before it can start against the rebuilt session.
+        // With no active selection the controller safely ignores this event.
         onStatusChange?(AudioStatusUpdate(.mediaServicesReset))
     }
 

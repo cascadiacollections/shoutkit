@@ -40,6 +40,7 @@ extension PlaybackController {
         isReconnecting = false
         resumeAfterRouteChange = false
         disarmInterruptionResume()
+        retireActiveStreamGeneration()
         outputStarted = false
         state = .failed(.audioServicesReset)
         pushNowPlaying(for: station, isPlaying: false)

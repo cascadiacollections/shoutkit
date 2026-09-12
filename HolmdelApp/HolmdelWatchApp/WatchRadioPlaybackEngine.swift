@@ -14,6 +14,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     private var playedToEndObserver: NSObjectProtocol?
     private var interruptionObserver: NSObjectProtocol?
     private var routeChangeObserver: NSObjectProtocol?
+    private var mediaServicesResetObserver: NSObjectProtocol?
     private var activeStreamGeneration: UInt64 = 0
     private var activationToken: UInt64 = 0
 
@@ -29,6 +30,9 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         }
         if let routeChangeObserver {
             NotificationCenter.default.removeObserver(routeChangeObserver)
+        }
+        if let mediaServicesResetObserver {
+            NotificationCenter.default.removeObserver(mediaServicesResetObserver)
         }
     }
 
@@ -124,10 +128,10 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
                 guard let self,
                       let failedItem,
                       self.player?.currentItem === failedItem else { return }
-                let message = reportedError?.localizedDescription
-                    ?? failedItem.error?.localizedDescription
-                    ?? "The stream stopped unexpectedly."
-                self.reportStatus(.failed(.streamFailed(message)))
+                let error = reportedError ?? failedItem.error
+                let playbackError = error.map(PlaybackError.classifying)
+                    ?? .streamFailed("The stream stopped unexpectedly.")
+                self.reportStatus(.failed(playbackError))
             }
         }
         observePlaythroughToEnd(of: item)
@@ -174,9 +178,9 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
 
     private func handleItemStatus(_ status: AVPlayerItem.Status, item: AVPlayerItem) {
         if status == .failed {
-            reportStatus(.failed(.streamFailed(
-                item.error?.localizedDescription ?? "The stream stopped unexpectedly.",
-            )))
+            let error = item.error.map(PlaybackError.classifying)
+                ?? .streamFailed("The stream stopped unexpectedly.")
+            reportStatus(.failed(error))
         }
     }
 
@@ -231,6 +235,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         let session = AVAudioSession.sharedInstance()
         observeInterruptions(on: session, with: center)
         observeRouteChanges(on: session, with: center)
+        observeMediaServicesReset(with: center)
     }
 
     private func observeInterruptions(on session: AVAudioSession, with center: NotificationCenter) {
@@ -302,5 +307,21 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         // Best effort: deactivation can legitimately fail during interruption
         // races and should not block local teardown.
         try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+    }
+}
+
+private extension WatchRadioPlaybackEngine {
+    func observeMediaServicesReset(with center: NotificationCenter) {
+        mediaServicesResetObserver = center.addObserver(
+            forName: AVAudioSession.mediaServicesWereResetNotification,
+            object: nil,
+            queue: nil,
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.tearDownPlayer()
+                self.onStatusChange?(.mediaServicesReset)
+            }
+        }
     }
 }

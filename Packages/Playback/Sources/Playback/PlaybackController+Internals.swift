@@ -31,6 +31,7 @@ extension PlaybackController {
         // fail; leaving the old output alive makes pause and failure lie about
         // what the listener can still hear.
         if outputStarted {
+            retireActiveStreamGeneration()
             output.stop()
         }
         activeStation = station
@@ -146,13 +147,11 @@ extension PlaybackController {
 
     func handleStatusChange(_ update: AudioStatusUpdate) {
         guard let station = activeStation else { return }
-        if let generation = update.streamGeneration,
-           generation != activeStreamGeneration {
-            return
-        }
-        if handleSystemStatus(update.status, station: station) {
-            return
-        }
+        guard handleSystemStatusUpdate(update, station: station) == false else { return }
+        // Stream-scoped callbacks must carry the generation handed to `start`.
+        // Treating nil as a wildcard defeats the stale-callback boundary for
+        // third-party AudioOutput implementations that omit the token.
+        guard update.streamGeneration == activeStreamGeneration else { return }
 
         switch update.status {
         case .buffering:
@@ -169,6 +168,13 @@ extension PlaybackController {
         default:
             break
         }
+    }
+
+    private func handleSystemStatusUpdate(_ update: AudioStatusUpdate, station: Station) -> Bool {
+        guard update.status.isSystemWide else { return false }
+        guard update.streamGeneration == nil else { return true }
+        _ = handleSystemStatus(update.status, station: station)
+        return true
     }
 
     private func handleBuffering(for station: Station) {
@@ -195,6 +201,11 @@ extension PlaybackController {
     }
 
     private func handlePaused(for station: Station) {
+        // A delayed acknowledgement of an earlier pause must not override a
+        // newer resume/play intent. The controller stays paused while a resume
+        // is pending anyway, so only an intent that still asks for silence may
+        // drive this transition.
+        guard playbackRequested == false else { return }
         stallCeilingTimer.cancel()
         reconnectTimer.cancel()
         tapToAudioTrace?.cancel()
@@ -204,6 +215,16 @@ extension PlaybackController {
         schedulePausedRelease()
     }
 
+    /// Makes a pause visible when a failed/stalled output is already torn down
+    /// and therefore cannot acknowledge `output.pause()` itself.
+    func pauseTornDownOutputIfNeeded() -> Bool {
+        guard outputStarted == false, let station = activeStation else { return false }
+        state = .paused(station)
+        pushNowPlaying(for: station, isPlaying: false)
+        schedulePausedRelease()
+        return true
+    }
+
     private func handlePlaybackFailure(_ error: PlaybackError, for station: Station) {
         guard playbackRequested else { return }
         pausedReleaseTimer.cancel()
@@ -211,6 +232,7 @@ extension PlaybackController {
         resumeWatchdogTimer.cancel()
         tapToAudioTrace?.cancel()
         tapToAudioTrace = nil
+        retireActiveStreamGeneration()
         output.stop()
         outputStarted = false
         if error.isRetryable {
@@ -221,6 +243,12 @@ extension PlaybackController {
             state = .failed(error)
             pushNowPlaying(for: station, isPlaying: false)
         }
+    }
+
+    /// Invalidates callbacks from the currently loaded stream before teardown
+    /// or a delayed retry creates a replacement generation.
+    func retireActiveStreamGeneration() {
+        activeStreamGeneration &+= 1
     }
 
     func handleTrackInfo(_ info: AudioTrackInfo) {
@@ -343,5 +371,16 @@ extension PlaybackController {
         nowPlayingCenter.onPause = { [weak self] in self?.pause() }
         nowPlayingCenter.onStop = { [weak self] in self?.stop() }
         nowPlayingCenter.onToggle = { [weak self] in self?.togglePlayPause() }
+    }
+}
+
+private extension AudioStatus {
+    var isSystemWide: Bool {
+        switch self {
+        case .interruptionBegan, .interruptionEnded, .routeLost, .routeAvailable, .mediaServicesReset:
+            true
+        case .buffering, .playing, .paused, .failed, .endOfStream:
+            false
+        }
     }
 }

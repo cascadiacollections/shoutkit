@@ -76,6 +76,44 @@ struct PlaybackIntentBoundaryTests {
         #expect(controller.state == .playing(stationB))
     }
 
+    @Test func `unscoped stream status cannot bypass generation guard`() async {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station()], output: output)
+
+        controller.play(station())
+        await waitForStart(output)
+        controller.handleStatusChange(.playing)
+
+        #expect(controller.state == .loading(station()))
+    }
+
+    @Test func `delayed pause cannot override resumed playback`() async {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station()], output: output)
+
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        controller.pause()
+        controller.resume()
+        output.onStatusChange?(.playing)
+        output.onStatusChange?(.paused)
+
+        #expect(controller.state == .playing(station()))
+    }
+
+    @Test func `media services reset during resolution cancels pending start`() async {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station()], output: output)
+
+        controller.play(station())
+        output.onStatusChange?(.mediaServicesReset)
+        await drainMainQueue()
+
+        #expect(controller.state == .failed(.audioServicesReset))
+        #expect(output.startedURLs.isEmpty)
+    }
+
     @Test func `media services reset waits for listener before restarting`() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
@@ -83,7 +121,9 @@ struct PlaybackIntentBoundaryTests {
         controller.play(station())
         await waitForStart(output)
         output.onStatusChange?(.playing)
+        let resetGeneration = output.startedStreamGenerations[0]
         output.onStatusChange?(.mediaServicesReset)
+        output.emit(.paused, generation: resetGeneration)
 
         #expect(controller.state == .failed(.audioServicesReset))
         #expect(output.startedURLs.count == 1)

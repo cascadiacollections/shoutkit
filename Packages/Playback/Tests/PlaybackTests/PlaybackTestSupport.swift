@@ -7,7 +7,30 @@ import RadioDirectory
 
 @MainActor
 final class FakeAudioOutput: AudioOutput {
-    var onStatusChange: ((AudioStatusUpdate) -> Void)?
+    private var statusHandler: ((AudioStatusUpdate) -> Void)?
+    var onStatusChange: ((AudioStatusUpdate) -> Void)? {
+        get {
+            guard let statusHandler else { return nil }
+            return { [weak self] update in
+                guard let self else { return }
+                switch update.status {
+                case .interruptionBegan, .interruptionEnded, .routeLost, .routeAvailable, .mediaServicesReset:
+                    statusHandler(update)
+                case .buffering, .playing, .paused, .failed, .endOfStream:
+                    guard update.streamGeneration == nil,
+                          let generation = self.startedStreamGenerations.last else {
+                        statusHandler(update)
+                        return
+                    }
+                    statusHandler(AudioStatusUpdate(update.status, streamGeneration: generation))
+                }
+            }
+        }
+        set {
+            statusHandler = newValue
+        }
+    }
+
     var onTrackInfo: ((AudioTrackInfo) -> Void)?
 
     private(set) var startedURLs: [URL] = []

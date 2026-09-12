@@ -14,7 +14,8 @@
 - Existing Playback host suite: **187 tests in 20 suites passed** on Xcode 27.0, build 27A266a.
 - Four temporary boundary tests: **all four failed**, producing five failed assertions. They test the desired behavior; failures are audit evidence, not fixes. Source is preserved in `AuditBoundaryTests.swift.txt`, output in `boundary-tests.log`. They were removed from the active test target afterward.
 - This is a source and automated-check audit. No TestFlight installation, physical audio output, Bluetooth/AirPlay session, on-device crash payload, accessibility walkthrough or screenshot layout was observed. Findings below distinguish reproduced controller behavior from source-derived engine behavior and layout risks.
-- No production code was modified. Simulator Release build and directory-test results are recorded in `validation.md`.
+- At the initial audit snapshot, no production code had been modified. The resolution above and
+  `validation.md` record the production fixes applied afterward.
 
 ## Findings, ordered by impact
 

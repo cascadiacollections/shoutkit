@@ -41,7 +41,9 @@ public enum AudioStatus: Equatable, Sendable {
 
 /// An output observation tied to the stream request that produced it.
 /// System-wide events have no generation; playback, failure, metadata-adjacent,
-/// and end-of-stream events carry the generation passed to `start`.
+/// and end-of-stream events carry the generation passed to `start`. The
+/// controller ignores an unscoped stream event rather than treating `nil` as a
+/// wildcard, so custom engines must echo that token.
 public struct AudioStatusUpdate: Equatable, Sendable {
     public let status: AudioStatus
     public let streamGeneration: UInt64?

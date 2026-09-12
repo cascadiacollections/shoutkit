@@ -277,12 +277,16 @@ public final class PlaybackController {
             tapToAudioTrace?.cancel()
             tapToAudioTrace = nil
             if outputStarted {
+                retireActiveStreamGeneration()
                 output.stop()
                 outputStarted = false
             }
             state = .paused(station)
             pushNowPlaying(for: station, isPlaying: false)
             schedulePausedRelease()
+            return
+        }
+        if pauseTornDownOutputIfNeeded() {
             return
         }
         output.pause()
@@ -354,6 +358,7 @@ public final class PlaybackController {
         resumeWatchdogTimer.cancel()
         reconnectAttempts = 0
         resumeAfterRouteChange = false
+        retireActiveStreamGeneration()
         output.stop()
         activeStation = nil
         state = .idle

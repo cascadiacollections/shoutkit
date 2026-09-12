@@ -46,6 +46,7 @@ extension PlaybackController {
             guard let self,
                   case .paused = self.state,
                   self.activeStation?.id == station.id else { return }
+            self.retireActiveStreamGeneration()
             self.output.stop()
             self.outputStarted = false
             // The listener just asked for audio: give the rejoin a full budget
@@ -67,6 +68,7 @@ extension PlaybackController {
     func scheduleStallCeiling(for station: Station) {
         stallCeilingTimer.schedule(after: stallTimeout) { [weak self] in
             guard let self, case .buffering = self.state else { return }
+            self.retireActiveStreamGeneration()
             self.output.stop()
             self.outputStarted = false
             // Try to recover the stalled stream before parking it. When the
@@ -101,6 +103,7 @@ extension PlaybackController {
         // The content is spent either way, so the engine holds nothing worth
         // resuming; tear it down so `resume()` restarts rather than resuming a
         // player parked at the end of its stream.
+        retireActiveStreamGeneration()
         output.stop()
         outputStarted = false
         playbackRequested = false
