@@ -14,6 +14,9 @@ below) are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- **Holmdel now runs on Mac.** The main app has a Mac Catalyst destination with the same
+  library, search, and playback experience as iPhone and iPad. iOS-only Live Activities,
+  widgets, and the embedded Watch app stay out of the Mac build
 - **Menus now grow out of the button you pressed.** The sleep timer's duration list used to
   fade in as a panel over the top of its own button, and long-pressing a station squared off
   the corners of the card under your finger before its menu appeared. Both now animate out of

@@ -1,7 +1,8 @@
 # Holmdel
 
-Holmdel is a native SwiftUI internet-radio client for iOS and iPadOS 26+, with companion apps
-for watchOS and tvOS, built on **ShoutKit** — this repo's MIT-licensed radio SDK (`Packages/`).
+Holmdel is a SwiftUI internet-radio client for iOS and iPadOS 26+, with a Mac Catalyst build and
+companion apps for watchOS and tvOS, built on **ShoutKit** — this repo's MIT-licensed radio SDK
+(`Packages/`).
 See [TRADEMARK.md](TRADEMARK.md) for how the two names split: ShoutKit is the reusable library
 layer, Holmdel is this app's name. Holmdel ships with real,
 keyless station discovery out of the box via [Radio-Browser](https://www.radio-browser.info) — a
@@ -21,12 +22,19 @@ app whose entire job is picking up signals and letting you listen.
 - Xcode 27 with the iOS 27 SDK (to build — the MediaSession path needs the iOS 27 SDK
   to compile, even though it only runs on iOS 27 devices)
 - Swift 6 strict concurrency
-- iOS / iPadOS 26.0+ deployment target; watchOS 26.0+ and tvOS 26.0+ for the companion apps
+- iOS / iPadOS 26.0+ deployment target; macOS 26.0+ through Mac Catalyst; watchOS 26.0+ and
+  tvOS 26.0+ for the companion apps
 
 If your active developer directory points at Command Line Tools, build with:
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel -destination 'generic/platform=iOS Simulator' build
+```
+
+For the Mac build, select **My Mac (Mac Catalyst)** in Xcode or use:
+
+```sh
+DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel -destination 'platform=macOS,variant=Mac Catalyst' build
 ```
 
 ## Station discovery
@@ -80,7 +88,7 @@ SHOUTCAST_DEV_KEY = your_key_here
 
 ## Architecture
 
-- `HolmdelApp`: thin SwiftUI app targets — the iPhone/iPad app keeps app-level wiring in
+- `HolmdelApp`: thin SwiftUI app targets — the shared iPhone/iPad/Mac Catalyst app keeps app-level wiring in
   `AppDependencies.bootstrap()` (shared between the scene and App Intents), while the watch app
   carries a separate minimal service graph for native watch playback. The phone app provides the
   3-tab root shell (Listen Now · Search · Favorites) with the persistent mini-player and
@@ -103,7 +111,7 @@ SHOUTCAST_DEV_KEY = your_key_here
   `AudioStreamingPlaybackEngine`, AVAudioEngine-backed via the MIT-licensed
   [AudioStreaming](https://github.com/dimitris-c/AudioStreaming) library — with audio-session
   ownership (interruptions, route changes, media-services reset) and the equalizer attach point.
-  iOS-only and linked by the app target alone: AudioStreaming pulls the ogg/vorbis xcframeworks,
+  iOS and Mac Catalyst only, linked by the app target alone: AudioStreaming pulls the ogg/vorbis xcframeworks,
   which have no watchOS slice, and SwiftPM fetches binary artifacts regardless of platform
   conditions. The watch app supplies its own `AVPlayer`-backed engine.
 - `Packages/Persistence`: SwiftData models and `LibraryStore` for favorites and recents.
