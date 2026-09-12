@@ -51,14 +51,37 @@ public struct AudioStatusUpdate: Equatable, Sendable {
         self.streamGeneration = streamGeneration
     }
 
-    public static var buffering: Self { Self(.buffering) }
-    public static var playing: Self { Self(.playing) }
-    public static var paused: Self { Self(.paused) }
-    public static var endOfStream: Self { Self(.endOfStream) }
-    public static var interruptionBegan: Self { Self(.interruptionBegan) }
-    public static var routeLost: Self { Self(.routeLost) }
-    public static var routeAvailable: Self { Self(.routeAvailable) }
-    public static var mediaServicesReset: Self { Self(.mediaServicesReset) }
+    public static var buffering: Self {
+        Self(.buffering)
+    }
+
+    public static var playing: Self {
+        Self(.playing)
+    }
+
+    public static var paused: Self {
+        Self(.paused)
+    }
+
+    public static var endOfStream: Self {
+        Self(.endOfStream)
+    }
+
+    public static var interruptionBegan: Self {
+        Self(.interruptionBegan)
+    }
+
+    public static var routeLost: Self {
+        Self(.routeLost)
+    }
+
+    public static var routeAvailable: Self {
+        Self(.routeAvailable)
+    }
+
+    public static var mediaServicesReset: Self {
+        Self(.mediaServicesReset)
+    }
 
     public static func failed(_ error: PlaybackError) -> Self {
         Self(.failed(error))
