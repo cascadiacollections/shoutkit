@@ -145,7 +145,7 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
         let services = AppDependencies.bootstrap()
         // Best effort: returning an empty suggestion list is preferable to
         // failing the Shortcuts picker for transient network errors.
-        let stations = await (try? services.directory.searchStations(matching: string, limit: 10)) ?? []
+        let stations = (try? await services.directory.searchStations(matching: string, limit: 10)) ?? []
         let entities = stations.map(StationEntity.init(station:))
         // Remember search results so a shortcut saved against one still resolves
         // by id after the search context is gone.

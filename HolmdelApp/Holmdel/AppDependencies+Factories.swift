@@ -113,7 +113,7 @@ extension AppDependencies {
             snapshotStore: snapshotStore,
             // Geo-filtered results are only reusable while that filter still applies.
             snapshotIdentity: {
-                await "radio-browser;" + (geoFilterProvider.currentGeoFilter()?.snapshotIdentity ?? "unfiltered")
+                "radio-browser;" + ((await geoFilterProvider.currentGeoFilter())?.snapshotIdentity ?? "unfiltered")
             },
         )
         return DirectoryServices(

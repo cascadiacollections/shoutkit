@@ -86,7 +86,7 @@ struct BrowseSavedContentTests {
         #expect(viewModel.refreshError == nil)
     }
 
-    @Test func `saved content survives A failed fetch`() async {
+    @Test func `saved content survives a failed fetch`() async {
         let directory = FakeRadioDirectory()
         await directory.setTopStationsResult(.failure(.transport("offline")))
         let viewModel = BrowseViewModel(
@@ -137,7 +137,7 @@ struct BrowseSavedContentTests {
         #expect(content.stations.map(\.id) == ["saved"])
     }
 
-    @Test func `user initiated refresh skips saved content and forces A fetch`() async {
+    @Test func `user initiated refresh skips saved content and forces a fetch`() async {
         let directory = FakeRadioDirectory()
         await directory.setTopStationsResult(.success([.fixture(id: "live", name: "Live Station")]))
         let cache = FakeDiscoveryCache(state: savedState(isFresh: true))
@@ -157,7 +157,7 @@ struct BrowseSavedContentTests {
         #expect(await directory.topStationsCallCount == 1)
     }
 
-    @Test func `refresh without A cache behaves like A plain live fetch`() async {
+    @Test func `refresh without a cache behaves like a plain live fetch`() async {
         let directory = FakeRadioDirectory()
         await directory.setTopStationsResult(.success([.fixture(id: "live", name: "Live Station")]))
         let viewModel = BrowseViewModel(

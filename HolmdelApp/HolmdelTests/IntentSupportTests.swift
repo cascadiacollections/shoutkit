@@ -46,7 +46,7 @@ struct IntentSupportTests {
         #expect(entity.providerName == nil)
     }
 
-    @Test func `station entity round trips back to A playable station`() {
+    @Test func `station entity round trips back to a playable station`() {
         let original = makeStation()
         let restored = StationEntity(station: original).station
 
@@ -57,7 +57,7 @@ struct IntentSupportTests {
         #expect(restored.preferredStreamURL == original.preferredStreamURL)
     }
 
-    @Test func `station entity tolerates missing UR ls`() {
+    @Test func `station entity tolerates missing URLs`() {
         let entity = StationEntity(station: makeStation(artwork: nil, stream: nil))
         let restored = entity.station
 
