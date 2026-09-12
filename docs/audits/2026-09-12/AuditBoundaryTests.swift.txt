@@ -1,0 +1,52 @@
+import Foundation
+@testable import Playback
+import Testing
+
+@MainActor
+struct AuditBoundaryTests {
+    @Test func pauseAfterStartBeforeStatusMustSilenceOutput() async {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station()], output: output)
+        controller.play(station())
+        await waitForStart(output)
+        #expect(output.startedURLs.count == 1)
+        controller.pause()
+        #expect(output.pauseCount + output.stopCount > 0)
+        controller.stop()
+    }
+
+    @Test func switchingThenPausingMustSilencePreviousStation() async {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station("a"), station("b")], output: output)
+        controller.play(station("a"))
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        controller.play(station("b"))
+        controller.pause()
+        #expect(output.pauseCount + output.stopCount > 0)
+        controller.stop()
+    }
+
+    @Test func permanentStreamFailureMustNotReconnect() async {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station()], output: output)
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.failed(.stationNotAvailable(errorCode: 404)))
+        #expect(controller.state == .failed(.stationNotAvailable(errorCode: 404)))
+        #expect(controller.reconnectAttempts == 0)
+        controller.stop()
+    }
+
+    @Test func latePlayingAfterPauseMustNotOverrideUserIntent() async {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station()], output: output)
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        controller.pause()
+        output.onStatusChange?(.playing)
+        #expect(controller.state == .paused(station()))
+        controller.stop()
+    }
+}

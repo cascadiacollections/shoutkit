@@ -8,7 +8,7 @@ import Testing
 /// without pulling in AudioStreaming, AVFoundation, or CoreMotion.
 @MainActor
 private final class FakeRadioPlaybackEngine: RadioPlaybackEngine {
-    var onStatusChange: ((AudioStatus) -> Void)?
+    var onStatusChange: ((AudioStatusUpdate) -> Void)?
     var onTrackInfo: ((AudioTrackInfo) -> Void)?
     let supportsSpatialAudio: Bool
     private(set) var spatialAudioStates: [Bool] = []

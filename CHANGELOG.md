@@ -49,6 +49,17 @@ below) are documented here. The format follows
   See `DECISIONS.md` (2026-08-24) and `TRADEMARK.md`.
 
 ### Fixed
+- **Pause now always means silence, even while a station is connecting or switching.** Late
+  callbacks from an old connection can no longer restart audio, replace the current station's
+  status, or trigger another retry after the listener has paused. Switching stations also stops
+  the outgoing stream before the next address is resolved
+- **Failed and stalled streams explain what is happening and offer the right next action.** The
+  player now shows reconnecting while it retries, gives up sooner when a stream is stuck, and
+  changes its main control to Retry for failures that need a tap. An iOS audio-system reset also
+  stays stopped until the listener chooses to resume
+- **Now Playing remains usable in landscape and with larger text.** Its content scrolls when it
+  needs more room, controls adapt to compact heights, and error controls expose accurate VoiceOver
+  labels instead of announcing Play or Pause for a retry or dismissal action
 - **The app no longer quits if the audio system restarts while a station is failing to
   connect.** iOS occasionally restarts its audio system out from under an app, and Holmdel
   rebuilds its player when that happens. If a station happened to be in the middle of

@@ -62,9 +62,8 @@ extension PlaybackController {
     /// Bounds how long a stalled stream may sit buffering — AVPlayer's
     /// `automaticallyWaitsToMinimizeStalling` otherwise retries a stalled
     /// live stream forever, churning the network radio in the background.
-    /// The stream is parked as `.paused` rather than `.failed`: a stall isn't
-    /// a user error, and paused keeps the lock screen accurate with a play
-    /// button that routes to the restart path.
+    /// After bounded recovery, the stream surfaces a recoverable stall error so
+    /// the listener knows why audio stopped and has an explicit Retry action.
     func scheduleStallCeiling(for station: Station) {
         stallCeilingTimer.schedule(after: stallTimeout) { [weak self] in
             guard let self, case .buffering = self.state else { return }
@@ -75,7 +74,7 @@ extension PlaybackController {
             // and pushes the lock-screen surface (teardown above suppressed the
             // player's own `.paused` callback). No paused-release is scheduled
             // on the give-up path: the player and session are already gone.
-            self.attemptReconnect(for: station, fallback: .paused(station))
+            self.attemptReconnect(for: station, fallback: .failed(.streamStalled))
         }
     }
 
@@ -105,6 +104,8 @@ extension PlaybackController {
         // player parked at the end of its stream.
         output.stop()
         outputStarted = false
+        playbackRequested = false
+        isReconnecting = false
         // Ending cleanly is a success, not a drop: the next real failure gets a
         // full budget rather than whatever this play-through left behind.
         reconnectAttempts = 0
@@ -117,6 +118,7 @@ extension PlaybackController {
             return
         }
 
+        playbackRequested = true
         startPlayback(of: station, isReconnect: true)
     }
 
@@ -127,14 +129,18 @@ extension PlaybackController {
     /// terminal state we'd have shown with no reconnect at all — is applied and
     /// the lock-screen surface is refreshed to match.
     func attemptReconnect(for station: Station, fallback: PlaybackState) {
+        guard playbackRequested else { return }
         guard reconnectAttempts < maxReconnectAttempts else {
             reconnectAttempts = 0
+            playbackRequested = false
+            isReconnecting = false
             state = fallback
             pushNowPlaying(for: station, isPlaying: false)
             return
         }
 
         reconnectAttempts += 1
+        isReconnecting = true
         // Exponential backoff: base × 1, 2, 4, … so a flapping network isn't
         // hammered and the budget spans a useful window.
         let delay = reconnectBaseDelay * (1 << (reconnectAttempts - 1))
@@ -143,6 +149,7 @@ extension PlaybackController {
         state = .buffering(station)
         reconnectTimer.schedule(after: delay) { [weak self] in
             guard let self, self.activeStation?.id == station.id else { return }
+            guard self.playbackRequested else { return }
             self.startPlayback(of: station, isReconnect: true)
         }
     }

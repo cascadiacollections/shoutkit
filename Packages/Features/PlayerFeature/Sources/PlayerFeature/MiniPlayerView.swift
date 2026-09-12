@@ -92,7 +92,7 @@ public struct MiniPlayerView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(isPlaying(playback) ? "Pause" : "Play")
+            .accessibilityLabel(transportLabel(playback))
         }
         .padding(.horizontal, ShoutKitSpacing.small)
         .padding(.vertical, ShoutKitSpacing.extraSmall)
@@ -106,9 +106,11 @@ public struct MiniPlayerView: View {
     private func playPauseIcon(_ playback: PlaybackController) -> some View {
         switch playback.state {
         case .loading, .buffering:
-            ProgressView().controlSize(.small)
+            Image(systemName: "xmark")
         case .playing:
             Image(systemName: "pause.fill")
+        case .failed:
+            Image(systemName: "arrow.clockwise")
         default:
             Image(systemName: "play.fill")
         }
@@ -124,7 +126,7 @@ public struct MiniPlayerView: View {
     private func secondaryLine(_ playback: PlaybackController) -> String {
         switch playback.state {
         case .loading, .buffering:
-            return "Connecting…"
+            return playback.isReconnecting ? "Reconnecting…" : "Connecting…"
         case let .failed(error):
             return error.shortUserMessage
         default:
@@ -135,6 +137,19 @@ public struct MiniPlayerView: View {
                 return title
             }
             return playback.currentStation?.genre ?? "Live radio"
+        }
+    }
+
+    private func transportLabel(_ playback: PlaybackController) -> String {
+        switch playback.state {
+        case .loading, .buffering:
+            "Cancel connection"
+        case .playing:
+            "Pause"
+        case .failed:
+            "Retry"
+        case .paused, .idle:
+            "Play"
         }
     }
 }

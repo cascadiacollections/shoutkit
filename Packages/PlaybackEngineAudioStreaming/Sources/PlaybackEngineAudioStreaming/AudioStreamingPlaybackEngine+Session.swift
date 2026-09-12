@@ -189,7 +189,7 @@ extension AudioStreamingPlaybackEngine {
                     // A pending activation retry belongs to the state before the
                     // interruption, and the session isn't ours to take during one.
                     self.cancelPendingSessionActivation()
-                    self.onStatusChange?(.interruptionBegan)
+                    self.onStatusChange?(AudioStatusUpdate(.interruptionBegan))
                 case .ended:
                     // Read live rather than captured: `AVAudioSession` isn't
                     // Sendable, and this is the moment the answer matters.
@@ -200,10 +200,10 @@ extension AudioStreamingPlaybackEngine {
                         otherAudioIsPlaying: \(otherAudioIsPlaying, privacy: .public))
                         """,
                     )
-                    self.onStatusChange?(.interruptionEnded(
+                    self.onStatusChange?(AudioStatusUpdate(.interruptionEnded(
                         shouldResume: shouldResume,
                         otherAudioIsPlaying: otherAudioIsPlaying,
-                    ))
+                    )))
                 @unknown default:
                     break
                 }
@@ -229,9 +229,9 @@ extension AudioStreamingPlaybackEngine {
                 case .oldDeviceUnavailable:
                     // Headphones unplugged: pause rather than continue on the speaker.
                     guard self.isPlayerActive else { return }
-                    self.onStatusChange?(.routeLost)
+                    self.onStatusChange?(AudioStatusUpdate(.routeLost))
                 case .newDeviceAvailable:
-                    self.onStatusChange?(.routeAvailable)
+                    self.onStatusChange?(AudioStatusUpdate(.routeAvailable))
                 case .unknown, .categoryChange, .override, .wakeFromSleep,
                      .noSuitableRouteForCategory, .routeConfigurationChange:
                     break
@@ -306,9 +306,10 @@ extension AudioStreamingPlaybackEngine {
         configureSession()
         reattachEqualizerIfNeeded()
         reattachSpatialAudioIfNeeded()
-        // Nothing was playing: there is nothing to recover, and reporting a
-        // failure would surface an error the listener never provoked.
+        // Nothing had been selected: there is no listener-visible state to
+        // update. Otherwise announce the reset without restarting playback;
+        // Apple requires a new user action before media processing resumes.
         guard didRequestStop == false, currentURL != nil else { return }
-        reportFailure(.streamFailed("Audio services restarted."))
+        onStatusChange?(AudioStatusUpdate(.mediaServicesReset))
     }
 }

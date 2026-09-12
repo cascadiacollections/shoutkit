@@ -1,5 +1,44 @@
 # Decisions
 
+## 2026-09-12 (playback intent owns asynchronous engine observations)
+
+The TestFlight playback audit exposed four related boundary failures: an output could start
+while the controller still said `.loading`, a station switch abandoned the old output before
+the new URL resolved, a late engine callback could reverse a listener's pause, and every
+engine failure spent the reconnect budget even when its typed error was permanent. The same
+review found that a media-services reset automatically rejoined paused audio, contrary to the
+listener's intent and Apple's requirement to wait for a new user action.
+
+**Every stream observation now carries the generation passed to `AudioOutput.start`.**
+`AudioStatusUpdate` applies the metadata generation contract to buffering, playing, paused,
+failure and end-of-stream too. Session-wide interruption, route and media-reset events remain
+unscoped. The controller rejects a mismatched generation and also keeps an explicit
+`playbackRequested` intent bit, so even an unattributed or unusually late callback cannot
+produce audio after Pause. The AudioStreaming adapter captures the generation before its
+main-actor hop, and the watch AVPlayer adapter attaches its active generation to observations.
+
+**A new station stops the owned output before resolution begins.** This gives pause,
+resolution failure and interruption a truthful ownership model: no previous station can keep
+playing behind the next station's loading or failed UI. The loading-pause path also stops an
+output whose `start` completed before the first asynchronous status arrived.
+
+**Recovery respects the error and the listener.** Nonretryable stream errors now fail
+immediately. A media-services reset rebuilds the engine but emits a dedicated reset event;
+the controller parks on a one-tap Resume error and never reactivates audio itself. Stall
+ceilings drop from 90 to 30 seconds per attempt, retain the existing three-retry budget, and
+end in a named, retryable stall error instead of an unexplained pause. The UI distinguishes
+Connecting from Reconnecting.
+
+**The transport and layout describe their real behavior.** Loading controls show a cancel
+glyph and announce “Cancel connection”; failures show and announce Retry. The full player is
+scrollable, sizes artwork from available height, uses a side-by-side compact landscape layout,
+and keeps a vertical scroll fallback for accessibility text sizes. This supersedes the
+2026-07-10 decision that a stalled stream should park as `.paused`: making the failure visible
+is necessary for a listener to understand the silence and recover it deliberately.
+
+Regression coverage lives in `PlaybackIntentBoundaryTests`; the Playback host suite grew from
+187 to 194 tests.
+
 ## 2026-09-07 (a media-services reset must stop the player it discards: AudioStreaming's timer `deinit` aborts the process)
 
 `handleMediaServicesReset()` replaced `player` with a fresh `AudioPlayer` and let the old

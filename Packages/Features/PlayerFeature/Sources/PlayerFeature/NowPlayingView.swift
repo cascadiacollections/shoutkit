@@ -34,6 +34,7 @@ public struct NowPlayingView: View {
     /// default size are hard to hit. `.largeTitle` rather than `.body` so it
     /// scales at the rate of the display text it sits under, not body copy.
     @ScaledMetric(relativeTo: .largeTitle) private var playPauseHeight: CGFloat = 64
+    @Environment(\.dynamicTypeSize) var dynamicTypeSize
 
     public init() {}
 
@@ -69,7 +70,7 @@ public struct NowPlayingView: View {
         }
     }
 
-    private var effectiveArtwork: EffectiveArtworkSelection {
+    var effectiveArtwork: EffectiveArtworkSelection {
         PlayerFeature.effectiveArtworkSelection(
             settings: settings,
             playback: playback,
@@ -98,40 +99,19 @@ public struct NowPlayingView: View {
     }
 
     private func content(playback: PlaybackController, station: Station) -> some View {
-        VStack(spacing: ShoutKitSpacing.large) {
-            grabberSpacer
-
-            // Balanced, not top-anchored. With a single `Spacer` above the
-            // transport row, everything piled against the top of the sheet and
-            // left one tall void in the middle of the screen — most visible on
-            // a station with no track line, which is most live radio. A spacer
-            // on each side splits that space, so the artwork sits where the eye
-            // already is and the transport stays pinned to the bottom.
-            Spacer(minLength: 0)
-
-            HeroArtworkView(
-                artworkURL: effectiveArtwork.primaryURL,
-                fallbackArtworkURL: effectiveArtwork.fallbackURL,
-                size: 272,
-                isPlaying: isPlaying(playback),
-            )
-
-            titleBlock(playback: playback, station: station)
-
-            statusBadge(playback)
-
-            Spacer(minLength: 0)
-
-            transportControls(playback: playback, station: station)
-
-            routePicker
-                .padding(.bottom, ShoutKitSpacing.large)
+        GeometryReader { proxy in
+            ScrollView {
+                if proxy.size.width > proxy.size.height, !dynamicTypeSize.isAccessibilitySize {
+                    compactContent(playback: playback, station: station, size: proxy.size)
+                } else {
+                    verticalContent(playback: playback, station: station, size: proxy.size)
+                }
+            }
+            .scrollBounceBehavior(.basedOnSize)
         }
-        .padding(.horizontal, ShoutKitSpacing.large)
-        .frame(maxWidth: .infinity)
     }
 
-    private var grabberSpacer: some View {
+    var grabberSpacer: some View {
         Color.clear.frame(height: ShoutKitSpacing.small)
     }
 
@@ -140,7 +120,7 @@ public struct NowPlayingView: View {
     /// text with no anchor is fine for one line and starts drifting as soon as a
     /// long station name and a long track title disagree about how many they
     /// need.
-    private func titleBlock(playback: PlaybackController, station: Station) -> some View {
+    func titleBlock(playback: PlaybackController, station: Station) -> some View {
         HStack(alignment: .top, spacing: ShoutKitSpacing.small) {
             VStack(alignment: .leading, spacing: ShoutKitSpacing.extraSmall) {
                 Text(station.name)
@@ -192,17 +172,17 @@ public struct NowPlayingView: View {
         .accessibilityLabel("More")
     }
 
-    private var routePicker: some View {
+    var routePicker: some View {
         RoutePickerView(tintColor: .secondaryLabel, activeTintColor: UIColor(accent))
             .frame(width: 44, height: 44)
             .accessibilityLabel("AirPlay and output devices")
     }
 
     @ViewBuilder
-    private func statusBadge(_ playback: PlaybackController) -> some View {
+    func statusBadge(_ playback: PlaybackController) -> some View {
         switch playback.state {
         case .loading, .buffering:
-            Label("Connecting", systemImage: "waveform")
+            Label(playback.isReconnecting ? "Reconnecting" : "Connecting", systemImage: "waveform")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
         case .playing:
@@ -234,7 +214,7 @@ public struct NowPlayingView: View {
     /// sit apart that would fuse a circle, a wide capsule and a capsule into a
     /// single pill. Zero buys the shared rendering context and the morph without
     /// buying a redesign.
-    private func transportControls(playback: PlaybackController, station: Station) -> some View {
+    func transportControls(playback: PlaybackController, station: Station) -> some View {
         GlassEffectContainer(spacing: 0) {
             HStack(spacing: ShoutKitSpacing.medium) {
                 favoriteButton(station: station)
@@ -266,7 +246,7 @@ public struct NowPlayingView: View {
         .buttonStyle(.glassProminent)
         .buttonBorderShape(.capsule)
         .glassEffectID(TransportGlassID.playPause, in: transportGlass)
-        .accessibilityLabel(isPlaying(playback) ? "Pause" : "Play")
+        .accessibilityLabel(transportLabel(playback))
     }
 
     @ViewBuilder
@@ -292,15 +272,17 @@ public struct NowPlayingView: View {
     private func playPauseIcon(_ playback: PlaybackController) -> some View {
         switch playback.state {
         case .loading, .buffering:
-            ProgressView().controlSize(.large)
+            Image(systemName: "xmark")
         case .playing:
             Image(systemName: "pause.fill")
+        case .failed:
+            Image(systemName: "arrow.clockwise")
         default:
             Image(systemName: "play.fill")
         }
     }
 
-    private func isPlaying(_ playback: PlaybackController) -> Bool {
+    func isPlaying(_ playback: PlaybackController) -> Bool {
         if case .playing = playback.state {
             return true
         }
@@ -313,6 +295,19 @@ public struct NowPlayingView: View {
             return "\(title) — \(artist)"
         }
         return title
+    }
+
+    private func transportLabel(_ playback: PlaybackController) -> String {
+        switch playback.state {
+        case .loading, .buffering:
+            "Cancel connection"
+        case .playing:
+            "Pause"
+        case .failed:
+            "Retry"
+        case .paused, .idle:
+            "Play"
+        }
     }
 }
 

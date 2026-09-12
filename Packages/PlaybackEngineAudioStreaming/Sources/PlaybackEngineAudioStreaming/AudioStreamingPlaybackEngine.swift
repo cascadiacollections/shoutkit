@@ -21,14 +21,14 @@ import Playback
 public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     static let logger = Logger(subsystem: "ShoutKit.Playback", category: "AudioStreamingPlaybackEngine")
 
-    public var onStatusChange: ((AudioStatus) -> Void)?
+    public var onStatusChange: ((AudioStatusUpdate) -> Void)?
     public var onTrackInfo: ((AudioTrackInfo) -> Void)?
 
     /// `var`, not `let`: a media-services reset invalidates every audio object in
     /// the process (including the `AVAudioEngine` inside this player), so
     /// recovering means building a new one — see `handleMediaServicesReset()`.
     var player = AudioPlayer()
-    private let streamGeneration = OSAllocatedUnfairLock(initialState: UInt64.zero)
+    let streamGeneration = OSAllocatedUnfairLock(initialState: UInt64.zero)
     var sessionDeactivationTask: Task<Void, Never>?
     var sessionActivationTask: Task<Void, Never>?
 
@@ -45,15 +45,15 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     /// One failure report per stream. A single collapse can surface as both an
     /// `AudioPlayerError` and a `.stopped` transition, and each report the
     /// controller sees spends another of its bounded reconnect attempts.
-    private var hasReportedFailure = false
+    var hasReportedFailure = false
 
     /// One end-of-stream report per stream, for the same reason, and doubling as
     /// the "this stop is accounted for" flag ``handleUnexpectedStop()`` reads.
-    private var hasReportedEndOfStream = false
+    var hasReportedEndOfStream = false
 
     /// The pending classification of a stop we haven't attributed yet — see
     /// ``handleUnexpectedStop()`` for why the decision waits.
-    private var stopClassificationTask: Task<Void, Never>?
+    var stopClassificationTask: Task<Void, Never>?
 
     /// The in-flight volume ramp from a silent rejoin up to full volume — see
     /// AudioStreamingPlaybackEngine+VolumeRamp.swift. `internal` rather than
@@ -150,7 +150,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         cancelPendingSessionActivation()
         volumeRampTask?.cancel()
         player.pause()
-        onStatusChange?(.paused)
+        reportStatus(.paused)
     }
 
     public func resume() {
@@ -197,7 +197,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         // already `.bufferring` when a stalled stream is rejoined), so the
         // transition out of paused has to be reported here or the controller
         // would keep waiting for a callback that never comes.
-        onStatusChange?(.buffering)
+        reportStatus(.buffering)
         player.play(url: currentURL)
     }
 
@@ -239,22 +239,6 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
             guard self.didRequestStop == false, self.player.state == .stopped else { return }
             self.reportFailure(.streamFailed("The stream ended unexpectedly."))
         }
-    }
-
-    func reportFailure(_ error: PlaybackError) {
-        guard hasReportedFailure == false, hasReportedEndOfStream == false else { return }
-        hasReportedFailure = true
-        stopClassificationTask?.cancel()
-        onStatusChange?(.failed(error))
-    }
-
-    /// The stream played through to the end of its content. Claims the pending
-    /// stop classification so the same ending isn't also reported as a failure.
-    private func reportEndOfStream() {
-        guard hasReportedEndOfStream == false, hasReportedFailure == false else { return }
-        hasReportedEndOfStream = true
-        stopClassificationTask?.cancel()
-        onStatusChange?(.endOfStream)
     }
 
     /// Whether a finished entry played all the way to the end of its content.
@@ -331,15 +315,16 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
         with newState: AudioPlayerState,
         previous _: AudioPlayerState,
     ) {
+        let generation = streamGeneration.withLock { $0 }
         executeOnMainActor(for: player) {
             switch newState {
             case .playing:
                 self.fadeInVolume()
-                self.onStatusChange?(.playing)
+                self.reportStatus(.playing, generation: generation)
             case .bufferring:
-                self.onStatusChange?(.buffering)
+                self.reportStatus(.buffering, generation: generation)
             case .paused:
-                self.onStatusChange?(.paused)
+                self.reportStatus(.paused, generation: generation)
             case .stopped:
                 self.handleUnexpectedStop()
             case .ready, .running, .error, .disposed:
@@ -364,14 +349,16 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
     ) {
         guard stopReason == .eof,
               Self.playedToEndOfContent(progress: progress, duration: duration) else { return }
+        let generation = streamGeneration.withLock { $0 }
         executeOnMainActor(for: player) {
-            self.reportEndOfStream()
+            self.reportEndOfStream(generation: generation)
         }
     }
 
     public nonisolated func audioPlayerUnexpectedError(player: AudioPlayer, error: AudioPlayerError) {
+        let generation = streamGeneration.withLock { $0 }
         executeOnMainActor(for: player) {
-            self.reportFailure(Self.classify(error))
+            self.reportFailure(Self.classify(error), generation: generation)
         }
     }
 

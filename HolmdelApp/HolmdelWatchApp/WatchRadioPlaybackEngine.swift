@@ -4,7 +4,7 @@ import Playback
 
 @MainActor
 final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
-    var onStatusChange: ((AudioStatus) -> Void)?
+    var onStatusChange: ((AudioStatusUpdate) -> Void)?
     var onTrackInfo: ((AudioTrackInfo) -> Void)?
 
     private var player: AVPlayer?
@@ -14,6 +14,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     private var playedToEndObserver: NSObjectProtocol?
     private var interruptionObserver: NSObjectProtocol?
     private var routeChangeObserver: NSObjectProtocol?
+    private var activeStreamGeneration: UInt64 = 0
 
     override init() {
         super.init()
@@ -34,8 +35,9 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     /// callbacks from a superseded stream after a fast station switch (see
     /// AudioStreamingPlaybackEngine). This engine emits no track info, so it only
     /// needs to satisfy the `AudioOutput` signature.
-    func start(url: URL, streamGeneration _: UInt64) {
+    func start(url: URL, streamGeneration: UInt64) {
         tearDownPlayer()
+        activeStreamGeneration = streamGeneration
 
         let item = AVPlayerItem(url: url)
         let player = AVPlayer(playerItem: item)
@@ -44,7 +46,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         observe(player: player, item: item)
 
         self.player = player
-        onStatusChange?(.buffering)
+        reportStatus(.buffering)
         activateAudioSession { [weak self] in
             guard let self, self.player === player else { return }
             player.play()
@@ -53,7 +55,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
 
     func pause() {
         player?.pause()
-        onStatusChange?(.paused)
+        reportStatus(.paused)
     }
 
     func resume() {
@@ -116,7 +118,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
                 let message = reportedError?.localizedDescription
                     ?? failedItem.error?.localizedDescription
                     ?? "The stream stopped unexpectedly."
-                self.onStatusChange?(.failed(.streamFailed(message)))
+                self.reportStatus(.failed(.streamFailed(message)))
             }
         }
         observePlaythroughToEnd(of: item)
@@ -142,7 +144,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
                 guard let self,
                       let endedItem,
                       self.player?.currentItem === endedItem else { return }
-                self.onStatusChange?(.endOfStream)
+                self.reportStatus(.endOfStream)
             }
         }
     }
@@ -151,11 +153,11 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         switch status {
         case .paused:
             guard player?.currentItem != nil else { return }
-            onStatusChange?(.paused)
+            reportStatus(.paused)
         case .waitingToPlayAtSpecifiedRate:
-            onStatusChange?(.buffering)
+            reportStatus(.buffering)
         case .playing:
-            onStatusChange?(.playing)
+            reportStatus(.playing)
         @unknown default:
             break
         }
@@ -163,10 +165,14 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
 
     private func handleItemStatus(_ status: AVPlayerItem.Status, item: AVPlayerItem) {
         if status == .failed {
-            onStatusChange?(.failed(.streamFailed(
+            reportStatus(.failed(.streamFailed(
                 item.error?.localizedDescription ?? "The stream stopped unexpectedly.",
             )))
         }
+    }
+
+    private func reportStatus(_ status: AudioStatus) {
+        onStatusChange?(AudioStatusUpdate(status, streamGeneration: activeStreamGeneration))
     }
 
     private func tearDownPlayer() {

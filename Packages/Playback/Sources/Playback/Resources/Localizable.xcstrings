@@ -1,9 +1,15 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Audio restarted. Tap to resume.": {},
+    "Audio services restarted.": {},
     "No connection": {},
     "No internet connection. Check your network and try again.": {},
     "Stream error": {},
+    "Stream stalled": {},
+    "Tap to resume": {},
+    "The stream stopped responding.": {},
+    "The stream stopped responding. Tap to retry.": {},
     "The stream stopped unexpectedly. Tap to retry.": {},
     "This station isn't available right now. Try again later.": {},
     "Unavailable": {},

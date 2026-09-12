@@ -94,8 +94,10 @@ struct PlaybackReconnectTests {
         output.onStatusChange?(.playing)
 
         output.onStatusChange?(.failed(.streamFailed("drop")))
+        #expect(controller.isReconnecting)
         await waitUntil { output.startedURLs.count == 2 }
         output.onStatusChange?(.playing) // recovered → budget refreshes
+        #expect(controller.isReconnecting == false)
         output.onStatusChange?(.failed(.streamFailed("drop")))
         await waitUntil { output.startedURLs.count == 3 }
 

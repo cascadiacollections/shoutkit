@@ -7,7 +7,7 @@ import RadioDirectory
 
 @MainActor
 final class FakeAudioOutput: AudioOutput {
-    var onStatusChange: ((AudioStatus) -> Void)?
+    var onStatusChange: ((AudioStatusUpdate) -> Void)?
     var onTrackInfo: ((AudioTrackInfo) -> Void)?
 
     private(set) var startedURLs: [URL] = []
@@ -54,6 +54,10 @@ final class FakeAudioOutput: AudioOutput {
     func emitTrackInfo(_ title: String?, _ artist: String?) {
         let generation = startedStreamGenerations.last ?? 0
         onTrackInfo?(AudioTrackInfo(title: title, artist: artist, streamGeneration: generation))
+    }
+
+    func emit(_ status: AudioStatus, generation: UInt64? = nil) {
+        onStatusChange?(AudioStatusUpdate(status, streamGeneration: generation))
     }
 }
 
@@ -171,7 +175,7 @@ func makeController(
     output: FakeAudioOutput,
     presenter: NowPlayingPresenterSpy = NowPlayingPresenterSpy(),
     pausedReleaseTimeout: Duration = .seconds(10 * 60),
-    stallTimeout: Duration = .seconds(90),
+    stallTimeout: Duration = .seconds(30),
     maxReconnectAttempts: Int = 3,
     reconnectBaseDelay: Duration = .seconds(2),
     resumeWatchdogTimeout: Duration = .seconds(2),

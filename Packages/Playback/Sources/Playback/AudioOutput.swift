@@ -34,6 +34,39 @@ public enum AudioStatus: Equatable, Sendable {
     case routeLost
     /// A new audio route became available.
     case routeAvailable
+    /// The system rebuilt its media services. Audio objects have been
+    /// recreated, but playback must wait for a fresh listener action.
+    case mediaServicesReset
+}
+
+/// An output observation tied to the stream request that produced it.
+/// System-wide events have no generation; playback, failure, metadata-adjacent,
+/// and end-of-stream events carry the generation passed to `start`.
+public struct AudioStatusUpdate: Equatable, Sendable {
+    public let status: AudioStatus
+    public let streamGeneration: UInt64?
+
+    public init(_ status: AudioStatus, streamGeneration: UInt64? = nil) {
+        self.status = status
+        self.streamGeneration = streamGeneration
+    }
+
+    public static var buffering: Self { Self(.buffering) }
+    public static var playing: Self { Self(.playing) }
+    public static var paused: Self { Self(.paused) }
+    public static var endOfStream: Self { Self(.endOfStream) }
+    public static var interruptionBegan: Self { Self(.interruptionBegan) }
+    public static var routeLost: Self { Self(.routeLost) }
+    public static var routeAvailable: Self { Self(.routeAvailable) }
+    public static var mediaServicesReset: Self { Self(.mediaServicesReset) }
+
+    public static func failed(_ error: PlaybackError) -> Self {
+        Self(.failed(error))
+    }
+
+    public static func interruptionEnded(shouldResume: Bool, otherAudioIsPlaying: Bool) -> Self {
+        Self(.interruptionEnded(shouldResume: shouldResume, otherAudioIsPlaying: otherAudioIsPlaying))
+    }
 }
 
 /// A live "now playing" track update parsed from a stream's ICY metadata.
@@ -80,7 +113,7 @@ public struct AudioTrackInfo: Equatable, Sendable {
 /// Two contracts are not expressible in the signatures:
 ///
 /// - Echo ``AudioOutput/start(url:streamGeneration:)``'s token back on every
-///   ``AudioTrackInfo`` you emit for that stream.
+///   ``AudioTrackInfo`` and stream-scoped ``AudioStatusUpdate`` you emit.
 /// - Drive ``onStatusChange`` as the stream progresses. A controller that never
 ///   observes ``AudioStatus/playing`` stays in its loading state forever, which
 ///   looks identical to having no engine at all.
@@ -95,7 +128,7 @@ public protocol AudioOutput: AnyObject {
     ///
     /// Assigned by ``PlaybackController`` during initialization; see the note on
     /// callback ownership above. Called on the main actor.
-    var onStatusChange: ((AudioStatus) -> Void)? { get set }
+    var onStatusChange: ((AudioStatusUpdate) -> Void)? { get set }
 
     /// Invoked when the engine decodes a new track update from stream metadata.
     ///
@@ -108,11 +141,9 @@ public protocol AudioOutput: AnyObject {
     /// - Parameters:
     ///   - url: The stream endpoint to play.
     ///   - streamGeneration: A monotonically increasing token identifying this
-    ///     playback attempt. **Every ``AudioTrackInfo`` you emit for this stream
-    ///     must carry this value back** in ``AudioTrackInfo/streamGeneration``.
-    ///     The controller uses it to discard metadata that arrives late from a
-    ///     stream the listener has already switched away from — without the echo,
-    ///     one station's track titles appear over another's.
+    ///     playback attempt. Every track-info and stream-status callback must
+    ///     carry this value back. The controller uses it to discard callbacks
+    ///     that arrive after the listener has switched stations.
     func start(url: URL, streamGeneration: UInt64)
 
     /// Pauses playback, keeping the connection open where the transport allows it.

@@ -26,6 +26,13 @@ extension PlaybackController {
         reconnectTimer.cancel()
         resumeWatchdogTimer.cancel()
         resumeAfterRouteChange = false
+        // A station switch must retire the previous output before ownership
+        // moves to the new station. Endpoint resolution can take seconds or
+        // fail; leaving the old output alive makes pause and failure lie about
+        // what the listener can still hear.
+        if outputStarted {
+            output.stop()
+        }
         activeStation = station
         state = .loading(station)
         outputStarted = false
@@ -53,24 +60,37 @@ extension PlaybackController {
                 } else {
                     try await directory.streamEndpoint(for: station)
                 }
-                guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
+                guard self.isCurrentRequest(for: station) else { return }
                 self.resolvedEndpoint = endpoint
                 self.tapToAudioTrace?.markResolved(url: endpoint.url)
-                self.output.start(url: endpoint.url, streamGeneration: streamGeneration)
+                // Claim ownership before entering the engine so a synchronous
+                // failure callback can tear it down without this method later
+                // overwriting that decision.
                 self.outputStarted = true
+                self.output.start(url: endpoint.url, streamGeneration: streamGeneration)
+                guard self.ownsStartedOutput(for: station, generation: streamGeneration) else { return }
                 self.tapToAudioTrace?.markOutputStarted()
                 // Pass the preserved track/art through: on a reconnect the
                 // last-known track must stay on the lock screen while the
                 // stream re-buffers (both are nil on a fresh start anyway).
                 self.pushNowPlaying(for: station, isPlaying: true)
             } catch let error as RadioDirectoryError {
-                guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
+                guard self.isCurrentRequest(for: station) else { return }
                 self.handleResolutionFailure(error, for: station)
             } catch {
-                guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
+                guard self.isCurrentRequest(for: station) else { return }
                 self.handleResolutionFailure(.transport(error.localizedDescription), for: station)
             }
         }
+    }
+
+    private func isCurrentRequest(for station: Station) -> Bool {
+        Task.isCancelled == false && activeStation?.id == station.id && playbackRequested
+    }
+
+    private func ownsStartedOutput(for station: Station, generation: UInt64) -> Bool {
+        outputStarted && activeStation?.id == station.id
+            && activeStreamGeneration == generation && playbackRequested
     }
 
     /// Endpoint resolution fails for the same transient reasons the stream
@@ -81,11 +101,14 @@ extension PlaybackController {
     /// is kept either way so the failed state stays recoverable via
     /// `resume()`/`togglePlayPause()`.
     func handleResolutionFailure(_ error: RadioDirectoryError, for station: Station) {
+        guard playbackRequested else { return }
         tapToAudioTrace?.cancel()
         tapToAudioTrace = nil
         let playbackError = PlaybackError.directory(error)
         let fallback = PlaybackState.failed(playbackError)
         if playbackError.isRetryable == false {
+            playbackRequested = false
+            isReconnecting = false
             state = fallback
             pushNowPlaying(for: station, isPlaying: false)
         } else {
@@ -106,8 +129,8 @@ extension PlaybackController {
     }
 
     func configureOutput() {
-        output.onStatusChange = { [weak self] status in
-            self?.handleStatusChange(status)
+        output.onStatusChange = { [weak self] update in
+            self?.handleStatusChange(update)
         }
         output.onTrackInfo = { [weak self] info in
             self?.handleTrackInfo(info)
@@ -121,66 +144,82 @@ extension PlaybackController {
         return false
     }
 
-    func handleStatusChange(_ status: AudioStatus) {
+    func handleStatusChange(_ update: AudioStatusUpdate) {
         guard let station = activeStation else { return }
-        switch status {
+        if let generation = update.streamGeneration,
+           generation != activeStreamGeneration {
+            return
+        }
+        if handleSystemStatus(update.status, station: station) {
+            return
+        }
+
+        switch update.status {
         case .buffering:
-            pausedReleaseTimer.cancel()
-            // Leaving `.paused` for `.buffering` is the output acknowledging a
-            // resume (or a restart); the watchdog has nothing left to guard.
-            resumeWatchdogTimer.cancel()
-            state = .buffering(station)
-            scheduleStallCeiling(for: station)
+            handleBuffering(for: station)
         case .playing:
-            resumeAfterRouteChange = false
-            pausedReleaseTimer.cancel()
-            stallCeilingTimer.cancel()
-            reconnectTimer.cancel()
-            resumeWatchdogTimer.cancel()
-            // A successful (re)connect clears the budget for the next drop.
-            reconnectAttempts = 0
-            state = .playing(station)
-            tapToAudioTrace?.completeIfNeeded()
-            tapToAudioTrace = nil
-            pushNowPlaying(for: station, isPlaying: true)
+            handlePlaying(for: station)
         case .paused:
-            stallCeilingTimer.cancel()
-            // A system-initiated pause (headphones unplugged, route change)
-            // must win over a pending auto-reconnect just like a user pause.
-            reconnectTimer.cancel()
-            // Any pause before first `.playing` ends the trace: completing it
-            // later would fold the pause duration into `firstPlayingMs`. (Once
-            // `.playing` has happened the trace is already nil.)
-            tapToAudioTrace?.cancel()
-            tapToAudioTrace = nil
-            state = .paused(station)
-            pushNowPlaying(for: station, isPlaying: false)
-            schedulePausedRelease()
+            handlePaused(for: station)
         case let .failed(playbackError):
-            pausedReleaseTimer.cancel()
-            stallCeilingTimer.cancel()
-            resumeWatchdogTimer.cancel()
-            tapToAudioTrace?.cancel()
-            tapToAudioTrace = nil
-            // Tear the dead player down before retrying: a failed AVPlayerItem
-            // is unrecoverable, so `resume()` must never find `outputStarted`
-            // still true and try to resume it — and on the give-up path the
-            // player and audio session must not stay resident behind a
-            // terminal `.failed`.
-            output.stop()
-            outputStarted = false
-            // A mid-play failure is usually transient; retry before giving up.
-            attemptReconnect(for: station, fallback: .failed(playbackError))
+            handlePlaybackFailure(playbackError, for: station)
         case .endOfStream:
+            guard playbackRequested else { return }
             handleEndOfStream(for: station)
-        case .interruptionBegan:
-            handleInterruptionBegan(station: station)
-        case let .interruptionEnded(shouldResume, otherAudioIsPlaying):
-            handleInterruptionEnded(shouldResume: shouldResume, otherAudioIsPlaying: otherAudioIsPlaying)
-        case .routeLost:
-            handleRouteLost()
-        case .routeAvailable:
-            handleRouteAvailable()
+        default:
+            break
+        }
+    }
+
+    private func handleBuffering(for station: Station) {
+        guard playbackRequested else { return }
+        pausedReleaseTimer.cancel()
+        resumeWatchdogTimer.cancel()
+        state = .buffering(station)
+        scheduleStallCeiling(for: station)
+    }
+
+    private func handlePlaying(for station: Station) {
+        guard playbackRequested else { return }
+        resumeAfterRouteChange = false
+        isReconnecting = false
+        pausedReleaseTimer.cancel()
+        stallCeilingTimer.cancel()
+        reconnectTimer.cancel()
+        resumeWatchdogTimer.cancel()
+        reconnectAttempts = 0
+        state = .playing(station)
+        tapToAudioTrace?.completeIfNeeded()
+        tapToAudioTrace = nil
+        pushNowPlaying(for: station, isPlaying: true)
+    }
+
+    private func handlePaused(for station: Station) {
+        stallCeilingTimer.cancel()
+        reconnectTimer.cancel()
+        tapToAudioTrace?.cancel()
+        tapToAudioTrace = nil
+        state = .paused(station)
+        pushNowPlaying(for: station, isPlaying: false)
+        schedulePausedRelease()
+    }
+
+    private func handlePlaybackFailure(_ error: PlaybackError, for station: Station) {
+        guard playbackRequested else { return }
+        pausedReleaseTimer.cancel()
+        stallCeilingTimer.cancel()
+        resumeWatchdogTimer.cancel()
+        tapToAudioTrace?.cancel()
+        tapToAudioTrace = nil
+        output.stop()
+        outputStarted = false
+        if error.isRetryable {
+            attemptReconnect(for: station, fallback: .failed(error))
+        } else {
+            playbackRequested = false
+            isReconnecting = false
+            state = .failed(error)
+            pushNowPlaying(for: station, isPlaying: false)
         }
     }
 

@@ -8,7 +8,7 @@ import Testing
 /// pulling in AudioStreaming or AVFoundation.
 @MainActor
 private final class FakeRadioPlaybackEngine: RadioPlaybackEngine {
-    var onStatusChange: ((AudioStatus) -> Void)?
+    var onStatusChange: ((AudioStatusUpdate) -> Void)?
     var onTrackInfo: ((AudioTrackInfo) -> Void)?
     let supportsEqualizer: Bool
     private(set) var appliedPresets: [EqualizerPreset] = []

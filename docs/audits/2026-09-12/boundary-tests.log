@@ -1,0 +1,200 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 362]
+[Planning deferred tasks]
+[7 / 43]
+[11 / 21] PlaybackTests-product
+[12 / 21] PlaybackTests-product
+[14 / 23] PlaybackTests-product
+[20 / 22] PlaybackTests-product
+[21 / 22] PlaybackTests-product
+Build complete! (15.20 sec)
+◇ Test run started.
+↳ Testing Library Version: 2084
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite AuditBoundaryTests started.
+◇ Test switchingThenPausingMustSilencePreviousStation() started.
+◇ Test pauseAfterStartBeforeStatusMustSilenceOutput() started.
+◇ Test latePlayingAfterPauseMustNotOverrideUserIntent() started.
+◇ Test permanentStreamFailureMustNotReconnect() started.
+✘ Test permanentStreamFailureMustNotReconnect() recorded an issue at AuditBoundaryTests.swift:36:9: Expectation failed: controller.state == .failed(.stationNotAvailable(errorCode: 404))
+↳ controller.state == .failed(.stationNotAvailable(errorCode: 404)) → false
+↳   controller.state → .buffering(RadioDirectory.Station(id: "kexp", name: "Station kexp", genre: "Indie", tags: nil, country: nil, codec: nil, language: nil, listenerCount: 0, bitrate: nil, clickTrend: nil, votes: nil, artworkURL: nil, preferredStreamURL: Optional(https://example.com/kexp.aac)))
+↳     buffering → Station(id: "kexp", name: "Station kexp", genre: "Indie", tags: nil, country: nil, codec: nil, language: nil, listenerCount: 0, bitrate: nil, clickTrend: nil, votes: nil, artworkURL: nil, preferredStreamURL: Optional(https://example.com/kexp.aac))
+↳       id → "kexp"
+↳       name → "Station kexp"
+↳       genre → "Indie"
+↳       tags → nil
+↳       country → nil
+↳       codec → nil
+↳       language → nil
+↳       listenerCount → 0
+↳       bitrate → nil
+↳       clickTrend → nil
+↳       votes → nil
+↳       artworkURL → nil
+↳       preferredStreamURL → https://example.com/kexp.aac
+↳         some → https://example.com/kexp.aac
+↳           _url → Foundation._SwiftURL
+↳             _parseInfo → Foundation.URLParseInfo
+↳               urlString → "https://example.com/kexp.aac"
+↳               schemeRange → 0[utf8] ..< 5[utf8]
+↳                 some → 0[utf8] ..< 5[utf8]
+↳                   lowerBound → 0[utf8]
+↳                     _rawBits → 4
+↳                   upperBound → 5[utf8]
+↳                     _rawBits → 327684
+↳               userRange → nil
+↳               passwordRange → nil
+↳               hostRange → 8[utf8] ..< 19[utf8]
+↳                 some → 8[utf8] ..< 19[utf8]
+↳                   lowerBound → 8[utf8]
+↳                     _rawBits → 524292
+↳                   upperBound → 19[utf8]
+↳                     _rawBits → 1245188
+↳               portRange → nil
+↳               pathRange → 19[utf8] ..< 28[utf8]
+↳                 some → 19[utf8] ..< 28[utf8]
+↳                   lowerBound → 19[utf8]
+↳                     _rawBits → 1245188
+↳                   upperBound → 28[utf8]
+↳                     _rawBits → 1835012
+↳               queryRange → nil
+↳               fragmentRange → nil
+↳               isIPLiteral → false
+↳               didPercentEncodeHost → false
+↳               pathHasFileID → false
+↳               encodedComponents → EncodedComponentSet(rawValue: 0)
+↳                 rawValue → 0
+↳             _baseURL → nil
+↳             _encoding → Unicode (UTF-8)
+↳               rawValue → 4
+↳             _isCanonicalFileURL → false
+↳             _nsurlLock → ()
+↳   .failed(.stationNotAvailable(errorCode: 404)) → .failed(Playback.PlaybackError.stationNotAvailable(errorCode: 404))
+↳     failed → .stationNotAvailable(errorCode: 404)
+↳       stationNotAvailable → (errorCode: 404)
+↳         errorCode → 404
+✘ Test permanentStreamFailureMustNotReconnect() recorded an issue at AuditBoundaryTests.swift:37:9: Expectation failed: controller.reconnectAttempts == 0
+↳ controller.reconnectAttempts == 0 → false
+↳   controller.reconnectAttempts → 1
+✘ Test permanentStreamFailureMustNotReconnect() failed after 0.180 seconds with 2 issues.
+✘ Test latePlayingAfterPauseMustNotOverrideUserIntent() recorded an issue at AuditBoundaryTests.swift:49:9: Expectation failed: controller.state == .paused(station())
+↳ controller.state == .paused(station()) → false
+↳   controller.state → .playing(RadioDirectory.Station(id: "kexp", name: "Station kexp", genre: "Indie", tags: nil, country: nil, codec: nil, language: nil, listenerCount: 0, bitrate: nil, clickTrend: nil, votes: nil, artworkURL: nil, preferredStreamURL: Optional(https://example.com/kexp.aac)))
+↳     playing → Station(id: "kexp", name: "Station kexp", genre: "Indie", tags: nil, country: nil, codec: nil, language: nil, listenerCount: 0, bitrate: nil, clickTrend: nil, votes: nil, artworkURL: nil, preferredStreamURL: Optional(https://example.com/kexp.aac))
+↳       id → "kexp"
+↳       name → "Station kexp"
+↳       genre → "Indie"
+↳       tags → nil
+↳       country → nil
+↳       codec → nil
+↳       language → nil
+↳       listenerCount → 0
+↳       bitrate → nil
+↳       clickTrend → nil
+↳       votes → nil
+↳       artworkURL → nil
+↳       preferredStreamURL → https://example.com/kexp.aac
+↳         some → https://example.com/kexp.aac
+↳           _url → Foundation._SwiftURL
+↳             _parseInfo → Foundation.URLParseInfo
+↳               urlString → "https://example.com/kexp.aac"
+↳               schemeRange → 0[utf8] ..< 5[utf8]
+↳                 some → 0[utf8] ..< 5[utf8]
+↳                   lowerBound → 0[utf8]
+↳                     _rawBits → 4
+↳                   upperBound → 5[utf8]
+↳                     _rawBits → 327684
+↳               userRange → nil
+↳               passwordRange → nil
+↳               hostRange → 8[utf8] ..< 19[utf8]
+↳                 some → 8[utf8] ..< 19[utf8]
+↳                   lowerBound → 8[utf8]
+↳                     _rawBits → 524292
+↳                   upperBound → 19[utf8]
+↳                     _rawBits → 1245188
+↳               portRange → nil
+↳               pathRange → 19[utf8] ..< 28[utf8]
+↳                 some → 19[utf8] ..< 28[utf8]
+↳                   lowerBound → 19[utf8]
+↳                     _rawBits → 1245188
+↳                   upperBound → 28[utf8]
+↳                     _rawBits → 1835012
+↳               queryRange → nil
+↳               fragmentRange → nil
+↳               isIPLiteral → false
+↳               didPercentEncodeHost → false
+↳               pathHasFileID → false
+↳               encodedComponents → EncodedComponentSet(rawValue: 0)
+↳                 rawValue → 0
+↳             _baseURL → nil
+↳             _encoding → Unicode (UTF-8)
+↳               rawValue → 4
+↳             _isCanonicalFileURL → false
+↳             _nsurlLock → ()
+↳   .paused(station()) → .paused(RadioDirectory.Station(id: "kexp", name: "Station kexp", genre: "Indie", tags: nil, country: nil, codec: nil, language: nil, listenerCount: 0, bitrate: nil, clickTrend: nil, votes: nil, artworkURL: nil, preferredStreamURL: Optional(https://example.com/kexp.aac)))
+↳     paused → Station(id: "kexp", name: "Station kexp", genre: "Indie", tags: nil, country: nil, codec: nil, language: nil, listenerCount: 0, bitrate: nil, clickTrend: nil, votes: nil, artworkURL: nil, preferredStreamURL: Optional(https://example.com/kexp.aac))
+↳       id → "kexp"
+↳       name → "Station kexp"
+↳       genre → "Indie"
+↳       tags → nil
+↳       country → nil
+↳       codec → nil
+↳       language → nil
+↳       listenerCount → 0
+↳       bitrate → nil
+↳       clickTrend → nil
+↳       votes → nil
+↳       artworkURL → nil
+↳       preferredStreamURL → https://example.com/kexp.aac
+↳         some → https://example.com/kexp.aac
+↳           _url → Foundation._SwiftURL
+↳             _parseInfo → Foundation.URLParseInfo
+↳               urlString → "https://example.com/kexp.aac"
+↳               schemeRange → 0[utf8] ..< 5[utf8]
+↳                 some → 0[utf8] ..< 5[utf8]
+↳                   lowerBound → 0[utf8]
+↳                     _rawBits → 4
+↳                   upperBound → 5[utf8]
+↳                     _rawBits → 327684
+↳               userRange → nil
+↳               passwordRange → nil
+↳               hostRange → 8[utf8] ..< 19[utf8]
+↳                 some → 8[utf8] ..< 19[utf8]
+↳                   lowerBound → 8[utf8]
+↳                     _rawBits → 524292
+↳                   upperBound → 19[utf8]
+↳                     _rawBits → 1245188
+↳               portRange → nil
+↳               pathRange → 19[utf8] ..< 28[utf8]
+↳                 some → 19[utf8] ..< 28[utf8]
+↳                   lowerBound → 19[utf8]
+↳                     _rawBits → 1245188
+↳                   upperBound → 28[utf8]
+↳                     _rawBits → 1835012
+↳               queryRange → nil
+↳               fragmentRange → nil
+↳               isIPLiteral → false
+↳               didPercentEncodeHost → false
+↳               pathHasFileID → false
+↳               encodedComponents → EncodedComponentSet(rawValue: 0)
+↳                 rawValue → 0
+↳             _baseURL → nil
+↳             _encoding → Unicode (UTF-8)
+↳               rawValue → 4
+↳             _isCanonicalFileURL → false
+↳             _nsurlLock → ()
+✘ Test switchingThenPausingMustSilencePreviousStation() recorded an issue at AuditBoundaryTests.swift:26:9: Expectation failed: output.pauseCount + output.stopCount > 0
+↳ output.pauseCount + output.stopCount > 0 → false
+↳   output.pauseCount + output.stopCount → 0
+✘ Test pauseAfterStartBeforeStatusMustSilenceOutput() recorded an issue at AuditBoundaryTests.swift:14:9: Expectation failed: output.pauseCount + output.stopCount > 0
+↳ output.pauseCount + output.stopCount > 0 → false
+↳   output.pauseCount + output.stopCount → 0
+✘ Test latePlayingAfterPauseMustNotOverrideUserIntent() failed after 0.181 seconds with 1 issue.
+✘ Test switchingThenPausingMustSilencePreviousStation() failed after 0.181 seconds with 1 issue.
+✘ Test pauseAfterStartBeforeStatusMustSilenceOutput() failed after 0.181 seconds with 1 issue.
+✘ Suite AuditBoundaryTests failed after 0.181 seconds with 5 issues.
+✘ Test run with 4 tests in 1 suite failed after 0.181 seconds with 5 issues.
+Note: Some test targets reported failures:
+  - PlaybackTests (Swift Testing)

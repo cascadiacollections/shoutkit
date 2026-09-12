@@ -65,6 +65,10 @@ public final class PlaybackController {
     /// available while the stream re-buffers (ICY repopulates it on success).
     public internal(set) var appleMusicURL: URL?
 
+    /// Whether a connection attempt is recovering a stream that had already
+    /// started. Views use this to distinguish Connecting from Reconnecting.
+    public internal(set) var isReconnecting = false
+
     /// Invoked whenever a station is chosen for playback. The app layer uses this
     /// to log recents so Playback does not depend on the persistence layer.
     /// (An event hook, deliberately — `state`/`nowPlaying` are @Observable and
@@ -172,6 +176,9 @@ public final class PlaybackController {
     /// in that case `resume()` must re-play rather than resume a nonexistent player.
     @ObservationIgnored var outputStarted = false
     @ObservationIgnored var activeStreamGeneration: UInt64 = 0
+    /// The listener's latest transport intent. Engine callbacks may arrive
+    /// asynchronously; none may turn audio back on after this becomes false.
+    @ObservationIgnored var playbackRequested = false
 
     /// Set when the system interrupts playback that was active, so playback can
     /// resume automatically when the interruption ends. Armed per interruption
@@ -201,7 +208,7 @@ public final class PlaybackController {
         output: any AudioOutput,
         nowPlayingCenter: any NowPlayingPresenting,
         pausedReleaseTimeout: Duration = .seconds(10 * 60),
-        stallTimeout: Duration = .seconds(90),
+        stallTimeout: Duration = .seconds(30),
         maxReconnectAttempts: Int = 3,
         reconnectBaseDelay: Duration = .seconds(2),
         resumeWatchdogTimeout: Duration = .seconds(2),
@@ -240,6 +247,8 @@ public final class PlaybackController {
         // A fresh choice always re-resolves; the cache exists only to spare
         // reconnect attempts from repeating resolution for the same station.
         resolvedEndpoint = nil
+        playbackRequested = true
+        isReconnecting = false
         startPlayback(of: station)
         onStationPlayed?(station)
     }
@@ -249,6 +258,8 @@ public final class PlaybackController {
     /// A user pause outranks a reconnect that is already scheduled — otherwise
     /// a stream the listener just stopped resurrects itself.
     public func pause() {
+        playbackRequested = false
+        isReconnecting = false
         resumeAfterRouteChange = false
         // A user pause must win over a pending auto-reconnect, or a stream the
         // user just stopped would resurrect itself when the reconnect fires.
@@ -265,6 +276,10 @@ public final class PlaybackController {
             resolveTask?.cancel()
             tapToAudioTrace?.cancel()
             tapToAudioTrace = nil
+            if outputStarted {
+                output.stop()
+                outputStarted = false
+            }
             state = .paused(station)
             pushNowPlaying(for: station, isPlaying: false)
             schedulePausedRelease()
@@ -282,6 +297,7 @@ public final class PlaybackController {
 
         switch state {
         case .paused:
+            playbackRequested = true
             if outputStarted {
                 pausedReleaseTimer.cancel()
                 // Armed before the call, so an output that acknowledges the
@@ -295,6 +311,7 @@ public final class PlaybackController {
                 startPlayback(of: station)
             }
         case .failed:
+            playbackRequested = true
             startPlayback(of: station)
         default:
             break
@@ -324,6 +341,8 @@ public final class PlaybackController {
 
     /// Stops playback, releases the stream, and clears ``nowPlaying``.
     public func stop() {
+        playbackRequested = false
+        isReconnecting = false
         tapToAudioTrace?.cancel()
         tapToAudioTrace = nil
         resolveTask?.cancel()
