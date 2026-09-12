@@ -9,27 +9,27 @@ let package = Package(
         .iOS(.v26),
         .tvOS(.v26),
         .watchOS(.v26),
-        .macOS(.v13)
+        .macOS(.v13),
     ],
     products: [
-        .library(name: "RadioDirectory", targets: ["RadioDirectory"])
+        .library(name: "RadioDirectory", targets: ["RadioDirectory"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-algorithms.git", from: "1.2.1"),
-        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2")
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2"),
     ],
     targets: [
         .target(
             name: "RadioDirectory",
             dependencies: [
                 .product(name: "Algorithms", package: "swift-algorithms"),
-                .product(name: "FactoryKit", package: "Factory")
+                .product(name: "FactoryKit", package: "Factory"),
             ],
-            resources: [.process("Resources/Localizable.xcstrings")]
+            resources: [.process("Resources/Localizable.xcstrings")],
         ),
         .testTarget(
             name: "RadioDirectoryTests",
-            dependencies: ["RadioDirectory"]
-        )
-    ]
+            dependencies: ["RadioDirectory"],
+        ),
+    ],
 )

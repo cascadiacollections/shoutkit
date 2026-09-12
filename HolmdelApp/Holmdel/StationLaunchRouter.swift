@@ -36,7 +36,8 @@ final class StationLaunchRouter {
     func open(userActivity: NSUserActivity) -> Bool {
         guard userActivity.activityType == StationLink.handoffActivityType,
               let userInfo = userActivity.userInfo,
-              let link = StationLink(handoffUserInfo: userInfo) else {
+              let link = StationLink(handoffUserInfo: userInfo)
+        else {
             return false
         }
 

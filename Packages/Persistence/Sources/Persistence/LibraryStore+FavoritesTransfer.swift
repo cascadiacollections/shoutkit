@@ -8,7 +8,7 @@ public struct FavoritesTransferDocument: Codable, Equatable, Sendable {
 
     public init(
         schemaVersion: Int = Self.currentSchemaVersion,
-        favorites: [Favorite]
+        favorites: [Favorite],
     ) {
         self.schemaVersion = schemaVersion
         self.favorites = favorites
@@ -30,7 +30,7 @@ public extension FavoritesTransferDocument {
             streamURL: String?,
             genre: String,
             artworkURL: String?,
-            sortIndex: Int
+            sortIndex: Int,
         ) {
             self.id = id
             self.name = name
@@ -47,7 +47,7 @@ public extension FavoritesTransferDocument {
                 streamURL: favorite.streamURLString,
                 genre: favorite.genre,
                 artworkURL: favorite.artworkURLString,
-                sortIndex: favorite.sortIndex
+                sortIndex: favorite.sortIndex,
             )
         }
     }
@@ -69,9 +69,9 @@ public enum FavoritesTransferError: Error, Equatable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .unsupportedSchemaVersion(let version):
+        case let .unsupportedSchemaVersion(version):
             "Unsupported favorites backup format version: \(version)."
-        case .saveFailed(let message):
+        case let .saveFailed(message):
             message
         }
     }
@@ -81,7 +81,7 @@ public enum FavoritesTransferError: Error, Equatable, LocalizedError {
 public extension LibraryStore {
     func exportFavoritesJSONData() throws -> Data {
         let document = FavoritesTransferDocument(
-            favorites: orderedFavorites().map(FavoritesTransferDocument.Favorite.init(favorite:))
+            favorites: orderedFavorites().map(FavoritesTransferDocument.Favorite.init(favorite:)),
         )
 
         let encoder = JSONEncoder()
@@ -118,8 +118,8 @@ public extension LibraryStore {
                     genre: favorite.genre,
                     artworkURLString: favorite.artworkURL,
                     streamURLString: favorite.streamURL,
-                    sortIndex: nextSortIndexStart + addedCount
-                )
+                    sortIndex: nextSortIndexStart + addedCount,
+                ),
             )
             existingIDs.insert(favorite.id)
             addedCount += 1
@@ -128,7 +128,7 @@ public extension LibraryStore {
         if addedCount > 0 {
             guard save(operation: "import favorites backup") else {
                 throw FavoritesTransferError.saveFailed(
-                    lastErrorMessage ?? "Could not save imported favorites."
+                    lastErrorMessage ?? "Could not save imported favorites.",
                 )
             }
             // Resync from what actually persisted rather than tracking inserts as we
@@ -139,12 +139,12 @@ public extension LibraryStore {
 
         return FavoritesImportResult(
             addedCount: addedCount,
-            skippedExistingCount: skippedExistingCount
+            skippedExistingCount: skippedExistingCount,
         )
     }
 
     private func normalizeImportedFavorites(
-        _ favorites: [FavoritesTransferDocument.Favorite]
+        _ favorites: [FavoritesTransferDocument.Favorite],
     ) -> [FavoritesTransferDocument.Favorite] {
         var seenIDs = Set<String>()
         return favorites

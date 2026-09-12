@@ -51,7 +51,7 @@ extension AudioStreamingPlaybackEngine {
             try session.setPrefersNoInterruptionsFromSystemAlerts(true)
         } catch {
             Self.logger.error(
-                "Could not prefer no interruptions from system alerts: \(String(describing: error), privacy: .public)"
+                "Could not prefer no interruptions from system alerts: \(String(describing: error), privacy: .public)",
             )
         }
     }
@@ -67,7 +67,7 @@ extension AudioStreamingPlaybackEngine {
             try session.setCategory(.playback, mode: .default, policy: .longFormAudio)
         } catch {
             Self.logger.error(
-                "Long-form audio category failed, falling back: \(String(describing: error), privacy: .public)"
+                "Long-form audio category failed, falling back: \(String(describing: error), privacy: .public)",
             )
             try? session.setCategory(.playback, mode: .default)
         }
@@ -120,7 +120,7 @@ extension AudioStreamingPlaybackEngine {
             return true
         } catch {
             Self.logger.error(
-                "Audio session activation failed: \(String(describing: error), privacy: .public)"
+                "Audio session activation failed: \(String(describing: error), privacy: .public)",
             )
             return false
         }
@@ -129,7 +129,7 @@ extension AudioStreamingPlaybackEngine {
     func deactivateSessionAfterStop() async {
         let session = AVAudioSession.sharedInstance()
 
-        for attempt in 0..<5 {
+        for attempt in 0 ..< 5 {
             guard Task.isCancelled == false else { return }
             do {
                 try session.setActive(false, options: [.notifyOthersOnDeactivation])
@@ -137,7 +137,7 @@ extension AudioStreamingPlaybackEngine {
             } catch {
                 guard Self.shouldRetrySessionDeactivation(error), attempt < 4 else {
                     Self.logger.error(
-                        "Audio session deactivation failed after stop: \(String(describing: error), privacy: .public)"
+                        "Audio session deactivation failed after stop: \(String(describing: error), privacy: .public)",
                     )
                     return
                 }
@@ -156,9 +156,9 @@ extension AudioStreamingPlaybackEngine {
 
     // MARK: - OS disruptions
 
-    // Observers use queue: .main throughout, so MainActor.assumeIsolated is safe
-    // inside them. One method per notification: together they overran the
-    // 50-line `function_body_length` budget, and each reads better alone anyway.
+    /// Observers use queue: .main throughout, so MainActor.assumeIsolated is safe
+    /// inside them. One method per notification: together they overran the
+    /// 50-line `function_body_length` budget, and each reads better alone anyway.
     func observeAudioSessionNotifications() {
         let center = NotificationCenter.default
         let session = AVAudioSession.sharedInstance()
@@ -171,10 +171,11 @@ extension AudioStreamingPlaybackEngine {
         notificationTokens.append(center.addObserver(
             forName: AVAudioSession.interruptionNotification,
             object: session,
-            queue: .main
+            queue: .main,
         ) { [weak self] notification in
             guard let rawType = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
-                  let type = AVAudioSession.InterruptionType(rawValue: rawType) else {
+                  let type = AVAudioSession.InterruptionType(rawValue: rawType)
+            else {
                 return
             }
 
@@ -197,11 +198,11 @@ extension AudioStreamingPlaybackEngine {
                         """
                         Interruption ended (shouldResume: \(shouldResume, privacy: .public), \
                         otherAudioIsPlaying: \(otherAudioIsPlaying, privacy: .public))
-                        """
+                        """,
                     )
                     self.onStatusChange?(.interruptionEnded(
                         shouldResume: shouldResume,
-                        otherAudioIsPlaying: otherAudioIsPlaying
+                        otherAudioIsPlaying: otherAudioIsPlaying,
                     ))
                 @unknown default:
                     break
@@ -214,10 +215,11 @@ extension AudioStreamingPlaybackEngine {
         notificationTokens.append(center.addObserver(
             forName: AVAudioSession.routeChangeNotification,
             object: session,
-            queue: .main
+            queue: .main,
         ) { [weak self] notification in
             guard let rawReason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
-                  let reason = AVAudioSession.RouteChangeReason(rawValue: rawReason) else {
+                  let reason = AVAudioSession.RouteChangeReason(rawValue: rawReason)
+            else {
                 return
             }
 
@@ -248,7 +250,7 @@ extension AudioStreamingPlaybackEngine {
         notificationTokens.append(center.addObserver(
             forName: AVAudioSession.mediaServicesWereResetNotification,
             object: nil,
-            queue: .main
+            queue: .main,
         ) { [weak self] _ in
             MainActor.assumeIsolated {
                 self?.handleMediaServicesReset()

@@ -5,7 +5,7 @@ import os
 import Playback
 
 #if canImport(CoreMotion)
-import CoreMotion
+    import CoreMotion
 #endif
 
 /// `RadioPlaybackEngine` backed by AudioStreaming's `AudioPlayer`
@@ -70,8 +70,8 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     /// latency before the controller's reconnect starts.
     private static let stopClassificationGrace = Duration.milliseconds(250)
 
-    // Block-based notification observers are not auto-removed on dealloc, so
-    // deinit is isolated to read this on the main actor without an escape hatch.
+    /// Block-based notification observers are not auto-removed on dealloc, so
+    /// deinit is isolated to read this on the main actor without an escape hatch.
     var notificationTokens: [NSObjectProtocol] = []
 
     /// The attached `AVAudioUnitEQ`, if a preset has been applied — see
@@ -95,16 +95,16 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     /// so head-tracking updates can check it's still wanted.
     var isSpatialAudioEnabled = false
 
-    /// Head tracking source for the spatial audio effect. Allocating this
-    /// unconditionally is cheap — it does nothing until
-    /// `startDeviceMotionUpdates(to:withHandler:)` is called, which only
-    /// happens once spatial audio is switched on.
-    ///
-    /// Absent where CoreMotion is — tvOS, given this package's platform list —
-    /// along with the whole effect it drives. See
-    /// AudioStreamingPlaybackEngine+SpatialAudio.swift.
+    // Head tracking source for the spatial audio effect. Allocating this
+    // unconditionally is cheap — it does nothing until
+    // `startDeviceMotionUpdates(to:withHandler:)` is called, which only
+    // happens once spatial audio is switched on.
+    //
+    // Absent where CoreMotion is — tvOS, given this package's platform list —
+    // along with the whole effect it drives. See
+    // AudioStreamingPlaybackEngine+SpatialAudio.swift.
     #if canImport(CoreMotion)
-    let headphoneMotionManager = CMHeadphoneMotionManager()
+        let headphoneMotionManager = CMHeadphoneMotionManager()
     #endif
 
     public init() {
@@ -119,7 +119,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         stopClassificationTask?.cancel()
         volumeRampTask?.cancel()
         #if canImport(CoreMotion)
-        headphoneMotionManager.stopDeviceMotionUpdates()
+            headphoneMotionManager.stopDeviceMotionUpdates()
         #endif
         for token in notificationTokens {
             NotificationCenter.default.removeObserver(token)
@@ -282,7 +282,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     /// and this crosses isolation domains.
     private nonisolated func executeOnMainActor(
         for player: AudioPlayer,
-        _ body: @escaping @MainActor () -> Void
+        _ body: @escaping @MainActor () -> Void,
     ) {
         let sender = ObjectIdentifier(player)
         executeOnMainActor { [weak self] in
@@ -312,25 +312,24 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     /// `URLError` code out of; everything else is classified on its
     /// `localizedDescription`.
     private static func classify(_ error: AudioPlayerError) -> PlaybackError {
-        let candidate: any Error
-        if case let .networkError(.failure(underlying)) = error {
-            candidate = underlying
+        let candidate: any Error = if case let .networkError(.failure(underlying)) = error {
+            underlying
         } else {
-            candidate = error
+            error
         }
         return PlaybackError.classifying(candidate)
     }
 }
 
 extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
-    public nonisolated func audioPlayerDidStartPlaying(player: AudioPlayer, with entryId: AudioEntryId) {}
+    public nonisolated func audioPlayerDidStartPlaying(player _: AudioPlayer, with _: AudioEntryId) {}
 
-    public nonisolated func audioPlayerDidFinishBuffering(player: AudioPlayer, with entryId: AudioEntryId) {}
+    public nonisolated func audioPlayerDidFinishBuffering(player _: AudioPlayer, with _: AudioEntryId) {}
 
     public nonisolated func audioPlayerStateChanged(
         player: AudioPlayer,
         with newState: AudioPlayerState,
-        previous: AudioPlayerState
+        previous _: AudioPlayerState,
     ) {
         executeOnMainActor(for: player) {
             switch newState {
@@ -358,10 +357,10 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
     /// retryable failure it is.
     public nonisolated func audioPlayerDidFinishPlaying(
         player: AudioPlayer,
-        entryId: AudioEntryId,
+        entryId _: AudioEntryId,
         stopReason: AudioPlayerStopReason,
         progress: Double,
-        duration: Double
+        duration: Double,
     ) {
         guard stopReason == .eof,
               Self.playedToEndOfContent(progress: progress, duration: duration) else { return }
@@ -376,7 +375,7 @@ extension AudioStreamingPlaybackEngine: AudioPlayerDelegate {
         }
     }
 
-    public nonisolated func audioPlayerDidCancel(player: AudioPlayer, queuedItems: [AudioEntryId]) {}
+    public nonisolated func audioPlayerDidCancel(player _: AudioPlayer, queuedItems _: [AudioEntryId]) {}
 
     /// The one ICY metadata seam: extract `StreamTitle` and run it through
     /// `ICYMetadataParser`, so `PlaybackController` receives track info in the

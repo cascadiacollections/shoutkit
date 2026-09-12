@@ -22,7 +22,7 @@ public final class FavoriteStation {
         artworkURLString: String? = nil,
         streamURLString: String? = nil,
         createdAt: Date = .now,
-        sortIndex: Int = 0
+        sortIndex: Int = 0,
     ) {
         self.stationID = stationID
         self.name = name
@@ -40,7 +40,7 @@ public final class FavoriteStation {
             genre: genre,
             listenerCount: 0,
             artworkURL: artworkURLString.flatMap(URL.init(string:)),
-            preferredStreamURL: streamURLString.flatMap(URL.init(string:))
+            preferredStreamURL: streamURLString.flatMap(URL.init(string:)),
         )
     }
 }
@@ -88,7 +88,7 @@ public final class RecentStation {
         streamURLString: String? = nil,
         playedAt: Date = .now,
         isHiddenFromListenNow: Bool = false,
-        playCount: Int = 1
+        playCount: Int = 1,
     ) {
         self.stationID = stationID
         self.name = name
@@ -121,7 +121,7 @@ public final class RecentStation {
             clickTrend: clickTrend,
             votes: votes,
             artworkURL: artworkURLString.flatMap(URL.init(string:)),
-            preferredStreamURL: streamURLString.flatMap(URL.init(string:))
+            preferredStreamURL: streamURLString.flatMap(URL.init(string:)),
         )
     }
 }
@@ -147,7 +147,7 @@ public final class RecentlyHeardTrack {
         artist: String?,
         heardAt: Date = .now,
         appleMusicURLString: String? = nil,
-        artworkURLString: String? = nil
+        artworkURLString: String? = nil,
     ) {
         self.stationID = stationID
         self.stationName = stationName

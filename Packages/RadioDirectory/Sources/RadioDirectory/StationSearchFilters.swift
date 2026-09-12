@@ -10,7 +10,7 @@ public struct StationSearchFilters: Codable, Equatable, Sendable {
         bitrateMin: Int? = nil,
         bitrateMax: Int? = nil,
         tag: String? = nil,
-        countryCode: String? = nil
+        countryCode: String? = nil,
     ) {
         self.bitrateMin = bitrateMin
         self.bitrateMax = bitrateMax
@@ -29,7 +29,7 @@ public struct StationSearchFilters: Codable, Equatable, Sendable {
             bitrateMin: bitrateMin,
             bitrateMax: bitrateMax,
             tag: tag,
-            countryCode: countryCode
+            countryCode: countryCode,
         )
         if let min = normalized.bitrateMin, let max = normalized.bitrateMax, min > max {
             normalized.bitrateMax = min
@@ -87,7 +87,7 @@ public struct StationSearchFilters: Codable, Equatable, Sendable {
 
         let regionNames = [
             Locale.current.localizedString(forRegionCode: countryCode),
-            Locale(identifier: "en_US_POSIX").localizedString(forRegionCode: countryCode)
+            Locale(identifier: "en_US_POSIX").localizedString(forRegionCode: countryCode),
         ]
         .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
 

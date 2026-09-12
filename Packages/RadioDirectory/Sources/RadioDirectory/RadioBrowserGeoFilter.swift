@@ -19,7 +19,7 @@ public struct RadioBrowserGeoFilter: Equatable, Sendable {
     public init(locale: Locale, countryCodeOverride: String? = nil) {
         self.init(
             countryCode: countryCodeOverride ?? locale.region?.identifier,
-            languageCode: locale.language.languageCode?.identifier
+            languageCode: locale.language.languageCode?.identifier,
         )
     }
 

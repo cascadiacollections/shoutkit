@@ -27,7 +27,7 @@ public struct NowPlayingActivityAttributes: ActivityAttributes, Sendable {
             trackTitle: String? = nil,
             artist: String? = nil,
             artworkToken: String? = nil,
-            isPlaying: Bool
+            isPlaying: Bool,
         ) {
             self.trackTitle = trackTitle
             self.artist = artist

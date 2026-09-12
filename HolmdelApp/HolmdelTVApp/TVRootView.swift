@@ -71,7 +71,7 @@ struct TVRootView: View {
             } label: {
                 Label(
                     isPlaying(playback) ? "Pause" : "Play",
-                    systemImage: isPlaying(playback) ? "pause.fill" : "play.fill"
+                    systemImage: isPlaying(playback) ? "pause.fill" : "play.fill",
                 )
             }
 
@@ -103,17 +103,16 @@ struct TVRootView: View {
 
     // MARK: - Shelves
 
+    @ViewBuilder
     private var topStationsShelf: some View {
-        Group {
-            if isLoading {
-                shelfPlaceholder(title: "Popular Stations", message: "Loading stations…")
-            } else if let loadFailure {
-                shelfPlaceholder(title: "Popular Stations", message: loadFailure)
-            } else if topStations.isEmpty {
-                shelfPlaceholder(title: "Popular Stations", message: "No stations found.")
-            } else {
-                shelf(title: "Popular Stations", stations: topStations)
-            }
+        if isLoading {
+            shelfPlaceholder(title: "Popular Stations", message: "Loading stations…")
+        } else if let loadFailure {
+            shelfPlaceholder(title: "Popular Stations", message: loadFailure)
+        } else if topStations.isEmpty {
+            shelfPlaceholder(title: "Popular Stations", message: "No stations found.")
+        } else {
+            shelf(title: "Popular Stations", stations: topStations)
         }
     }
 

@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 #if canImport(OSLog)
-import OSLog
+    import OSLog
 #endif
 
 public enum ShoutKitModelContainer {
@@ -9,7 +9,7 @@ public enum ShoutKitModelContainer {
     public static let schema = Schema([
         FavoriteStation.self,
         RecentStation.self,
-        RecentlyHeardTrack.self
+        RecentlyHeardTrack.self,
     ])
 
     /// `false` when opening the persistent on-disk store failed and the app is
@@ -18,7 +18,7 @@ public enum ShoutKitModelContainer {
     public private(set) static var isPersistentStoreAvailable = true
 
     #if canImport(OSLog)
-    private static let logger = Logger(subsystem: "ShoutKit.Persistence", category: "ShoutKitModelContainer")
+        private static let logger = Logger(subsystem: "ShoutKit.Persistence", category: "ShoutKitModelContainer")
     #endif
 
     /// Builds the app-wide persistent container. Falls back to an in-memory
@@ -33,25 +33,24 @@ public enum ShoutKitModelContainer {
     @MainActor
     static func makeContainer(
         inMemory: Bool,
-        open: (ModelConfiguration) throws -> ModelContainer
+        open: (ModelConfiguration) throws -> ModelContainer,
     ) -> ModelContainer {
         isPersistentStoreAvailable = true
-        let configuration: ModelConfiguration
-        if inMemory {
-            configuration = ModelConfiguration(
+        let configuration = if inMemory {
+            ModelConfiguration(
                 "ShoutKitInMemory-\(UUID().uuidString)",
                 schema: schema,
-                isStoredInMemoryOnly: true
+                isStoredInMemoryOnly: true,
             )
         } else {
-            configuration = ModelConfiguration(
+            ModelConfiguration(
                 schema: schema,
-                isStoredInMemoryOnly: false
+                isStoredInMemoryOnly: false,
             )
         }
 
         let attempts = inMemory ? 1 : 2
-        for attempt in 1...attempts {
+        for attempt in 1 ... attempts {
             do {
                 return try open(configuration)
             } catch {
@@ -75,9 +74,9 @@ public enum ShoutKitModelContainer {
             "Failed to open persistent SwiftData store; using in-memory fallback store: \(error)"
         }
         #if canImport(OSLog)
-        logger.fault("\(message, privacy: .public)")
+            logger.fault("\(message, privacy: .public)")
         #else
-        print(message)
+            print(message)
         #endif
     }
 }

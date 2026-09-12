@@ -26,25 +26,25 @@ struct HolmdelApp: App {
         WindowGroup {
             RootView(
                 launchRouter: services.stationLaunchRouter,
-                isPersistentStoreAvailable: services.isPersistentStoreAvailable
+                isPersistentStoreAvailable: services.isPersistentStoreAvailable,
             )
-                .modelContainer(services.container)
-                .libraryStore(services.libraryStore)
-                .playbackController(services.playbackController)
-                .sleepTimer(services.sleepTimer)
-                .settingsStore(services.settingsStore)
-                .tint(.shoutKitAccent)
-                .onChange(of: services.settingsStore.isDiagnosticsSharingEnabled) { _, _ in
-                    services.diagnosticsService.refreshSubscription()
+            .modelContainer(services.container)
+            .libraryStore(services.libraryStore)
+            .playbackController(services.playbackController)
+            .sleepTimer(services.sleepTimer)
+            .settingsStore(services.settingsStore)
+            .tint(.shoutKitAccent)
+            .onChange(of: services.settingsStore.isDiagnosticsSharingEnabled) { _, _ in
+                services.diagnosticsService.refreshSubscription()
+            }
+            .onOpenURL { url in
+                services.stationLaunchRouter.open(url: url)
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .background {
+                    backgroundRefresh.schedule()
                 }
-                .onOpenURL { url in
-                    services.stationLaunchRouter.open(url: url)
-                }
-                .onChange(of: scenePhase) { _, newPhase in
-                    if newPhase == .background {
-                        backgroundRefresh.schedule()
-                    }
-                }
+            }
         }
     }
 }

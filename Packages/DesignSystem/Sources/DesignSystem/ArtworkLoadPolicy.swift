@@ -26,25 +26,25 @@ public struct ArtworkLoadRequest: Equatable, Sendable {
 public enum ArtworkLoadPolicy {
     public static let defaultRetryDelays: [Duration] = [
         .milliseconds(350),
-        .seconds(1)
+        .seconds(1),
     ]
 
     public static func load<Artwork>(
         _ request: ArtworkLoadRequest,
         retryDelays: [Duration] = defaultRetryDelays,
-        loader: @escaping (URL?) async -> Artwork?
+        loader: @escaping (URL?) async -> Artwork?,
     ) async -> Artwork? {
         await loadWithSource(
             request,
             retryDelays: retryDelays,
-            loader: loader
+            loader: loader,
         )?.artwork
     }
 
     public static func loadWithSource<Artwork>(
         _ request: ArtworkLoadRequest,
         retryDelays: [Duration] = defaultRetryDelays,
-        loader: @escaping (URL?) async -> Artwork?
+        loader: @escaping (URL?) async -> Artwork?,
     ) async -> (artwork: Artwork, sourceURL: URL)? {
         for url in request.candidateURLs {
             var attempt = 0

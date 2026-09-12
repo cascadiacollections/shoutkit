@@ -3,14 +3,14 @@ import AVFoundation
 import Foundation
 import Playback
 
-// The equalizer attach point on AudioStreaming's `AVAudioEngine`-backed node
-// graph. AudioStreaming's `AudioPlayer.attach(node:)` inserts a custom
-// `AVAudioNode` between its rate node and main mixer (see the "Adding custom
-// audio nodes to AudioPlayer" section of its README), which is what makes an
-// equalizer possible here at all — `AVPlayer` (the previous engine, and the
-// one `WatchRadioPlaybackEngine` still uses) has no supported way to insert a
-// filter into its render chain. Split out of AudioStreamingPlaybackEngine.swift
-// for the same `file_length` reason as the `+Session` split.
+/// The equalizer attach point on AudioStreaming's `AVAudioEngine`-backed node
+/// graph. AudioStreaming's `AudioPlayer.attach(node:)` inserts a custom
+/// `AVAudioNode` between its rate node and main mixer (see the "Adding custom
+/// audio nodes to AudioPlayer" section of its README), which is what makes an
+/// equalizer possible here at all — `AVPlayer` (the previous engine, and the
+/// one `WatchRadioPlaybackEngine` still uses) has no supported way to insert a
+/// filter into its render chain. Split out of AudioStreamingPlaybackEngine.swift
+/// for the same `file_length` reason as the `+Session` split.
 extension AudioStreamingPlaybackEngine {
     /// Number of equalizer bands. Matches the Android client's default so both
     /// clients apply the same curve shape.
@@ -18,7 +18,7 @@ extension AudioStreamingPlaybackEngine {
 
     /// Center frequencies (Hz) for the bands, roughly log-spaced across the
     /// audible range.
-    static let equalizerBandFrequencies: [Float] = [60, 230, 910, 3600, 14_000]
+    static let equalizerBandFrequencies: [Float] = [60, 230, 910, 3600, 14000]
 
     /// Gain range, in dB, applied at each band. Deliberately narrower than
     /// `AVAudioUnitEQ`'s full `-96...24` range: it's a listening-color preset,
@@ -27,7 +27,9 @@ extension AudioStreamingPlaybackEngine {
     static let equalizerMinGain: Float = -12
     static let equalizerMaxGain: Float = 12
 
-    public var supportsEqualizer: Bool { true }
+    public var supportsEqualizer: Bool {
+        true
+    }
 
     public func setEqualizerPreset(_ preset: EqualizerPreset) {
         currentEqualizerPreset = preset
@@ -69,7 +71,7 @@ extension AudioStreamingPlaybackEngine {
             for: preset,
             bandCount: Self.equalizerBandCount,
             minGain: Self.equalizerMinGain,
-            maxGain: Self.equalizerMaxGain
+            maxGain: Self.equalizerMaxGain,
         )
         for (index, gain) in gains.enumerated() where equalizer.bands.indices.contains(index) {
             equalizer.bands[index].gain = gain

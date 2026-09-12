@@ -17,7 +17,7 @@ public struct PlayingIndicator: View {
         TimelineView(.animation(minimumInterval: 0.12, paused: isPaused)) { timeline in
             let time = timeline.date.timeIntervalSinceReferenceDate
             HStack(alignment: .bottom, spacing: 2) {
-                ForEach(0..<3, id: \.self) { index in
+                ForEach(0 ..< 3, id: \.self) { index in
                     Capsule()
                         .fill(color)
                         .frame(width: 3, height: barHeight(index: index, time: time))

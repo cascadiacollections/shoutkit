@@ -7,16 +7,18 @@ public enum TopTracksTimeframe: String, CaseIterable, Identifiable, Sendable {
     case month
     case allTime
 
-    public var id: String { rawValue }
+    public var id: String {
+        rawValue
+    }
 
     public func since(from now: Date = .now) -> Date? {
         switch self {
         case .week:
-            return Calendar.current.date(byAdding: .day, value: -7, to: now)
+            Calendar.current.date(byAdding: .day, value: -7, to: now)
         case .month:
-            return Calendar.current.date(byAdding: .month, value: -1, to: now)
+            Calendar.current.date(byAdding: .month, value: -1, to: now)
         case .allTime:
-            return nil
+            nil
         }
     }
 }
@@ -33,8 +35,13 @@ public struct TopTrack: Identifiable, Sendable, Equatable {
     public let artworkURLString: String?
     public let appleMusicURLString: String?
 
-    public var artworkURL: URL? { artworkURLString.flatMap(URL.init(string:)) }
-    public var appleMusicURL: URL? { appleMusicURLString.flatMap(URL.init(string:)) }
+    public var artworkURL: URL? {
+        artworkURLString.flatMap(URL.init(string:))
+    }
+
+    public var appleMusicURL: URL? {
+        appleMusicURLString.flatMap(URL.init(string:))
+    }
 }
 
 /// Aggregates local listening history into a "most played" ranking.
@@ -56,7 +63,7 @@ public enum TopTracksAggregator {
         _ tracks: [RecentlyHeardTrack],
         timeframe: TopTracksTimeframe,
         limit: Int = 20,
-        now: Date = .now
+        now: Date = .now,
     ) -> [TopTrack] {
         let since = timeframe.since(from: now)
         var buckets: [String: TopTrack] = [:]
@@ -64,7 +71,9 @@ public enum TopTracksAggregator {
         for track in tracks {
             guard let title = track.title, let artist = track.artist,
                   title.isEmpty == false, artist.isEmpty == false else { continue }
-            if let since, track.heardAt < since { continue }
+            if let since, track.heardAt < since {
+                continue
+            }
 
             // A unit separator, not "|": a track title or artist can legitimately
             // contain a pipe (e.g. "Artist | Live"), which would otherwise let two
@@ -81,7 +90,7 @@ public enum TopTracksAggregator {
                     artworkURLString: isNewer ? track.artworkURLString ?? existing.artworkURLString
                         : existing.artworkURLString ?? track.artworkURLString,
                     appleMusicURLString: isNewer ? track.appleMusicURLString ?? existing.appleMusicURLString
-                        : existing.appleMusicURLString ?? track.appleMusicURLString
+                        : existing.appleMusicURLString ?? track.appleMusicURLString,
                 )
             } else {
                 buckets[key] = TopTrack(
@@ -91,7 +100,7 @@ public enum TopTracksAggregator {
                     playCount: 1,
                     lastHeardAt: track.heardAt,
                     artworkURLString: track.artworkURLString,
-                    appleMusicURLString: track.appleMusicURLString
+                    appleMusicURLString: track.appleMusicURLString,
                 )
             }
         }
@@ -101,6 +110,6 @@ public enum TopTracksAggregator {
                 lhs.playCount == rhs.playCount ? lhs.lastHeardAt > rhs.lastHeardAt : lhs.playCount > rhs.playCount
             }
             .prefix(limit)
-            .map { $0 }
+            .map(\.self)
     }
 }

@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import RadioDirectory
+import Testing
 
 private actor FilterRequestRecordingTransport: HTTPTransporting {
     private(set) var requests: [URLRequest] = []
@@ -27,13 +27,13 @@ private actor FilterRequestRecordingTransport: HTTPTransporting {
 
 struct RadioBrowserSearchFiltersTests {
     @Test
-    func searchSendsRadioBrowserFilterParameters() async throws {
+    func `search sends radio browser filter parameters`() async throws {
         let endpointURL = try #require(URL(string: "https://all.api.radio-browser.info/json/stations/search"))
         let response = try #require(HTTPURLResponse(
             url: endpointURL,
             statusCode: 200,
             httpVersion: nil,
-            headerFields: nil
+            headerFields: nil,
         ))
         let stationJSON = """
         [{
@@ -49,13 +49,13 @@ struct RadioBrowserSearchFiltersTests {
         let transport = FilterRequestRecordingTransport([.success((Data(stationJSON.utf8), response))])
         let directory = RadioBrowserDirectoryClient(
             transport: transport,
-            retryPolicy: RetryPolicy(maximumRetries: 0, timeout: 1, baseDelay: 0)
+            retryPolicy: RetryPolicy(maximumRetries: 0, timeout: 1, baseDelay: 0),
         )
 
         _ = try await directory.searchStations(
             matching: "kexp",
             limit: 40,
-            filters: StationSearchFilters(bitrateMin: 96, bitrateMax: 192, tag: "jazz", countryCode: "us")
+            filters: StationSearchFilters(bitrateMin: 96, bitrateMax: 192, tag: "jazz", countryCode: "us"),
         )
 
         let queryItems = await transport.firstRequestQueryItems()
@@ -66,13 +66,13 @@ struct RadioBrowserSearchFiltersTests {
     }
 
     @Test
-    func genreSearchComposesGenreAndTagFilterAsTagList() async throws {
+    func `genre search composes genre and tag filter as tag list`() async throws {
         let endpointURL = try #require(URL(string: "https://all.api.radio-browser.info/json/stations/search"))
         let response = try #require(HTTPURLResponse(
             url: endpointURL,
             statusCode: 200,
             httpVersion: nil,
-            headerFields: nil
+            headerFields: nil,
         ))
         let stationJSON = """
         [{
@@ -87,13 +87,13 @@ struct RadioBrowserSearchFiltersTests {
         let transport = FilterRequestRecordingTransport([.success((Data(stationJSON.utf8), response))])
         let directory = RadioBrowserDirectoryClient(
             transport: transport,
-            retryPolicy: RetryPolicy(maximumRetries: 0, timeout: 1, baseDelay: 0)
+            retryPolicy: RetryPolicy(maximumRetries: 0, timeout: 1, baseDelay: 0),
         )
 
         _ = try await directory.stations(
             inGenre: "Jazz",
             limit: 40,
-            filters: StationSearchFilters(tag: "live")
+            filters: StationSearchFilters(tag: "live"),
         )
 
         let queryItems = await transport.firstRequestQueryItems()

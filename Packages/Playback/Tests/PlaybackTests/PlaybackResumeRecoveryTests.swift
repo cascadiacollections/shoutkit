@@ -1,8 +1,7 @@
 import Foundation
+@testable import Playback
 import RadioDirectory
 import Testing
-
-@testable import Playback
 
 // The paths that used to leave playback stuck after a pause: tapping play did
 // nothing at all — no audio, no error — until the listener switched stations and
@@ -21,11 +20,11 @@ struct PlaybackResumeRecoveryTests {
 
     // MARK: - Resume watchdog
 
-    @Test func resumeTheOutputNeverAcknowledgesRejoinsStream() async {
+    @Test func `resume the output never acknowledges rejoins stream`() async {
         let output = FakeAudioOutput()
         let controller = makeController(
             stations: [station()], output: output,
-            resumeWatchdogTimeout: Self.shortTimeout
+            resumeWatchdogTimeout: Self.shortTimeout,
         )
 
         controller.play(station())
@@ -47,11 +46,11 @@ struct PlaybackResumeRecoveryTests {
         #expect(controller.state == .playing(station()))
     }
 
-    @Test func acknowledgedResumeDoesNotRejoinStream() async {
+    @Test func `acknowledged resume does not rejoin stream`() async {
         let output = FakeAudioOutput()
         let controller = makeController(
             stations: [station()], output: output,
-            resumeWatchdogTimeout: Self.shortTimeout
+            resumeWatchdogTimeout: Self.shortTimeout,
         )
 
         controller.play(station())
@@ -66,11 +65,11 @@ struct PlaybackResumeRecoveryTests {
         #expect(controller.state == .playing(station()))
     }
 
-    @Test func pauseCancelsResumeWatchdog() async {
+    @Test func `pause cancels resume watchdog`() async {
         let output = FakeAudioOutput()
         let controller = makeController(
             stations: [station()], output: output,
-            resumeWatchdogTimeout: Self.shortTimeout
+            resumeWatchdogTimeout: Self.shortTimeout,
         )
 
         controller.play(station())
@@ -87,11 +86,11 @@ struct PlaybackResumeRecoveryTests {
         #expect(controller.state == .paused(station()))
     }
 
-    @Test func stopCancelsResumeWatchdog() async {
+    @Test func `stop cancels resume watchdog`() async {
         let output = FakeAudioOutput()
         let controller = makeController(
             stations: [station()], output: output,
-            resumeWatchdogTimeout: Self.shortTimeout
+            resumeWatchdogTimeout: Self.shortTimeout,
         )
 
         controller.play(station())
@@ -108,12 +107,12 @@ struct PlaybackResumeRecoveryTests {
         #expect(controller.state == .idle)
     }
 
-    @Test func rejoinReusesResolvedEndpointAndIsNotANewChoice() async {
+    @Test func `rejoin reuses resolved endpoint and is not A new choice`() async {
         let output = FakeAudioOutput()
         let directory = CountingRadioDirectory(stations: [station()])
         let controller = makeController(
             directory: directory, output: output,
-            resumeWatchdogTimeout: Self.shortTimeout
+            resumeWatchdogTimeout: Self.shortTimeout,
         )
         var playedCount = 0
         controller.onStationPlayed = { _ in playedCount += 1 }
@@ -136,7 +135,7 @@ struct PlaybackResumeRecoveryTests {
 
     // MARK: - Keeping the output's state in step
 
-    @Test func interruptionPausesTheOutputToo() async {
+    @Test func `interruption pauses the output too`() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
 
@@ -152,7 +151,7 @@ struct PlaybackResumeRecoveryTests {
         #expect(controller.state == .paused(station()))
     }
 
-    @Test func interruptionDuringLoadingTearsDownAStartedOutput() async {
+    @Test func `interruption during loading tears down A started output`() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
 

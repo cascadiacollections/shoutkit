@@ -30,7 +30,7 @@ public struct SettingsView: View {
                 // Debug and TestFlight builds only: the catalog is all internal
                 // placeholder flags, so App Store users have nothing actionable here.
                 #if DEBUG || TESTFLIGHT
-                featureFlagsSection
+                    featureFlagsSection
                 #endif
                 FavoritesBackupSection()
                 supportSection
@@ -61,8 +61,8 @@ public struct SettingsView: View {
                     "Loop Finished Broadcasts",
                     isOn: Binding(
                         get: { settings.isStreamLoopingEnabled },
-                        set: { settings.isStreamLoopingEnabled = $0 }
-                    )
+                        set: { settings.isStreamLoopingEnabled = $0 },
+                    ),
                 )
             } header: {
                 Text("Playback")
@@ -86,30 +86,30 @@ public struct SettingsView: View {
                     "Report Plays to Radio-Browser",
                     isOn: Binding(
                         get: { settings.isPlayReportingEnabled },
-                        set: { settings.isPlayReportingEnabled = $0 }
-                    )
+                        set: { settings.isPlayReportingEnabled = $0 },
+                    ),
                 )
                 Toggle(
                     "Fetch Album Artwork",
                     isOn: Binding(
                         get: { settings.isAlbumArtEnabled },
-                        set: { settings.isAlbumArtEnabled = $0 }
-                    )
+                        set: { settings.isAlbumArtEnabled = $0 },
+                    ),
                 )
                 Toggle(
                     "Share diagnostics",
                     isOn: Binding(
                         get: { settings.isDiagnosticsSharingEnabled },
-                        set: { settings.isDiagnosticsSharingEnabled = $0 }
-                    )
+                        set: { settings.isDiagnosticsSharingEnabled = $0 },
+                    ),
                 )
                 if isGeoStationsEnabled {
                     Toggle(
                         "Use Precise Location for Geo Stations",
                         isOn: Binding(
                             get: { settings.isPreciseGeoStationLocationEnabled },
-                            set: { settings.isPreciseGeoStationLocationEnabled = $0 }
-                        )
+                            set: { settings.isPreciseGeoStationLocationEnabled = $0 },
+                        ),
                     )
                 }
             } header: {
@@ -148,14 +148,14 @@ public struct SettingsView: View {
                         selection: Binding(
                             get: {
                                 SettingsPresentation.resolvedEqualizerPreset(
-                                    storedRawValue: settings.equalizerPresetRawValue
+                                    storedRawValue: settings.equalizerPresetRawValue,
                                 )
                             },
                             set: { preset in
                                 settings.equalizerPresetRawValue = preset.rawValue
                                 playbackController.setEqualizerPreset(preset)
-                            }
-                        )
+                            },
+                        ),
                     ) {
                         ForEach(EqualizerPreset.allCases, id: \.self) { preset in
                             Text(preset.displayName).tag(preset)
@@ -170,8 +170,8 @@ public struct SettingsView: View {
                             set: { isEnabled in
                                 settings.isSpatialAudioEnabled = isEnabled
                                 playbackController.setSpatialAudioEnabled(isEnabled)
-                            }
-                        )
+                            },
+                        ),
                     )
                 }
             } header: {
@@ -208,19 +208,19 @@ public struct SettingsView: View {
     }
 
     #if DEBUG || TESTFLIGHT
-    private var featureFlagsSection: some View {
-        Section {
-            NavigationLink {
-                FeatureFlagsView(featureFlags: featureFlags)
-            } label: {
-                Label("Feature Flags", systemImage: "switch.2")
+        private var featureFlagsSection: some View {
+            Section {
+                NavigationLink {
+                    FeatureFlagsView(featureFlags: featureFlags)
+                } label: {
+                    Label("Feature Flags", systemImage: "switch.2")
+                }
+            } header: {
+                Text("Developer")
+            } footer: {
+                Text("Feature flags are stored locally on this device and apply immediately.")
             }
-        } header: {
-            Text("Developer")
-        } footer: {
-            Text("Feature flags are stored locally on this device and apply immediately.")
         }
-    }
     #endif
 
     private var aboutSection: some View {

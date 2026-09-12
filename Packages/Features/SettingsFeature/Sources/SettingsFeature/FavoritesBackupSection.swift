@@ -37,15 +37,15 @@ struct FavoritesBackupSection: View {
             isPresented: $isExporting,
             document: exportFile,
             contentType: .json,
-            defaultFilename: "shoutkit-favorites"
+            defaultFilename: "shoutkit-favorites",
         ) { result in
-            if case .failure(let error) = result {
+            if case let .failure(error) = result {
                 presentAlert(error.localizedDescription)
             }
         }
         .fileImporter(
             isPresented: $isImporting,
-            allowedContentTypes: [.json]
+            allowedContentTypes: [.json],
         ) { result in
             handleImport(result)
         }
@@ -76,7 +76,7 @@ struct FavoritesBackupSection: View {
         }
 
         switch result {
-        case .success(let url):
+        case let .success(url):
             do {
                 let data = try readImportedFileData(from: url)
                 let importResult = try library.importFavoritesJSONData(data)
@@ -84,13 +84,13 @@ struct FavoritesBackupSection: View {
                     presentAlert("No new favorites were imported.")
                 } else {
                     presentAlert(
-                        "Imported \(importResult.addedCount) favorite\(importResult.addedCount == 1 ? "" : "s")."
+                        "Imported \(importResult.addedCount) favorite\(importResult.addedCount == 1 ? "" : "s").",
                     )
                 }
             } catch {
                 presentAlert(error.localizedDescription)
             }
-        case .failure(let error):
+        case let .failure(error):
             presentAlert(error.localizedDescription)
         }
     }
@@ -112,7 +112,9 @@ struct FavoritesBackupSection: View {
 }
 
 private struct FavoritesExportFile: FileDocument {
-    static var readableContentTypes: [UTType] { [.json] }
+    static var readableContentTypes: [UTType] {
+        [.json]
+    }
 
     let data: Data
 
@@ -127,7 +129,7 @@ private struct FavoritesExportFile: FileDocument {
         self.data = data
     }
 
-    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+    func fileWrapper(configuration _: WriteConfiguration) throws -> FileWrapper {
         FileWrapper(regularFileWithContents: data)
     }
 }

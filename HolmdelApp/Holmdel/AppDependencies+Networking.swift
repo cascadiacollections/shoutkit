@@ -42,18 +42,18 @@ extension AppDependencies {
         // carries all directory and artwork traffic) on the old default cache.
         URLCache.shared = URLCache(
             memoryCapacity: 2 * 1024 * 1024,
-            diskCapacity: 64 * 1024 * 1024
+            diskCapacity: 64 * 1024 * 1024,
         )
 
         DebugNetworkInspection.install()
 
         #if !DEBUG
-        // Fail-fast when offline, responsive-data service type. In Debug,
-        // DebugNetworkInspection.install() above already claimed the slot
-        // with the same tuned configuration plus Pulse's proxy delegate.
-        URLSessionHTTPTransport.installSharedSession(
-            URLSession(configuration: URLSessionHTTPTransport.interactiveConfiguration())
-        )
+            // Fail-fast when offline, responsive-data service type. In Debug,
+            // DebugNetworkInspection.install() above already claimed the slot
+            // with the same tuned configuration plus Pulse's proxy delegate.
+            URLSessionHTTPTransport.installSharedSession(
+                URLSession(configuration: URLSessionHTTPTransport.interactiveConfiguration()),
+            )
         #endif
     }
 }

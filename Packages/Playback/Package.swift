@@ -12,10 +12,10 @@ let package = Package(
         // Declared so the controller/state-machine test suite can run on the mac
         // host (`swift test`); the AVPlayer/UIKit-backed production types are
         // gated behind canImport(UIKit) and the app product remains iOS-only.
-        .macOS(.v15)
+        .macOS(.v15),
     ],
     products: [
-        .library(name: "Playback", targets: ["Playback"])
+        .library(name: "Playback", targets: ["Playback"]),
     ],
     // No AudioStreaming here, deliberately. The concrete engine lives in
     // Packages/PlaybackEngineAudioStreaming, which only the iOS app target
@@ -35,7 +35,7 @@ let package = Package(
     dependencies: [
         .package(path: "../ImageIODownsample"),
         .package(path: "../RadioDirectory"),
-        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2")
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2"),
     ],
     targets: [
         .target(
@@ -43,13 +43,13 @@ let package = Package(
             dependencies: [
                 "ImageIODownsample",
                 "RadioDirectory",
-                .product(name: "FactoryKit", package: "Factory")
+                .product(name: "FactoryKit", package: "Factory"),
             ],
-            resources: [.process("Resources/Localizable.xcstrings")]
+            resources: [.process("Resources/Localizable.xcstrings")],
         ),
         .testTarget(
             name: "PlaybackTests",
-            dependencies: ["Playback"]
-        )
-    ]
+            dependencies: ["Playback"],
+        ),
+    ],
 )

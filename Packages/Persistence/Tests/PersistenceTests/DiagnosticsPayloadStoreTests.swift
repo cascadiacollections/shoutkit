@@ -1,38 +1,37 @@
 import Foundation
+@testable import Persistence
 import Testing
 
-@testable import Persistence
-
 struct DiagnosticsPayloadStoreTests {
-    @Test func persistsMetricAndDiagnosticPayloads() throws {
+    @Test func `persists metric and diagnostic payloads`() throws {
         let store = try DiagnosticsPayloadStore(path: ":memory:")
 
         try store.persist(
             metricPayloads: [Data("metric-a".utf8), Data("metric-b".utf8)],
             diagnosticPayloads: [Data("diag-a".utf8)],
-            receivedAt: Date()
+            receivedAt: Date(),
         )
 
         #expect(try store.payloadCount() == 3)
     }
 
-    @Test func extractsLaunchSummariesFromStoredMetricPayloads() throws {
+    @Test func `extracts launch summaries from stored metric payloads`() throws {
         let store = try DiagnosticsPayloadStore(path: ":memory:")
         let payload = try JSONSerialization.data(withJSONObject: [
             "applicationLaunchMetrics": [
                 "histogrammedTimeToFirstDraw": [
                     "histogramValue": [
                         "0": "1810 ms",
-                        "1": "1210 ms"
-                    ]
+                        "1": "1210 ms",
+                    ],
                 ],
                 "histogrammedApplicationResumeTime": [
                     "histogramValue": [
                         "0": "620 ms",
-                        "1": "1180 ms"
-                    ]
-                ]
-            ]
+                        "1": "1180 ms",
+                    ],
+                ],
+            ],
         ])
 
         try store.persist(metricPayloads: [payload], diagnosticPayloads: [], receivedAt: Date())
@@ -47,7 +46,7 @@ struct DiagnosticsPayloadStoreTests {
         #expect(summaries.first?.networkTransactions.isEmpty == true)
     }
 
-    @Test func ignoresUnparseableMetricPayloadsWhenSummarizing() throws {
+    @Test func `ignores unparseable metric payloads when summarizing`() throws {
         let store = try DiagnosticsPayloadStore(path: ":memory:")
 
         try store.persist(metricPayloads: [Data("not-json".utf8)], diagnosticPayloads: [], receivedAt: Date())
@@ -55,7 +54,7 @@ struct DiagnosticsPayloadStoreTests {
         #expect(try store.metricPayloadSummaries(limit: 5).isEmpty)
     }
 
-    @Test func prunesPayloadsOutsideRetentionWindow() throws {
+    @Test func `prunes payloads outside retention window`() throws {
         let store = try DiagnosticsPayloadStore(path: ":memory:")
         let oldDate = try #require(Calendar.current.date(byAdding: .day, value: -40, to: Date()))
         let currentDate = Date()
@@ -63,33 +62,33 @@ struct DiagnosticsPayloadStoreTests {
         try store.persist(
             metricPayloads: [Data("old".utf8)],
             diagnosticPayloads: [Data("old-diag".utf8)],
-            receivedAt: oldDate
+            receivedAt: oldDate,
         )
         try store.persist(
             metricPayloads: [Data("new".utf8)],
             diagnosticPayloads: [],
-            receivedAt: currentDate
+            receivedAt: currentDate,
         )
 
         #expect(try store.payloadCount() == 1)
     }
 
-    @Test func parsesHistogramDurationStringsAcrossSupportedFormats() throws {
+    @Test func `parses histogram duration strings across supported formats`() throws {
         let store = try DiagnosticsPayloadStore(path: ":memory:")
         let payload = try JSONSerialization.data(withJSONObject: [
             "applicationLaunchMetrics": [
                 "histogrammedTimeToFirstDraw": [
                     "histogramValue": [
                         "0": "+1.5ms",
-                        "1": "2.5 ms"
-                    ]
+                        "1": "2.5 ms",
+                    ],
                 ],
                 "histogrammedApplicationResumeTime": [
                     "histogramValue": [
-                        "0": "-2.3 s"
-                    ]
-                ]
-            ]
+                        "0": "-2.3 s",
+                    ],
+                ],
+            ],
         ])
 
         try store.persist(metricPayloads: [payload], diagnosticPayloads: [], receivedAt: Date())
@@ -99,16 +98,16 @@ struct DiagnosticsPayloadStoreTests {
         #expect(summary.launch?.meanResumeTimeMilliseconds == -2300)
     }
 
-    @Test func ignoresMalformedHistogramDurationStrings() throws {
+    @Test func `ignores malformed histogram duration strings`() throws {
         let store = try DiagnosticsPayloadStore(path: ":memory:")
         let payload = try JSONSerialization.data(withJSONObject: [
             "applicationLaunchMetrics": [
                 "histogrammedTimeToFirstDraw": [
                     "histogramValue": [
-                        "0": "1.2-3.4ms"
-                    ]
-                ]
-            ]
+                        "0": "1.2-3.4ms",
+                    ],
+                ],
+            ],
         ])
 
         try store.persist(metricPayloads: [payload], diagnosticPayloads: [], receivedAt: Date())

@@ -59,7 +59,7 @@ final class BackgroundRefreshController {
         // isolation checking). The main queue matches the closure's isolation.
         isRegistered = BGTaskScheduler.shared.register(
             forTaskWithIdentifier: Self.taskIdentifier,
-            using: .main
+            using: .main,
         ) { [weak self] task in
             guard let refreshTask = task as? BGAppRefreshTask else {
                 task.setTaskCompleted(success: false)
@@ -129,7 +129,7 @@ final class BackgroundRefreshController {
         let didRefreshFavoriteSnapshots = await refreshFavoriteStreamURLSnapshots(
             favoriteStations,
             store: services.libraryStore,
-            directory: services.directory
+            directory: services.directory,
         )
         if didRefreshFavoriteSnapshots {
             QuickPlayWidgetPublisher.publishStations(services.libraryStore.favoriteStations())
@@ -148,7 +148,7 @@ final class BackgroundRefreshController {
     private func refreshFavoriteStreamURLSnapshots(
         _ favoriteStations: [Station],
         store: LibraryStore,
-        directory: any RadioDirectoryProviding
+        directory: any RadioDirectoryProviding,
     ) async -> Bool {
         var didRefreshAnySnapshot = false
         for favorite in favoriteStations {
@@ -165,7 +165,7 @@ final class BackgroundRefreshController {
                     """
                     Background refresh skipped station \(favorite.id, privacy: .public): \
                     \(String(describing: error), privacy: .public)
-                    """
+                    """,
                 )
             }
         }
@@ -179,7 +179,7 @@ final class BackgroundRefreshController {
             return true
         } catch {
             logger.debug(
-                "Background refresh failed to warm top stations: \(String(describing: error), privacy: .public)"
+                "Background refresh failed to warm top stations: \(String(describing: error), privacy: .public)",
             )
             return false
         }
@@ -216,7 +216,7 @@ final class BackgroundRefreshController {
             clickTrend: station.clickTrend,
             votes: station.votes,
             artworkURL: station.artworkURL,
-            preferredStreamURL: nil
+            preferredStreamURL: nil,
         )
     }
 }

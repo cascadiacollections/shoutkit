@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Persistence
+import Testing
 
 struct DefaultsKeyTests {
     private func makeDefaults() throws -> UserDefaults {
@@ -11,14 +10,14 @@ struct DefaultsKeyTests {
         return defaults
     }
 
-    @Test func plistReturnsDefaultWhenUnset() throws {
+    @Test func `plist returns default when unset`() throws {
         let defaults = try makeDefaults()
         let key = DefaultsKey<Bool>.plist("test.bool.key", default: true)
 
         #expect(defaults.value(for: key) == true)
     }
 
-    @Test func plistRoundTripsWrittenValue() throws {
+    @Test func `plist round trips written value`() throws {
         let defaults = try makeDefaults()
         let key = DefaultsKey<Bool>.plist("test.bool.key", default: true)
 
@@ -27,7 +26,7 @@ struct DefaultsKeyTests {
         #expect(defaults.value(for: key) == false)
     }
 
-    @Test func codableSetRoundTripsAndDefaultsWhenUnset() throws {
+    @Test func `codable set round trips and defaults when unset`() throws {
         let defaults = try makeDefaults()
         let key = DefaultsKey<Set<String>>.codable("test.set.key", default: ["fallback"])
 

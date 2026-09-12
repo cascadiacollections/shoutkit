@@ -1,8 +1,7 @@
 import Foundation
+@testable import Playback
 import RadioDirectory
 import Testing
-
-@testable import Playback
 
 /// A minimal ``RadioPlaybackEngine`` double for exercising
 /// ``PlaybackController/supportsEqualizer``/``setEqualizerPreset(_:)`` without
@@ -18,7 +17,7 @@ private final class FakeRadioPlaybackEngine: RadioPlaybackEngine {
         self.supportsEqualizer = supportsEqualizer
     }
 
-    func start(url: URL, streamGeneration: UInt64) {}
+    func start(url _: URL, streamGeneration _: UInt64) {}
     func pause() {}
     func resume() {}
     func stop() {}
@@ -30,33 +29,33 @@ private final class FakeRadioPlaybackEngine: RadioPlaybackEngine {
 
 @MainActor
 struct EqualizerCapabilityTests {
-    @Test func plainAudioOutputReportsNoEqualizerSupport() {
+    @Test func `plain audio output reports no equalizer support`() {
         let controller = makeController(stations: [station()], output: FakeAudioOutput())
         #expect(controller.supportsEqualizer == false)
     }
 
-    @Test func settingAPresetOnAPlainAudioOutputIsANoOp() {
+    @Test func `setting A preset on A plain audio output is A no op`() {
         let controller = makeController(stations: [station()], output: FakeAudioOutput())
         // Must not crash or throw; there is simply nothing to apply it to.
         controller.setEqualizerPreset(.bassBoost)
     }
 
-    @Test func engineWithoutEqualizerSupportReportsFalse() {
+    @Test func `engine without equalizer support reports false`() {
         let engine = FakeRadioPlaybackEngine(supportsEqualizer: false)
         let controller = PlaybackController(
             directory: BundledRadioDirectory(stations: [station()]),
             output: engine,
-            nowPlayingCenter: NowPlayingPresenterSpy()
+            nowPlayingCenter: NowPlayingPresenterSpy(),
         )
         #expect(controller.supportsEqualizer == false)
     }
 
-    @Test func engineWithEqualizerSupportAppliesThePreset() {
+    @Test func `engine with equalizer support applies the preset`() {
         let engine = FakeRadioPlaybackEngine(supportsEqualizer: true)
         let controller = PlaybackController(
             directory: BundledRadioDirectory(stations: [station()]),
             output: engine,
-            nowPlayingCenter: NowPlayingPresenterSpy()
+            nowPlayingCenter: NowPlayingPresenterSpy(),
         )
         #expect(controller.supportsEqualizer)
 

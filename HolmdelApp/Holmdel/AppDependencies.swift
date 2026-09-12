@@ -82,7 +82,7 @@ enum AppDependencies {
             store: store,
             settings: settings,
             featureFlags: featureFlags,
-            playReporter: directoryServices.playReporter
+            playReporter: directoryServices.playReporter,
         )
 
         let activityCoordinator = makeActivityCoordinator(for: controller, featureFlags: featureFlags)
@@ -101,7 +101,7 @@ enum AppDependencies {
             directoryDiscoveryCache: directoryServices.discoveryCache,
             geoStationLocationCoordinator: directoryServices.geoStationLocationCoordinator,
             activityCoordinator: activityCoordinator,
-            stationLaunchRouter: StationLaunchRouter()
+            stationLaunchRouter: StationLaunchRouter(),
         )
         scheduleLaunchWarmups(store: store, featureFlags: featureFlags, prewarmer: stationConnectionPrewarmer)
 

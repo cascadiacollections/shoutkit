@@ -38,10 +38,15 @@ struct StationEntity: AppEntity, Sendable {
     /// The schema's canonical display name (distinct from `name`, which the rest
     /// of the app/entity query code already uses). Kept here as well as on
     /// ``LiveRadioStationEntity`` so the two stay trivially convertible.
-    var title: String { name }
+    var title: String {
+        name
+    }
+
     /// The network/broadcaster behind the stream (e.g. "NPR"). Holmdel doesn't
     /// track this separately from the station itself.
-    var providerName: String? { nil }
+    var providerName: String? {
+        nil
+    }
 
     var displayRepresentation: DisplayRepresentation {
         DisplayRepresentation(title: "\(name)", subtitle: "\(genre)")
@@ -60,7 +65,7 @@ struct StationEntity: AppEntity, Sendable {
         name: String,
         genre: String,
         artworkURLString: String?,
-        streamURLString: String?
+        streamURLString: String?,
     ) {
         self.id = id
         self.name = name
@@ -76,7 +81,7 @@ struct StationEntity: AppEntity, Sendable {
             genre: genre,
             listenerCount: 0,
             artworkURL: artworkURLString.flatMap(URL.init(string:)),
-            preferredStreamURL: streamURLString.flatMap(URL.init(string:))
+            preferredStreamURL: streamURLString.flatMap(URL.init(string:)),
         )
     }
 }
@@ -158,10 +163,10 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
         // Best effort: shortcuts can still resolve curated/cache stations when a
         // store read fails.
         let favorites = (try? context.fetch(
-            FetchDescriptor<FavoriteStation>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
+            FetchDescriptor<FavoriteStation>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)]),
         )) ?? []
         let recents = (try? context.fetch(
-            FetchDescriptor<RecentStation>(sortBy: [SortDescriptor(\.playedAt, order: .reverse)])
+            FetchDescriptor<RecentStation>(sortBy: [SortDescriptor(\.playedAt, order: .reverse)]),
         )) ?? []
 
         let candidates = favorites.map { StationEntity(station: $0.station) }
@@ -202,7 +207,7 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
                         .indexAppEntities(entities.map(LiveRadioStationEntity.init))
                 } catch {
                     Self.logger.error(
-                        "Failed to index Siri radio-schema stations in Spotlight: \(error, privacy: .public)"
+                        "Failed to index Siri radio-schema stations in Spotlight: \(error, privacy: .public)",
                     )
                 }
             }
@@ -235,7 +240,7 @@ enum IntentStationCache {
                 name: name,
                 genre: genre,
                 artworkURLString: artworkURLString,
-                streamURLString: streamURLString
+                streamURLString: streamURLString,
             )
         }
     }
@@ -298,7 +303,7 @@ struct GetCurrentPlaybackIntent: AppIntent {
 struct ToggleFavoriteIntent: AppIntent {
     static let title: LocalizedStringResource = "Toggle Favorite"
     static let description = IntentDescription(
-        "Adds or removes the currently playing station from your Holmdel favorites."
+        "Adds or removes the currently playing station from your Holmdel favorites.",
     )
     static let openAppWhenRun = false
 
@@ -318,7 +323,7 @@ struct ToggleFavoriteIntent: AppIntent {
         return .result(
             dialog: isFavoriteNow
                 ? "Added \(station.name) to your favorites."
-                : "Removed \(station.name) from your favorites."
+                : "Removed \(station.name) from your favorites.",
         )
     }
 }
@@ -331,39 +336,39 @@ struct HolmdelShortcuts: AppShortcutsProvider {
             intent: PlayStationIntent(),
             phrases: [
                 "Play \(\.$station) on \(.applicationName)",
-                "Listen to \(\.$station) on \(.applicationName)"
+                "Listen to \(\.$station) on \(.applicationName)",
             ],
             shortTitle: "Play Station",
-            systemImageName: "play.circle"
+            systemImageName: "play.circle",
         )
 
         AppShortcut(
             intent: OpenHolmdelIntent(),
             phrases: [
-                "Open \(.applicationName)"
+                "Open \(.applicationName)",
             ],
             shortTitle: "Open",
-            systemImageName: "dot.radiowaves.left.and.right"
+            systemImageName: "dot.radiowaves.left.and.right",
         )
 
         AppShortcut(
             intent: GetCurrentPlaybackIntent(),
             phrases: [
                 "What's playing on \(.applicationName)",
-                "What is playing on \(.applicationName)"
+                "What is playing on \(.applicationName)",
             ],
             shortTitle: "What's Playing",
-            systemImageName: "waveform"
+            systemImageName: "waveform",
         )
 
         AppShortcut(
             intent: ToggleFavoriteIntent(),
             phrases: [
                 "Add this station to my favorites in \(.applicationName)",
-                "Favorite this station in \(.applicationName)"
+                "Favorite this station in \(.applicationName)",
             ],
             shortTitle: "Toggle Favorite",
-            systemImageName: "heart"
+            systemImageName: "heart",
         )
     }
 }

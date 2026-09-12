@@ -24,15 +24,24 @@ public enum SongTitleFilter {
 
     public static func isLikelySongTitle(_ info: AudioTrackInfo, stationName: String) -> Bool {
         guard let title = info.title?.trimmingCharacters(in: .whitespacesAndNewlines),
-              title.isEmpty == false else {
+              title.isEmpty == false
+        else {
             return false
         }
 
-        let candidates = [title, info.artist].compactMap { $0 }
-        if candidates.contains(where: looksLikeURL) { return false }
-        if candidates.contains(where: { matchesStationName($0, stationName: stationName) }) { return false }
-        if candidates.contains(where: containsPromoPhrasing) { return false }
-        if info.artist == nil, isBareSingleWordID(title) { return false }
+        let candidates = [title, info.artist].compactMap(\.self)
+        if candidates.contains(where: looksLikeURL) {
+            return false
+        }
+        if candidates.contains(where: { matchesStationName($0, stationName: stationName) }) {
+            return false
+        }
+        if candidates.contains(where: containsPromoPhrasing) {
+            return false
+        }
+        if info.artist == nil, isBareSingleWordID(title) {
+            return false
+        }
         return true
     }
 
@@ -71,7 +80,9 @@ public enum SongTitleFilter {
     /// placeholder ID — only the latter carries a digit or is a known filler.
     private static func isBareSingleWordID(_ title: String) -> Bool {
         guard title.contains(where: \.isWhitespace) == false else { return false }
-        if junkSingleWords.contains(title.lowercased()) { return true }
+        if junkSingleWords.contains(title.lowercased()) {
+            return true
+        }
         return title.contains(where: \.isNumber)
     }
 }

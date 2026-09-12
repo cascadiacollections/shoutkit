@@ -92,9 +92,8 @@ swift test --skip-build
 - **Style** is enforced by the checked-in `.swiftformat` and `.swiftlint.yml`. CI runs
   SwiftLint **0.65.0** with `--strict` (warnings fail the build), pinned in `.github/workflows/ci.yml`;
   install that version locally (e.g. `mise use swiftlint@0.65.0`) so your results match CI. CI also
-  runs `swiftformat --lint` (currently non-blocking — the tree isn't fully conformant yet, see
-  `DECISIONS.md`) — run `swiftformat HolmdelApp Packages` locally before pushing to help close
-  that gap. Without a local toolchain, run the **Reformat** workflow
+  runs blocking `swiftformat --lint` — run `swiftformat HolmdelApp Packages` locally before
+  pushing. Without a local toolchain, run the **Reformat** workflow
   (`.github/workflows/format.yml`) from the Actions tab instead; it runs the same command on a
   macOS runner and can push the result to your branch.
 - **Formatting-only commits belong in `.git-blame-ignore-revs`.** A whole-tree reformat would

@@ -1,13 +1,13 @@
 import Foundation
-import Testing
 @testable import RadioDirectory
+import Testing
 
 private func decodeStations(_ json: String) throws -> [RadioBrowserStation] {
     try JSONDecoder().decode([RadioBrowserStation].self, from: Data(json.utf8))
 }
 
 @Test
-func decodesRadioBrowserStationJSON() throws {
+func `decodes radio browser station JSON`() throws {
     let json = """
     [{
         "stationuuid": "6a7508a9-27ab-11e8-91bf-52543be04c81",
@@ -44,7 +44,7 @@ func decodesRadioBrowserStationJSON() throws {
 }
 
 @Test
-func fallsBackToRawURLWhenResolvedIsEmpty() throws {
+func `falls back to raw URL when resolved is empty`() throws {
     let json = """
     [{
         "stationuuid": "445cbb3a-1c4e-49aa-a268-f5b6acfa8f2e",
@@ -64,7 +64,7 @@ func fallsBackToRawURLWhenResolvedIsEmpty() throws {
 }
 
 @Test
-func dropsStationsWithoutNameOrStreamURL() throws {
+func `drops stations without name or stream URL`() throws {
     let json = """
     [
         {"stationuuid": "a", "name": "  ", "url": "https://stream.example.com/a"},
@@ -80,7 +80,7 @@ func dropsStationsWithoutNameOrStreamURL() throws {
 }
 
 @Test
-func genreFallsBackToCountryThenPlaceholder() throws {
+func `genre falls back to country then placeholder`() throws {
     let json = """
     [
         {"stationuuid":"a","name":"Tagged","url":"https://x.example/a","tags":"jazz,smooth","country":"France"},
@@ -95,25 +95,25 @@ func genreFallsBackToCountryThenPlaceholder() throws {
 }
 
 @Test
-func upgradesInsecureFaviconsAndDropsEmptyOnes() {
+func `upgrades insecure favicons and drops empty ones`() {
     #expect(
         RadioBrowserDirectoryClient.artworkURL(from: "http://example.com/icon.png")?.absoluteString
-            == "https://example.com/icon.png"
+            == "https://example.com/icon.png",
     )
     #expect(
         RadioBrowserDirectoryClient.artworkURL(from: "HTTP://example.com:8080/icon.png")?.absoluteString
-            == "https://example.com/icon.png"
+            == "https://example.com/icon.png",
     )
     #expect(
         RadioBrowserDirectoryClient.artworkURL(from: "https://example.com/icon.png")?.absoluteString
-            == "https://example.com/icon.png"
+            == "https://example.com/icon.png",
     )
     #expect(RadioBrowserDirectoryClient.artworkURL(from: "") == nil)
     #expect(RadioBrowserDirectoryClient.artworkURL(from: nil) == nil)
 }
 
 @Test
-func decodesTagListIntoGenres() throws {
+func `decodes tag list into genres`() throws {
     let json = """
     [{"name": "pop", "stationcount": 5767}, {"name": "  ", "stationcount": 3}]
     """

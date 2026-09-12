@@ -31,10 +31,10 @@ public enum LiveActivityArtworkStore {
     /// (the point of not using `Hashable`), and collision-resistant enough for a
     /// single-item cache that only ever holds the current track's art.
     public static func token(for url: URL) -> String {
-        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        var hash: UInt64 = 0xCBF2_9CE4_8422_2325
         for byte in url.absoluteString.utf8 {
             hash ^= UInt64(byte)
-            hash = hash &* 0x0000_0100_0000_01b3
+            hash = hash &* 0x0000_0100_0000_01B3
         }
         return String(hash, radix: 16)
     }
@@ -90,7 +90,7 @@ public enum LiveActivityArtworkStore {
         let keep = Set(tokens.map { "\($0).png" })
         let contents = (try? FileManager.default.contentsOfDirectory(
             at: directory,
-            includingPropertiesForKeys: nil
+            includingPropertiesForKeys: nil,
         )) ?? []
         for file in contents where keep.contains(file.lastPathComponent) == false {
             try? FileManager.default.removeItem(at: file)

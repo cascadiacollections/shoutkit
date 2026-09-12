@@ -10,10 +10,10 @@ public func assertEnvironmentInjected(
     _ condition: @autoclosure () -> Bool,
     _ message: @autoclosure () -> String,
     file: StaticString = #fileID,
-    line: UInt = #line
+    line: UInt = #line,
 ) {
     #if DEBUG
-    guard ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] != "1" else { return }
-    assert(condition(), message(), file: file, line: line)
+        guard ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] != "1" else { return }
+        assert(condition(), message(), file: file, line: line)
     #endif
 }

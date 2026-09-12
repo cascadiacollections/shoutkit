@@ -42,7 +42,7 @@ public enum QuickPlayFavoritesStore {
     /// Test-only override for the container directory, so tests can stage a list
     /// in an isolated temp directory without an App Group. Mutated only from test
     /// setup/teardown (never concurrently), hence `nonisolated(unsafe)`.
-    nonisolated(unsafe) public static var directoryURLOverride: URL?
+    public nonisolated(unsafe) static var directoryURLOverride: URL?
 
     /// Writes the current favorites, replacing any previous list.
     ///

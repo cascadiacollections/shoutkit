@@ -41,7 +41,7 @@ public struct NowPlayingView: View {
         ZStack {
             AmbientArtworkBackdrop(
                 artworkURL: effectiveArtwork.primaryURL,
-                fallbackArtworkURL: effectiveArtwork.fallbackURL
+                fallbackArtworkURL: effectiveArtwork.fallbackURL,
             )
 
             if let playback, let station = playback.currentStation {
@@ -73,14 +73,14 @@ public struct NowPlayingView: View {
         PlayerFeature.effectiveArtworkSelection(
             settings: settings,
             playback: playback,
-            station: playback?.currentStation
+            station: playback?.currentStation,
         )
     }
 
     private var artworkLoadRequest: ArtworkLoadRequest {
         ArtworkLoadRequest(
             primaryURL: effectiveArtwork.primaryURL,
-            fallbackURL: effectiveArtwork.fallbackURL
+            fallbackURL: effectiveArtwork.fallbackURL,
         )
     }
 
@@ -113,7 +113,7 @@ public struct NowPlayingView: View {
                 artworkURL: effectiveArtwork.primaryURL,
                 fallbackArtworkURL: effectiveArtwork.fallbackURL,
                 size: 272,
-                isPlaying: isPlaying(playback)
+                isPlaying: isPlaying(playback),
             )
 
             titleBlock(playback: playback, station: station)
@@ -301,13 +301,17 @@ public struct NowPlayingView: View {
     }
 
     private func isPlaying(_ playback: PlaybackController) -> Bool {
-        if case .playing = playback.state { return true }
+        if case .playing = playback.state {
+            return true
+        }
         return false
     }
 
     private func trackLine(_ playback: PlaybackController) -> String? {
         guard let track = playback.nowPlaying, let title = track.title else { return nil }
-        if let artist = track.artist { return "\(title) — \(artist)" }
+        if let artist = track.artist {
+            return "\(title) — \(artist)"
+        }
         return title
     }
 }

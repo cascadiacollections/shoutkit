@@ -17,7 +17,7 @@ public enum EqualizerCurves {
         for preset: EqualizerPreset,
         bandCount: Int,
         minGain: Float,
-        maxGain: Float
+        maxGain: Float,
     ) -> [Float] {
         guard let curve = preset.curve else {
             return Array(repeating: 0, count: max(bandCount, 0))
@@ -27,7 +27,7 @@ public enum EqualizerCurves {
             minGain: minGain,
             maxGain: maxGain,
             range: maxGain - minGain,
-            curve: curve
+            curve: curve,
         )
     }
 
@@ -41,11 +41,11 @@ public enum EqualizerCurves {
         minGain: Float,
         maxGain: Float,
         range: Float,
-        curve: (Float) -> Float
+        curve: (Float) -> Float,
     ) -> [Float] {
         guard bandCount > 0 else { return [] }
         let denominator = Float(max(bandCount - 1, 1))
-        return (0..<bandCount).map { band in
+        return (0 ..< bandCount).map { band in
             let position = Float(band) / denominator
             let value = minGain + range * curve(position)
             return min(max(value, minGain), maxGain)

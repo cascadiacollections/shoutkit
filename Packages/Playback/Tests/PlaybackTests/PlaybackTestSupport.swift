@@ -1,8 +1,7 @@
 import Foundation
 import Observation
-import RadioDirectory
-
 @testable import Playback
+import RadioDirectory
 
 // Shared doubles and builders for the PlaybackController test suites.
 
@@ -24,23 +23,33 @@ final class FakeAudioOutput: AudioOutput {
     /// case the controller's resume watchdog exists for.
     var resumeSilentlyFails = false
 
-    var startedURL: URL? { startedURLs.last }
-    var stopCalled: Bool { stopCount > 0 }
+    var startedURL: URL? {
+        startedURLs.last
+    }
+
+    var stopCalled: Bool {
+        stopCount > 0
+    }
 
     func start(url: URL, streamGeneration: UInt64) {
         startedURLs.append(url)
         startedStreamGenerations.append(streamGeneration)
     }
+
     func pause() {
         pauseCount += 1
         onStatusChange?(.paused)
     }
+
     func resume() {
         resumeCount += 1
         guard resumeSilentlyFails == false else { return }
         onStatusChange?(.playing)
     }
-    func stop() { stopCount += 1 }
+
+    func stop() {
+        stopCount += 1
+    }
 
     func emitTrackInfo(_ title: String?, _ artist: String?) {
         let generation = startedStreamGenerations.last ?? 0
@@ -65,7 +74,9 @@ final class NowPlayingPresenterSpy: NowPlayingPresenting {
 
     private(set) var events: [Event] = []
 
-    var lastUpdate: Event? { events.last(where: { $0 != .clear }) }
+    var lastUpdate: Event? {
+        events.last(where: { $0 != .clear })
+    }
 
     /// Every artwork the controller pushed, in order — the sequence a Bluetooth
     /// head unit would have to keep up with.
@@ -81,7 +92,7 @@ final class NowPlayingPresenterSpy: NowPlayingPresenting {
             stationID: station.id,
             trackTitle: track?.title,
             isPlaying: isPlaying,
-            artwork: artwork
+            artwork: artwork,
         ))
     }
 
@@ -96,7 +107,7 @@ func station(_ id: String = "kexp") -> Station {
         name: "Station \(id)",
         genre: "Indie",
         listenerCount: 0,
-        preferredStreamURL: URL(string: "https://example.com/\(id).aac")
+        preferredStreamURL: URL(string: "https://example.com/\(id).aac"),
     )
 }
 
@@ -141,7 +152,7 @@ func makeController(
     maxReconnectAttempts: Int = 3,
     reconnectBaseDelay: Duration = .seconds(2),
     resumeWatchdogTimeout: Duration = .seconds(2),
-    hintlessResumeWindow: Duration = .seconds(90)
+    hintlessResumeWindow: Duration = .seconds(90),
 ) -> PlaybackController {
     PlaybackController(
         directory: directory,
@@ -150,7 +161,7 @@ func makeController(
         maxReconnectAttempts: maxReconnectAttempts,
         reconnectBaseDelay: reconnectBaseDelay,
         resumeWatchdogTimeout: resumeWatchdogTimeout,
-        hintlessResumeWindow: hintlessResumeWindow
+        hintlessResumeWindow: hintlessResumeWindow,
     )
 }
 
@@ -164,7 +175,7 @@ func makeController(
     maxReconnectAttempts: Int = 3,
     reconnectBaseDelay: Duration = .seconds(2),
     resumeWatchdogTimeout: Duration = .seconds(2),
-    hintlessResumeWindow: Duration = .seconds(90)
+    hintlessResumeWindow: Duration = .seconds(90),
 ) -> PlaybackController {
     PlaybackController(
         directory: BundledRadioDirectory(stations: stations),
@@ -175,19 +186,19 @@ func makeController(
         maxReconnectAttempts: maxReconnectAttempts,
         reconnectBaseDelay: reconnectBaseDelay,
         resumeWatchdogTimeout: resumeWatchdogTimeout,
-        hintlessResumeWindow: hintlessResumeWindow
+        hintlessResumeWindow: hintlessResumeWindow,
     )
 }
 
 @MainActor
 func waitForStart(_ output: FakeAudioOutput, count: Int = 1) async {
-    for _ in 0..<200 where output.startedURLs.count < count {
+    for _ in 0 ..< 200 where output.startedURLs.count < count {
         await Task.yield()
     }
 }
 
 func drainMainQueue() async {
-    for _ in 0..<50 {
+    for _ in 0 ..< 50 {
         await Task.yield()
     }
 }
@@ -220,7 +231,7 @@ final class ObservationToken {
 @discardableResult
 func observeChanges<Value>(
     of value: @escaping @MainActor () -> Value,
-    onChange: @escaping @MainActor (Value) -> Void
+    onChange: @escaping @MainActor (Value) -> Void,
 ) -> ObservationToken {
     let token = ObservationToken()
 
@@ -232,13 +243,13 @@ func observeChanges<Value>(
 private func observeChanges<Value>(
     of value: @escaping @MainActor () -> Value,
     token: ObservationToken,
-    onChange: @escaping @MainActor (Value) -> Void
+    onChange: @escaping @MainActor (Value) -> Void,
 ) {
-    withObservationTracking({
+    withObservationTracking {
         // Read once to register the dependency; the test only cares about
         // subsequent changes, so the initial value is intentionally ignored.
         _ = value()
-    }, onChange: {
+    } onChange: {
         // `onChange` fires before the triggering mutation is actually applied,
         // so reading `value()` synchronously here would still observe the old
         // value. Hop through a Task so the read lands after the mutation.
@@ -247,5 +258,5 @@ private func observeChanges<Value>(
             onChange(value())
             observeChanges(of: value, token: token, onChange: onChange)
         }
-    })
+    }
 }

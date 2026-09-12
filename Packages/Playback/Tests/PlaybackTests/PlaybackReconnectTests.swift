@@ -1,8 +1,7 @@
 import Foundation
+@testable import Playback
 import RadioDirectory
 import Testing
-
-@testable import Playback
 
 // Bounded auto-reconnect: a mid-play failure or a stalled stream should retry a
 // few times on a backed-off schedule before surfacing a terminal state, and a
@@ -13,11 +12,11 @@ import Testing
 struct PlaybackReconnectTests {
     private static let fastDelay: Duration = .milliseconds(10)
 
-    @Test func failureReconnectsThenRecovers() async {
+    @Test func `failure reconnects then recovers`() async {
         let output = FakeAudioOutput()
         let controller = makeController(
             stations: [station()], output: output,
-            maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay
+            maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay,
         )
 
         controller.play(station())
@@ -34,12 +33,12 @@ struct PlaybackReconnectTests {
         #expect(controller.state == .playing(station()))
     }
 
-    @Test func reconnectReusesResolvedEndpointInsteadOfReResolving() async {
+    @Test func `reconnect reuses resolved endpoint instead of re resolving`() async {
         let output = FakeAudioOutput()
         let directory = CountingRadioDirectory(stations: [station()])
         let controller = makeController(
             directory: directory, output: output,
-            maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay
+            maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay,
         )
 
         controller.play(station())
@@ -60,11 +59,11 @@ struct PlaybackReconnectTests {
         #expect(await directory.streamEndpointCallCount == 2)
     }
 
-    @Test func failureReconnectsUpToBudgetThenSurfacesFailure() async {
+    @Test func `failure reconnects up to budget then surfaces failure`() async {
         let output = FakeAudioOutput()
         let controller = makeController(
             stations: [station()], output: output,
-            maxReconnectAttempts: 2, reconnectBaseDelay: Self.fastDelay
+            maxReconnectAttempts: 2, reconnectBaseDelay: Self.fastDelay,
         )
 
         controller.play(station())
@@ -82,12 +81,12 @@ struct PlaybackReconnectTests {
         #expect(controller.state == .failed(.streamFailed("boom")))
     }
 
-    @Test func recoveryResetsReconnectBudget() async {
+    @Test func `recovery resets reconnect budget`() async {
         let output = FakeAudioOutput()
         // Budget of 1: without a reset, the second drop could never retry.
         let controller = makeController(
             stations: [station()], output: output,
-            maxReconnectAttempts: 1, reconnectBaseDelay: Self.fastDelay
+            maxReconnectAttempts: 1, reconnectBaseDelay: Self.fastDelay,
         )
 
         controller.play(station())
@@ -103,12 +102,12 @@ struct PlaybackReconnectTests {
         #expect(output.startedURLs.count == 3, "a recovery between drops must refresh the budget")
     }
 
-    @Test func pauseCancelsPendingReconnect() async {
+    @Test func `pause cancels pending reconnect`() async {
         let output = FakeAudioOutput()
         // A long backoff so the test can pause before the retry fires.
         let controller = makeController(
             stations: [station()], output: output,
-            maxReconnectAttempts: 3, reconnectBaseDelay: .milliseconds(200)
+            maxReconnectAttempts: 3, reconnectBaseDelay: .milliseconds(200),
         )
 
         controller.play(station())
@@ -122,12 +121,12 @@ struct PlaybackReconnectTests {
         #expect(controller.state == .paused(station()))
     }
 
-    @Test func stallReconnectsBeforeParking() async {
+    @Test func `stall reconnects before parking`() async {
         let output = FakeAudioOutput()
         let controller = makeController(
             stations: [station()], output: output,
             stallTimeout: .milliseconds(30),
-            maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay
+            maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay,
         )
 
         controller.play(station())

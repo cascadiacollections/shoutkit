@@ -11,6 +11,4 @@
 # Nothing but pure reformats belongs here: a commit listed here becomes
 # invisible to blame, so anything that changed behavior must never be added.
 
-# (No reformat commit yet — the one-time `swiftformat` run lands via the
-# Reformat workflow, and its SHA goes here in the same PR that drops
-# `continue-on-error` from the format check in ci.yml.)
+070443c6c27c00313d5aab4c241127014c4aa9cb # Reformat with SwiftFormat

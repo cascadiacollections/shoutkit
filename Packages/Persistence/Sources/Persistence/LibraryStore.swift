@@ -72,7 +72,7 @@ public final class LibraryStore {
             genre: station.genre,
             artworkURLString: station.artworkURL?.absoluteString,
             streamURLString: station.preferredStreamURL?.absoluteString,
-            sortIndex: nextSortIndex()
+            sortIndex: nextSortIndex(),
         )
         context.insert(favorite)
         favoriteIDs.insert(station.id)
@@ -87,21 +87,22 @@ public final class LibraryStore {
         // `.onMove` always supplies valid indices, but guard so this public API can't
         // crash on accidental misuse. An empty/invalid move is a no-op.
         let count = favorites.count
-        guard let maxSource = source.max(), maxSource < count, (0...count).contains(destination) else { return }
+        guard let maxSource = source.max(), maxSource < count, (0 ... count).contains(destination) else { return }
 
         let orderedDescriptor = FetchDescriptor<FavoriteStation>(
-            sortBy: [SortDescriptor(\.sortIndex, order: .forward)]
+            sortBy: [SortDescriptor(\.sortIndex, order: .forward)],
         )
         guard let persistedFavorites = fetch(orderedDescriptor, operation: "load favorites for move") else {
             return
         }
         guard persistedFavorites.count == favorites.count,
-              zip(persistedFavorites, favorites).allSatisfy({ $0.stationID == $1.stationID }) else {
+              zip(persistedFavorites, favorites).allSatisfy({ $0.stationID == $1.stationID })
+        else {
             logger.warning(
                 """
                 move favorites skipped due to source mismatch \
                 [persistedCount: \(persistedFavorites.count), passedCount: \(favorites.count)]
-                """
+                """,
             )
             return
         }
@@ -121,7 +122,7 @@ public final class LibraryStore {
     /// Intents, background work) and need the list to republish.
     public func orderedFavorites() -> [FavoriteStation] {
         let descriptor = FetchDescriptor<FavoriteStation>(
-            sortBy: [SortDescriptor(\.sortIndex, order: .forward)]
+            sortBy: [SortDescriptor(\.sortIndex, order: .forward)],
         )
         return fetch(descriptor, operation: "fetch ordered favorites") ?? []
     }
@@ -130,7 +131,7 @@ public final class LibraryStore {
     /// to the bottom of the user's arrangement.
     private func nextSortIndex() -> Int {
         var descriptor = FetchDescriptor<FavoriteStation>(
-            sortBy: [SortDescriptor(\.sortIndex, order: .reverse)]
+            sortBy: [SortDescriptor(\.sortIndex, order: .reverse)],
         )
         descriptor.fetchLimit = 1
         let maxIndex = fetch(descriptor, operation: "compute next sort index")?.first?.sortIndex
@@ -194,7 +195,7 @@ public final class LibraryStore {
                 votes: station.votes,
                 bitrate: station.bitrate,
                 artworkURLString: station.artworkURL?.absoluteString,
-                streamURLString: station.preferredStreamURL?.absoluteString
+                streamURLString: station.preferredStreamURL?.absoluteString,
             )
             context.insert(recent)
         }
@@ -251,7 +252,7 @@ public final class LibraryStore {
         var shouldContinue = true
         while shouldContinue {
             var descriptor = FetchDescriptor<RecentStation>(
-                sortBy: [SortDescriptor(\.playedAt, order: .reverse)]
+                sortBy: [SortDescriptor(\.playedAt, order: .reverse)],
             )
             descriptor.fetchLimit = fetchLimit
 
@@ -294,14 +295,14 @@ extension LibraryStore {
     /// this a no-op on every subsequent launch.
     private func normalizeSortIndicesIfNeeded() {
         let descriptor = FetchDescriptor<FavoriteStation>(
-            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+            sortBy: [SortDescriptor(\.createdAt, order: .reverse)],
         )
         guard let favorites = fetch(descriptor, operation: "normalize sort indices"),
               favorites.count > 1 else { return }
 
         let indices = favorites.map(\.sortIndex)
         guard Set(indices).count != indices.count else { return }
-        let hasAllZeroIndices = indices.allSatisfy({ $0 == 0 })
+        let hasAllZeroIndices = indices.allSatisfy { $0 == 0 }
         guard hasAllZeroIndices else { return }
 
         for (index, favorite) in favorites.enumerated() {
@@ -310,10 +311,10 @@ extension LibraryStore {
         save(operation: "normalize sort indices")
     }
 
-    func fetch<Model>(
+    func fetch<Model: PersistentModel>(
         _ descriptor: FetchDescriptor<Model>,
-        operation: String
-    ) -> [Model]? where Model: PersistentModel {
+        operation: String,
+    ) -> [Model]? {
         do {
             let models = try context.fetch(descriptor)
             lastErrorMessage = nil
@@ -346,7 +347,7 @@ extension LibraryStore {
             """
             LibraryStore \(operation, privacy: .public) failed: \
             \(localizedMessage, privacy: .public) [\(debugDescription, privacy: .public)]
-            """
+            """,
         )
     }
 

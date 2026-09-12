@@ -27,7 +27,7 @@ public final class DefaultsFeatureFlagService: FeatureFlagProviding {
     public init(
         defaults: UserDefaults = .standard,
         features: [Feature] = FeatureCatalog.all,
-        cleanupOnDeinit: (@Sendable () -> Void)? = nil
+        cleanupOnDeinit: (@Sendable () -> Void)? = nil,
     ) {
         self.defaults = defaults
         self.features = features

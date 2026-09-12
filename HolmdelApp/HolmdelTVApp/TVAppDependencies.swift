@@ -46,13 +46,13 @@ enum TVAppDependencies {
         let directory = CachingRadioDirectory(
             base: PreferredRadioDirectory(
                 base: RadioBrowserDirectoryClient(userAgent: "Holmdel/0.1"),
-                preferredStations: PreferredStations.all
-            )
+                preferredStations: PreferredStations.all,
+            ),
         )
         let playbackController = PlaybackController(
             directory: directory,
             output: AudioStreamingPlaybackEngine(),
-            nowPlayingCenter: TVNowPlayingCenter()
+            nowPlayingCenter: TVNowPlayingCenter(),
         )
         playbackController.onStationPlayed = { station in
             libraryStore.logRecent(station)
@@ -62,7 +62,7 @@ enum TVAppDependencies {
             container: container,
             libraryStore: libraryStore,
             playbackController: playbackController,
-            directory: directory
+            directory: directory,
         )
         Self.services = services
         return services

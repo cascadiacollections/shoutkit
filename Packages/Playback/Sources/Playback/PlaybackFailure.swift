@@ -8,11 +8,11 @@ enum PlaybackFailure: Equatable, Sendable {
     var message: String {
         switch self {
         case .noInternet:
-            return "No internet connection."
+            "No internet connection."
         case .stationNotAvailable:
-            return "This station is not available right now."
+            "This station is not available right now."
         case let .playback(message):
-            return message
+            message
         }
     }
 
@@ -24,7 +24,7 @@ enum PlaybackFailure: Equatable, Sendable {
             return classified
         }
 
-        if let error = fallbackErrors.compactMap({ $0 }).first {
+        if let error = fallbackErrors.compactMap(\.self).first {
             return .playback(message: error.localizedDescription)
         }
 

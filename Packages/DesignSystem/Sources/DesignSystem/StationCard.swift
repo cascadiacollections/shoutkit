@@ -35,7 +35,7 @@ public struct StationCard: View {
         isFavorite: Bool = false,
         onTap: @escaping () -> Void,
         onToggleFavorite: (() -> Void)? = nil,
-        removeAction: StationRowAction? = nil
+        removeAction: StationRowAction? = nil,
     ) {
         self.station = station
         self.phase = phase
@@ -54,7 +54,7 @@ public struct StationCard: View {
         isFavorite: Bool = false,
         onTap: @escaping () -> Void,
         onToggleFavorite: (() -> Void)? = nil,
-        removeAction: StationRowAction? = nil
+        removeAction: StationRowAction? = nil,
     ) {
         self.station = station
         self.phase = phase
@@ -109,7 +109,7 @@ public struct StationCard: View {
         .contentShape(
             .contextMenuPreview,
             RoundedRectangle(cornerRadius: ShoutKitRadius.card, style: .continuous)
-                .inset(by: -ShoutKitSpacing.small)
+                .inset(by: -ShoutKitSpacing.small),
         )
         .contextMenu {
             if let onToggleFavorite {
@@ -142,14 +142,14 @@ public struct StationCard: View {
                 size: fixedWidth,
                 cornerRadius: ShoutKitRadius.card,
                 isPlaying: phase == .playing,
-                placeholderSeed: station.name
+                placeholderSeed: station.name,
             )
         } else {
             StationArtworkView.filling(
                 artworkURL: station.artworkURL,
                 cornerRadius: ShoutKitRadius.card,
                 isPlaying: phase == .playing,
-                placeholderSeed: station.name
+                placeholderSeed: station.name,
             )
         }
     }
@@ -213,7 +213,7 @@ public struct StationCard: View {
                     phase: station.id == PreviewRadioDirectory.sampleStations.first?.id ? .playing : .idle,
                     isFavorite: station.id == PreviewRadioDirectory.sampleStations.last?.id,
                     onTap: {},
-                    onToggleFavorite: {}
+                    onToggleFavorite: {},
                 )
             }
         }

@@ -37,7 +37,7 @@ extension AudioStreamingPlaybackEngine {
             guard let self else { return }
             let steps = Self.volumeRampSteps
             let stepDuration = Self.volumeRampDuration / steps
-            for step in 1...steps {
+            for step in 1 ... steps {
                 try? await Task.sleep(for: stepDuration)
                 guard Task.isCancelled == false else { return }
                 self.player.volume = Float(step) / Float(steps)

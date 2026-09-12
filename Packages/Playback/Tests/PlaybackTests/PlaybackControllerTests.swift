@@ -1,8 +1,7 @@
 import Foundation
+@testable import Playback
 import RadioDirectory
 import Testing
-
-@testable import Playback
 
 // Doubles and builders (FakeAudioOutput, NowPlayingPresenterSpy, station(_:),
 // makeController, waitForStart, drainMainQueue) live in PlaybackTestSupport.swift
@@ -10,7 +9,7 @@ import Testing
 
 @MainActor
 struct PlaybackControllerTests {
-    @Test func playResolvesEndpointAndStartsOutput() async {
+    @Test func `play resolves endpoint and starts output`() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
 
@@ -22,7 +21,7 @@ struct PlaybackControllerTests {
         #expect(controller.currentStation?.id == "kexp")
     }
 
-    @Test func tapToAudioTraceEndsOnFirstPlayingStatus() async {
+    @Test func `tap to audio trace ends on first playing status`() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
 
@@ -37,7 +36,7 @@ struct PlaybackControllerTests {
         #expect(controller.tapToAudioTrace == nil)
     }
 
-    @Test func statusUpdatesDrivePlaybackState() async {
+    @Test func `status updates drive playback state`() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
 
@@ -53,7 +52,7 @@ struct PlaybackControllerTests {
         #expect(controller.phase(for: station()) == .paused)
     }
 
-    @Test func pauseDuringLoadingCancelsPendingStart() async {
+    @Test func `pause during loading cancels pending start`() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
 
@@ -66,7 +65,7 @@ struct PlaybackControllerTests {
         #expect(controller.state == .paused(station()))
     }
 
-    @Test func resumeAfterLoadingPauseReplaysStation() async {
+    @Test func `resume after loading pause replays station`() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
 
@@ -81,7 +80,7 @@ struct PlaybackControllerTests {
         #expect(controller.currentStation?.id == "kexp")
     }
 
-    @Test func rapidStationSwitchOnlyStartsTheLatest() async {
+    @Test func `rapid station switch only starts the latest`() async {
         let stationA = station("a")
         let stationB = station("b")
         let output = FakeAudioOutput()
@@ -98,7 +97,7 @@ struct PlaybackControllerTests {
         #expect(controller.currentStation?.id == "b")
     }
 
-    @Test func interruptionPausesAndResumesWhenHinted() async {
+    @Test func `interruption pauses and resumes when hinted`() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
 
@@ -115,7 +114,7 @@ struct PlaybackControllerTests {
         #expect(controller.state == .playing(station()))
     }
 
-    @Test func interruptionWithoutResumeHintStaysPaused() async {
+    @Test func `interruption without resume hint stays paused`() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
 
@@ -130,7 +129,7 @@ struct PlaybackControllerTests {
         #expect(controller.state == .paused(station()))
     }
 
-    @Test func trackInfoBecomesNowPlayingMetadata() async {
+    @Test func `track info becomes now playing metadata`() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
 
@@ -143,7 +142,7 @@ struct PlaybackControllerTests {
         #expect(controller.nowPlaying?.artist == "Band")
     }
 
-    @Test func staleTrackInfoFromPreviousStreamGenerationIsDropped() async {
+    @Test func `stale track info from previous stream generation is dropped`() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
 
@@ -159,7 +158,7 @@ struct PlaybackControllerTests {
         #expect(controller.nowPlaying?.artist == "New Band")
     }
 
-    @Test func stopResetsToIdle() async {
+    @Test func `stop resets to idle`() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
 
@@ -173,7 +172,7 @@ struct PlaybackControllerTests {
         #expect(output.stopCalled)
     }
 
-    @Test func onStationPlayedFiresForEveryPlay() async {
+    @Test func `on station played fires for every play`() {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station("a"), station("b")], output: output)
 
@@ -187,7 +186,7 @@ struct PlaybackControllerTests {
 
     // MARK: - Lock-screen (NowPlayingPresenting) contract
 
-    @Test func playingStatusPushesNowPlayingUpdate() async {
+    @Test func `playing status pushes now playing update`() async {
         let output = FakeAudioOutput()
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(stations: [station()], output: output, presenter: presenter)
@@ -197,11 +196,11 @@ struct PlaybackControllerTests {
         output.onStatusChange?(.playing)
 
         #expect(presenter.lastUpdate == .update(
-            stationID: "kexp", trackTitle: nil, isPlaying: true, artwork: .resolved(nil)
+            stationID: "kexp", trackTitle: nil, isPlaying: true, artwork: .resolved(nil),
         ))
     }
 
-    @Test func pauseDuringLoadingTellsLockScreenNotPlaying() async {
+    @Test func `pause during loading tells lock screen not playing`() async {
         let output = FakeAudioOutput()
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(stations: [station()], output: output, presenter: presenter)
@@ -212,11 +211,11 @@ struct PlaybackControllerTests {
 
         // The lock screen must reflect the pause even though no player ever started.
         #expect(presenter.lastUpdate == .update(
-            stationID: "kexp", trackTitle: nil, isPlaying: false, artwork: .resolved(nil)
+            stationID: "kexp", trackTitle: nil, isPlaying: false, artwork: .resolved(nil),
         ))
     }
 
-    @Test func trackInfoReachesLockScreenWithTitle() async {
+    @Test func `track info reaches lock screen with title`() async {
         let output = FakeAudioOutput()
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(stations: [station()], output: output, presenter: presenter)
@@ -227,11 +226,11 @@ struct PlaybackControllerTests {
         output.emitTrackInfo("Song", "Band")
 
         #expect(presenter.lastUpdate == .update(
-            stationID: "kexp", trackTitle: "Song", isPlaying: true, artwork: .resolved(nil)
+            stationID: "kexp", trackTitle: "Song", isPlaying: true, artwork: .resolved(nil),
         ))
     }
 
-    @Test func interruptionTellsLockScreenNotPlaying() async {
+    @Test func `interruption tells lock screen not playing`() async {
         let output = FakeAudioOutput()
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(stations: [station()], output: output, presenter: presenter)
@@ -242,12 +241,12 @@ struct PlaybackControllerTests {
         output.onStatusChange?(.interruptionBegan)
 
         #expect(presenter.lastUpdate == .update(
-            stationID: "kexp", trackTitle: nil, isPlaying: false, artwork: .resolved(nil)
+            stationID: "kexp", trackTitle: nil, isPlaying: false, artwork: .resolved(nil),
         ))
         #expect(controller.state == .paused(station()))
     }
 
-    @Test func stopClearsLockScreen() async {
+    @Test func `stop clears lock screen`() async {
         let output = FakeAudioOutput()
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(stations: [station()], output: output, presenter: presenter)
@@ -260,7 +259,7 @@ struct PlaybackControllerTests {
         #expect(presenter.events.last == .clear)
     }
 
-    @Test func remoteCommandsDriveTheController() async {
+    @Test func `remote commands drive the controller`() async {
         let output = FakeAudioOutput()
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(stations: [station()], output: output, presenter: presenter)
@@ -288,25 +287,25 @@ struct PlaybackControllerTests {
 
     // MARK: - ICY metadata parsing
 
-    @Test func icyMetadataParsesArtistAndTitle() {
+    @Test func `icy metadata parses artist and title`() {
         let info = ICYMetadataParser.parseTrack(from: "Radiohead - Weird Fishes")
         #expect(info.artist == "Radiohead")
         #expect(info.title == "Weird Fishes")
     }
 
-    @Test func icyMetadataWithoutSeparatorIsTitleOnly() {
+    @Test func `icy metadata without separator is title only`() {
         let info = ICYMetadataParser.parseTrack(from: "Station Jingle")
         #expect(info.artist == nil)
         #expect(info.title == "Station Jingle")
     }
 
-    @Test func icyMetadataSplitsOnFirstSeparatorOnly() {
+    @Test func `icy metadata splits on first separator only`() {
         let info = ICYMetadataParser.parseTrack(from: "Artist - Title - Live Session")
         #expect(info.artist == "Artist")
         #expect(info.title == "Title - Live Session")
     }
 
-    @Test func icyMetadataWithEmptyArtistIsNil() {
+    @Test func `icy metadata with empty artist is nil`() {
         let info = ICYMetadataParser.parseTrack(from: " - Orphan Title")
         #expect(info.artist == nil)
         #expect(info.title == "Orphan Title")

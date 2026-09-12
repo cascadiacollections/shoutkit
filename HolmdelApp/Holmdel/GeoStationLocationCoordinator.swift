@@ -27,7 +27,7 @@ final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationM
     init(
         settings: SettingsStore,
         featureFlags: any FeatureFlagProviding,
-        geoFilterProvider: MutableRadioBrowserGeoFilterProvider
+        geoFilterProvider: MutableRadioBrowserGeoFilterProvider,
     ) {
         self.settings = settings
         self.featureFlags = featureFlags
@@ -52,7 +52,7 @@ final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationM
             let changes = Observations {
                 (
                     settings.isPreciseGeoStationLocationEnabled,
-                    featureFlags.isEnabled(geoStationsFeature)
+                    featureFlags.isEnabled(geoStationsFeature),
                 )
             }
 
@@ -112,12 +112,12 @@ final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationM
         let preciseCountryOverride = settings.isPreciseGeoStationLocationEnabled ? preciseCountryCode : nil
         let geoFilter = RadioBrowserGeoFilter(
             locale: .current,
-            countryCodeOverride: preciseCountryOverride
+            countryCodeOverride: preciseCountryOverride,
         )
         await geoFilterProvider.setCurrentGeoFilter(geoFilter)
     }
 
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+    func locationManagerDidChangeAuthorization(_: CLLocationManager) {
         // Core Location invokes this as soon as the delegate is assigned (i.e.
         // at every launch). Without the opt-in gate, the `.notDetermined`
         // branch below would prompt for location permission on first launch
@@ -131,7 +131,7 @@ final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationM
         }
     }
 
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+    func locationManager(_: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
         let generation = preciseLocationGeneration
 
@@ -149,7 +149,8 @@ final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationM
 
             guard self.preciseLocationGeneration == generation,
                   self.featureFlags.isEnabled(self.geoStationsFeature),
-                  self.settings.isPreciseGeoStationLocationEnabled else {
+                  self.settings.isPreciseGeoStationLocationEnabled
+            else {
                 return
             }
             if let geocodingError {
@@ -161,7 +162,7 @@ final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationM
         }
     }
 
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
+    func locationManager(_: CLLocationManager, didFailWithError error: any Error) {
         // Mirror the generation guard in didUpdateLocations: a failure delivered
         // for a superseded request (the feature was toggled, or a newer
         // requestLocation was issued) must not clear a country code a fresher
@@ -171,7 +172,8 @@ final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationM
             self.logger.error("Location request failed: \(error.localizedDescription, privacy: .public)")
             guard self.preciseLocationGeneration == generation,
                   self.featureFlags.isEnabled(self.geoStationsFeature),
-                  self.settings.isPreciseGeoStationLocationEnabled else {
+                  self.settings.isPreciseGeoStationLocationEnabled
+            else {
                 return
             }
             self.preciseCountryCode = nil

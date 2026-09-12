@@ -34,7 +34,7 @@ public struct ListenNowView: View {
     private var recents: [RecentStation]
 
     public init(
-        viewModel: @autoclosure @escaping () -> BrowseViewModel = BrowseViewModel()
+        viewModel: @autoclosure @escaping () -> BrowseViewModel = BrowseViewModel(),
     ) {
         _viewModel = State(wrappedValue: viewModel())
     }
@@ -101,9 +101,9 @@ public struct ListenNowView: View {
         }
     }
 
-    // Recents dismissed from the Listen Now teaser but still present in
-    // `recents`, which remains the play record the Library's own list and the
-    // station ranking read (see `LibraryStore.hideFromListenNow`).
+    /// Recents dismissed from the Listen Now teaser but still present in
+    /// `recents`, which remains the play record the Library's own list and the
+    /// station ranking read (see `LibraryStore.hideFromListenNow`).
     private var visibleRecents: [RecentStation] {
         recents.filter { $0.isHiddenFromListenNow == false }
     }
@@ -122,14 +122,14 @@ public struct ListenNowView: View {
             ContentUnavailableView(
                 String(localized: "Nothing here yet", bundle: .module),
                 systemImage: "dot.radiowaves.left.and.right",
-                description: Text(String(localized: "Pull to refresh or try again soon.", bundle: .module))
+                description: Text(String(localized: "Pull to refresh or try again soon.", bundle: .module)),
             )
             .frame(maxWidth: .infinity, minHeight: 260)
         case let .failed(error):
             DirectoryUnavailableView(
                 title: String(localized: "Directory Unavailable", bundle: .module),
                 error: error,
-                minHeight: 260
+                minHeight: 260,
             ) {
                 Task { await viewModel.refresh(source: .userInitiated) }
             }
@@ -177,11 +177,11 @@ public struct ListenNowView: View {
                     removeAction: { station in
                         StationRowAction(
                             title: String(localized: "Remove from Recently Played", bundle: .module),
-                            systemImage: "clock.badge.xmark"
+                            systemImage: "clock.badge.xmark",
                         ) {
                             dismissRecent(station: station, in: displayed)
                         }
-                    }
+                    },
                 )
             }
         }
@@ -194,7 +194,7 @@ public struct ListenNowView: View {
         dismissRecent(
             stationID: station.id,
             stationName: displayed[index].name,
-            at: index
+            at: index,
         )
     }
 
@@ -254,7 +254,7 @@ public struct ListenNowView: View {
                         phase: playback?.phase(for: station) ?? .idle,
                         isFavorite: library?.isFavorite(station) ?? false,
                         onTap: { playback?.toggle(station) },
-                        onToggleFavorite: library.map { store in { store.toggleFavorite(station) } }
+                        onToggleFavorite: library.map { store in { store.toggleFavorite(station) } },
                     )
                     .prefetchStationArtwork(
                         after: index,
@@ -262,7 +262,7 @@ public struct ListenNowView: View {
                         displayScale: displayScale,
                         // Tiles decode at poster size; prefetching at row size
                         // would warm a cache entry the tile never reads.
-                        maxPixelSize: StationArtworkView.posterPixelSize(displayScale: displayScale)
+                        maxPixelSize: StationArtworkView.posterPixelSize(displayScale: displayScale),
                     )
                 }
             }

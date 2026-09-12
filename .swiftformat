@@ -1,4 +1,4 @@
 --swiftversion 6.4
 --indent 4
---disable redundantSelf
+--disable redundantSelf,docComments,wrapMultilineStatementBraces,hoistAwait,hoistTry
 --enable isEmpty

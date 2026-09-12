@@ -16,17 +16,17 @@ public enum LibraryListEditing {
     public static func stationIDsForRecentDeletion(
         recentStationIDsNewestFirst: [String],
         offsets: IndexSet,
-        displayLimit: Int = recentDisplayLimit
+        displayLimit: Int = recentDisplayLimit,
     ) -> [String] {
         stationIDsForDeletion(
             in: Array(recentStationIDsNewestFirst.prefix(Swift.max(displayLimit, 0))),
-            offsets: offsets
+            offsets: offsets,
         )
     }
 
     public static func stationIDsForFavoriteDeletion(
         favoriteStationIDs: [String],
-        offsets: IndexSet
+        offsets: IndexSet,
     ) -> [String] {
         stationIDsForDeletion(in: favoriteStationIDs, offsets: offsets)
     }

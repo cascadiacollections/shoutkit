@@ -15,7 +15,7 @@ extension AppDependencies {
     static func scheduleLaunchWarmups(
         store: LibraryStore,
         featureFlags: any FeatureFlagProviding,
-        prewarmer: StationConnectionPrewarmer
+        prewarmer: StationConnectionPrewarmer,
     ) {
         Task {
             await StationEntityQuery().indexKnownStationsForSpotlight()

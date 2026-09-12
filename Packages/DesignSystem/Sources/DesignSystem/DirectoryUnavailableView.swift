@@ -20,7 +20,7 @@ public struct DirectoryUnavailableView: View {
         title: String,
         error: RadioDirectoryError,
         minHeight: CGFloat = 240,
-        retry: @escaping () -> Void
+        retry: @escaping () -> Void,
     ) {
         self.title = title
         self.error = error

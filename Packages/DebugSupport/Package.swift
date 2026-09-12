@@ -10,22 +10,22 @@ let package = Package(
     name: "DebugSupport",
     platforms: [
         .iOS(.v26),
-        .macOS(.v13)
+        .macOS(.v13),
     ],
     products: [
-        .library(name: "DebugSupport", targets: ["DebugSupport"])
+        .library(name: "DebugSupport", targets: ["DebugSupport"]),
     ],
     dependencies: [
         .package(path: "../RadioDirectory"),
-        .package(url: "https://github.com/kean/Pulse.git", exact: "5.2.3")
+        .package(url: "https://github.com/kean/Pulse.git", exact: "5.2.3"),
     ],
     targets: [
         .target(
             name: "DebugSupport",
             dependencies: [
                 "RadioDirectory",
-                .product(name: "Pulse", package: "Pulse")
-            ]
-        )
-    ]
+                .product(name: "Pulse", package: "Pulse"),
+            ],
+        ),
+    ],
 )

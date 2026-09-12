@@ -40,7 +40,7 @@ public struct GlassControlSurface<ClipShape: Shape, Content: View>: View {
 
     public init(
         in shape: ClipShape = Capsule(),
-        @ViewBuilder content: () -> Content
+        @ViewBuilder content: () -> Content,
     ) {
         self.shape = shape
         self.content = content()

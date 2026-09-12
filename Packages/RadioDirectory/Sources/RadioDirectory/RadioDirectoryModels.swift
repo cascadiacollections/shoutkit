@@ -28,7 +28,7 @@ public struct Station: Codable, Equatable, Hashable, Identifiable, Sendable {
         clickTrend: Int? = nil,
         votes: Int? = nil,
         artworkURL: URL? = nil,
-        preferredStreamURL: URL? = nil
+        preferredStreamURL: URL? = nil,
     ) {
         self.id = id
         self.name = name
@@ -67,7 +67,9 @@ public struct Station: Codable, Equatable, Hashable, Identifiable, Sendable {
 }
 
 public struct Genre: Codable, Equatable, Hashable, Identifiable, Sendable {
-    public var id: String { name }
+    public var id: String {
+        name
+    }
 
     public let name: String
     public let stationCount: Int?
@@ -97,7 +99,7 @@ public struct Genre: Codable, Equatable, Hashable, Identifiable, Sendable {
     public static let paintTimeDefaults: [Genre] = [
         "Pop", "Rock", "News", "Classical", "Jazz", "Talk",
         "Dance", "Country", "Oldies", "Electronic", "Blues", "Metal",
-        "Folk", "Soul", "Reggae", "Latin", "Ambient", "Sports"
+        "Folk", "Soul", "Reggae", "Latin", "Ambient", "Sports",
     ].map { Genre(name: $0) }
 }
 

@@ -1,8 +1,7 @@
+@testable import BrowseFeatureCore
 import Foundation
 import RadioDirectory
 import Testing
-
-@testable import BrowseFeatureCore
 
 /// Scriptable ``DirectoryDiscoveryCaching`` double: hands back a saved snapshot
 /// and records whether the view model asked for the in-memory window to be
@@ -32,26 +31,26 @@ private func savedState(isFresh: Bool) -> DirectoryDiscoverySnapshotState {
             topStations: DirectoryDiscoverySnapshot.TopStations(
                 stations: [.fixture(id: "saved", name: "Saved Station")],
                 limit: 24,
-                capturedAt: capturedAt
+                capturedAt: capturedAt,
             ),
             genres: DirectoryDiscoverySnapshot.Genres(
                 genres: [Genre(name: "Saved Genre")],
-                capturedAt: capturedAt
+                capturedAt: capturedAt,
             ),
-            sourceIdentity: "test"
+            sourceIdentity: "test",
         ),
-        isFresh: isFresh
+        isFresh: isFresh,
     )
 }
 
 @MainActor
 struct BrowseSavedContentTests {
-    @Test func freshSavedContentPaintsWithoutTouchingTheDirectory() async {
+    @Test func `fresh saved content paints without touching the directory`() async {
         let directory = FakeRadioDirectory()
         await directory.setTopStationsResult(.success([.fixture(id: "live", name: "Live Station")]))
         let viewModel = BrowseViewModel(
             directory: directory,
-            discoveryCache: FakeDiscoveryCache(state: savedState(isFresh: true))
+            discoveryCache: FakeDiscoveryCache(state: savedState(isFresh: true)),
         )
 
         await viewModel.refresh()
@@ -68,12 +67,12 @@ struct BrowseSavedContentTests {
         #expect(await directory.topStationsCallCount == 0)
     }
 
-    @Test func staleSavedContentIsReplacedByLiveContent() async {
+    @Test func `stale saved content is replaced by live content`() async {
         let directory = FakeRadioDirectory()
         await directory.setTopStationsResult(.success([.fixture(id: "live", name: "Live Station")]))
         let viewModel = BrowseViewModel(
             directory: directory,
-            discoveryCache: FakeDiscoveryCache(state: savedState(isFresh: false))
+            discoveryCache: FakeDiscoveryCache(state: savedState(isFresh: false)),
         )
 
         await viewModel.refresh()
@@ -87,12 +86,12 @@ struct BrowseSavedContentTests {
         #expect(viewModel.refreshError == nil)
     }
 
-    @Test func savedContentSurvivesAFailedFetch() async {
+    @Test func `saved content survives a failed fetch`() async {
         let directory = FakeRadioDirectory()
         await directory.setTopStationsResult(.failure(.transport("offline")))
         let viewModel = BrowseViewModel(
             directory: directory,
-            discoveryCache: FakeDiscoveryCache(state: savedState(isFresh: false))
+            discoveryCache: FakeDiscoveryCache(state: savedState(isFresh: false)),
         )
 
         await viewModel.refresh()
@@ -108,12 +107,12 @@ struct BrowseSavedContentTests {
         #expect(viewModel.refreshError == .transport("offline"))
     }
 
-    @Test func failedFetchWithNothingSavedStillFails() async {
+    @Test func `failed fetch with nothing saved still fails`() async {
         let directory = FakeRadioDirectory()
         await directory.setTopStationsResult(.failure(.transport("offline")))
         let viewModel = BrowseViewModel(
             directory: directory,
-            discoveryCache: FakeDiscoveryCache(state: nil)
+            discoveryCache: FakeDiscoveryCache(state: nil),
         )
 
         await viewModel.refresh()
@@ -121,12 +120,12 @@ struct BrowseSavedContentTests {
         #expect(viewModel.phase == .failed(.transport("offline")))
     }
 
-    @Test func emptyLiveResponseDoesNotBlankSavedContent() async {
+    @Test func `empty live response does not blank saved content`() async {
         let directory = FakeRadioDirectory()
         await directory.setTopStationsResult(.success([]))
         let viewModel = BrowseViewModel(
             directory: directory,
-            discoveryCache: FakeDiscoveryCache(state: savedState(isFresh: false))
+            discoveryCache: FakeDiscoveryCache(state: savedState(isFresh: false)),
         )
 
         await viewModel.refresh()
@@ -138,7 +137,7 @@ struct BrowseSavedContentTests {
         #expect(content.stations.map(\.id) == ["saved"])
     }
 
-    @Test func userInitiatedRefreshSkipsSavedContentAndForcesAFetch() async {
+    @Test func `user initiated refresh skips saved content and forces a fetch`() async {
         let directory = FakeRadioDirectory()
         await directory.setTopStationsResult(.success([.fixture(id: "live", name: "Live Station")]))
         let cache = FakeDiscoveryCache(state: savedState(isFresh: true))
@@ -158,12 +157,12 @@ struct BrowseSavedContentTests {
         #expect(await directory.topStationsCallCount == 1)
     }
 
-    @Test func refreshWithoutACacheBehavesLikeAPlainLiveFetch() async {
+    @Test func `refresh without a cache behaves like a plain live fetch`() async {
         let directory = FakeRadioDirectory()
         await directory.setTopStationsResult(.success([.fixture(id: "live", name: "Live Station")]))
         let viewModel = BrowseViewModel(
             directory: directory,
-            discoveryCache: UnavailableDirectoryDiscoveryCache()
+            discoveryCache: UnavailableDirectoryDiscoveryCache(),
         )
 
         await viewModel.refresh()

@@ -1,9 +1,8 @@
 import Foundation
+@testable import Persistence
 import RadioDirectory
 import SwiftData
 import Testing
-
-@testable import Persistence
 
 @MainActor
 private func makeTransferStoreAndContext() -> (LibraryStore, ModelContext) {
@@ -18,7 +17,7 @@ private func transferStation(_ id: String) -> Station {
 
 @MainActor
 struct LibraryStoreFavoritesTransferTests {
-    @Test func exportIncludesSchemaAndOrderedFavorites() throws {
+    @Test func `export includes schema and ordered favorites`() throws {
         let (store, _) = makeTransferStoreAndContext()
         store.addFavorite(transferStation("a"))
         store.addFavorite(transferStation("b"))
@@ -31,7 +30,7 @@ struct LibraryStoreFavoritesTransferTests {
         #expect(document.favorites.map(\.sortIndex) == [0, 1])
     }
 
-    @Test func importMergesByStationIDAndAppendsNewFavorites() throws {
+    @Test func `import merges by station ID and appends new favorites`() throws {
         let (store, context) = makeTransferStoreAndContext()
         store.addFavorite(transferStation("a"))
         store.addFavorite(transferStation("b"))
@@ -40,62 +39,62 @@ struct LibraryStoreFavoritesTransferTests {
             favorites: [
                 .init(
                     id: "b", name: "B", streamURL: "https://b.example/stream",
-                    genre: "Jazz", artworkURL: nil, sortIndex: 0
+                    genre: "Jazz", artworkURL: nil, sortIndex: 0,
                 ),
                 .init(
                     id: "c", name: "C", streamURL: "https://c.example/stream",
-                    genre: "Rock", artworkURL: nil, sortIndex: 1
+                    genre: "Rock", artworkURL: nil, sortIndex: 1,
                 ),
                 .init(
                     id: "d", name: "D", streamURL: "https://d.example/stream",
-                    genre: "Talk", artworkURL: nil, sortIndex: 2
-                )
-            ]
+                    genre: "Talk", artworkURL: nil, sortIndex: 2,
+                ),
+            ],
         )
 
-        let result = try store.importFavoritesJSONData(try JSONEncoder().encode(document))
+        let result = try store.importFavoritesJSONData(JSONEncoder().encode(document))
         #expect(result.addedCount == 2)
         #expect(result.skippedExistingCount == 1)
 
         let favorites = try context.fetch(
             FetchDescriptor<FavoriteStation>(
-                sortBy: [SortDescriptor(\.sortIndex, order: .forward)]
-            )
+                sortBy: [SortDescriptor(\.sortIndex, order: .forward)],
+            ),
         )
         #expect(favorites.map(\.stationID) == ["a", "b", "c", "d"])
         #expect(favorites.map(\.sortIndex) == [0, 1, 2, 3])
     }
 
-    @Test func importingIntoEmptyStorePreservesSortIndexOrderWithRebasedIndices() throws {
+    @Test func `importing into empty store preserves sort index order with rebased indices`() throws {
         let (store, context) = makeTransferStoreAndContext()
         let document = FavoritesTransferDocument(
             favorites: [
                 .init(id: "x", name: "X", streamURL: nil, genre: "Genre", artworkURL: nil, sortIndex: 7),
                 .init(id: "y", name: "Y", streamURL: nil, genre: "Genre", artworkURL: nil, sortIndex: -1),
-                .init(id: "z", name: "Z", streamURL: nil, genre: "Genre", artworkURL: nil, sortIndex: -1)
-            ]
+                .init(id: "z", name: "Z", streamURL: nil, genre: "Genre", artworkURL: nil, sortIndex: -1),
+            ],
         )
 
-        _ = try store.importFavoritesJSONData(try JSONEncoder().encode(document))
+        _ = try store.importFavoritesJSONData(JSONEncoder().encode(document))
 
         let favorites = try context.fetch(
             FetchDescriptor<FavoriteStation>(
-                sortBy: [SortDescriptor(\.sortIndex, order: .forward)]
-            )
+                sortBy: [SortDescriptor(\.sortIndex, order: .forward)],
+            ),
         )
         #expect(favorites.map(\.stationID) == ["y", "z", "x"])
         #expect(favorites.map(\.sortIndex) == [0, 1, 2])
     }
 
-    @Test func importRejectsUnsupportedSchemaVersion() throws {
+    @Test func `import rejects unsupported schema version`() throws {
         let (store, _) = makeTransferStoreAndContext()
         let document = FavoritesTransferDocument(
             schemaVersion: FavoritesTransferDocument.currentSchemaVersion + 1,
-            favorites: []
+            favorites: [],
         )
 
         #expect(throws: FavoritesTransferError.unsupportedSchemaVersion(document.schemaVersion)) {
-            try store.importFavoritesJSONData(try JSONEncoder().encode(document))
+            try store.importFavoritesJSONData(JSONEncoder().encode(document))
         }
     }
 }

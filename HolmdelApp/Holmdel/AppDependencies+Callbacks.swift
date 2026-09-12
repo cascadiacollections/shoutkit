@@ -6,7 +6,7 @@ import Persistence
 import Playback
 import RadioDirectory
 #if canImport(WatchConnectivity)
-import WatchConnectivity
+    import WatchConnectivity
 #endif
 
 // Everything that happens *after* the graph exists: the app-layer closures
@@ -26,7 +26,7 @@ extension AppDependencies {
         store: LibraryStore,
         settings: SettingsStore,
         featureFlags: any FeatureFlagProviding,
-        playReporter: (any StationPlayReporting)?
+        playReporter: (any StationPlayReporting)?,
     ) {
         controller.onStationPlayed = { station in
             store.logRecent(station)
@@ -48,7 +48,7 @@ extension AppDependencies {
                 artist: heard.track.artist,
                 heardAt: heard.track.receivedAt,
                 artworkURL: heard.artworkURL,
-                appleMusicURL: heard.appleMusicURL
+                appleMusicURL: heard.appleMusicURL,
             )
         }
 
@@ -85,7 +85,7 @@ extension AppDependencies {
     /// activity on the lock screen that nothing else would ever end.
     static func makeActivityCoordinator(
         for controller: PlaybackController,
-        featureFlags: any FeatureFlagProviding
+        featureFlags: any FeatureFlagProviding,
     ) -> NowPlayingActivityCoordinator {
         let coordinator = NowPlayingActivityCoordinator()
         if featureFlags.isEnabled(FeatureCatalog.liveActivity) {
@@ -109,53 +109,53 @@ extension AppDependencies {
 
 #if canImport(WatchConnectivity)
 
-private final class PhoneWatchLastStationSync: NSObject, WCSessionDelegate {
-    private enum Keys {
-        static let lastStation = "watchSync.lastStation"
-    }
-
-    private let session: WCSession?
-    private let encoder = JSONEncoder()
-
-    override init() {
-        if WCSession.isSupported() {
-            let session = WCSession.default
-            self.session = session
-        } else {
-            session = nil
+    private final class PhoneWatchLastStationSync: NSObject, WCSessionDelegate {
+        private enum Keys {
+            static let lastStation = "watchSync.lastStation"
         }
-        super.init()
-        self.session?.delegate = self
-        self.session?.activate()
+
+        private let session: WCSession?
+        private let encoder = JSONEncoder()
+
+        override init() {
+            if WCSession.isSupported() {
+                let session = WCSession.default
+                self.session = session
+            } else {
+                session = nil
+            }
+            super.init()
+            self.session?.delegate = self
+            self.session?.activate()
+        }
+
+        func publish(station: Station) {
+            guard let session,
+                  session.activationState == .activated,
+                  session.isWatchAppInstalled else { return }
+            // Best effort: watch handoff should never block local playback state.
+            guard let encoded = try? encoder.encode(station) else { return }
+            // Best effort: WCSession will deliver a newer context on the next play.
+            try? session.updateApplicationContext([Keys.lastStation: encoded])
+        }
+
+        func session(
+            _: WCSession,
+            activationDidCompleteWith _: WCSessionActivationState,
+            error _: Error?,
+        ) {}
+
+        func sessionDidBecomeInactive(_: WCSession) {}
+
+        func sessionDidDeactivate(_ session: WCSession) {
+            session.activate()
+        }
     }
-
-    func publish(station: Station) {
-        guard let session,
-              session.activationState == .activated,
-              session.isWatchAppInstalled else { return }
-        // Best effort: watch handoff should never block local playback state.
-        guard let encoded = try? encoder.encode(station) else { return }
-        // Best effort: WCSession will deliver a newer context on the next play.
-        try? session.updateApplicationContext([Keys.lastStation: encoded])
-    }
-
-    func session(
-        _ session: WCSession,
-        activationDidCompleteWith activationState: WCSessionActivationState,
-        error: Error?
-    ) {}
-
-    func sessionDidBecomeInactive(_ session: WCSession) {}
-
-    func sessionDidDeactivate(_ session: WCSession) {
-        session.activate()
-    }
-}
 
 #else
 
-private final class PhoneWatchLastStationSync {
-    func publish(station: Station) {}
-}
+    private final class PhoneWatchLastStationSync {
+        func publish(station _: Station) {}
+    }
 
 #endif

@@ -9,43 +9,43 @@ import Testing
 import Playback
 
 struct PlaybackErrorClassificationTests {
-    @Test func noInternetURLErrorMapsToNoInternet() {
+    @Test func `no internet URL error maps to no internet`() {
         let error = NSError(
             domain: NSURLErrorDomain,
-            code: URLError.Code.notConnectedToInternet.rawValue
+            code: URLError.Code.notConnectedToInternet.rawValue,
         )
 
         #expect(PlaybackError.classifying(error) == .noInternet)
     }
 
-    @Test func missingResourceMapsToStationNotAvailableCarryingItsCode() {
+    @Test func `missing resource maps to station not available carrying its code`() {
         let error = NSError(
             domain: NSURLErrorDomain,
-            code: URLError.Code.resourceUnavailable.rawValue
+            code: URLError.Code.resourceUnavailable.rawValue,
         )
 
         #expect(
             PlaybackError.classifying(error)
-                == .stationNotAvailable(errorCode: URLError.Code.resourceUnavailable.rawValue)
+                == .stationNotAvailable(errorCode: URLError.Code.resourceUnavailable.rawValue),
         )
     }
 
-    @Test func unrecognizedErrorsBecomeStreamFailedWithTheirDescription() {
+    @Test func `unrecognized errors become stream failed with their description`() {
         let error = NSError(
             domain: "AudioStreamingErrorDomain",
             code: -1,
-            userInfo: [NSLocalizedDescriptionKey: "The stream could not be opened."]
+            userInfo: [NSLocalizedDescriptionKey: "The stream could not be opened."],
         )
 
         #expect(
-            PlaybackError.classifying(error) == .streamFailed("The stream could not be opened.")
+            PlaybackError.classifying(error) == .streamFailed("The stream could not be opened."),
         )
     }
 
     /// `.stationNotAvailable` is the one classification the bounded auto-reconnect
     /// must *not* retry — a 404 does not become a 200 on the third attempt. Worth
     /// asserting alongside the mapping, since the mapping is what decides it.
-    @Test func retryabilityFollowsTheClassification() {
+    @Test func `retryability follows the classification`() {
         let gone = NSError(domain: NSURLErrorDomain, code: URLError.Code.fileDoesNotExist.rawValue)
         let offline = NSError(domain: NSURLErrorDomain, code: URLError.Code.notConnectedToInternet.rawValue)
 

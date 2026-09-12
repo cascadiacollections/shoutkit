@@ -41,9 +41,9 @@ public struct HeardTrack {
 @MainActor
 @Observable
 public final class PlaybackController {
-    // `internal(set)` (not `private(set)`) so the wiring extension in
-    // PlaybackController+Internals.swift can drive these; the public read
-    // surface is unchanged.
+    /// `internal(set)` (not `private(set)`) so the wiring extension in
+    /// PlaybackController+Internals.swift can drive these; the public read
+    /// surface is unchanged.
     /// The current playback state. Observe this rather than the engine.
     public internal(set) var state: PlaybackState = .idle
 
@@ -96,7 +96,9 @@ public final class PlaybackController {
     /// for by opting in, not what a finished broadcast does on its own.
     @ObservationIgnored public var isStreamLoopingEnabledProvider: (@MainActor () -> Bool) = { false }
 
-    public var currentStation: Station? { activeStation }
+    public var currentStation: Station? {
+        activeStation
+    }
 
     /// Whether the active ``AudioOutput`` can apply an ``EqualizerPreset``.
     /// `false` for engines with no supported way to insert a filter into their
@@ -203,7 +205,7 @@ public final class PlaybackController {
         maxReconnectAttempts: Int = 3,
         reconnectBaseDelay: Duration = .seconds(2),
         resumeWatchdogTimeout: Duration = .seconds(2),
-        hintlessResumeWindow: Duration = .seconds(90)
+        hintlessResumeWindow: Duration = .seconds(90),
     ) {
         self.directory = directory
         self.output = output
@@ -233,7 +235,7 @@ public final class PlaybackController {
         tapToAudioTrace?.cancel()
         tapToAudioTrace = TapToAudioLatencyTrace(
             stationID: station.id,
-            prewarmEnabled: tapToAudioPrewarmEnabledProvider()
+            prewarmEnabled: tapToAudioPrewarmEnabledProvider(),
         )
         // A fresh choice always re-resolves; the cache exists only to spare
         // reconnect attempts from repeating resolution for the same station.

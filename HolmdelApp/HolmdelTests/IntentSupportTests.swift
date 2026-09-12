@@ -1,13 +1,13 @@
 import Foundation
+@testable import Holmdel
 import RadioDirectory
 import Testing
-@testable import Holmdel
 
 /// Unit coverage for the pure logic backing the Siri/Shortcuts intents — the
 /// parts that don't need the App Intents runtime or the app's dependency graph.
 /// The App Intents framework itself is exercised through real system pathways in
 /// `AppIntentsPathwayTests`.
-@Suite struct IntentSupportTests {
+struct IntentSupportTests {
     private func makeDefaults() throws -> UserDefaults {
         let suiteName = "IntentSupportTests-\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
@@ -20,7 +20,7 @@ import Testing
         name: String = "KEXP",
         genre: String = "Alternative",
         artwork: String? = "https://example.com/art.png",
-        stream: String? = "https://example.com/stream"
+        stream: String? = "https://example.com/stream",
     ) -> Station {
         Station(
             id: id,
@@ -28,13 +28,13 @@ import Testing
             genre: genre,
             listenerCount: 0,
             artworkURL: artwork.flatMap(URL.init(string:)),
-            preferredStreamURL: stream.flatMap(URL.init(string:))
+            preferredStreamURL: stream.flatMap(URL.init(string:)),
         )
     }
 
     // MARK: - StationEntity round-trip
 
-    @Test func stationEntityCarriesTheFieldsSiriNeeds() {
+    @Test func `station entity carries the fields siri needs`() {
         let entity = StationEntity(station: makeStation())
 
         #expect(entity.id == "station-1")
@@ -46,7 +46,7 @@ import Testing
         #expect(entity.providerName == nil)
     }
 
-    @Test func stationEntityRoundTripsBackToAPlayableStation() {
+    @Test func `station entity round trips back to a playable station`() {
         let original = makeStation()
         let restored = StationEntity(station: original).station
 
@@ -57,7 +57,7 @@ import Testing
         #expect(restored.preferredStreamURL == original.preferredStreamURL)
     }
 
-    @Test func stationEntityToleratesMissingURLs() {
+    @Test func `station entity tolerates missing URLs`() {
         let entity = StationEntity(station: makeStation(artwork: nil, stream: nil))
         let restored = entity.station
 
@@ -72,14 +72,14 @@ import Testing
     // 2026-08-12). The runtime guard is what keeps this target compiling; on
     // iOS 26 the types do not exist, so there is nothing to assert.
 
-    @Test func playbackAttributesExposeEveryCaseToTheSchema() {
+    @Test func `playback attributes expose every case to the schema`() {
         guard #available(iOS 27, *) else { return }
 
         #expect(PlaybackAttributes.caseDisplayRepresentations.count == 3)
         #expect(PlaybackAttributes.caseDisplayRepresentations[.none] != nil)
     }
 
-    @Test func queueInsertionLocationsExposeEveryCaseToTheSchema() {
+    @Test func `queue insertion locations expose every case to the schema`() {
         guard #available(iOS 27, *) else { return }
 
         #expect(QueueInsertionLocation.caseDisplayRepresentations.count == 3)
@@ -88,20 +88,20 @@ import Testing
 
     // MARK: - IntentStationCache
 
-    // These cases guard the regression in #116: `StationEntity` used to be the
-    // persisted type, and because the `@AppEntity(schema:)` macro's synthesized
-    // property storage didn't survive a `Codable` round-trip, decoding one
-    // trapped in `EntityProperty` — on the launch path, once the cache had been
-    // written. The cache now persists a plain `CachedStation` snapshot instead,
-    // so anything here that reads an entity back out of `UserDefaults` is
-    // exercising that boundary. Each case gets its own defaults suite: they ran
-    // against `UserDefaults.standard` in parallel before, which made them
-    // interdependent.
-    @Test func intentCacheKeepsNewestFirstAndDeduplicates() throws {
+    /// These cases guard the regression in #116: `StationEntity` used to be the
+    /// persisted type, and because the `@AppEntity(schema:)` macro's synthesized
+    /// property storage didn't survive a `Codable` round-trip, decoding one
+    /// trapped in `EntityProperty` — on the launch path, once the cache had been
+    /// written. The cache now persists a plain `CachedStation` snapshot instead,
+    /// so anything here that reads an entity back out of `UserDefaults` is
+    /// exercising that boundary. Each case gets its own defaults suite: they ran
+    /// against `UserDefaults.standard` in parallel before, which made them
+    /// interdependent.
+    @Test func `intent cache keeps newest first and deduplicates`() throws {
         let defaults = try makeDefaults()
         // Remembered entries are prepended, so the batch we just added is at the
         // front regardless of what was already in this cache.
-        let batch = (0..<3).map { StationEntity(station: makeStation(id: "fresh-\($0)", name: "S\($0)")) }
+        let batch = (0 ..< 3).map { StationEntity(station: makeStation(id: "fresh-\($0)", name: "S\($0)")) }
         IntentStationCache.remember(batch, defaults: defaults)
 
         let loaded = IntentStationCache.load(defaults: defaults)
@@ -110,13 +110,13 @@ import Testing
         // Re-remembering an existing id must not create a duplicate.
         IntentStationCache.remember([batch[0]], defaults: defaults)
         #expect(
-            IntentStationCache.load(defaults: defaults).filter { $0.id == "fresh-0" }.count == 1
+            IntentStationCache.load(defaults: defaults).count { $0.id == "fresh-0" } == 1,
         )
     }
 
-    @Test func intentCacheIsBoundedToItsCapacity() throws {
+    @Test func `intent cache is bounded to its capacity`() throws {
         let defaults = try makeDefaults()
-        let many = (0..<80).map { StationEntity(station: makeStation(id: "cap-\($0)")) }
+        let many = (0 ..< 80).map { StationEntity(station: makeStation(id: "cap-\($0)")) }
         IntentStationCache.remember(many, defaults: defaults)
 
         // Capacity is 50; the cache never grows unbounded no matter how many
@@ -124,7 +124,7 @@ import Testing
         #expect(IntentStationCache.load(defaults: defaults).count <= 50)
     }
 
-    @Test func intentCacheLoadsPersistedStationSnapshots() throws {
+    @Test func `intent cache loads persisted station snapshots`() throws {
         let defaults = try makeDefaults()
         let cachedJSON = """
         [

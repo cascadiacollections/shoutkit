@@ -11,13 +11,13 @@ public struct SearchView: View {
     @Environment(\.playbackController) private var playback
     @Environment(\.libraryStore) private var library
     @Environment(\.displayScale) private var displayScale
-    // Switching into the Search tab should drop the keyboard straight into the
-    // search field, matching Apple Music/Podcasts — nobody switches to Search
-    // to look at it.
+    /// Switching into the Search tab should drop the keyboard straight into the
+    /// search field, matching Apple Music/Podcasts — nobody switches to Search
+    /// to look at it.
     @FocusState private var isSearchFieldFocused: Bool
-    // Bumped by the caller when the Search tab is re-tapped while already
-    // selected, so re-selecting Search also refocuses the field — `onAppear`
-    // alone only covers the first switch into this tab.
+    /// Bumped by the caller when the Search tab is re-tapped while already
+    /// selected, so re-selecting Search also refocuses the field — `onAppear`
+    /// alone only covers the first switch into this tab.
     private let reactivationToken: Int
 
     public init(viewModel: @autoclosure @escaping () -> SearchViewModel, reactivationToken: Int = 0) {
@@ -80,7 +80,7 @@ public struct SearchView: View {
             DirectoryUnavailableView(
                 title: String(localized: "Search Unavailable", bundle: .module),
                 error: error,
-                minHeight: 200
+                minHeight: 200,
             ) {
                 viewModel.retry()
             }
@@ -93,7 +93,7 @@ public struct SearchView: View {
             if let error = viewModel.genreLoadError {
                 DirectoryUnavailableView(
                     title: String(localized: "Couldn't Load Genres", bundle: .module),
-                    error: error
+                    error: error,
                 ) {
                     Task { await viewModel.loadGenres() }
                 }
@@ -101,7 +101,7 @@ public struct SearchView: View {
                 ContentUnavailableView(
                     "Find your sound",
                     systemImage: "magnifyingglass",
-                    description: Text("Search for stations by name or genre.")
+                    description: Text("Search for stations by name or genre."),
                 )
                 .frame(maxWidth: .infinity, minHeight: 240)
             }
@@ -121,7 +121,7 @@ public struct SearchView: View {
                     phase: playback?.phase(for: station) ?? .idle,
                     isFavorite: library?.isFavorite(station) ?? false,
                     onTap: { playback?.toggle(station) },
-                    onToggleFavorite: library.map { store in { store.toggleFavorite(station) } }
+                    onToggleFavorite: library.map { store in { store.toggleFavorite(station) } },
                 )
                 .prefetchStationArtwork(after: index, in: stations, displayScale: displayScale)
             }
@@ -134,14 +134,14 @@ public struct SearchView: View {
             ContentUnavailableView {
                 Label(
                     String(localized: "No matching stations", bundle: .module),
-                    systemImage: "line.3.horizontal.decrease.circle"
+                    systemImage: "line.3.horizontal.decrease.circle",
                 )
             } description: {
                 Text(
                     String(
                         format: String(localized: "Active filters: %@", bundle: .module),
-                        activeFilterSummary
-                    )
+                        activeFilterSummary,
+                    ),
                 )
             } actions: {
                 Button(String(localized: "Clear Filters", bundle: .module)) {
@@ -160,32 +160,32 @@ public struct SearchView: View {
             parts.append(
                 String(
                     format: String(localized: "%d kbps or higher", bundle: .module),
-                    bitrateMin
-                )
+                    bitrateMin,
+                ),
             )
         }
         if let bitrateMax = filters.bitrateMax {
             parts.append(
                 String(
                     format: String(localized: "%d kbps or lower", bundle: .module),
-                    bitrateMax
-                )
+                    bitrateMax,
+                ),
             )
         }
         if let tag = filters.tag {
             parts.append(
                 String(
                     format: String(localized: "Tag: %@", bundle: .module),
-                    tag
-                )
+                    tag,
+                ),
             )
         }
         if let countryCode = filters.countryCode {
             parts.append(
                 String(
                     format: String(localized: "Country: %@", bundle: .module),
-                    countryCode
-                )
+                    countryCode,
+                ),
             )
         }
         return parts.joined(separator: ", ")
@@ -229,8 +229,8 @@ private struct GenreChips: View {
         .animation(.smooth(duration: 0.3), value: selected)
     }
 
-    // Two branches rather than one style value: `ButtonStyle` has no type-erased
-    // box, so the choice has to be made in the view tree.
+    /// Two branches rather than one style value: `ButtonStyle` has no type-erased
+    /// box, so the choice has to be made in the view tree.
     @ViewBuilder
     private func chip(_ genre: Genre) -> some View {
         let label = Text(genre.name)
@@ -268,7 +268,7 @@ private struct SearchFilterSheet: View {
                 Section(String(localized: "Bitrate", bundle: .module)) {
                     Picker(
                         String(localized: "Minimum Bitrate", bundle: .module),
-                        selection: minimumBitrateBinding
+                        selection: minimumBitrateBinding,
                     ) {
                         Text(String(localized: "Any", bundle: .module)).tag(Int?.none)
                         ForEach(bitrateOptions, id: \.self) { bitrate in
@@ -278,7 +278,7 @@ private struct SearchFilterSheet: View {
 
                     Picker(
                         String(localized: "Maximum Bitrate", bundle: .module),
-                        selection: maximumBitrateBinding
+                        selection: maximumBitrateBinding,
                     ) {
                         Text(String(localized: "Any", bundle: .module)).tag(Int?.none)
                         ForEach(bitrateOptions, id: \.self) { bitrate in
@@ -291,7 +291,7 @@ private struct SearchFilterSheet: View {
                     TextField(String(localized: "Tag", bundle: .module), text: tagBinding)
                     TextField(
                         String(localized: "Country Code", bundle: .module),
-                        text: countryCodeBinding
+                        text: countryCodeBinding,
                     )
                     .textInputAutocapitalization(.characters)
                     .autocorrectionDisabled()
@@ -318,14 +318,14 @@ private struct SearchFilterSheet: View {
     private var minimumBitrateBinding: Binding<Int?> {
         Binding(
             get: { filters.bitrateMin },
-            set: { filters.bitrateMin = $0 }
+            set: { filters.bitrateMin = $0 },
         )
     }
 
     private var maximumBitrateBinding: Binding<Int?> {
         Binding(
             get: { filters.bitrateMax },
-            set: { filters.bitrateMax = $0 }
+            set: { filters.bitrateMax = $0 },
         )
     }
 
@@ -335,7 +335,7 @@ private struct SearchFilterSheet: View {
             set: { newValue in
                 let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
                 filters.tag = trimmed.isEmpty ? nil : newValue
-            }
+            },
         )
     }
 
@@ -345,7 +345,7 @@ private struct SearchFilterSheet: View {
             set: { newValue in
                 let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
                 filters.countryCode = trimmed.isEmpty ? nil : newValue
-            }
+            },
         )
     }
 }

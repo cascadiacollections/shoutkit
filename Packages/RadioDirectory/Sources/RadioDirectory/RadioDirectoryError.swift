@@ -63,7 +63,7 @@ public enum RadioDirectoryError: Error, Equatable, LocalizedError, Sendable {
             // System-provided (URLSession's localizedDescription) when non-nil.
             message ?? String(
                 localized: "The station directory could not be reached. Check your connection.",
-                bundle: .module
+                bundle: .module,
             )
         }
     }

@@ -73,7 +73,7 @@ public enum ICYMetadataParser {
                 let artist = fields["artist"]?.trimmingCharacters(in: .whitespacesAndNewlines)
                 return AudioTrackInfo(
                     title: title?.isEmpty == false ? title : nil,
-                    artist: artist?.isEmpty == false ? artist : nil
+                    artist: artist?.isEmpty == false ? artist : nil,
                 )
             }
 
@@ -132,7 +132,9 @@ public enum ICYMetadataParser {
         var rest = Substring(rawMetadata)
         while true {
             rest = rest.drop { $0 == ";" || $0 == "," || $0.isWhitespace }
-            if rest.isEmpty { break }
+            if rest.isEmpty {
+                break
+            }
             guard let equals = rest.firstIndex(of: "=") else { return nil }
             let key = rest[..<equals].trimmingCharacters(in: .whitespaces).lowercased()
             guard !key.isEmpty, key.allSatisfy(isKeyCharacter) else { return nil }
@@ -185,7 +187,7 @@ public enum ICYMetadataParser {
         while let quoteIndex = text[searchFrom...].firstIndex(of: quote) {
             let afterQuote = text.index(after: quoteIndex)
             if looksLikeFieldBoundary(after: afterQuote, in: text) {
-                return quoteIndex..<afterQuote
+                return quoteIndex ..< afterQuote
             }
             searchFrom = afterQuote
         }
@@ -203,7 +205,9 @@ public enum ICYMetadataParser {
         while cursor != text.endIndex, text[cursor] == ";" || text[cursor] == "," || text[cursor].isWhitespace {
             cursor = text.index(after: cursor)
         }
-        if cursor == text.endIndex { return true }
+        if cursor == text.endIndex {
+            return true
+        }
 
         var keyEnd = cursor
         while keyEnd != text.endIndex, isKeyCharacter(text[keyEnd]) {

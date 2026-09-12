@@ -8,7 +8,7 @@ public protocol RadioDirectoryProviding: Sendable {
     func searchStations(
         matching query: String,
         limit: Int,
-        filters: StationSearchFilters
+        filters: StationSearchFilters,
     ) async throws(RadioDirectoryError) -> [Station]
     /// Stations belonging to a genre/tag, ordered by popularity where the
     /// directory supports it. Distinct from `searchStations`, which matches names.
@@ -16,7 +16,7 @@ public protocol RadioDirectoryProviding: Sendable {
     func stations(
         inGenre genre: String,
         limit: Int,
-        filters: StationSearchFilters
+        filters: StationSearchFilters,
     ) async throws(RadioDirectoryError) -> [Station]
     /// Looks up a station by identifier for consumers (like App Intents) that
     /// need to rehydrate a previously saved entity id.
@@ -28,7 +28,7 @@ public extension RadioDirectoryProviding {
     func searchStations(
         matching query: String,
         limit: Int,
-        filters: StationSearchFilters
+        filters: StationSearchFilters,
     ) async throws(RadioDirectoryError) -> [Station] {
         let stations = try await searchStations(matching: query, limit: limit)
         return Array(filters.normalized.apply(to: stations).prefix(limit))
@@ -43,7 +43,7 @@ public extension RadioDirectoryProviding {
     func stations(
         inGenre genre: String,
         limit: Int,
-        filters: StationSearchFilters
+        filters: StationSearchFilters,
     ) async throws(RadioDirectoryError) -> [Station] {
         let stations = try await stations(inGenre: genre, limit: limit)
         return Array(filters.normalized.apply(to: stations).prefix(limit))
@@ -56,7 +56,7 @@ public extension RadioDirectoryProviding {
     ///   and no thrown error to signal it — `nil` is also the correct answer
     ///   for "not found." An implementation backed by a real directory should
     ///   override this rather than inherit it.
-    func station(id: String) async throws(RadioDirectoryError) -> Station? {
+    func station(id _: String) async throws(RadioDirectoryError) -> Station? {
         nil
     }
 }
@@ -73,7 +73,7 @@ public extension RadioDirectoryProviding {
 public enum PreferredStations {
     public static let all: [Station] = [
         kexpHighBandwidth,
-        kexpLowBandwidth
+        kexpLowBandwidth,
     ]
 
     public static let kexpHighBandwidth = Station(
@@ -83,7 +83,7 @@ public enum PreferredStations {
         listenerCount: 0,
         bitrate: 160,
         artworkURL: URL(string: "https://www.kexp.org/static/assets/img/icons/apple-touch-icon.png"),
-        preferredStreamURL: URL(string: "https://kexp.streamguys1.com/kexp160.aac")
+        preferredStreamURL: URL(string: "https://kexp.streamguys1.com/kexp160.aac"),
     )
 
     public static let kexpLowBandwidth = Station(
@@ -93,7 +93,7 @@ public enum PreferredStations {
         listenerCount: 0,
         bitrate: 64,
         artworkURL: URL(string: "https://www.kexp.org/static/assets/img/icons/apple-touch-icon.png"),
-        preferredStreamURL: URL(string: "https://kexp.streamguys1.com/kexp64.aac")
+        preferredStreamURL: URL(string: "https://kexp.streamguys1.com/kexp64.aac"),
     )
 }
 
@@ -109,7 +109,7 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
     ///     adopter. Pass `PreferredStations.all` to opt into it.
     public init(
         base: any RadioDirectoryProviding,
-        preferredStations: [Station]
+        preferredStations: [Station],
     ) {
         self.base = base
         self.preferredStations = preferredStations
@@ -134,7 +134,7 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
     public func searchStations(
         matching query: String,
         limit: Int,
-        filters: StationSearchFilters
+        filters: StationSearchFilters,
     ) async throws(RadioDirectoryError) -> [Station] {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmedQuery.isEmpty == false else {
@@ -159,7 +159,7 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
     public func stations(
         inGenre genre: String,
         limit: Int,
-        filters: StationSearchFilters
+        filters: StationSearchFilters,
     ) async throws(RadioDirectoryError) -> [Station] {
         // Forward to the base's real genre query (the protocol default would
         // degrade this into a name search), layering matching preferred stations
@@ -186,7 +186,7 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
             return StreamEndpoint(
                 stationID: station.id,
                 url: preferredStreamURL,
-                format: StreamFormat(url: preferredStreamURL)
+                format: StreamFormat(url: preferredStreamURL),
             )
         }
 
@@ -234,7 +234,7 @@ public struct BundledRadioDirectory: RadioDirectoryProviding {
         return StreamEndpoint(
             stationID: station.id,
             url: streamURL,
-            format: StreamFormat(url: streamURL)
+            format: StreamFormat(url: streamURL),
         )
     }
 
@@ -250,7 +250,7 @@ public struct PreviewRadioDirectory: RadioDirectoryProviding {
         [
             Genre(name: "Electronic", stationCount: 128),
             Genre(name: "Jazz", stationCount: 84),
-            Genre(name: "Public Radio", stationCount: 51)
+            Genre(name: "Public Radio", stationCount: 51),
         ]
     }
 
@@ -278,7 +278,7 @@ public struct PreviewRadioDirectory: RadioDirectoryProviding {
         return StreamEndpoint(
             stationID: station.id,
             url: fallbackURL ?? URL(fileURLWithPath: "/dev/null"),
-            format: .hls
+            format: .hls,
         )
     }
 
@@ -288,6 +288,6 @@ public struct PreviewRadioDirectory: RadioDirectoryProviding {
         Station(id: "ambient-current", name: "Ambient Current", genre: "Electronic", listenerCount: 1842, bitrate: 128),
         Station(id: "midnight-jazz", name: "Midnight Jazz", genre: "Jazz", listenerCount: 1320, bitrate: 192),
         Station(id: "city-signal", name: "City Signal", genre: "Public Radio", listenerCount: 966, bitrate: 128),
-        Station(id: "deep-orbit", name: "Deep Orbit", genre: "Electronic", listenerCount: 724, bitrate: 256)
+        Station(id: "deep-orbit", name: "Deep Orbit", genre: "Electronic", listenerCount: 724, bitrate: 256),
     ]
 }

@@ -49,7 +49,7 @@ public struct StationRow: View {
         isFavorite: Bool = false,
         onTap: @escaping () -> Void,
         onToggleFavorite: (() -> Void)? = nil,
-        removeAction: StationRowAction? = nil
+        removeAction: StationRowAction? = nil,
     ) {
         self.station = station
         self.phase = phase
@@ -69,7 +69,7 @@ public struct StationRow: View {
                 StationArtworkView(
                     artworkURL: station.artworkURL,
                     isPlaying: phase == .playing,
-                    placeholderSeed: station.name
+                    placeholderSeed: station.name,
                 )
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -118,7 +118,7 @@ public struct StationRow: View {
         // above, deliberately: the preview *is* that background.
         .contentShape(
             .contextMenuPreview,
-            RoundedRectangle(cornerRadius: ShoutKitRadius.medium, style: .continuous)
+            RoundedRectangle(cornerRadius: ShoutKitRadius.medium, style: .continuous),
         )
         .contextMenu {
             if let onToggleFavorite {
@@ -178,12 +178,12 @@ public struct StationRow: View {
             phase: .playing,
             isFavorite: true,
             onTap: {},
-            onToggleFavorite: {}
+            onToggleFavorite: {},
         )
         StationRow(
             station: PreviewRadioDirectory.sampleStations[2],
             phase: .idle,
-            onTap: {}
+            onTap: {},
         )
     }
     .padding()

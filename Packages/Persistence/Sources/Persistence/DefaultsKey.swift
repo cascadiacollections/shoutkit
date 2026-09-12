@@ -3,7 +3,7 @@ import Foundation
 /// A typed UserDefaults key: name + default value + how to (de)serialize, declared once.
 /// Replaces scattered `defaults.object(forKey:) as? T ?? fallback` and manual
 /// `Codable`-as-`Data` glue with a single source of truth per preference.
-public struct DefaultsKey<Value>: Sendable where Value: Sendable {
+public struct DefaultsKey<Value: Sendable>: Sendable {
     public let name: String
     public let defaultValue: Value
 
@@ -14,7 +14,7 @@ public struct DefaultsKey<Value>: Sendable where Value: Sendable {
         name: String,
         defaultValue: Value,
         read: @escaping @Sendable (UserDefaults) -> Value,
-        write: @escaping @Sendable (UserDefaults, Value) -> Void
+        write: @escaping @Sendable (UserDefaults, Value) -> Void,
     ) {
         self.name = name
         self.defaultValue = defaultValue
@@ -22,8 +22,13 @@ public struct DefaultsKey<Value>: Sendable where Value: Sendable {
         self.write = write
     }
 
-    func readValue(from defaults: UserDefaults) -> Value { read(defaults) }
-    func writeValue(_ value: Value, to defaults: UserDefaults) { write(defaults, value) }
+    func readValue(from defaults: UserDefaults) -> Value {
+        read(defaults)
+    }
+
+    func writeValue(_ value: Value, to defaults: UserDefaults) {
+        write(defaults, value)
+    }
 }
 
 public extension DefaultsKey {
@@ -37,7 +42,7 @@ public extension DefaultsKey {
             name: name,
             defaultValue: defaultValue,
             read: { $0.object(forKey: name) as? Value ?? defaultValue },
-            write: { $0.set($1, forKey: name) }
+            write: { $0.set($1, forKey: name) },
         )
     }
 }
@@ -61,12 +66,17 @@ public extension DefaultsKey where Value: Codable {
                 // instead of writing a partial or invalid payload.
                 guard let data = try? JSONEncoder().encode(value) else { return }
                 defaults.set(data, forKey: name)
-            }
+            },
         )
     }
 }
 
 public extension UserDefaults {
-    func value<Value>(for key: DefaultsKey<Value>) -> Value { key.readValue(from: self) }
-    func set<Value>(_ value: Value, for key: DefaultsKey<Value>) { key.writeValue(value, to: self) }
+    func value<Value>(for key: DefaultsKey<Value>) -> Value {
+        key.readValue(from: self)
+    }
+
+    func set<Value>(_ value: Value, for key: DefaultsKey<Value>) {
+        key.writeValue(value, to: self)
+    }
 }

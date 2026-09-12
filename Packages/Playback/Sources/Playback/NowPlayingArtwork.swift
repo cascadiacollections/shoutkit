@@ -62,18 +62,17 @@ enum NowPlayingArtworkPolicy {
         stationArtworkURL: URL?,
         presented: URL?,
         isSameStation: Bool,
-        readyArtworkURLs: Set<URL>
+        readyArtworkURLs: Set<URL>,
     ) -> Decision {
         let held = isSameStation ? presented : nil
 
-        let target: URL?
-        switch artwork {
+        let target: URL? = switch artwork {
         case .resolving:
             // Keep what's on screen. With nothing held — a cold start, or a
             // station switch — the station's own artwork is what we aim at next.
-            target = held ?? stationArtworkURL
+            held ?? stationArtworkURL
         case let .resolved(url):
-            target = url ?? stationArtworkURL
+            url ?? stationArtworkURL
         }
 
         guard let target else { return .present(nil) }

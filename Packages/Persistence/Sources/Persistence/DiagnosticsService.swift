@@ -2,13 +2,13 @@ import FeatureFlags
 import Foundation
 import Observation
 #if canImport(OSLog)
-import OSLog
+    import OSLog
 #endif
 
 // MetricKit's metric payloads (MXMetricPayload) are unavailable on macOS, so
 // gate on os(iOS) too — the package's tests build for the mac host.
 #if canImport(MetricKit) && os(iOS)
-import MetricKit
+    import MetricKit
 #endif
 
 @MainActor
@@ -22,10 +22,10 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
 
     private static let diagnosticsFeature = FeatureCatalog.diagnostics
     #if canImport(OSLog)
-    private nonisolated static let logger = Logger(
-        subsystem: "ShoutKit.Persistence",
-        category: "DiagnosticsService"
-    )
+        private nonisolated static let logger = Logger(
+            subsystem: "ShoutKit.Persistence",
+            category: "DiagnosticsService",
+        )
     #endif
 
     private let featureFlags: any FeatureFlagProviding
@@ -45,7 +45,7 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
         settings: SettingsStore,
         payloadStore: any DiagnosticsPayloadPersisting,
         subscribe: SubscriptionHandler? = nil,
-        unsubscribe: SubscriptionHandler? = nil
+        unsubscribe: SubscriptionHandler? = nil,
     ) {
         self.featureFlags = featureFlags
         self.settings = settings
@@ -87,7 +87,7 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
             await worker.persistAndLogSummaries(
                 metricPayloads: metricPayloadsToPersist,
                 diagnosticPayloads: diagnosticPayloadsToPersist,
-                receivedAt: receivedAt
+                receivedAt: receivedAt,
             )
         }
     }
@@ -96,7 +96,9 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
         featureFlags.isEnabled(Self.diagnosticsFeature) && settings.isDiagnosticsSharingEnabled
     }
 
-    var subscribedForCollection: Bool { isSubscribed }
+    var subscribedForCollection: Bool {
+        isSubscribed
+    }
 
     private func observeCollectionEligibility() {
         observationTask = Task { @MainActor [weak self] in
@@ -104,12 +106,14 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
                 guard let self else { return (false, false) }
                 return (
                     self.settings.isDiagnosticsSharingEnabled,
-                    self.featureFlags.isEnabled(Self.diagnosticsFeature)
+                    self.featureFlags.isEnabled(Self.diagnosticsFeature),
                 )
             }
 
             for await _ in changes {
-                if Task.isCancelled { return }
+                if Task.isCancelled {
+                    return
+                }
                 guard let self else { return }
                 self.refreshSubscription()
             }
@@ -123,26 +127,26 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
 
     private nonisolated static func log(_ message: String) {
         #if canImport(OSLog)
-        logger.notice("\(message, privacy: .public)")
+            logger.notice("\(message, privacy: .public)")
         #else
-        print(message)
+            print(message)
         #endif
     }
 
     private nonisolated static func logMetricPayloadSummaries(
         _ summaries: [DiagnosticsMetricPayloadSummary],
-        receivedAt: Date
+        receivedAt: Date,
     ) {
         for summary in summaries {
             if let launch = summary.launch {
-                Self.log(
+                log(
                     """
                     MetricKit launch receivedAt=\(receivedAt.formatted(.iso8601)) \
-                    timeToFirstDrawMeanMs=\(Self.describe(launch.meanTimeToFirstDrawMilliseconds)) \
+                    timeToFirstDrawMeanMs=\(describe(launch.meanTimeToFirstDrawMilliseconds)) \
                     timeToFirstDrawSamples=\(launch.timeToFirstDrawSampleCount) \
-                    resumeMeanMs=\(Self.describe(launch.meanResumeTimeMilliseconds)) \
+                    resumeMeanMs=\(describe(launch.meanResumeTimeMilliseconds)) \
                     resumeSamples=\(launch.resumeSampleCount)
-                    """
+                    """,
                 )
             }
             for transaction in summary.networkTransactions {
@@ -153,9 +157,9 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
 
     private static func defaultSubscribe(_ service: DiagnosticsService) {
         #if canImport(MetricKit) && os(iOS)
-        MXMetricManager.shared.add(service)
+            MXMetricManager.shared.add(service)
         #else
-        _ = service
+            _ = service
         #endif
     }
 
@@ -171,7 +175,7 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
                 try payloadStore.persist(
                     metricPayloads: metricPayloads,
                     diagnosticPayloads: diagnosticPayloads,
-                    receivedAt: receivedAt
+                    receivedAt: receivedAt,
                 )
                 let summaries = metricPayloads.compactMap {
                     DiagnosticsMetricSummaryExtractor.summary(from: $0, receivedAt: receivedAt)
@@ -185,30 +189,30 @@ public final class DiagnosticsService: NSObject, DiagnosticsServicing {
 
     private static func defaultUnsubscribe(_ service: DiagnosticsService) {
         #if canImport(MetricKit) && os(iOS)
-        MXMetricManager.shared.remove(service)
+            MXMetricManager.shared.remove(service)
         #else
-        _ = service
+            _ = service
         #endif
     }
 }
 
 #if canImport(MetricKit) && os(iOS)
-@MainActor
-extension DiagnosticsService: MXMetricManagerSubscriber {
-    public nonisolated func didReceive(_ payloads: [MXMetricPayload]) {
-        let jsonPayloads = payloads.map { $0.jsonRepresentation() }
-        Task { @MainActor in
-            ingest(metricPayloads: jsonPayloads, diagnosticPayloads: [])
+    @MainActor
+    extension DiagnosticsService: MXMetricManagerSubscriber {
+        public nonisolated func didReceive(_ payloads: [MXMetricPayload]) {
+            let jsonPayloads = payloads.map { $0.jsonRepresentation() }
+            Task { @MainActor in
+                ingest(metricPayloads: jsonPayloads, diagnosticPayloads: [])
+            }
         }
-    }
 
-    public nonisolated func didReceive(_ payloads: [MXDiagnosticPayload]) {
-        let jsonPayloads = payloads.map { $0.jsonRepresentation() }
-        Task { @MainActor in
-            ingest(metricPayloads: [], diagnosticPayloads: jsonPayloads)
+        public nonisolated func didReceive(_ payloads: [MXDiagnosticPayload]) {
+            let jsonPayloads = payloads.map { $0.jsonRepresentation() }
+            Task { @MainActor in
+                ingest(metricPayloads: [], diagnosticPayloads: jsonPayloads)
+            }
         }
     }
-}
 #endif
 
 @MainActor

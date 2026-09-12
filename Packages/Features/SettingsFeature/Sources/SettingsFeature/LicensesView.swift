@@ -49,9 +49,9 @@ struct LicensesView: View {
                 // Debug builds link Pulse (never Release — CI symbol-checks
                 // that), so builds handed to testers still carry its notice.
                 #if DEBUG
-                NavigationLink("Pulse (Debug builds only) — MIT") {
-                    LicenseTextView(title: "MIT", resource: "pulse-mit")
-                }
+                    NavigationLink("Pulse (Debug builds only) — MIT") {
+                        LicenseTextView(title: "MIT", resource: "pulse-mit")
+                    }
                 #endif
             } header: {
                 Text("Third-Party")
@@ -91,7 +91,8 @@ private struct LicenseTextView: View {
 
     private var licenseText: String {
         guard let url = Bundle.module.url(forResource: resource, withExtension: "txt"),
-              let text = try? String(contentsOf: url, encoding: .utf8) else {
+              let text = try? String(contentsOf: url, encoding: .utf8)
+        else {
             return String(localized: "License text unavailable — see the project repository.", bundle: .module)
         }
         return text

@@ -13,7 +13,7 @@ public final class SettingsStore {
         static let diagnosticsSharing = DefaultsKey<Bool>.plist("settings.diagnosticsSharingEnabled", default: false)
         static let preciseGeoStationLocation = DefaultsKey<Bool>.plist(
             "settings.preciseGeoStationLocationEnabled",
-            default: false
+            default: false,
         )
         static let equalizerPreset = DefaultsKey<Int>.plist("settings.equalizerPresetRawValue", default: 0)
         static let streamLooping = DefaultsKey<Bool>.plist("settings.streamLoopingEnabled", default: false)

@@ -1,7 +1,6 @@
+@testable import BrowseFeatureCore
 import RadioDirectory
 import Testing
-
-@testable import BrowseFeatureCore
 
 private actor SequencedTopStationsDirectory: RadioDirectoryProviding {
     private var topStationsCalls = 0
@@ -10,7 +9,7 @@ private actor SequencedTopStationsDirectory: RadioDirectoryProviding {
         [Genre(name: "Jazz")]
     }
 
-    func topStations(limit: Int) async throws(RadioDirectoryError) -> [Station] {
+    func topStations(limit _: Int) async throws(RadioDirectoryError) -> [Station] {
         topStationsCalls += 1
         if topStationsCalls == 1 {
             try? await Task.sleep(for: .milliseconds(200))
@@ -19,22 +18,22 @@ private actor SequencedTopStationsDirectory: RadioDirectoryProviding {
         return [.fixture(id: "b", name: "Station B")]
     }
 
-    func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+    func searchStations(matching _: String, limit _: Int) async throws(RadioDirectoryError) -> [Station] {
         []
     }
 
-    func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+    func stations(inGenre _: String, limit _: Int) async throws(RadioDirectoryError) -> [Station] {
         []
     }
 
-    func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
+    func streamEndpoint(for _: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
         throw .invalidResponse
     }
 }
 
 @MainActor
 struct BrowseViewModelTests {
-    @Test func refreshLoadsSpotlightStationsAndGenres() async {
+    @Test func `refresh loads spotlight stations and genres`() async {
         let directory = FakeRadioDirectory()
         let stations: [Station] = [.fixture(id: "a", name: "Station A"), .fixture(id: "b", name: "Station B")]
         await directory.setTopStationsResult(.success(stations))
@@ -53,7 +52,7 @@ struct BrowseViewModelTests {
         #expect(viewModel.genresError == nil)
     }
 
-    @Test func refreshWithNoStationsIsEmpty() async {
+    @Test func `refresh with no stations is empty`() async {
         let directory = FakeRadioDirectory()
         await directory.setTopStationsResult(.success([]))
         let viewModel = BrowseViewModel(directory: directory)
@@ -63,7 +62,7 @@ struct BrowseViewModelTests {
         #expect(viewModel.phase == .empty)
     }
 
-    @Test func refreshSurfacesTopStationsFailure() async {
+    @Test func `refresh surfaces top stations failure`() async {
         let directory = FakeRadioDirectory()
         await directory.setTopStationsResult(.failure(.httpStatus(500)))
         let viewModel = BrowseViewModel(directory: directory)
@@ -73,7 +72,7 @@ struct BrowseViewModelTests {
         #expect(viewModel.phase == .failed(.httpStatus(500)))
     }
 
-    @Test func genresFailureIsNonFatalToLoadedPhase() async {
+    @Test func `genres failure is non fatal to loaded phase`() async {
         let directory = FakeRadioDirectory()
         await directory.setTopStationsResult(.success([.fixture(id: "a", name: "Station A")]))
         await directory.setGenresResult(.failure(.invalidResponse))
@@ -88,7 +87,7 @@ struct BrowseViewModelTests {
         #expect(viewModel.genresError == .invalidResponse)
     }
 
-    @Test func toggleGenreFilterLoadsStationsForThatGenre() async {
+    @Test func `toggle genre filter loads stations for that genre`() async {
         let directory = FakeRadioDirectory()
         let jazzStations: [Station] = [.fixture(id: "j1", name: "Jazz One", genre: "Jazz")]
         await directory.setGenreStations(.success(jazzStations), forGenre: "Jazz")
@@ -103,7 +102,7 @@ struct BrowseViewModelTests {
         #expect(viewModel.genrePhase == .loaded(jazzStations))
     }
 
-    @Test func togglingSameGenreTwiceClearsTheFilter() async {
+    @Test func `toggling same genre twice clears the filter`() async {
         let directory = FakeRadioDirectory()
         await directory.setGenreStations(.success([.fixture(id: "j1", name: "Jazz One")]), forGenre: "Jazz")
         let viewModel = BrowseViewModel(directory: directory)
@@ -116,7 +115,7 @@ struct BrowseViewModelTests {
         #expect(viewModel.genrePhase == nil)
     }
 
-    @Test func stalePriorGenreResponseIsDiscardedAfterSwitchingSelection() async {
+    @Test func `stale prior genre response is discarded after switching selection`() async {
         let directory = FakeRadioDirectory()
         // "Jazz" resolves slowly; by the time it does, the user has already
         // switched to "Rock" (which resolves immediately). The guard in
@@ -124,7 +123,7 @@ struct BrowseViewModelTests {
         await directory.setGenreStations(
             .success([.fixture(id: "j1", name: "Jazz One")]),
             forGenre: "Jazz",
-            delay: .milliseconds(200)
+            delay: .milliseconds(200),
         )
         await directory.setGenreStations(.success([.fixture(id: "r1", name: "Rock One")]), forGenre: "Rock")
         let viewModel = BrowseViewModel(directory: directory)
@@ -140,7 +139,7 @@ struct BrowseViewModelTests {
         #expect(viewModel.genrePhase == .loaded([.fixture(id: "r1", name: "Rock One")]))
     }
 
-    @Test func olderRefreshFailureDoesNotOverrideNewerLoadedResult() async {
+    @Test func `older refresh failure does not override newer loaded result`() async {
         let directory = SequencedTopStationsDirectory()
         let viewModel = BrowseViewModel(directory: directory)
 

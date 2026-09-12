@@ -1,9 +1,8 @@
 import FeatureFlags
 import Foundation
 import Observation
-import Testing
-
 @testable import Persistence
+import Testing
 
 @MainActor
 struct DiagnosticsServiceTests {
@@ -19,14 +18,20 @@ struct DiagnosticsServiceTests {
     fileprivate final class FeatureFlagsStub: FeatureFlagProviding {
         var enabled = false
 
-        func isEnabled(_: Feature) -> Bool { enabled }
-        func override(for _: Feature) -> FeatureOverride { .useDefault }
+        func isEnabled(_: Feature) -> Bool {
+            enabled
+        }
+
+        func override(for _: Feature) -> FeatureOverride {
+            .useDefault
+        }
+
         func setOverride(_: FeatureOverride, for _: Feature) {}
         func resetAll() {}
     }
 
-    @Test func noCollectionWhenFeatureFlagDisabled() throws {
-        let settings = SettingsStore(defaults: try makeDefaults())
+    @Test func `no collection when feature flag disabled`() throws {
+        let settings = try SettingsStore(defaults: makeDefaults())
         settings.isDiagnosticsSharingEnabled = true
         let featureFlags = FeatureFlagsStub()
         featureFlags.enabled = false
@@ -37,7 +42,7 @@ struct DiagnosticsServiceTests {
             settings: settings,
             payloadStore: payloadStore,
             subscribe: { _ in subscribeCalls += 1 },
-            unsubscribe: { _ in }
+            unsubscribe: { _ in },
         )
 
         // A nil task is the real assertion: no work was even scheduled. The
@@ -45,7 +50,7 @@ struct DiagnosticsServiceTests {
         // spawned and simply hadn't run yet.
         let ingestTask = service.ingest(
             metricPayloads: [Data("metric".utf8)],
-            diagnosticPayloads: [Data("diag".utf8)]
+            diagnosticPayloads: [Data("diag".utf8)],
         )
 
         #expect(ingestTask == nil)
@@ -54,8 +59,8 @@ struct DiagnosticsServiceTests {
         #expect(payloadStore.diagnosticPayloads.isEmpty)
     }
 
-    @Test func noCollectionWhenUserOptInDisabled() throws {
-        let settings = SettingsStore(defaults: try makeDefaults())
+    @Test func `no collection when user opt in disabled`() throws {
+        let settings = try SettingsStore(defaults: makeDefaults())
         settings.isDiagnosticsSharingEnabled = false
         let featureFlags = FeatureFlagsStub()
         featureFlags.enabled = true
@@ -66,12 +71,12 @@ struct DiagnosticsServiceTests {
             settings: settings,
             payloadStore: payloadStore,
             subscribe: { _ in subscribeCalls += 1 },
-            unsubscribe: { _ in }
+            unsubscribe: { _ in },
         )
 
         let ingestTask = service.ingest(
             metricPayloads: [Data("metric".utf8)],
-            diagnosticPayloads: [Data("diag".utf8)]
+            diagnosticPayloads: [Data("diag".utf8)],
         )
 
         #expect(ingestTask == nil)
@@ -80,8 +85,8 @@ struct DiagnosticsServiceTests {
         #expect(payloadStore.diagnosticPayloads.isEmpty)
     }
 
-    @Test func collectionStartsWhenFlagAndOptInEnabled() async throws {
-        let settings = SettingsStore(defaults: try makeDefaults())
+    @Test func `collection starts when flag and opt in enabled`() async throws {
+        let settings = try SettingsStore(defaults: makeDefaults())
         settings.isDiagnosticsSharingEnabled = true
         let featureFlags = FeatureFlagsStub()
         featureFlags.enabled = true
@@ -92,7 +97,7 @@ struct DiagnosticsServiceTests {
             settings: settings,
             payloadStore: payloadStore,
             subscribe: { _ in subscribeCalls += 1 },
-            unsubscribe: { _ in }
+            unsubscribe: { _ in },
         )
 
         // Awaiting the returned task is what makes this deterministic: the
@@ -100,7 +105,7 @@ struct DiagnosticsServiceTests {
         // effects lost the scheduler race under CI's parallel execution.
         let ingestTask = service.ingest(
             metricPayloads: [Data("metric".utf8)],
-            diagnosticPayloads: [Data("diag".utf8)]
+            diagnosticPayloads: [Data("diag".utf8)],
         )
         try await #require(ingestTask).value
 
@@ -109,8 +114,8 @@ struct DiagnosticsServiceTests {
         #expect(payloadStore.diagnosticPayloads.count == 1)
     }
 
-    @Test func refreshUnsubscribesWhenOptInTurnsOff() throws {
-        let settings = SettingsStore(defaults: try makeDefaults())
+    @Test func `refresh unsubscribes when opt in turns off`() throws {
+        let settings = try SettingsStore(defaults: makeDefaults())
         settings.isDiagnosticsSharingEnabled = true
         let featureFlags = FeatureFlagsStub()
         featureFlags.enabled = true
@@ -121,7 +126,7 @@ struct DiagnosticsServiceTests {
             settings: settings,
             payloadStore: payloadStore,
             subscribe: { _ in },
-            unsubscribe: { _ in unsubscribeCalls += 1 }
+            unsubscribe: { _ in unsubscribeCalls += 1 },
         )
 
         settings.isDiagnosticsSharingEnabled = false
@@ -131,8 +136,8 @@ struct DiagnosticsServiceTests {
         #expect(service.subscribedForCollection == false)
     }
 
-    @Test func refreshesSubscriptionWhenFeatureFlagChanges() async throws {
-        let settings = SettingsStore(defaults: try makeDefaults())
+    @Test func `refreshes subscription when feature flag changes`() async throws {
+        let settings = try SettingsStore(defaults: makeDefaults())
         settings.isDiagnosticsSharingEnabled = true
         let featureFlags = FeatureFlagsStub()
         featureFlags.enabled = false
@@ -144,7 +149,7 @@ struct DiagnosticsServiceTests {
             settings: settings,
             payloadStore: payloadStore,
             subscribe: { _ in subscribeCalls += 1 },
-            unsubscribe: { _ in unsubscribeCalls += 1 }
+            unsubscribe: { _ in unsubscribeCalls += 1 },
         )
 
         #expect(service.subscribedForCollection == false)
@@ -176,7 +181,7 @@ struct DiagnosticsServiceTests {
     private func waitUntil(
         timeoutSeconds: TimeInterval = 10,
         intervalNanoseconds: UInt64 = 10_000_000,
-        condition: @escaping () -> Bool
+        condition: @escaping () -> Bool,
     ) async {
         let start = Date()
         let deadline = start.addingTimeInterval(timeoutSeconds)

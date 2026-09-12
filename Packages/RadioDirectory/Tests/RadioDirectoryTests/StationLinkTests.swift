@@ -1,10 +1,10 @@
 import Foundation
-import Testing
 @testable import RadioDirectory
+import Testing
 
 struct StationLinkTests {
     @Test
-    func roundTripsStationURL() {
+    func `round trips station URL`() {
         let station = Station(
             id: "npr-newscast",
             name: "NPR News Now",
@@ -18,7 +18,7 @@ struct StationLinkTests {
             clickTrend: 3,
             votes: 12,
             artworkURL: URL(string: "https://example.com/artwork.png"),
-            preferredStreamURL: URL(string: "https://example.com/live.mp3")
+            preferredStreamURL: URL(string: "https://example.com/live.mp3"),
         )
         let link = StationLink(station: station, autoPlay: true, presentNowPlaying: false)
 
@@ -28,14 +28,14 @@ struct StationLinkTests {
     }
 
     @Test
-    func omitsCleartextRemoteURLsWhenBuildingLinkURL() {
+    func `omits cleartext remote UR ls when building link URL`() {
         let station = Station(
             id: "kexp",
             name: "KEXP",
             genre: "Indie",
             listenerCount: 0,
             artworkURL: URL(string: "http://example.com/artwork.png"),
-            preferredStreamURL: URL(string: "http://example.com/live.mp3")
+            preferredStreamURL: URL(string: "http://example.com/live.mp3"),
         )
         let link = StationLink(station: station)
         let url = link.url()
@@ -47,7 +47,7 @@ struct StationLinkTests {
     }
 
     @Test
-    func parsesMinimalStationLinks() throws {
+    func `parses minimal station links`() throws {
         let url = try #require(URL(string: "holmdel://station?name=KEXP&streamURL=https://example.com/live.mp3"))
 
         let parsed = StationLink(url: url)
@@ -61,7 +61,7 @@ struct StationLinkTests {
     }
 
     @Test
-    func parsesPlayRouteWithExplicitFlags() throws {
+    func `parses play route with explicit flags`() throws {
         let url = try #require(URL(string: "holmdel://play?id=kexp&name=KEXP&autoPlay=0&presentNowPlaying=false"))
 
         let parsed = StationLink(url: url)
@@ -82,18 +82,18 @@ struct StationLinkTests {
         // id or playable stream, so the whole link is rejected.
         "holmdel://station?name=KEXP&streamURL=http://example.com/live.mp3",
         // No id and no name.
-        "holmdel://station?genre=News"
+        "holmdel://station?genre=News",
     ])
-    func rejectsUntrustedOrMalformedLinks(urlString: String) throws {
+    func `rejects untrusted or malformed links`(urlString: String) throws {
         let url = try #require(URL(string: urlString))
 
         #expect(StationLink(url: url) == nil)
     }
 
     @Test
-    func dropsCleartextRemoteURLsButKeepsIdentifiedStation() throws {
+    func `drops cleartext remote UR ls but keeps identified station`() throws {
         let url = try #require(URL(
-            string: "holmdel://station?id=kexp&streamURL=http://x.example/s.mp3&artworkURL=http://x.example/a.png"
+            string: "holmdel://station?id=kexp&streamURL=http://x.example/s.mp3&artworkURL=http://x.example/a.png",
         ))
 
         let parsed = StationLink(url: url)
@@ -104,7 +104,7 @@ struct StationLinkTests {
     }
 
     @Test
-    func roundTripsHandoffUserInfo() {
+    func `round trips handoff user info`() {
         let station = Station(
             id: "kexp",
             name: "KEXP",
@@ -113,12 +113,12 @@ struct StationLinkTests {
             country: "US",
             codec: "mp3",
             language: "en",
-            listenerCount: 1_234,
+            listenerCount: 1234,
             bitrate: 128,
             clickTrend: 9,
             votes: 88,
             artworkURL: URL(string: "https://example.com/artwork.png"),
-            preferredStreamURL: URL(string: "https://example.com/live.mp3")
+            preferredStreamURL: URL(string: "https://example.com/live.mp3"),
         )
         let link = StationLink(station: station, autoPlay: false, presentNowPlaying: true)
 
@@ -128,13 +128,13 @@ struct StationLinkTests {
     }
 
     @Test
-    func rejectsHandoffUserInfoWithMismatchedStationID() throws {
+    func `rejects handoff user info with mismatched station ID`() {
         let station = Station(
             id: "kexp",
             name: "KEXP",
             genre: "Indie",
             listenerCount: 1,
-            preferredStreamURL: URL(string: "https://example.com/live.mp3")
+            preferredStreamURL: URL(string: "https://example.com/live.mp3"),
         )
         let link = StationLink(station: station)
         var userInfo = link.handoffUserInfo

@@ -15,21 +15,21 @@ public enum PlaybackState: Equatable, Sendable {
     public var station: Station? {
         switch self {
         case .idle, .failed:
-            return nil
+            nil
         case let .loading(station),
              let .buffering(station),
              let .playing(station),
              let .paused(station):
-            return station
+            station
         }
     }
 
     public var isActive: Bool {
         switch self {
         case .idle, .failed:
-            return false
+            false
         default:
-            return true
+            true
         }
     }
 
@@ -41,9 +41,9 @@ public enum PlaybackState: Equatable, Sendable {
         case let .loading(station),
              let .buffering(station),
              let .playing(station):
-            return station
+            station
         case .idle, .paused, .failed:
-            return nil
+            nil
         }
     }
 }

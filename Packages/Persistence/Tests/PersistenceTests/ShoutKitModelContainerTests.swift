@@ -1,7 +1,6 @@
+@testable import Persistence
 import SwiftData
 import Testing
-
-@testable import Persistence
 
 @MainActor
 struct ShoutKitModelContainerTests {
@@ -9,7 +8,7 @@ struct ShoutKitModelContainerTests {
         case openFailed
     }
 
-    @Test func persistentStoreSuccessKeepsAvailabilityTrue() {
+    @Test func `persistent store success keeps availability true`() {
         var openCalls = 0
 
         _ = ShoutKitModelContainer.makeContainer(inMemory: true) { configuration in
@@ -21,7 +20,7 @@ struct ShoutKitModelContainerTests {
         #expect(ShoutKitModelContainer.isPersistentStoreAvailable)
     }
 
-    @Test func persistentStoreFailureRetriesOnceBeforeSuccess() {
+    @Test func `persistent store failure retries once before success`() {
         var openCalls = 0
 
         _ = ShoutKitModelContainer.makeContainer(inMemory: false) { configuration in
@@ -36,7 +35,7 @@ struct ShoutKitModelContainerTests {
         #expect(ShoutKitModelContainer.isPersistentStoreAvailable)
     }
 
-    @Test func persistentStoreFailureFallsBackToInMemoryAndMarksUnavailable() throws {
+    @Test func `persistent store failure falls back to in memory and marks unavailable`() throws {
         var openCalls = 0
 
         let container = ShoutKitModelContainer.makeContainer(inMemory: false) { _ in

@@ -29,7 +29,7 @@ enum QuickPlayWidgetPublisher {
                 id: station.id,
                 name: station.name,
                 genre: station.genre,
-                deepLinkURLString: link.url().absoluteString
+                deepLinkURLString: link.url().absoluteString,
             )
         }
 

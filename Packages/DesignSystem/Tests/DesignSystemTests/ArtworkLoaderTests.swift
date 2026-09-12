@@ -1,16 +1,15 @@
 import CoreGraphics
+@testable import DesignSystem
 import Testing
 import UIKit
 
-@testable import DesignSystem
-
 struct ArtworkLoaderTests {
     @Test
-    func paletteSamplesPreserveTopLeftRowMajorOrder() throws {
+    func `palette samples preserve top left row major order`() throws {
         let image = try #require(makeImage(colors: [
             .red, .green, .blue,
             .yellow, .magenta, .cyan,
-            .white, .gray, .black
+            .white, .gray, .black,
         ]))
         let samples = ArtworkLoader.paletteHSBSamples(from: image)
 
@@ -47,7 +46,7 @@ struct ArtworkLoaderTests {
             bitsPerComponent: 8,
             bytesPerRow: side * 4,
             space: colorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue,
         ) else { return nil }
         return context.makeImage()
     }

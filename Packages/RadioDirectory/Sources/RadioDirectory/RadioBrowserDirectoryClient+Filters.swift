@@ -1,8 +1,8 @@
 import Foundation
 
-// Encodes `StationSearchFilters` as Radio-Browser query parameters. Internal
-// rather than `private` now that it lives beside the client rather than inside
-// its file; nothing outside this module names it.
+/// Encodes `StationSearchFilters` as Radio-Browser query parameters. Internal
+/// rather than `private` now that it lives beside the client rather than inside
+/// its file; nothing outside this module names it.
 extension StationSearchFilters {
     func radioBrowserQueryItems(excludingTag: Bool = false) -> [URLQueryItem] {
         var queryItems: [URLQueryItem] = []

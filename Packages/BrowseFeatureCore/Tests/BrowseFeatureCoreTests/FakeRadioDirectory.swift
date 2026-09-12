@@ -26,7 +26,7 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
     func setGenreStations(
         _ result: Result<[Station], RadioDirectoryError>,
         forGenre genre: String,
-        delay: Duration? = nil
+        delay: Duration? = nil,
     ) {
         genreStationsResultsByGenre[genre] = result
         if let delay {
@@ -41,7 +41,7 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
         }
     }
 
-    func topStations(limit: Int) async throws(RadioDirectoryError) -> [Station] {
+    func topStations(limit _: Int) async throws(RadioDirectoryError) -> [Station] {
         topStationsCallCount += 1
         switch topStationsResult {
         case let .success(stations): return stations
@@ -49,14 +49,14 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
         }
     }
 
-    func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+    func searchStations(matching _: String, limit _: Int) async throws(RadioDirectoryError) -> [Station] {
         switch searchStationsResult {
         case let .success(stations): return stations
         case let .failure(error): throw error
         }
     }
 
-    func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+    func stations(inGenre genre: String, limit _: Int) async throws(RadioDirectoryError) -> [Station] {
         genreStationsCallCount += 1
         if let delay = genreStationsDelayByGenre[genre] {
             try? await Task.sleep(for: delay)
@@ -67,7 +67,7 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
         }
     }
 
-    func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
+    func streamEndpoint(for _: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
         throw .invalidResponse
     }
 }

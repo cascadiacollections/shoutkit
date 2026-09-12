@@ -44,11 +44,17 @@ public protocol RadioPlaybackEngine: AudioOutput {
 }
 
 public extension RadioPlaybackEngine {
-    var supportsEqualizer: Bool { false }
-    func setEqualizerPreset(_ preset: EqualizerPreset) {}
+    var supportsEqualizer: Bool {
+        false
+    }
 
-    var supportsSpatialAudio: Bool { false }
-    func setSpatialAudioEnabled(_ isEnabled: Bool) {}
+    func setEqualizerPreset(_: EqualizerPreset) {}
+
+    var supportsSpatialAudio: Bool {
+        false
+    }
+
+    func setSpatialAudioEnabled(_: Bool) {}
 }
 
 /// Placeholder ``RadioPlaybackEngine`` registered until a concrete engine lands.
@@ -76,7 +82,7 @@ public final class StubRadioPlaybackEngine: RadioPlaybackEngine {
 
     public init() {}
 
-    public func start(url: URL, streamGeneration: UInt64) {
+    public func start(url _: URL, streamGeneration _: UInt64) {
         guard !hasLoggedNoEngineFault else { return }
         hasLoggedNoEngineFault = true
         Self.logger.fault(
@@ -85,7 +91,7 @@ public final class StubRadioPlaybackEngine: RadioPlaybackEngine {
             so this stream will never produce audio and playback will stay in .loading. \
             Call registerProductionPlaybackEngine() (PlaybackEngineAudioStreaming) during \
             startup, or inject an engine via PlaybackController.init(output:).
-            """
+            """,
         )
     }
 

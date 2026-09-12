@@ -55,7 +55,7 @@ public struct MiniPlayerView: View {
         let artworkSelection = effectiveArtworkSelection(
             settings: settings,
             playback: playback,
-            station: station
+            station: station,
         )
         HStack(spacing: ShoutKitSpacing.small) {
             StationArtworkView(
@@ -63,7 +63,7 @@ public struct MiniPlayerView: View {
                 fallbackArtworkURL: artworkSelection.fallbackURL,
                 size: 40,
                 cornerRadius: ShoutKitRadius.small,
-                isPlaying: isPlaying(playback)
+                isPlaying: isPlaying(playback),
             )
 
             VStack(alignment: .leading, spacing: 1) {
@@ -115,7 +115,9 @@ public struct MiniPlayerView: View {
     }
 
     private func isPlaying(_ playback: PlaybackController) -> Bool {
-        if case .playing = playback.state { return true }
+        if case .playing = playback.state {
+            return true
+        }
         return false
     }
 
@@ -127,7 +129,9 @@ public struct MiniPlayerView: View {
             return error.shortUserMessage
         default:
             if let track = playback.nowPlaying, let title = track.title {
-                if let artist = track.artist { return "\(title) — \(artist)" }
+                if let artist = track.artist {
+                    return "\(title) — \(artist)"
+                }
                 return title
             }
             return playback.currentStation?.genre ?? "Live radio"

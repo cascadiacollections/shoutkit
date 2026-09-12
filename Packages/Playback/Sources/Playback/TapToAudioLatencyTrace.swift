@@ -37,7 +37,7 @@ final class TapToAudioLatencyTrace {
             """
             TapToAudio resolved station=\(self.stationID, privacy: .public) \
             host=\(url.host ?? "unknown", privacy: .public) prewarmEnabled=\(self.prewarmEnabled)
-            """
+            """,
         )
     }
 
@@ -54,7 +54,7 @@ final class TapToAudioLatencyTrace {
 
         let resolveMilliseconds = milliseconds(from: startedAt, to: resolvedAt)
         let outputStartMilliseconds = milliseconds(from: startedAt, to: outputStartedAt)
-        let firstPlayingMilliseconds = Date().timeIntervalSince(startedAt) * 1_000
+        let firstPlayingMilliseconds = Date().timeIntervalSince(startedAt) * 1000
 
         Self.logger.notice(
             """
@@ -62,7 +62,7 @@ final class TapToAudioLatencyTrace {
             resolveMs=\(Self.describe(resolveMilliseconds), privacy: .public) \
             outputStartMs=\(Self.describe(outputStartMilliseconds), privacy: .public) \
             firstPlayingMs=\(Self.describe(firstPlayingMilliseconds), privacy: .public)
-            """
+            """,
         )
     }
 
@@ -74,7 +74,7 @@ final class TapToAudioLatencyTrace {
 
     private func milliseconds(from start: Date, to end: Date?) -> Double? {
         guard let end else { return nil }
-        return end.timeIntervalSince(start) * 1_000
+        return end.timeIntervalSince(start) * 1000
     }
 
     private static func describe(_ value: Double?) -> String {

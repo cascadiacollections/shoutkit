@@ -1,9 +1,8 @@
 import Foundation
+@testable import Persistence
 import RadioDirectory
 import SwiftData
 import Testing
-
-@testable import Persistence
 
 @MainActor
 struct LibraryStoreRecentlyHeardTests {
@@ -20,12 +19,12 @@ struct LibraryStoreRecentlyHeardTests {
     private func recentlyHeard(_ context: ModelContext) throws -> [RecentlyHeardTrack] {
         try context.fetch(
             FetchDescriptor<RecentlyHeardTrack>(
-                sortBy: [SortDescriptor(\.heardAt, order: .reverse)]
-            )
+                sortBy: [SortDescriptor(\.heardAt, order: .reverse)],
+            ),
         )
     }
 
-    @Test func loggingSameTrackConsecutivelyKeepsOneRecentlyHeardRow() throws {
+    @Test func `logging same track consecutively keeps one recently heard row`() throws {
         let (store, context) = makeStoreAndContext()
         let station = station("kexp")
 
@@ -38,7 +37,7 @@ struct LibraryStoreRecentlyHeardTests {
         #expect(rows.first?.artist == "Band")
     }
 
-    @Test func loggingTrackAgainAfterDifferentTrackCreatesNewHistoryRow() throws {
+    @Test func `logging track again after different track creates new history row`() throws {
         let (store, context) = makeStoreAndContext()
         let station = station("kexp")
 
@@ -51,7 +50,7 @@ struct LibraryStoreRecentlyHeardTests {
         #expect(rows.map(\.title) == ["Song", "Other", "Song"])
     }
 
-    @Test func appleMusicLinkBackfillsMostRecentMatchingTrack() throws {
+    @Test func `apple music link backfills most recent matching track`() throws {
         let (store, context) = makeStoreAndContext()
         let station = station("kexp")
         let link = try #require(URL(string: "https://music.apple.com/us/album/song/1?i=2"))
@@ -64,7 +63,7 @@ struct LibraryStoreRecentlyHeardTests {
         #expect(rows.first?.appleMusicURLString == link.absoluteString)
     }
 
-    @Test func artworkURLBackfillsMostRecentMatchingTrack() throws {
+    @Test func `artwork URL backfills most recent matching track`() throws {
         let (store, context) = makeStoreAndContext()
         let station = station("kexp")
         let art = try #require(URL(string: "https://example.com/art/600x600bb.jpg"))
@@ -77,7 +76,7 @@ struct LibraryStoreRecentlyHeardTests {
         #expect(rows.first?.artworkURLString == art.absoluteString)
     }
 
-    @Test func outOfOrderConsecutiveDuplicateDoesNotRegressHeardAt() throws {
+    @Test func `out of order consecutive duplicate does not regress heard at`() throws {
         let (store, context) = makeStoreAndContext()
         let station = station("kexp")
         let latest = Date()
@@ -91,14 +90,14 @@ struct LibraryStoreRecentlyHeardTests {
         #expect(rows.first?.heardAt == latest)
     }
 
-    @Test func recentlyHeardIsCappedAtLimit() throws {
+    @Test func `recently heard is capped at limit`() throws {
         let (store, context) = makeStoreAndContext()
 
-        for index in 0..<(LibraryStore.recentlyHeardLimit + 20) {
+        for index in 0 ..< (LibraryStore.recentlyHeardLimit + 20) {
             store.logRecentlyHeardTrack(
                 station: station("s\(index)"),
                 title: "Song \(index)",
-                artist: "Band"
+                artist: "Band",
             )
         }
 
@@ -106,19 +105,19 @@ struct LibraryStoreRecentlyHeardTests {
         #expect(rows.count <= LibraryStore.recentlyHeardLimit)
     }
 
-    @Test func recentlyHeardTrimClearsBacklogBeyondSingleBatch() throws {
+    @Test func `recently heard trim clears backlog beyond single batch`() throws {
         let (store, context) = makeStoreAndContext()
         let total = LibraryStore.recentlyHeardLimit + LibraryStore.recentlyHeardTrimHeadroom + 25
 
-        for index in 0..<total {
+        for index in 0 ..< total {
             context.insert(
                 RecentlyHeardTrack(
                     stationID: "seed\(index)",
                     stationName: "Seed \(index)",
                     title: "Song \(index)",
                     artist: "Band",
-                    heardAt: .now.addingTimeInterval(TimeInterval(-index))
-                )
+                    heardAt: .now.addingTimeInterval(TimeInterval(-index)),
+                ),
             )
         }
         try context.save()
