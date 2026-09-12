@@ -78,10 +78,13 @@ Two contracts are not expressible in the type system, so they are stated here:
 
 **Echo the stream generation.** ``AudioOutput/start(url:streamGeneration:)`` hands you a token.
 Every ``AudioTrackInfo`` and stream-scoped ``AudioStatusUpdate`` you emit for that stream must
-carry the same value back. The controller uses it to discard metadata and status changes that
-arrive late from a stream the listener has already switched away from. System-wide events such
-as interruptions, route changes, and media-services resets remain unscoped by leaving
-``AudioStatusUpdate/streamGeneration`` as `nil`.
+carry the same value back in ``AudioTrackInfo/streamGeneration`` or
+``AudioStatusUpdate/streamGeneration``. The controller uses it to discard metadata and status
+changes that arrive late from a stream the listener has already switched away from.
+`AudioTrackInfo`'s initializer defaults this parameter to `0`, so ignoring it compiles cleanly
+and then misattributes track titles. System-wide events such as interruptions, route changes,
+and media-services resets remain unscoped by leaving ``AudioStatusUpdate/streamGeneration`` as
+`nil`.
 
 **Report status transitions.** Drive ``AudioOutput/onStatusChange`` with ``AudioStatusUpdate`` as
 the stream progresses. A controller that never sees `.playing` stays in `.loading` indefinitely

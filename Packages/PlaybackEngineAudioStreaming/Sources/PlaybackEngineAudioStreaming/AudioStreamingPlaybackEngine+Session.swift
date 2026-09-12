@@ -280,6 +280,8 @@ extension AudioStreamingPlaybackEngine {
         // Nothing had been selected: there is no listener-visible state to
         // update. Otherwise announce the reset without restarting playback;
         // Apple requires a new user action before media processing resumes.
+        // `didRequestStop` may reflect controller-internal teardown, so listener
+        // intent is decided by the controller rather than suppressed here.
         guard currentURL != nil else { return }
         onStatusChange?(AudioStatusUpdate(.mediaServicesReset))
     }
