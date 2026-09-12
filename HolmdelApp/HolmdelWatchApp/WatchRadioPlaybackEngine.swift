@@ -15,6 +15,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     private var interruptionObserver: NSObjectProtocol?
     private var routeChangeObserver: NSObjectProtocol?
     private var activeStreamGeneration: UInt64 = 0
+    private var activationToken: UInt64 = 0
 
     override init() {
         super.init()
@@ -38,6 +39,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     func start(url: URL, streamGeneration: UInt64) {
         tearDownPlayer()
         activeStreamGeneration = streamGeneration
+        let activationToken = nextActivationToken()
 
         let item = AVPlayerItem(url: url)
         let player = AVPlayer(playerItem: item)
@@ -48,25 +50,32 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         self.player = player
         reportStatus(.buffering)
         activateAudioSession { [weak self] in
-            guard let self, self.player === player else { return }
+            guard let self,
+                  self.player === player,
+                  self.activationToken == activationToken else { return }
             player.play()
         }
     }
 
     func pause() {
+        invalidateActivation()
         player?.pause()
         reportStatus(.paused)
     }
 
     func resume() {
         guard let player else { return }
+        let activationToken = nextActivationToken()
         activateAudioSession { [weak self] in
-            guard let self, self.player === player else { return }
+            guard let self,
+                  self.player === player,
+                  self.activationToken == activationToken else { return }
             player.play()
         }
     }
 
     func stop() {
+        invalidateActivation()
         player?.pause()
         tearDownPlayer()
         deactivateAudioSession()
@@ -175,7 +184,17 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         onStatusChange?(AudioStatusUpdate(status, streamGeneration: activeStreamGeneration))
     }
 
+    private func nextActivationToken() -> UInt64 {
+        activationToken &+= 1
+        return activationToken
+    }
+
+    private func invalidateActivation() {
+        activationToken &+= 1
+    }
+
     private func tearDownPlayer() {
+        invalidateActivation()
         timeControlObservation?.invalidate()
         itemStatusObservation?.invalidate()
         timeControlObservation = nil

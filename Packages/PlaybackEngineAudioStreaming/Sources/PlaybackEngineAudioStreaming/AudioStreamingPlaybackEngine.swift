@@ -127,6 +127,9 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     }
 
     public func start(url: URL, streamGeneration: UInt64) {
+        replacePlayer()
+        reattachEqualizerIfNeeded()
+        reattachSpatialAudioIfNeeded()
         self.streamGeneration.withLock { $0 = streamGeneration }
         currentURL = url
         didRequestStop = false
@@ -134,12 +137,13 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         hasReportedEndOfStream = false
         stopClassificationTask?.cancel()
         silenceForUpcomingPlayback()
+        let player = self.player
         withActiveSession { [weak self] in
             // A newer start (or a stop) supersedes this one; the pending
             // activation is cancelled for those, and this is the belt to that
             // brace — never begin streaming a URL that is no longer current.
-            guard let self, self.currentURL == url else { return }
-            self.player.play(url: url)
+            guard let self, self.player === player, self.currentURL == url else { return }
+            player.play(url: url)
         }
     }
 

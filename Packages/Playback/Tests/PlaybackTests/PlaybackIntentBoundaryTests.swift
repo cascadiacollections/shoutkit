@@ -91,4 +91,36 @@ struct PlaybackIntentBoundaryTests {
         await waitForStart(output, count: 2)
         #expect(output.startedURLs.count == 2)
     }
+
+    @Test func `media services reset clears pending route resume`() async {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station()], output: output)
+
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        output.onStatusChange?(.routeLost)
+        output.onStatusChange?(.mediaServicesReset)
+        output.onStatusChange?(.routeAvailable)
+
+        #expect(controller.state == .failed(.audioServicesReset))
+        #expect(output.resumeCount == 0)
+        #expect(output.startedURLs.count == 1)
+    }
+
+    @Test func `media services reset clears pending interruption resume`() async {
+        let output = FakeAudioOutput()
+        let controller = makeController(stations: [station()], output: output)
+
+        controller.play(station())
+        await waitForStart(output)
+        output.onStatusChange?(.playing)
+        output.onStatusChange?(.interruptionBegan)
+        output.onStatusChange?(.mediaServicesReset)
+        output.onStatusChange?(.interruptionEnded(shouldResume: true, otherAudioIsPlaying: false))
+
+        #expect(controller.state == .failed(.audioServicesReset))
+        #expect(output.resumeCount == 0)
+        #expect(output.startedURLs.count == 1)
+    }
 }

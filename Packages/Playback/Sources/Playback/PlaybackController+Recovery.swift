@@ -70,10 +70,9 @@ extension PlaybackController {
             self.output.stop()
             self.outputStarted = false
             // Try to recover the stalled stream before parking it. When the
-            // reconnect budget is spent, `attemptReconnect` parks as `.paused`
-            // and pushes the lock-screen surface (teardown above suppressed the
-            // player's own `.paused` callback). No paused-release is scheduled
-            // on the give-up path: the player and session are already gone.
+            // reconnect budget is spent, `attemptReconnect` parks as
+            // `.failed(.streamStalled)` and exposes an explicit Retry action.
+            // The player and session are already gone on that give-up path.
             self.attemptReconnect(for: station, fallback: .failed(.streamStalled))
         }
     }

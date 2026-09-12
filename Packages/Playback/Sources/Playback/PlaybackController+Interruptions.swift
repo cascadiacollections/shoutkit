@@ -38,6 +38,8 @@ extension PlaybackController {
         stallCeilingTimer.cancel()
         playbackRequested = false
         isReconnecting = false
+        resumeAfterRouteChange = false
+        disarmInterruptionResume()
         outputStarted = false
         state = .failed(.audioServicesReset)
         pushNowPlaying(for: station, isPlaying: false)

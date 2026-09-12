@@ -16,11 +16,10 @@ import Playback
 extension AudioStreamingPlaybackEngine {
     private static let sessionDeactivationRetryDelay: Duration = .milliseconds(150)
 
-    /// How long a player discarded by a media-services reset is kept alive after
-    /// `stop()`, so AudioStreaming's own asynchronous teardown can reach it —
-    /// see `handleMediaServicesReset()`. Long enough for a queue hop, short
-    /// enough that the dead player's buffers aren't held for any perceptible
-    /// time.
+    /// How long a replaced player is kept alive after `stop()`, so
+    /// AudioStreaming's own asynchronous teardown can reach it. Long enough for
+    /// a queue hop, short enough that the dead player's buffers aren't held for
+    /// any perceptible time.
     private static let discardedPlayerTeardownGrace: Duration = .seconds(1)
 
     /// Backoff between reactivation attempts. `setActive(true)` legitimately fails
@@ -274,7 +273,19 @@ extension AudioStreamingPlaybackEngine {
         cancelPendingSessionActivation()
         sessionDeactivationTask?.cancel()
         sessionDeactivationTask = nil
-        // Late callbacks from the discarded player are ignored by the identity
+        replacePlayer()
+        configureSession()
+        reattachEqualizerIfNeeded()
+        reattachSpatialAudioIfNeeded()
+        // Nothing had been selected: there is no listener-visible state to
+        // update. Otherwise announce the reset without restarting playback;
+        // Apple requires a new user action before media processing resumes.
+        guard currentURL != nil else { return }
+        onStatusChange?(AudioStatusUpdate(.mediaServicesReset))
+    }
+
+    func replacePlayer() {
+        // Late callbacks from the replaced player are ignored by the identity
         // check in the delegate methods, but it can't be dropped *silently*:
         // `AudioPlayer.deinit` closes only `audioPlayingEntry`, never
         // `audioReadingEntry`, and an abandoned reading entry takes its
@@ -303,13 +314,5 @@ extension AudioStreamingPlaybackEngine {
         }
         player = AudioPlayer()
         player.delegate = self
-        configureSession()
-        reattachEqualizerIfNeeded()
-        reattachSpatialAudioIfNeeded()
-        // Nothing had been selected: there is no listener-visible state to
-        // update. Otherwise announce the reset without restarting playback;
-        // Apple requires a new user action before media processing resumes.
-        guard didRequestStop == false, currentURL != nil else { return }
-        onStatusChange?(AudioStatusUpdate(.mediaServicesReset))
     }
 }

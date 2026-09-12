@@ -303,6 +303,8 @@ public struct NowPlayingView: View {
             "Cancel connection"
         case .playing:
             "Pause"
+        case .failed(.audioServicesReset):
+            "Resume"
         case .failed:
             "Retry"
         case .paused, .idle:
