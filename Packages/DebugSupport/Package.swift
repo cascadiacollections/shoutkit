@@ -2,10 +2,10 @@
 
 import PackageDescription
 
-/// App-side debug tooling. This package exists so Pulse never appears in the
-/// dependency graph of the reusable packages (RadioDirectory et al.) — only the
-/// app target links it, and every Pulse reference is #if DEBUG (CI symbol-checks
-/// the Release binary to prove it never ships).
+// App-side debug tooling. This package exists so Pulse never appears in the
+// dependency graph of the reusable packages (RadioDirectory et al.) — only the
+// app target links it, and every Pulse reference is #if DEBUG (CI symbol-checks
+// the Release binary to prove it never ships).
 let package = Package(
     name: "DebugSupport",
     platforms: [

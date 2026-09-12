@@ -35,14 +35,14 @@ struct AppServices {
     let stationLaunchRouter: StationLaunchRouter
 }
 
-/// This file is the shared graph and the one call that assembles it. Each step
-/// `bootstrap()` delegates to lives in its own extension: the networking install
-/// in AppDependencies+Networking.swift, the diagnostics and directory stacks in
-/// +Factories.swift, the controller callbacks in +Callbacks.swift, and the
-/// post-launch warmups in +Warmups.swift. Splitting along those seams keeps this
-/// file under the 400-line `file_length` limit CI enforces via
-/// `swiftlint --strict` — the same remedy as the
-/// AudioStreamingPlaybackEngine+Session and PlaybackController+Internals splits.
+// This file is the shared graph and the one call that assembles it. Each step
+// `bootstrap()` delegates to lives in its own extension: the networking install
+// in AppDependencies+Networking.swift, the diagnostics and directory stacks in
+// +Factories.swift, the controller callbacks in +Callbacks.swift, and the
+// post-launch warmups in +Warmups.swift. Splitting along those seams keeps this
+// file under the 400-line `file_length` limit CI enforces via
+// `swiftlint --strict` — the same remedy as the
+// AudioStreamingPlaybackEngine+Session and PlaybackController+Internals splits.
 @MainActor
 enum AppDependencies {
     private(set) static var services: AppServices?

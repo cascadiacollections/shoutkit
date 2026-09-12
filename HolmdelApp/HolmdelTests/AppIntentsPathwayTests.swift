@@ -52,7 +52,7 @@ struct AppIntentsPathwayTests {
     /// diagnostics for a 600 s timeout, so the job runs ~15 min instead of ~8
     /// even though the tests themselves finish in 8 s.
     @Test(.disabled("IntentDefinitions has no live intents session in CI — run it on a host"))
-    func `station entity query suggests stations on A fresh library`() async throws {
+    func `station entity query suggests stations on a fresh library`() async throws {
         // `IntentDefinitions` and the entity accessors it vends are iOS 27-only,
         // and the app's floor is iOS 26 — so the availability check is what keeps
         // this target compiling, not a choice about what to exercise. Below 27

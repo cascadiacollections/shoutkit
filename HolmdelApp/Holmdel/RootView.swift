@@ -87,6 +87,17 @@ struct RootView: View {
             .onContinueUserActivity(StationLink.handoffActivityType) { activity in
                 launchRouter.open(userActivity: activity)
             }
+            // Deliberately no root-level swipe-between-tabs gesture. A
+            // `simultaneousGesture(DragGesture())` here fires *in addition to*
+            // whatever the child handled, so a horizontal drag past the
+            // threshold also switched tabs while the user was scrolling a
+            // `StationCarousel`, swiping a row to delete in Favorites or the
+            // Listen Now teaser, or using the interactive back-swipe in a
+            // `NavigationStack`. Constraining it doesn't rescue it: the only
+            // filter that separates it from those (start near a screen edge)
+            // is the back-swipe's own trigger. Apple Music and the system
+            // `TabView` don't page between tabs either, so matching them is
+            // both the safe and the expected behavior.
             .userActivity(
                 StationLink.handoffActivityType,
                 isActive: currentHandoffLink != nil,
@@ -99,17 +110,6 @@ struct RootView: View {
                 activity.requiredUserInfoKeys = Set(userInfo.keys)
                 activity.userInfo = userInfo
             }
-        // Deliberately no root-level swipe-between-tabs gesture. A
-        // `simultaneousGesture(DragGesture())` here fires *in addition to*
-        // whatever the child handled, so a horizontal drag past the
-        // threshold also switched tabs while the user was scrolling a
-        // `StationCarousel`, swiping a row to delete in Favorites or the
-        // Listen Now teaser, or using the interactive back-swipe in a
-        // `NavigationStack`. Constraining it doesn't rescue it: the only
-        // filter that separates it from those (start near a screen edge)
-        // is the back-swipe's own trigger. Apple Music and the system
-        // `TabView` don't page between tabs either, so matching them is
-        // both the safe and the expected behavior.
     }
 
     /// Three tabs, each answering a different question: what should I play, what
