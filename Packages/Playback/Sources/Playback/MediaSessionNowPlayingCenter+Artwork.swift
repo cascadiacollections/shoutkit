@@ -87,8 +87,7 @@
             // unique track-art URLs failed to fill the table — which is exactly the
             // unbounded retrying the cap exists to prevent.
             if artworkFailures[url] == nil, artworkFailures.count >= Self.maxArtworkFailureURLs,
-               let oldest = artworkFailures.min(by: { $0.value.lastAttempt < $1.value.lastAttempt })?.key
-            {
+               let oldest = artworkFailures.min(by: { $0.value.lastAttempt < $1.value.lastAttempt })?.key {
                 artworkFailures.removeValue(forKey: oldest)
             }
             var failure = artworkFailures[url] ?? ArtworkFailure(attempts: 0, lastAttempt: Self.clock.now)

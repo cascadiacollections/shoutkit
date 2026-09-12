@@ -209,8 +209,7 @@ extension PlaybackController {
         if let current = nowPlaying,
            current.stationID == station.id,
            current.title == info.title,
-           current.artist == info.artist
-        {
+           current.artist == info.artist {
             // A repeated push is also the only signal on which a transiently
             // failed resource lookup can retry: AlbumArtLookup caches hits and
             // definitive misses but deliberately not transient failures, yet

@@ -199,8 +199,7 @@ enum DiagnosticsMetricSummaryExtractor {
            let counts = numberArray(forKeys: ["bucketCounts"], in: histogram),
            starts.count == ends.count,
            starts.count == counts.count,
-           starts.isEmpty == false
-        {
+           starts.isEmpty == false {
             let multiplier = durationUnitMultiplier(from: histogram["unit"])
             var totalSamples = 0.0
             var weightedTotal = 0.0
@@ -365,8 +364,7 @@ enum DiagnosticsMetricSummaryExtractor {
         let components = trimmed.split(whereSeparator: \.isWhitespace)
         if components.count >= 2,
            let value = Double(components[0]),
-           let unit = DurationUnit(rawValue: String(components[1]).lowercased())
-        {
+           let unit = DurationUnit(rawValue: String(components[1]).lowercased()) {
             return value * unit.multiplierToMilliseconds
         }
 

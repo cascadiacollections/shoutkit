@@ -24,8 +24,7 @@ public struct SettingsView: View {
                 playbackSection
                 privacySection
                 if let playbackController,
-                   playbackController.supportsEqualizer || playbackController.supportsSpatialAudio
-                {
+                   playbackController.supportsEqualizer || playbackController.supportsSpatialAudio {
                     soundSection
                 }
                 // Debug and TestFlight builds only: the catalog is all internal
