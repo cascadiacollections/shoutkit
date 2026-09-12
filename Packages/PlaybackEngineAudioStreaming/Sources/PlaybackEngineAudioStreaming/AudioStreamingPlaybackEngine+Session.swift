@@ -284,6 +284,8 @@ extension AudioStreamingPlaybackEngine {
         onStatusChange?(AudioStatusUpdate(.mediaServicesReset))
     }
 
+    /// Replaces the player while allowing its asynchronous teardown to finish.
+    /// Callers reattach enabled effects after any required session setup.
     func replacePlayer() {
         // Late callbacks from the replaced player are ignored by the identity
         // check in the delegate methods, but it can't be dropped *silently*:

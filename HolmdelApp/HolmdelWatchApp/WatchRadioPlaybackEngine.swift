@@ -39,7 +39,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     func start(url: URL, streamGeneration: UInt64) {
         tearDownPlayer()
         activeStreamGeneration = streamGeneration
-        let activationToken = nextActivationToken()
+        let token = nextActivationToken()
 
         let item = AVPlayerItem(url: url)
         let player = AVPlayer(playerItem: item)
@@ -52,7 +52,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         activateAudioSession { [weak self] in
             guard let self,
                   self.player === player,
-                  self.activationToken == activationToken else { return }
+                  self.activationToken == token else { return }
             player.play()
         }
     }
@@ -65,11 +65,11 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
 
     func resume() {
         guard let player else { return }
-        let activationToken = nextActivationToken()
+        let token = nextActivationToken()
         activateAudioSession { [weak self] in
             guard let self,
                   self.player === player,
-                  self.activationToken == activationToken else { return }
+                  self.activationToken == token else { return }
             player.play()
         }
     }
@@ -190,7 +190,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     }
 
     private func invalidateActivation() {
-        activationToken &+= 1
+        _ = nextActivationToken()
     }
 
     private func tearDownPlayer() {
