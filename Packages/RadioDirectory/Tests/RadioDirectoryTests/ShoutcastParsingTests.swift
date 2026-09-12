@@ -1,9 +1,9 @@
 import Foundation
-import Testing
 @testable import RadioDirectory
+import Testing
 
 @Test
-func parsesStationXML() throws {
+func `parses station XML`() throws {
     let xml = """
     <stationlist>
         <station name="Midnight Jazz" id="1234" genre="Jazz" br="192" lc="42" />
@@ -13,12 +13,12 @@ func parsesStationXML() throws {
     let stations = try ShoutcastXMLParser.parseStations(from: Data(xml.utf8))
 
     #expect(stations == [
-        Station(id: "1234", name: "Midnight Jazz", genre: "Jazz", listenerCount: 42, bitrate: 192)
+        Station(id: "1234", name: "Midnight Jazz", genre: "Jazz", listenerCount: 42, bitrate: 192),
     ])
 }
 
 @Test
-func parsesGenreXML() throws {
+func `parses genre XML`() throws {
     let xml = """
     <genrelist>
         <genre name="Electronic" count="128" />
@@ -28,12 +28,12 @@ func parsesGenreXML() throws {
     let genres = try ShoutcastXMLParser.parseGenres(from: Data(xml.utf8))
 
     #expect(genres == [
-        Genre(name: "Electronic", stationCount: 128)
+        Genre(name: "Electronic", stationCount: 128),
     ])
 }
 
 @Test
-func extractsFirstPLSStreamURL() throws {
+func `extracts first PLS stream URL`() throws {
     let playlist = """
     [playlist]
     NumberOfEntries=2
@@ -47,7 +47,7 @@ func extractsFirstPLSStreamURL() throws {
 }
 
 @Test
-func resolvesRelativePLSStreamURLAgainstPlaylistURL() throws {
+func `resolves relative PLS stream URL against playlist URL`() throws {
     let playlist = """
     [playlist]
     NumberOfEntries=2
@@ -62,7 +62,7 @@ func resolvesRelativePLSStreamURLAgainstPlaylistURL() throws {
 }
 
 @Test
-func extractsFirstM3UStreamURL() throws {
+func `extracts first M 3 U stream URL`() throws {
     let playlist = """
     #EXTM3U
     #EXTINF:-1,Example Stream
@@ -75,7 +75,7 @@ func extractsFirstM3UStreamURL() throws {
 }
 
 @Test
-func extractsUppercaseSchemeFromRawM3UFallback() throws {
+func `extracts uppercase scheme from raw M 3 U fallback`() throws {
     let playlist = """
     #EXTM3U
     HTTP://stream.example.com/live.mp3

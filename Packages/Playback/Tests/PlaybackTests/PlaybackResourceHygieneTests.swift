@@ -1,8 +1,7 @@
 import Foundation
+@testable import Playback
 import RadioDirectory
 import Testing
-
-@testable import Playback
 
 // Battery hygiene: a paused stream must release the player and audio session
 // after a timeout, and a stalled (endlessly buffering) stream must be parked
@@ -15,12 +14,12 @@ struct PlaybackResourceHygieneTests {
 
     // MARK: - Paused release
 
-    @Test func pausedStreamReleasesOutputAfterTimeout() async {
+    @Test func `paused stream releases output after timeout`() async {
         let output = FakeAudioOutput()
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(
             stations: [station()], output: output, presenter: presenter,
-            pausedReleaseTimeout: Self.shortTimeout
+            pausedReleaseTimeout: Self.shortTimeout,
         )
 
         controller.play(station())
@@ -35,15 +34,15 @@ struct PlaybackResourceHygieneTests {
         #expect(controller.state == .paused(station()))
         #expect(presenter.events.contains(.clear) == false)
         #expect(presenter.lastUpdate == .update(
-            stationID: "kexp", trackTitle: nil, isPlaying: false, artwork: .resolved(nil)
+            stationID: "kexp", trackTitle: nil, isPlaying: false, artwork: .resolved(nil),
         ))
     }
 
-    @Test func resumeBeforeReleaseTimeoutKeepsPlayer() async {
+    @Test func `resume before release timeout keeps player`() async {
         let output = FakeAudioOutput()
         let controller = makeController(
             stations: [station()], output: output,
-            pausedReleaseTimeout: Self.shortTimeout
+            pausedReleaseTimeout: Self.shortTimeout,
         )
 
         controller.play(station())
@@ -59,12 +58,12 @@ struct PlaybackResourceHygieneTests {
         #expect(controller.state == .playing(station()))
     }
 
-    @Test func lockScreenPlayAfterReleaseRestartsStream() async {
+    @Test func `lock screen play after release restarts stream`() async {
         let output = FakeAudioOutput()
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(
             stations: [station()], output: output, presenter: presenter,
-            pausedReleaseTimeout: Self.shortTimeout
+            pausedReleaseTimeout: Self.shortTimeout,
         )
 
         controller.play(station())
@@ -81,11 +80,11 @@ struct PlaybackResourceHygieneTests {
         #expect(controller.currentStation?.id == "kexp")
     }
 
-    @Test func releaseRestartDoesNotRefireStationPlayed() async {
+    @Test func `release restart does not refire station played`() async {
         let output = FakeAudioOutput()
         let controller = makeController(
             stations: [station()], output: output,
-            pausedReleaseTimeout: Self.shortTimeout
+            pausedReleaseTimeout: Self.shortTimeout,
         )
         var playedCount = 0
         controller.onStationPlayed = { _ in playedCount += 1 }
@@ -102,11 +101,11 @@ struct PlaybackResourceHygieneTests {
         #expect(playedCount == 1, "an internal restart is not a new listening choice")
     }
 
-    @Test func stopCancelsPausedReleaseTimer() async {
+    @Test func `stop cancels paused release timer`() async {
         let output = FakeAudioOutput()
         let controller = makeController(
             stations: [station()], output: output,
-            pausedReleaseTimeout: Self.shortTimeout
+            pausedReleaseTimeout: Self.shortTimeout,
         )
 
         controller.play(station())
@@ -120,11 +119,11 @@ struct PlaybackResourceHygieneTests {
         #expect(controller.state == .idle)
     }
 
-    @Test func interruptionOutlastingReleaseTimeoutStillAutoResumes() async {
+    @Test func `interruption outlasting release timeout still auto resumes`() async {
         let output = FakeAudioOutput()
         let controller = makeController(
             stations: [station()], output: output,
-            pausedReleaseTimeout: Self.shortTimeout
+            pausedReleaseTimeout: Self.shortTimeout,
         )
 
         controller.play(station())
@@ -142,12 +141,12 @@ struct PlaybackResourceHygieneTests {
 
     // MARK: - Stall ceiling
 
-    @Test func stalledBufferingParksAsPausedAfterCeiling() async {
+    @Test func `stalled buffering parks as paused after ceiling`() async {
         let output = FakeAudioOutput()
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(
             stations: [station()], output: output, presenter: presenter,
-            stallTimeout: Self.shortTimeout, maxReconnectAttempts: 0
+            stallTimeout: Self.shortTimeout, maxReconnectAttempts: 0,
         )
 
         controller.play(station())
@@ -160,15 +159,15 @@ struct PlaybackResourceHygieneTests {
         // Teardown suppresses the player's own status callback, so the
         // controller must have pushed the paused surface itself.
         #expect(presenter.lastUpdate == .update(
-            stationID: "kexp", trackTitle: nil, isPlaying: false, artwork: .resolved(nil)
+            stationID: "kexp", trackTitle: nil, isPlaying: false, artwork: .resolved(nil),
         ))
     }
 
-    @Test func bufferingThatRecoversCancelsStallCeiling() async {
+    @Test func `buffering that recovers cancels stall ceiling`() async {
         let output = FakeAudioOutput()
         let controller = makeController(
             stations: [station()], output: output,
-            stallTimeout: Self.shortTimeout
+            stallTimeout: Self.shortTimeout,
         )
 
         controller.play(station())
@@ -181,12 +180,12 @@ struct PlaybackResourceHygieneTests {
         #expect(controller.state == .playing(station()))
     }
 
-    @Test func playAfterStallParkRestartsStream() async {
+    @Test func `play after stall park restarts stream`() async {
         let output = FakeAudioOutput()
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(
             stations: [station()], output: output, presenter: presenter,
-            stallTimeout: Self.shortTimeout, maxReconnectAttempts: 0
+            stallTimeout: Self.shortTimeout, maxReconnectAttempts: 0,
         )
 
         controller.play(station())

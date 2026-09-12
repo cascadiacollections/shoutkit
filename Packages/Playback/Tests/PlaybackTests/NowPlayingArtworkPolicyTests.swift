@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Playback
+import Testing
 
 /// The artwork-identity decision behind ``NowPlayingPresenting``. Its whole job
 /// is to keep artwork changes down to one per track with the image already in
@@ -23,47 +22,47 @@ struct NowPlayingArtworkPolicyTests {
         stationArtworkURL: URL? = nil,
         presented: URL? = nil,
         isSameStation: Bool = true,
-        ready: Set<URL> = []
+        ready: Set<URL> = [],
     ) -> NowPlayingArtworkPolicy.Decision {
         NowPlayingArtworkPolicy.decide(
             artwork: artwork,
             stationArtworkURL: stationArtworkURL,
             presented: presented,
             isSameStation: isSameStation,
-            readyArtworkURLs: ready
+            readyArtworkURLs: ready,
         )
     }
 
     // MARK: - Resolving
 
-    @Test func resolvingOnFirstPushFetchesStationArtBeforeAdvertisingIt() {
+    @Test func `resolving on first push fetches station art before advertising it`() {
         // Cold start: nothing is held and the station's bytes aren't in hand, so
         // there is nothing to advertise yet. Advertising the URL here would spend
         // the head unit's single cover-art request on a lazy network fetch.
         #expect(
             decide(artwork: .resolving, stationArtworkURL: stationArt)
-                == .hold(current: nil, pending: stationArt)
+                == .hold(current: nil, pending: stationArt),
         )
     }
 
-    @Test func resolvingPresentsStationArtOnceItsBytesAreReady() {
+    @Test func `resolving presents station art once its bytes are ready`() {
         #expect(
             decide(artwork: .resolving, stationArtworkURL: stationArt, ready: [stationArt])
-                == .present(stationArt)
+                == .present(stationArt),
         )
     }
 
-    @Test func resolvingHoldsTheArtworkAlreadyOnScreen() {
+    @Test func `resolving holds the artwork already on screen`() {
         // The regression this exists to prevent: without the hold, every track
         // boundary snapped back to the station favicon for the length of the
         // lookup, so each song cost two artwork changes instead of one.
         #expect(
             decide(artwork: .resolving, stationArtworkURL: stationArt, presented: albumArt)
-                == .present(albumArt)
+                == .present(albumArt),
         )
     }
 
-    @Test func resolvingAfterAStationSwitchDropsTheOldStationsArt() {
+    @Test func `resolving after A station switch drops the old stations art`() {
         // Nothing from the previous station is worth holding, and the new
         // station's art still has to be fetched before it can be advertised.
         #expect(
@@ -71,8 +70,8 @@ struct NowPlayingArtworkPolicyTests {
                 artwork: .resolving,
                 stationArtworkURL: stationArt,
                 presented: albumArt,
-                isSameStation: false
-            ) == .hold(current: nil, pending: stationArt)
+                isSameStation: false,
+            ) == .hold(current: nil, pending: stationArt),
         )
         #expect(
             decide(
@@ -80,43 +79,43 @@ struct NowPlayingArtworkPolicyTests {
                 stationArtworkURL: stationArt,
                 presented: albumArt,
                 isSameStation: false,
-                ready: [stationArt]
-            ) == .present(stationArt)
+                ready: [stationArt],
+            ) == .present(stationArt),
         )
     }
 
-    @Test func resolvingWithNothingToShowPresentsNothing() {
+    @Test func `resolving with nothing to show presents nothing`() {
         #expect(decide(artwork: .resolving) == .present(nil))
     }
 
     // MARK: - Resolved
 
-    @Test func resolvedArtworkAlreadyResidentIsPresentedImmediately() {
+    @Test func `resolved artwork already resident is presented immediately`() {
         #expect(
             decide(artwork: .resolved(nextAlbumArt), presented: albumArt, ready: [nextAlbumArt])
-                == .present(nextAlbumArt)
+                == .present(nextAlbumArt),
         )
     }
 
-    @Test func resolvedArtworkWithoutBytesHoldsUntilItIsFetched() {
+    @Test func `resolved artwork without bytes holds until it is fetched`() {
         #expect(
             decide(artwork: .resolved(nextAlbumArt), presented: albumArt)
-                == .hold(current: albumArt, pending: nextAlbumArt)
+                == .hold(current: albumArt, pending: nextAlbumArt),
         )
     }
 
-    @Test func resolvedNilFallsBackToStationArt() {
+    @Test func `resolved nil falls back to station art`() {
         #expect(
             decide(artwork: .resolved(nil), stationArtworkURL: stationArt, ready: [stationArt])
-                == .present(stationArt)
+                == .present(stationArt),
         )
     }
 
-    @Test func resolvedNilHoldsPreviousTrackArtOnlyUntilStationArtIsReady() {
+    @Test func `resolved nil holds previous track art only until station art is ready`() {
         // A lookup miss must not strand the previous track's cover on screen…
         #expect(
             decide(artwork: .resolved(nil), stationArtworkURL: stationArt, presented: albumArt)
-                == .hold(current: albumArt, pending: stationArt)
+                == .hold(current: albumArt, pending: stationArt),
         )
         // …and the hold ends as soon as the station art can be served.
         #expect(
@@ -124,41 +123,41 @@ struct NowPlayingArtworkPolicyTests {
                 artwork: .resolved(nil),
                 stationArtworkURL: stationArt,
                 presented: albumArt,
-                ready: [stationArt]
-            ) == .present(stationArt)
+                ready: [stationArt],
+            ) == .present(stationArt),
         )
     }
 
-    @Test func resolvedArtworkThatFailedToFetchIsAdvertisedAnyway() {
+    @Test func `resolved artwork that failed to fetch is advertised anyway`() {
         // A URL marked ready-because-unfetchable releases the hold: the system's
         // own lazy provider gets a turn, and a stale image can't outlive the
         // track it belonged to.
         #expect(
             decide(artwork: .resolved(nextAlbumArt), presented: albumArt, ready: [nextAlbumArt])
-                == .present(nextAlbumArt)
+                == .present(nextAlbumArt),
         )
     }
 
-    @Test func resolvedArtworkAlreadyPresentedIsNotReadvertised() {
+    @Test func `resolved artwork already presented is not readvertised`() {
         #expect(decide(artwork: .resolved(albumArt), presented: albumArt) == .present(albumArt))
     }
 
-    @Test func resolvedArtworkAfterAStationSwitchHoldsNothingButStillWaitsForBytes() {
+    @Test func `resolved artwork after A station switch holds nothing but still waits for bytes`() {
         #expect(
             decide(artwork: .resolved(albumArt), presented: nextAlbumArt, isSameStation: false)
-                == .hold(current: nil, pending: albumArt)
+                == .hold(current: nil, pending: albumArt),
         )
         #expect(
             decide(
                 artwork: .resolved(albumArt),
                 presented: nextAlbumArt,
                 isSameStation: false,
-                ready: [albumArt]
-            ) == .present(albumArt)
+                ready: [albumArt],
+            ) == .present(albumArt),
         )
     }
 
-    @Test func resolvedNothingAtAllPresentsNothing() {
+    @Test func `resolved nothing at all presents nothing`() {
         #expect(decide(artwork: .resolved(nil), presented: albumArt) == .present(nil))
     }
 
@@ -166,17 +165,17 @@ struct NowPlayingArtworkPolicyTests {
     /// presented yet (`held == nil`) by the time the first track's album art
     /// resolves — but that is still the same station, not a switch, so the
     /// unfetched art must not be advertised before its bytes exist.
-    @Test func resolvedFirstTrackArtOnAStationWithNoArtworkOfItsOwnHoldsUntilFetched() {
+    @Test func `resolved first track art on A station with no artwork of its own holds until fetched`() {
         #expect(
             decide(artwork: .resolved(albumArt))
-                == .hold(current: nil, pending: albumArt)
+                == .hold(current: nil, pending: albumArt),
         )
     }
 
-    @Test func resolvedFirstTrackArtIsPresentedOnceItsBytesAreResident() {
+    @Test func `resolved first track art is presented once its bytes are resident`() {
         #expect(
             decide(artwork: .resolved(albumArt), ready: [albumArt])
-                == .present(albumArt)
+                == .present(albumArt),
         )
     }
 }

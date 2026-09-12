@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import RadioDirectory
+import Testing
 
 private actor SequenceTransport: HTTPTransporting {
     private var results: [Result<(Data, URLResponse), Error>]
@@ -19,16 +19,16 @@ private actor SequenceTransport: HTTPTransporting {
 
 struct HTTPTransportTests {
     @Test
-    func retriesThroughTransientFailures() async throws {
-        let response = try #require(HTTPURLResponse(
-            url: URL(string: "https://example.com")!,
+    func `retries through transient failures`() async throws {
+        let response = try #require(try HTTPURLResponse(
+            url: #require(URL(string: "https://example.com")),
             statusCode: 200,
             httpVersion: nil,
-            headerFields: nil
+            headerFields: nil,
         ))
         let transport = SequenceTransport([
             .failure(HTTPTransportError.transport("offline")),
-            .success((Data("ok".utf8), response))
+            .success((Data("ok".utf8), response)),
         ])
 
         let data = try await transport.retryingData(
@@ -37,31 +37,31 @@ struct HTTPTransportTests {
             shouldRetry: { error in
                 (error as? HTTPTransportError) == .transport("offline")
             },
-            request: { _ in URLRequest(url: URL(string: "https://example.com")!) }
+            request: { _ in URLRequest(url: URL(string: "https://example.com")!) },
         )
 
         #expect(String(bytes: data, encoding: .utf8) == "ok")
     }
 
     @Test
-    func validatesHTTPStatusCodes() async throws {
-        let response = try #require(HTTPURLResponse(
-            url: URL(string: "https://example.com")!,
+    func `validates HTTP status codes`() async throws {
+        let response = try #require(try HTTPURLResponse(
+            url: #require(URL(string: "https://example.com")),
             statusCode: 503,
             httpVersion: nil,
-            headerFields: nil
+            headerFields: nil,
         ))
         let transport = SequenceTransport([
-            .success((Data(), response))
+            .success((Data(), response)),
         ])
 
         await #expect(throws: HTTPTransportError.httpStatus(503)) {
-            try await transport.data(for: URLRequest(url: URL(string: "https://example.com")!))
+            try await transport.data(for: URLRequest(url: #require(URL(string: "https://example.com"))))
         }
     }
 
     @Test
-    func artworkConfigurationYieldsPriorityWithoutRefusingConstrainedNetworks() throws {
+    func `artwork configuration yields priority without refusing constrained networks`() {
         let configuration = URLSessionHTTPTransport.artworkConfiguration()
 
         // `.background` so artwork doesn't contend with the audio stream for
@@ -76,7 +76,7 @@ struct HTTPTransportTests {
     }
 
     @Test
-    func nowPlayingArtworkConfigurationStaysOutOfTheDeferrableTier() {
+    func `now playing artwork configuration stays out of the deferrable tier`() {
         let configuration = URLSessionHTTPTransport.nowPlayingArtworkConfiguration()
 
         // NOT `.background`: a lock screen, Live Activity, or Bluetooth head unit
@@ -92,7 +92,7 @@ struct HTTPTransportTests {
     }
 
     @Test
-    func escapesPlusInQueryValues() throws {
+    func `escapes plus in query values`() throws {
         var components = try #require(URLComponents(string: "https://example.com/search"))
         components.queryItems = [URLQueryItem(name: "q", value: "C+C Music Factory")]
         components.escapePlusInQueryValues()

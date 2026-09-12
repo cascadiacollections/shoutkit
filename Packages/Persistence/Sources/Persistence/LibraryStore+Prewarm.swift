@@ -10,7 +10,7 @@ public extension LibraryStore {
     /// same stream/artwork snapshot playback and App Intents already rely on.
     func mostRecentStation() -> Station? {
         var descriptor = FetchDescriptor<RecentStation>(
-            sortBy: [SortDescriptor(\.playedAt, order: .reverse)]
+            sortBy: [SortDescriptor(\.playedAt, order: .reverse)],
         )
         descriptor.fetchLimit = 1
         return fetch(descriptor, operation: "fetch most recent station")?.first?.station
@@ -21,7 +21,7 @@ public extension LibraryStore {
     /// arrangement.
     func favoriteStations() -> [Station] {
         let descriptor = FetchDescriptor<FavoriteStation>(
-            sortBy: [SortDescriptor(\.sortIndex, order: .forward)]
+            sortBy: [SortDescriptor(\.sortIndex, order: .forward)],
         )
         return (fetch(descriptor, operation: "fetch favorite stations") ?? []).map(\.station)
     }
@@ -36,7 +36,7 @@ public extension LibraryStore {
         let favoriteDescriptor = FetchDescriptor<FavoriteStation>(predicate: favoritePredicate)
         for favorite in fetch(
             favoriteDescriptor,
-            operation: "refresh favorite stream URL \(sanitizedForLogs(stationID))"
+            operation: "refresh favorite stream URL \(sanitizedForLogs(stationID))",
         ) ?? [] where favorite.streamURLString != streamURLString {
             favorite.streamURLString = streamURLString
             didChange = true
@@ -46,7 +46,7 @@ public extension LibraryStore {
         let recentDescriptor = FetchDescriptor<RecentStation>(predicate: recentPredicate)
         for recent in fetch(
             recentDescriptor,
-            operation: "refresh recent stream URL \(sanitizedForLogs(stationID))"
+            operation: "refresh recent stream URL \(sanitizedForLogs(stationID))",
         ) ?? [] where recent.streamURLString != streamURLString {
             recent.streamURLString = streamURLString
             didChange = true
@@ -102,7 +102,7 @@ extension LibraryStore {
         }
 
         let favoritesDescriptor = FetchDescriptor<FavoriteStation>(
-            sortBy: [SortDescriptor(\.sortIndex, order: .forward)]
+            sortBy: [SortDescriptor(\.sortIndex, order: .forward)],
         )
         for favorite in fetch(favoritesDescriptor, operation: "rank favorites") ?? [] {
             append(favorite.station)
@@ -111,8 +111,8 @@ extension LibraryStore {
         let recentsDescriptor = FetchDescriptor<RecentStation>(
             sortBy: [
                 SortDescriptor(\.playCount, order: .reverse),
-                SortDescriptor(\.playedAt, order: .reverse)
-            ]
+                SortDescriptor(\.playedAt, order: .reverse),
+            ],
         )
         for recent in fetch(recentsDescriptor, operation: "rank recents") ?? [] {
             append(recent.station)

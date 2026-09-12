@@ -18,12 +18,12 @@ extension AppDependencies {
     /// Constructs the diagnostics service and registers it with Factory.
     static func makeDiagnosticsService(
         settings: SettingsStore,
-        featureFlags: any FeatureFlagProviding
+        featureFlags: any FeatureFlagProviding,
     ) -> DiagnosticsService {
         let diagnosticsService = DiagnosticsService(
             featureFlags: featureFlags,
             settings: settings,
-            payloadStore: makeDiagnosticsPayloadStore()
+            payloadStore: makeDiagnosticsPayloadStore(),
         )
         registerProductionDiagnosticsService(diagnosticsService)
         return diagnosticsService
@@ -77,13 +77,13 @@ extension AppDependencies {
     /// launch paint stations before (or without) reaching the network.
     static func makeDirectory(
         settings: SettingsStore,
-        featureFlags: any FeatureFlagProviding
+        featureFlags: any FeatureFlagProviding,
     ) -> DirectoryServices {
         let geoFilterProvider = MutableRadioBrowserGeoFilterProvider()
         let geoStationLocationCoordinator = GeoStationLocationCoordinator(
             settings: settings,
             featureFlags: featureFlags,
-            geoFilterProvider: geoFilterProvider
+            geoFilterProvider: geoFilterProvider,
         )
         // One file serves either branch: snapshots are scoped by source identity.
         let snapshotStore = FileDirectorySnapshotStore.applicationSupport()
@@ -91,18 +91,18 @@ extension AppDependencies {
         if let apiKey = shoutcastAPIKey() {
             let directory = PreferredRadioDirectory(
                 base: ShoutcastDirectoryClient(apiKey: apiKey),
-                preferredStations: PreferredStations.all
+                preferredStations: PreferredStations.all,
             )
             let caching = CachingRadioDirectory(
                 base: directory,
                 snapshotStore: snapshotStore,
-                snapshotIdentity: { "shoutcast" }
+                snapshotIdentity: { "shoutcast" },
             )
             return DirectoryServices(
                 directory: caching,
                 discoveryCache: caching,
                 playReporter: nil,
-                geoStationLocationCoordinator: geoStationLocationCoordinator
+                geoStationLocationCoordinator: geoStationLocationCoordinator,
             )
         }
 
@@ -113,14 +113,14 @@ extension AppDependencies {
             snapshotStore: snapshotStore,
             // Geo-filtered results are only reusable while that filter still applies.
             snapshotIdentity: {
-                "radio-browser;" + (await geoFilterProvider.currentGeoFilter()?.snapshotIdentity ?? "unfiltered")
-            }
+                await "radio-browser;" + (geoFilterProvider.currentGeoFilter()?.snapshotIdentity ?? "unfiltered")
+            },
         )
         return DirectoryServices(
             directory: caching,
             discoveryCache: caching,
             playReporter: radioBrowser,
-            geoStationLocationCoordinator: geoStationLocationCoordinator
+            geoStationLocationCoordinator: geoStationLocationCoordinator,
         )
     }
 

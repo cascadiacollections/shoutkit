@@ -26,7 +26,7 @@ public struct StationCarousel: View {
         isFavorite: @escaping (Station) -> Bool = { _ in false },
         onTap: @escaping (Station) -> Void,
         onToggleFavorite: ((Station) -> Void)? = nil,
-        removeAction: ((Station) -> StationRowAction)? = nil
+        removeAction: ((Station) -> StationRowAction)? = nil,
     ) {
         self.stations = stations
         self.phase = phase
@@ -50,7 +50,7 @@ public struct StationCarousel: View {
                         isFavorite: isFavorite(station),
                         onTap: { onTap(station) },
                         onToggleFavorite: onToggleFavorite.map { toggle in { toggle(station) } },
-                        removeAction: removeAction?(station)
+                        removeAction: removeAction?(station),
                     )
                 }
             }
@@ -68,7 +68,7 @@ public struct StationCarousel: View {
     StationCarousel(
         stations: PreviewRadioDirectory.sampleStations,
         phase: { _ in .idle },
-        onTap: { _ in }
+        onTap: { _ in },
     )
     .padding()
     .tint(.shoutKitAccent)

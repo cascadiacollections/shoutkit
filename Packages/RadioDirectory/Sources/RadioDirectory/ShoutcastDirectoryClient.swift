@@ -21,7 +21,7 @@ public actor ShoutcastDirectoryClient: RadioDirectoryProviding {
         endpoints: ShoutcastEndpoints = .production,
         transport: any HTTPTransporting = URLSessionHTTPTransport.shared,
         retryPolicy: RetryPolicy = .default,
-        userAgent: String = RadioBrowserDirectoryClient.defaultUserAgent
+        userAgent: String = RadioBrowserDirectoryClient.defaultUserAgent,
     ) {
         self.apiKey = apiKey
         self.endpoints = endpoints
@@ -37,7 +37,7 @@ public actor ShoutcastDirectoryClient: RadioDirectoryProviding {
 
     public func topStations(limit: Int) async throws(RadioDirectoryError) -> [Station] {
         let data = try await request(endpoint: "Top500", queryItems: [])
-        return Array(try ShoutcastXMLParser.parseStations(from: data).prefix(limit))
+        return try Array(ShoutcastXMLParser.parseStations(from: data).prefix(limit))
     }
 
     public func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
@@ -48,11 +48,11 @@ public actor ShoutcastDirectoryClient: RadioDirectoryProviding {
         let data = try await request(
             endpoint: "stationsearch",
             queryItems: [
-                URLQueryItem(name: "search", value: query)
-            ]
+                URLQueryItem(name: "search", value: query),
+            ],
         )
 
-        return Array(try ShoutcastXMLParser.parseStations(from: data).prefix(limit))
+        return try Array(ShoutcastXMLParser.parseStations(from: data).prefix(limit))
     }
 
     public func stations(inGenre genre: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
@@ -63,11 +63,11 @@ public actor ShoutcastDirectoryClient: RadioDirectoryProviding {
         let data = try await request(
             endpoint: "genresearch",
             queryItems: [
-                URLQueryItem(name: "genre", value: genre)
-            ]
+                URLQueryItem(name: "genre", value: genre),
+            ],
         )
 
-        return Array(try ShoutcastXMLParser.parseStations(from: data).prefix(limit))
+        return try Array(ShoutcastXMLParser.parseStations(from: data).prefix(limit))
     }
 
     public func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
@@ -79,13 +79,13 @@ public actor ShoutcastDirectoryClient: RadioDirectoryProviding {
         let playlist = String(decoding: data, as: UTF8.self)
         let streamURL = try PlaylistParser.firstStreamURL(
             in: playlist,
-            playlistURL: endpoints.tuneInURL(stationID: station.id)
+            playlistURL: endpoints.tuneInURL(stationID: station.id),
         )
 
         return StreamEndpoint(
             stationID: station.id,
             url: streamURL,
-            format: StreamFormat(url: streamURL)
+            format: StreamFormat(url: streamURL),
         )
     }
 
@@ -121,7 +121,7 @@ public actor ShoutcastDirectoryClient: RadioDirectoryProviding {
                     var request = URLRequest(url: url, timeoutInterval: retryPolicy.timeout)
                     request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
                     return request
-                }
+                },
             )
         } catch {
             throw Self.directoryError(from: error)
@@ -159,13 +159,13 @@ public struct ShoutcastEndpoints: Sendable {
 
     public static let production = ShoutcastEndpoints(
         legacyBaseURL: URL(string: "https://api.shoutcast.com/legacy") ?? URL(fileURLWithPath: "/"),
-        tuneInBaseURL: URL(string: "https://yp.shoutcast.com/sbin/tunein-station.pls") ?? URL(fileURLWithPath: "/")
+        tuneInBaseURL: URL(string: "https://yp.shoutcast.com/sbin/tunein-station.pls") ?? URL(fileURLWithPath: "/"),
     )
 
     public func legacyURL(
         endpoint: String,
         apiKey: String,
-        queryItems: [URLQueryItem]
+        queryItems: [URLQueryItem],
     ) throws(RadioDirectoryError) -> URL {
         let endpointURL = legacyBaseURL.appendingPathComponent(endpoint)
         var components = URLComponents(url: endpointURL, resolvingAgainstBaseURL: false)
@@ -182,7 +182,7 @@ public struct ShoutcastEndpoints: Sendable {
     public func tuneInURL(stationID: Station.ID) -> URL {
         var components = URLComponents(url: tuneInBaseURL, resolvingAgainstBaseURL: false)
         components?.queryItems = [
-            URLQueryItem(name: "id", value: stationID)
+            URLQueryItem(name: "id", value: stationID),
         ]
 
         return components?.url ?? tuneInBaseURL
@@ -217,7 +217,7 @@ public struct RetryPolicy: Sendable {
 enum PlaylistParser {
     static func firstStreamURL(
         in playlist: String,
-        playlistURL: URL? = nil
+        playlistURL: URL? = nil,
     ) throws(RadioDirectoryError) -> URL {
         let lines = playlist
             .split(whereSeparator: \.isNewline)
@@ -258,7 +258,8 @@ enum PlaylistParser {
         let parsed = URL(string: value, relativeTo: playlistURL)?.absoluteURL
         guard let parsed,
               let scheme = parsed.scheme?.lowercased(),
-              scheme == "http" || scheme == "https" else {
+              scheme == "http" || scheme == "https"
+        else {
             return nil
         }
         return parsed
@@ -298,7 +299,7 @@ private final class GenreParserDelegate: NSObject, XMLParserDelegate {
         didStartElement elementName: String,
         namespaceURI _: String?,
         qualifiedName _: String?,
-        attributes attributeDict: [String: String] = [:]
+        attributes attributeDict: [String: String] = [:],
     ) {
         // Locale-independent: XML element names are protocol tokens, and
         // localized folding fails on i/I under e.g. the Turkish locale.
@@ -325,7 +326,7 @@ private final class StationParserDelegate: NSObject, XMLParserDelegate {
         didStartElement elementName: String,
         namespaceURI _: String?,
         qualifiedName _: String?,
-        attributes attributeDict: [String: String] = [:]
+        attributes attributeDict: [String: String] = [:],
     ) {
         // Locale-independent for the same reason as the genre parser above.
         guard elementName.caseInsensitiveCompare("station") == .orderedSame else {
@@ -346,8 +347,8 @@ private final class StationParserDelegate: NSObject, XMLParserDelegate {
                 name: StationNameFormatter.normalize(name),
                 genre: genre,
                 listenerCount: listeners,
-                bitrate: bitrate
-            )
+                bitrate: bitrate,
+            ),
         )
     }
 }

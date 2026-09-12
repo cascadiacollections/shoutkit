@@ -72,11 +72,11 @@ public enum PlaybackError: Error, Equatable, LocalizedError, Sendable {
     public static func classifying(_ error: any Error) -> PlaybackError {
         switch PlaybackFailure.classify(playerError: error, itemError: nil) {
         case .noInternet:
-            return .noInternet
+            .noInternet
         case let .stationNotAvailable(errorCode: code):
-            return .stationNotAvailable(errorCode: code)
+            .stationNotAvailable(errorCode: code)
         case let .playback(message):
-            return .streamFailed(message)
+            .streamFailed(message)
         }
     }
 

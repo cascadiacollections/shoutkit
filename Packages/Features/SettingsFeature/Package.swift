@@ -6,17 +6,17 @@ let package = Package(
     name: "SettingsFeature",
     defaultLocalization: "en",
     platforms: [
-        .iOS(.v26)
+        .iOS(.v26),
     ],
     products: [
-        .library(name: "SettingsFeature", targets: ["SettingsFeature"])
+        .library(name: "SettingsFeature", targets: ["SettingsFeature"]),
     ],
     dependencies: [
         .package(path: "../../DesignSystem"),
         .package(path: "../../SettingsFeatureCore"),
         .package(path: "../../Persistence"),
         .package(path: "../../FeatureFlags"),
-        .package(path: "../../Playback")
+        .package(path: "../../Playback"),
     ],
     targets: [
         .target(
@@ -26,7 +26,7 @@ let package = Package(
                 "SettingsFeatureCore",
                 "Persistence",
                 "FeatureFlags",
-                "Playback"
+                "Playback",
             ],
             resources: [
                 .copy("Resources/apache-2.0.txt"),
@@ -37,9 +37,9 @@ let package = Package(
                 .copy("Resources/ogg-bsd.txt"),
                 .copy("Resources/pulse-mit.txt"),
                 .copy("Resources/vorbis-bsd.txt"),
-                .process("Resources/Localizable.xcstrings")
+                .process("Resources/Localizable.xcstrings"),
             ],
-            swiftSettings: [.defaultIsolation(MainActor.self)]
-        )
-    ]
+            swiftSettings: [.defaultIsolation(MainActor.self)],
+        ),
+    ],
 )

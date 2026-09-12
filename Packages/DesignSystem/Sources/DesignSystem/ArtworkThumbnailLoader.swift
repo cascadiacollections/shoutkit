@@ -1,6 +1,6 @@
 import Foundation
-import UIKit
 import RadioDirectory
+import UIKit
 
 /// Decoded-thumbnail loading for station artwork in list rows, cards, and the
 /// mini-player — the small, many-instance surfaces.
@@ -43,7 +43,7 @@ public nonisolated enum ArtworkThumbnailLoader {
     public static func thumbnail(
         for url: URL?,
         maxPixelSize: CGFloat,
-        transport: any HTTPTransporting = URLSessionHTTPTransport.artwork
+        transport: any HTTPTransporting = URLSessionHTTPTransport.artwork,
     ) async -> UIImage? {
         guard let url, maxPixelSize > 0 else { return nil }
 
@@ -56,7 +56,7 @@ public nonisolated enum ArtworkThumbnailLoader {
             forKey: key,
             url: url,
             maxPixelSize: maxPixelSize,
-            transport: transport
+            transport: transport,
         )
     }
 
@@ -78,7 +78,7 @@ public nonisolated enum ArtworkThumbnailLoader {
     public static func prefetch(
         _ urls: [URL?],
         maxPixelSize: CGFloat,
-        transport: any HTTPTransporting = URLSessionHTTPTransport.speculative
+        transport: any HTTPTransporting = URLSessionHTTPTransport.speculative,
     ) {
         guard maxPixelSize > 0 else { return }
         // Read per call rather than cached: Low Power Mode flips mid-session
@@ -95,7 +95,7 @@ public nonisolated enum ArtworkThumbnailLoader {
                     forKey: key,
                     url: url,
                     maxPixelSize: maxPixelSize,
-                    transport: transport
+                    transport: transport,
                 )
             }
         }
@@ -116,7 +116,7 @@ public nonisolated enum ArtworkThumbnailLoader {
         key: String,
         url: URL,
         maxPixelSize: CGFloat,
-        transport: any HTTPTransporting
+        transport: any HTTPTransporting,
     ) async -> UIImage? {
         var request = URLRequest(url: url)
         request.cachePolicy = requestCachePolicy
@@ -143,7 +143,7 @@ private actor InFlightThumbnails {
         forKey key: String,
         url: URL,
         maxPixelSize: CGFloat,
-        transport: any HTTPTransporting
+        transport: any HTTPTransporting,
     ) async -> UIImage? {
         if let cached = ArtworkThumbnailLoader.cachedThumbnail(forKey: key) {
             return cached
@@ -160,7 +160,7 @@ private actor InFlightThumbnails {
                 key: key,
                 url: url,
                 maxPixelSize: maxPixelSize,
-                transport: transport
+                transport: transport,
             )
         }
         tasks[key] = task

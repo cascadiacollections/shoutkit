@@ -32,8 +32,8 @@ struct RecentlyHeardListView: View {
                     String(localized: "No Tracks Yet", bundle: .module),
                     systemImage: "music.note.list",
                     description: Text(
-                        String(localized: "Tracks you hear while listening appear here.", bundle: .module)
-                    )
+                        String(localized: "Tracks you hear while listening appear here.", bundle: .module),
+                    ),
                 )
             }
         }

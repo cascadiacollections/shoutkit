@@ -21,7 +21,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     /// level; the named mirrors are direct fallbacks if it misbehaves.
     public static let defaultHosts: [URL] = [
         URL(string: "https://all.api.radio-browser.info") ?? URL(fileURLWithPath: "/"),
-        URL(string: "https://de1.api.radio-browser.info") ?? URL(fileURLWithPath: "/")
+        URL(string: "https://de1.api.radio-browser.info") ?? URL(fileURLWithPath: "/"),
     ]
 
     /// Sent as the `User-Agent` on every request when a caller supplies nothing
@@ -50,7 +50,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         transport: any HTTPTransporting = URLSessionHTTPTransport.shared,
         retryPolicy: RetryPolicy = .interactive,
         geoFilterProvider: (any RadioBrowserGeoFilterProviding)? = nil,
-        userAgent: String = RadioBrowserDirectoryClient.defaultUserAgent
+        userAgent: String = RadioBrowserDirectoryClient.defaultUserAgent,
     ) {
         self.hosts = hosts.isEmpty ? RadioBrowserDirectoryClient.defaultHosts : hosts
         self.transport = transport
@@ -68,8 +68,8 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
                 URLQueryItem(name: "order", value: "stationcount"),
                 URLQueryItem(name: "reverse", value: "true"),
                 URLQueryItem(name: "hidebroken", value: "true"),
-                URLQueryItem(name: "limit", value: "48")
-            ]
+                URLQueryItem(name: "limit", value: "48"),
+            ],
         )
 
         let tags = try decode([RadioBrowserTag].self, from: data)
@@ -83,12 +83,12 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     public func topStations(limit: Int) async throws(RadioDirectoryError) -> [Station] {
         let baseQueryItems = [
             URLQueryItem(name: "limit", value: String(max(limit, 1))),
-            URLQueryItem(name: "hidebroken", value: "true")
+            URLQueryItem(name: "hidebroken", value: "true"),
         ]
 
         let stations = try await requestStations(
             path: "/json/stations/topclick",
-            queryItems: baseQueryItems
+            queryItems: baseQueryItems,
         )
         return Array(stations.prefix(limit))
     }
@@ -100,7 +100,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     public func searchStations(
         matching query: String,
         limit: Int,
-        filters: StationSearchFilters
+        filters: StationSearchFilters,
     ) async throws(RadioDirectoryError) -> [Station] {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmedQuery.isEmpty == false else {
@@ -115,9 +115,9 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
                 URLQueryItem(name: "limit", value: String(max(limit, 1))),
                 URLQueryItem(name: "hidebroken", value: "true"),
                 URLQueryItem(name: "order", value: "clickcount"),
-                URLQueryItem(name: "reverse", value: "true")
+                URLQueryItem(name: "reverse", value: "true"),
             ] + normalizedFilters.radioBrowserQueryItems(),
-            allowGeoFallback: normalizedFilters.countryCode == nil
+            allowGeoFallback: normalizedFilters.countryCode == nil,
         )
         return Array(normalizedFilters.apply(to: stations).prefix(limit))
     }
@@ -129,7 +129,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     public func stations(
         inGenre genre: String,
         limit: Int,
-        filters: StationSearchFilters
+        filters: StationSearchFilters,
     ) async throws(RadioDirectoryError) -> [Station] {
         let trimmedGenre = genre.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmedGenre.isEmpty == false else {
@@ -150,9 +150,9 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
                 URLQueryItem(name: "limit", value: String(max(limit, 1))),
                 URLQueryItem(name: "hidebroken", value: "true"),
                 URLQueryItem(name: "order", value: "clickcount"),
-                URLQueryItem(name: "reverse", value: "true")
+                URLQueryItem(name: "reverse", value: "true"),
             ] + normalizedFilters.radioBrowserQueryItems(excludingTag: true),
-            allowGeoFallback: normalizedFilters.countryCode == nil
+            allowGeoFallback: normalizedFilters.countryCode == nil,
         )
         return Array(normalizedFilters.apply(to: stations).prefix(limit))
     }
@@ -161,7 +161,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         guard id.isEmpty == false else { return nil }
         let data = try await request(
             path: "/json/stations/byuuid",
-            queryItems: [URLQueryItem(name: "uuids", value: id)]
+            queryItems: [URLQueryItem(name: "uuids", value: id)],
         )
         let stations = try decode([RadioBrowserStation].self, from: data)
         return stations.compactMap(Self.station(from:)).first
@@ -172,7 +172,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
             return StreamEndpoint(
                 stationID: station.id,
                 url: preferredStreamURL,
-                format: StreamFormat(url: preferredStreamURL)
+                format: StreamFormat(url: preferredStreamURL),
             )
         }
 
@@ -180,19 +180,20 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         // still be re-resolved by UUID.
         let data = try await request(
             path: "/json/stations/byuuid",
-            queryItems: [URLQueryItem(name: "uuids", value: station.id)]
+            queryItems: [URLQueryItem(name: "uuids", value: station.id)],
         )
 
         let stations = try decode([RadioBrowserStation].self, from: data)
         guard let resolved = stations.compactMap(Self.station(from:)).first,
-              let streamURL = resolved.preferredStreamURL else {
+              let streamURL = resolved.preferredStreamURL
+        else {
             throw RadioDirectoryError.emptyPlaylist
         }
 
         return StreamEndpoint(
             stationID: station.id,
             url: streamURL,
-            format: StreamFormat(url: streamURL)
+            format: StreamFormat(url: streamURL),
         )
     }
 
@@ -214,7 +215,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
             return try JSONDecoder().decode(type, from: data)
         } catch {
             throw RadioDirectoryError.parsingFailed(
-                String(localized: "The Radio-Browser response could not be parsed.", bundle: .module)
+                String(localized: "The Radio-Browser response could not be parsed.", bundle: .module),
             )
         }
     }
@@ -222,10 +223,10 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     private func requestStations(
         path: String,
         queryItems: [URLQueryItem],
-        allowGeoFallback: Bool = true
+        allowGeoFallback: Bool = true,
     ) async throws(RadioDirectoryError) -> [Station] {
         let geoFilter = allowGeoFallback ? await geoFilterProvider?.currentGeoFilter() : nil
-        let geoFilterQueryItemSets = geoFilter.map { $0.queryItemSets } ?? [[]]
+        let geoFilterQueryItemSets = geoFilter.map(\.queryItemSets) ?? [[]]
         let lastGeoFilterIndex = geoFilterQueryItemSets.count - 1
 
         for (index, geoFilterQueryItems) in geoFilterQueryItemSets.enumerated() {
@@ -238,7 +239,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
                 if filteredStations.isEmpty == false || index == lastGeoFilterIndex {
                     return filteredStations
                 }
-            } catch let error {
+            } catch {
                 if index == lastGeoFilterIndex {
                     throw error
                 }
@@ -266,18 +267,18 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
                 totalAttempts: attemptBudget,
                 onRetry: { _, delay in
                     logger.debug(
-                        "Radio-Browser request failed; trying next mirror in \(delay, privacy: .public) seconds"
+                        "Radio-Browser request failed; trying next mirror in \(delay, privacy: .public) seconds",
                     )
                 },
                 request: { attempt in
-                    var request = URLRequest(
-                        url: try url(host: hosts[attempt], path: path, queryItems: queryItems),
-                        timeoutInterval: retryPolicy.timeout
+                    var request = try URLRequest(
+                        url: url(host: hosts[attempt], path: path, queryItems: queryItems),
+                        timeoutInterval: retryPolicy.timeout,
                     )
                     // Radio-Browser asks clients to identify themselves with a speaking agent.
                     request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
                     return request
-                }
+                },
             )
         } catch {
             throw Self.directoryError(from: error)
@@ -289,7 +290,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     private nonisolated func url(
         host: URL,
         path: String,
-        queryItems: [URLQueryItem]
+        queryItems: [URLQueryItem],
     ) throws(RadioDirectoryError) -> URL {
         var components = URLComponents(url: host, resolvingAgainstBaseURL: false)
         components?.path = path

@@ -28,7 +28,7 @@ public actor StationConnectionPrewarmer {
         handshakeTimeout: TimeInterval = 4,
         isLowPowerModeEnabled: @escaping @Sendable () -> Bool = {
             ProcessInfo.processInfo.isLowPowerModeEnabled
-        }
+        },
     ) {
         self.maxHosts = maxHosts
         self.handshakeTimeout = handshakeTimeout
@@ -88,7 +88,7 @@ public actor StationConnectionPrewarmer {
             guard let host = url.host, host.isEmpty == false else { return nil }
             let useTLS = url.scheme?.lowercased() == "https"
             let resolvedPort = url.port ?? (useTLS ? 443 : 80)
-            guard (1...65_535).contains(resolvedPort),
+            guard (1 ... 65535).contains(resolvedPort),
                   let port = NWEndpoint.Port(rawValue: UInt16(resolvedPort)) else { return nil }
             self.host = NWEndpoint.Host(host)
             self.port = port

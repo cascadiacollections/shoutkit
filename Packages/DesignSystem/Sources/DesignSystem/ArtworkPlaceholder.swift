@@ -22,10 +22,10 @@ public struct ArtworkPlaceholder: View {
         LinearGradient(
             colors: [
                 Color(hue: hue, saturation: 0.52, brightness: 0.62),
-                Color(hue: (hue + 0.08).truncatingRemainder(dividingBy: 1), saturation: 0.62, brightness: 0.40)
+                Color(hue: (hue + 0.08).truncatingRemainder(dividingBy: 1), saturation: 0.62, brightness: 0.40),
             ],
             startPoint: .topLeading,
-            endPoint: .bottomTrailing
+            endPoint: .bottomTrailing,
         )
         .overlay {
             // Sized to the tile rather than to a font metric: this stands in for
@@ -66,10 +66,10 @@ public struct ArtworkPlaceholder: View {
     /// same station would pick a different colour on every launch — the one
     /// thing a generated identity must not do.
     static func hue(for seed: String) -> Double {
-        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        var hash: UInt64 = 0xCBF2_9CE4_8422_2325
         for byte in seed.utf8 {
             hash ^= UInt64(byte)
-            hash &*= 0x0000_0100_0000_01b3
+            hash &*= 0x0000_0100_0000_01B3
         }
         return Double(hash % 3600) / 3600
     }

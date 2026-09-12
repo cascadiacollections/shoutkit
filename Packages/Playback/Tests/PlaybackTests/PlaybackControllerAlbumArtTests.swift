@@ -1,14 +1,13 @@
 import Foundation
-import Testing
-
 @testable import Playback
+import Testing
 
 /// The injected album-art provider seam: resolution reaching the lock screen,
 /// duplicate-push dedupe, staleness, and reset. See `DECISIONS.md` for why
 /// each guard exists.
 @MainActor
 struct PlaybackControllerAlbumArtTests {
-    @Test func resolvedAlbumArtIsPublishedAndPushedToLockScreen() async throws {
+    @Test func `resolved album art is published and pushed to lock screen`() async throws {
         let output = FakeAudioOutput()
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(stations: [station()], output: output, presenter: presenter)
@@ -23,16 +22,16 @@ struct PlaybackControllerAlbumArtTests {
 
         #expect(controller.albumArtURL == art)
         #expect(presenter.lastUpdate == .update(
-            stationID: "kexp", trackTitle: "Song", isPlaying: true, artwork: .resolved(art)
+            stationID: "kexp", trackTitle: "Song", isPlaying: true, artwork: .resolved(art),
         ))
     }
 
-    // A track boundary used to push the station's own artwork as if it were this
-    // track's, then replace it a lookup later. That is two artwork changes per
-    // song; a Bluetooth head unit is told the track changed and re-fetches cover
-    // art over a slow side channel for each one, and commonly finishes neither.
-    // The boundary now says "resolving" and the verdict push is the only change.
-    @Test func trackStartHoldsArtworkUntilTheLookupAnswers() async throws {
+    /// A track boundary used to push the station's own artwork as if it were this
+    /// track's, then replace it a lookup later. That is two artwork changes per
+    /// song; a Bluetooth head unit is told the track changed and re-fetches cover
+    /// art over a slow side channel for each one, and commonly finishes neither.
+    /// The boundary now says "resolving" and the verdict push is the only change.
+    @Test func `track start holds artwork until the lookup answers`() async throws {
         let output = FakeAudioOutput()
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(stations: [station()], output: output, presenter: presenter)
@@ -48,9 +47,9 @@ struct PlaybackControllerAlbumArtTests {
         #expect(Array(presenter.artworkPushes.suffix(2)) == [.resolving, .resolved(art)])
     }
 
-    // The hold has to be bounded, or a track the lookup can't match would keep
-    // the previous track's cover on screen for its whole duration.
-    @Test func lookupMissReleasesTheHold() async throws {
+    /// The hold has to be bounded, or a track the lookup can't match would keep
+    /// the previous track's cover on screen for its whole duration.
+    @Test func `lookup miss releases the hold`() async {
         let output = FakeAudioOutput()
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(stations: [station()], output: output, presenter: presenter)
@@ -65,9 +64,9 @@ struct PlaybackControllerAlbumArtTests {
         #expect(Array(presenter.artworkPushes.suffix(2)) == [.resolving, .resolved(nil)])
     }
 
-    // With album art turned off there is no lookup to wait for, so the boundary
-    // must not claim one is running — nothing would ever release the hold.
-    @Test func trackStartWithoutAProviderResolvesImmediately() async {
+    /// With album art turned off there is no lookup to wait for, so the boundary
+    /// must not claim one is running — nothing would ever release the hold.
+    @Test func `track start without A provider resolves immediately`() async {
         let output = FakeAudioOutput()
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(stations: [station()], output: output, presenter: presenter)
@@ -80,11 +79,11 @@ struct PlaybackControllerAlbumArtTests {
 
         #expect(presenter.artworkPushes.contains(.resolving) == false)
         #expect(presenter.lastUpdate == .update(
-            stationID: "kexp", trackTitle: "Song", isPlaying: true, artwork: .resolved(nil)
+            stationID: "kexp", trackTitle: "Song", isPlaying: true, artwork: .resolved(nil),
         ))
     }
 
-    @Test func resolvedAppleMusicLinkIsPublished() async throws {
+    @Test func `resolved apple music link is published`() async throws {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
         let art = try #require(URL(string: "https://example.com/art.jpg"))
@@ -102,7 +101,7 @@ struct PlaybackControllerAlbumArtTests {
         #expect(controller.appleMusicURL == link)
     }
 
-    @Test func appleMusicLinkResolvesWithoutArtwork() async throws {
+    @Test func `apple music link resolves without artwork`() async throws {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
         let link = try #require(URL(string: "https://music.apple.com/us/album/song/1?i=2"))
@@ -118,7 +117,7 @@ struct PlaybackControllerAlbumArtTests {
         #expect(controller.appleMusicURL == link)
     }
 
-    @Test func duplicateTrackInfoDoesNotRefireLookup() async throws {
+    @Test func `duplicate track info does not refire lookup`() async throws {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
         let art = try #require(URL(string: "https://example.com/art.jpg"))
@@ -141,11 +140,11 @@ struct PlaybackControllerAlbumArtTests {
         #expect(controller.albumArtURL == art)
     }
 
-    // A resolution that produced nothing may have been a transient network
-    // failure (the lookup deliberately doesn't cache those), and the repeated
-    // ICY push is the only retry signal there is — so, unlike a resolved
-    // track, an unresolved one re-runs the lookup on a duplicate push.
-    @Test func duplicateTrackInfoRetriesLookupAfterEmptyResolution() async throws {
+    /// A resolution that produced nothing may have been a transient network
+    /// failure (the lookup deliberately doesn't cache those), and the repeated
+    /// ICY push is the only retry signal there is — so, unlike a resolved
+    /// track, an unresolved one re-runs the lookup on a duplicate push.
+    @Test func `duplicate track info retries lookup after empty resolution`() async throws {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
         let art = try #require(URL(string: "https://example.com/art.jpg"))
@@ -170,10 +169,10 @@ struct PlaybackControllerAlbumArtTests {
         #expect(controller.albumArtURL == art)
     }
 
-    // Engine metadata callbacks are asynchronous, so a previous station's
-    // track info can arrive while the new station's endpoint is still
-    // resolving; it must not be attributed to the new station.
-    @Test func trackInfoBeforeStreamStartIsIgnored() async {
+    /// Engine metadata callbacks are asynchronous, so a previous station's
+    /// track info can arrive while the new station's endpoint is still
+    /// resolving; it must not be attributed to the new station.
+    @Test func `track info before stream start is ignored`() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
 
@@ -187,7 +186,7 @@ struct PlaybackControllerAlbumArtTests {
         #expect(controller.nowPlaying?.title == "Song")
     }
 
-    @Test func lateArtForPreviousTrackIsDiscarded() async throws {
+    @Test func `late art for previous track is discarded`() async throws {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
         let oldArt = try #require(URL(string: "https://example.com/old.jpg"))
@@ -196,7 +195,9 @@ struct PlaybackControllerAlbumArtTests {
             if track.title == "Old" {
                 // Outlast the track change below; cancellation and the
                 // staleness guard must keep this result from applying.
-                for _ in 0..<400 { await Task.yield() }
+                for _ in 0 ..< 400 {
+                    await Task.yield()
+                }
                 return TrackResources(artworkURL: oldArt)
             }
             return TrackResources(artworkURL: newArt)
@@ -207,12 +208,14 @@ struct PlaybackControllerAlbumArtTests {
         output.onStatusChange?(.playing)
         output.emitTrackInfo("Old", "Band")
         output.emitTrackInfo("New", "Band")
-        for _ in 0..<600 { await Task.yield() }
+        for _ in 0 ..< 600 {
+            await Task.yield()
+        }
 
         #expect(controller.albumArtURL == newArt)
     }
 
-    @Test func stopClearsAlbumArt() async throws {
+    @Test func `stop clears album art`() async throws {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
         let art = try #require(URL(string: "https://example.com/art.jpg"))
@@ -234,7 +237,7 @@ struct PlaybackControllerAlbumArtTests {
         #expect(controller.appleMusicURL == nil)
     }
 
-    @Test func onTrackHeardFiresForParsedTrackAndResolvedLink() async throws {
+    @Test func `on track heard fires for parsed track and resolved link`() async throws {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
         let link = try #require(URL(string: "https://music.apple.com/us/album/song/1?i=2"))
@@ -256,14 +259,16 @@ struct PlaybackControllerAlbumArtTests {
         #expect(events[1].appleMusicURL == link)
     }
 
-    @Test func trackChangeClearsPublishedArtworkBeforePublishingNewMetadata() async throws {
+    @Test func `track change clears published artwork before publishing new metadata`() async throws {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
         let oldArt = try #require(URL(string: "https://example.com/old.jpg"))
         let newArt = try #require(URL(string: "https://example.com/new.jpg"))
         controller.trackResourcesProvider = { track in
             if track.title == "New" {
-                for _ in 0..<200 { await Task.yield() }
+                for _ in 0 ..< 200 {
+                    await Task.yield()
+                }
                 return TrackResources(artworkURL: newArt)
             }
             return TrackResources(artworkURL: oldArt)
@@ -291,11 +296,11 @@ struct PlaybackControllerAlbumArtTests {
         }
 
         output.emitTrackInfo("New", "Band")
-        await waitUntil({ events.count >= 2 })
+        await waitUntil { events.count >= 2 }
 
         #expect(Array(events.prefix(2)) == [
             "art:nil",
-            "track:New"
+            "track:New",
         ])
     }
 }

@@ -8,16 +8,16 @@ let package = Package(
         .iOS(.v26),
         .tvOS(.v26),
         .watchOS(.v26),
-        .macOS(.v15)
+        .macOS(.v15),
     ],
     products: [
-        .library(name: "ImageIODownsample", targets: ["ImageIODownsample"])
+        .library(name: "ImageIODownsample", targets: ["ImageIODownsample"]),
     ],
     targets: [
         .target(name: "ImageIODownsample"),
         .testTarget(
             name: "ImageIODownsampleTests",
-            dependencies: ["ImageIODownsample"]
-        )
-    ]
+            dependencies: ["ImageIODownsample"],
+        ),
+    ],
 )

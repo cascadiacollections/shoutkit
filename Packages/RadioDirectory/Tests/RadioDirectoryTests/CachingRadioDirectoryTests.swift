@@ -1,8 +1,7 @@
 import Foundation
 import os
-import Testing
-
 @testable import RadioDirectory
+import Testing
 
 /// Base-directory fake that counts calls and can delay responses so tests can
 /// deterministically land a second request mid-flight.
@@ -14,10 +13,15 @@ actor CountingDirectory: RadioDirectoryProviding {
     var responseDelay: Duration = .zero
     var failNextTopStations = false
 
-    func setResponseDelay(_ delay: Duration) { responseDelay = delay }
-    func setFailNextTopStations(_ fail: Bool) { failNextTopStations = fail }
+    func setResponseDelay(_ delay: Duration) {
+        responseDelay = delay
+    }
 
-    private let stations = (0..<30).map { index in
+    func setFailNextTopStations(_ fail: Bool) {
+        failNextTopStations = fail
+    }
+
+    private let stations = (0 ..< 30).map { index in
         Station(id: "s\(index)", name: "Station \(index)", genre: "Test", listenerCount: 0)
     }
 
@@ -37,7 +41,7 @@ actor CountingDirectory: RadioDirectoryProviding {
         return Array(stations.prefix(limit))
     }
 
-    func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
+    func searchStations(matching _: String, limit _: Int) async throws(RadioDirectoryError) -> [Station] {
         []
     }
 
@@ -46,13 +50,13 @@ actor CountingDirectory: RadioDirectoryProviding {
         return stations.first(where: { $0.id == id })
     }
 
-    func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
+    func streamEndpoint(for _: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
         throw RadioDirectoryError.emptyPlaylist
     }
 }
 
 struct CachingRadioDirectoryTests {
-    @Test func concurrentTopStationsRequestsShareOneBaseFetch() async throws {
+    @Test func `concurrent top stations requests share one base fetch`() async throws {
         let counting = CountingDirectory()
         await counting.setResponseDelay(.milliseconds(150))
         let cache = CachingRadioDirectory(base: counting)
@@ -70,7 +74,7 @@ struct CachingRadioDirectoryTests {
         #expect(await counting.topStationsCalls == 1, "concurrent callers must share one base fetch")
     }
 
-    @Test func secondRequestWithinTTLServesFromCache() async throws {
+    @Test func `second request within TTL serves from cache`() async throws {
         let counting = CountingDirectory()
         let cache = CachingRadioDirectory(base: counting)
 
@@ -83,7 +87,7 @@ struct CachingRadioDirectoryTests {
         #expect(await counting.genresCalls == 1)
     }
 
-    @Test func smallerLimitIsServedFromLargerCachedFetch() async throws {
+    @Test func `smaller limit is served from larger cached fetch`() async throws {
         let counting = CountingDirectory()
         let cache = CachingRadioDirectory(base: counting)
 
@@ -94,7 +98,7 @@ struct CachingRadioDirectoryTests {
         #expect(await counting.topStationsCalls == 1)
     }
 
-    @Test func largerLimitBypassesSmallerCachedFetch() async throws {
+    @Test func `larger limit bypasses smaller cached fetch`() async throws {
         let counting = CountingDirectory()
         let cache = CachingRadioDirectory(base: counting)
 
@@ -105,13 +109,13 @@ struct CachingRadioDirectoryTests {
         #expect(await counting.topStationsCalls == 2)
     }
 
-    @Test func expiredTTLRefetches() async throws {
+    @Test func `expired TTL refetches`() async throws {
         let clock = OSAllocatedUnfairLock(initialState: Date(timeIntervalSinceReferenceDate: 0))
         let counting = CountingDirectory()
         let cache = CachingRadioDirectory(
             base: counting,
             timeToLive: 60,
-            now: { clock.withLock { $0 } }
+            now: { clock.withLock { $0 } },
         )
 
         _ = try await cache.topStations(limit: 24)
@@ -121,7 +125,7 @@ struct CachingRadioDirectoryTests {
         #expect(await counting.topStationsCalls == 2)
     }
 
-    @Test func failuresAreNotCached() async throws {
+    @Test func `failures are not cached`() async throws {
         let counting = CountingDirectory()
         await counting.setFailNextTopStations(true)
         let cache = CachingRadioDirectory(base: counting)
@@ -136,7 +140,7 @@ struct CachingRadioDirectoryTests {
         #expect(await counting.topStationsCalls == 2)
     }
 
-    @Test func stationLookupPassesThroughToBase() async throws {
+    @Test func `station lookup passes through to base`() async throws {
         let counting = CountingDirectory()
         let cache = CachingRadioDirectory(base: counting)
 

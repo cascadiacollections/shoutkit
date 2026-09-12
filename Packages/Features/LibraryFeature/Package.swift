@@ -6,17 +6,17 @@ let package = Package(
     name: "LibraryFeature",
     defaultLocalization: "en",
     platforms: [
-        .iOS(.v26)
+        .iOS(.v26),
     ],
     products: [
-        .library(name: "LibraryFeature", targets: ["LibraryFeature"])
+        .library(name: "LibraryFeature", targets: ["LibraryFeature"]),
     ],
     dependencies: [
         .package(path: "../../DesignSystem"),
         .package(path: "../../LibraryFeatureCore"),
         .package(path: "../../Playback"),
         .package(path: "../../Persistence"),
-        .package(path: "../../RadioDirectory")
+        .package(path: "../../RadioDirectory"),
     ],
     targets: [
         .target(
@@ -26,10 +26,10 @@ let package = Package(
                 "LibraryFeatureCore",
                 "Playback",
                 "Persistence",
-                "RadioDirectory"
+                "RadioDirectory",
             ],
             resources: [.process("Resources/Localizable.xcstrings")],
-            swiftSettings: [.defaultIsolation(MainActor.self)]
-        )
-    ]
+            swiftSettings: [.defaultIsolation(MainActor.self)],
+        ),
+    ],
 )

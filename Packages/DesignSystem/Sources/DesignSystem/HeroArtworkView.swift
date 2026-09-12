@@ -33,7 +33,7 @@ public struct HeroArtworkView: View {
         artworkURL: URL?,
         fallbackArtworkURL: URL? = nil,
         size: CGFloat = 280,
-        isPlaying: Bool = false
+        isPlaying: Bool = false,
     ) {
         self.artworkURL = artworkURL
         self.fallbackArtworkURL = fallbackArtworkURL
@@ -50,7 +50,7 @@ public struct HeroArtworkView: View {
             .shadow(
                 color: .black.opacity(isPlaying ? 0.35 : 0.20),
                 radius: isPlaying ? 28 : 14,
-                y: isPlaying ? 14 : 8
+                y: isPlaying ? 14 : 8,
             )
             .scaleEffect(playbackScale)
             .animation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.75), value: isPlaying)
@@ -100,9 +100,9 @@ public struct HeroArtworkView: View {
                 LinearGradient(
                     colors: [.white.opacity(0.55), .white.opacity(0.06), .white.opacity(0.28)],
                     startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+                    endPoint: .bottomTrailing,
                 ),
-                lineWidth: 1
+                lineWidth: 1,
             )
             .frame(width: tileSize, height: tileSize)
     }
@@ -115,8 +115,8 @@ public struct HeroArtworkView: View {
                     .clear,
                     in: RoundedRectangle(
                         cornerRadius: ShoutKitRadius.large + ShoutKitSpacing.small,
-                        style: .continuous
-                    )
+                        style: .continuous,
+                    ),
                 )
         }
     }
@@ -132,7 +132,9 @@ public struct HeroArtworkView: View {
     }
 
     private var playbackScale: CGFloat {
-        if reduceMotion { return 1 }
+        if reduceMotion {
+            return 1
+        }
         return isPlaying ? 1 : 0.85
     }
 

@@ -1,8 +1,8 @@
 import Foundation
 
-// Wire-format DTOs for the Radio-Browser JSON API. Decoding shapes only — the
-// mapping onto the domain `Station` lives in
-// RadioBrowserDirectoryClient+Mapping.swift.
+/// Wire-format DTOs for the Radio-Browser JSON API. Decoding shapes only — the
+/// mapping onto the domain `Station` lives in
+/// RadioBrowserDirectoryClient+Mapping.swift.
 struct RadioBrowserStation: Decodable {
     let stationuuid: String
     let name: String?

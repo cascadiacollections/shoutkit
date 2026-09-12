@@ -80,13 +80,13 @@ public nonisolated enum AlbumArtLookup {
     public static func lookup(
         artist: String?,
         title: String?,
-        transport: (any HTTPTransporting)? = nil
+        transport: (any HTTPTransporting)? = nil,
     ) async -> Match {
         await lookup(
             artist: artist,
             title: title,
             regionIdentifier: Locale.current.region?.identifier,
-            transport: transport
+            transport: transport,
         )
     }
 
@@ -94,7 +94,7 @@ public nonisolated enum AlbumArtLookup {
         artist: String?,
         title: String?,
         regionIdentifier: String?,
-        transport: (any HTTPTransporting)? = nil
+        transport: (any HTTPTransporting)? = nil,
     ) async -> Match {
         // Resolved here, not as a default argument: `defaultTransport` is
         // private, and a public function's default argument can't reference a
@@ -123,7 +123,7 @@ public nonisolated enum AlbumArtLookup {
                 title: title,
                 regionIdentifier: regionIdentifier,
                 cacheKey: cacheKey,
-                transport: transport
+                transport: transport,
             )
         })
         inFlight.withLock { $0[cacheKey] = inFlightLookup }
@@ -141,12 +141,12 @@ public nonisolated enum AlbumArtLookup {
         title: String,
         regionIdentifier: String?,
         cacheKey: String,
-        transport: any HTTPTransporting
+        transport: any HTTPTransporting,
     ) async -> Match {
         guard let searchURL = buildSearchURL(
             artist: artist,
             title: title,
-            regionIdentifier: regionIdentifier
+            regionIdentifier: regionIdentifier,
         ) else { return .empty }
 
         var request = URLRequest(url: searchURL)
@@ -183,7 +183,7 @@ public nonisolated enum AlbumArtLookup {
             URLQueryItem(name: "term", value: "\(artist) \(title)"),
             URLQueryItem(name: "media", value: "music"),
             URLQueryItem(name: "entity", value: "song"),
-            URLQueryItem(name: "limit", value: "1")
+            URLQueryItem(name: "limit", value: "1"),
         ]
         // Search the user's storefront — the API defaults to the US catalog,
         // which misses regional releases and returns wrong-region art.
@@ -202,7 +202,9 @@ public nonisolated enum AlbumArtLookup {
 
     private static func store(_ value: CachedLookup, forKey key: String) {
         cache.withLock {
-            if $0.count >= maxCacheEntries { $0.removeAll(keepingCapacity: true) }
+            if $0.count >= maxCacheEntries {
+                $0.removeAll(keepingCapacity: true)
+            }
             $0[key] = value
         }
     }

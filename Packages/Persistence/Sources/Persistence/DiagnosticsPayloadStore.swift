@@ -57,7 +57,7 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
         guard let cutoff = Calendar.current.date(
             byAdding: .day,
             value: -diagnosticsPayloadRetentionDays,
-            to: receivedAt
+            to: receivedAt,
         ) else {
             throw DiagnosticsPayloadStoreError.invalidRetentionCutoffDate
         }
@@ -115,7 +115,7 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
             for: .applicationSupportDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
-            create: true
+            create: true,
         )
         let folder = appSupport.appendingPathComponent("ShoutKit", isDirectory: true)
         try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -124,8 +124,8 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
 }
 
 public final class InMemoryDiagnosticsPayloadStore: DiagnosticsPayloadPersisting, @unchecked Sendable {
-    private(set) public var metricPayloads: [Data] = []
-    private(set) public var diagnosticPayloads: [Data] = []
+    public private(set) var metricPayloads: [Data] = []
+    public private(set) var diagnosticPayloads: [Data] = []
     private var metricRecords: [(payload: Data, receivedAt: Date)] = []
     private var diagnosticRecords: [(payload: Data, receivedAt: Date)] = []
 
@@ -135,7 +135,7 @@ public final class InMemoryDiagnosticsPayloadStore: DiagnosticsPayloadPersisting
         guard let cutoff = Calendar.current.date(
             byAdding: .day,
             value: -diagnosticsPayloadRetentionDays,
-            to: receivedAt
+            to: receivedAt,
         ) else {
             throw DiagnosticsPayloadStoreError.invalidRetentionCutoffDate
         }

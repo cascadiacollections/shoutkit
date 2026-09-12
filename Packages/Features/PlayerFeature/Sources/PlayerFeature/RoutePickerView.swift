@@ -11,7 +11,7 @@ public struct RoutePickerView: UIViewRepresentable {
         self.activeTintColor = activeTintColor
     }
 
-    public func makeUIView(context: Context) -> AVRoutePickerView {
+    public func makeUIView(context _: Context) -> AVRoutePickerView {
         let view = AVRoutePickerView()
         view.prioritizesVideoDevices = false
         view.tintColor = tintColor
@@ -19,7 +19,7 @@ public struct RoutePickerView: UIViewRepresentable {
         return view
     }
 
-    public func updateUIView(_ uiView: AVRoutePickerView, context: Context) {
+    public func updateUIView(_ uiView: AVRoutePickerView, context _: Context) {
         uiView.tintColor = tintColor
         uiView.activeTintColor = activeTintColor
     }

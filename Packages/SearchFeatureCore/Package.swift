@@ -8,15 +8,15 @@ let package = Package(
         .iOS(.v26),
         // Declared so the view-model test suite can run on the mac host
         // (`swift test`), same pattern as RadioDirectory/Playback/Persistence.
-        .macOS(.v15)
+        .macOS(.v15),
     ],
     products: [
-        .library(name: "SearchFeatureCore", targets: ["SearchFeatureCore"])
+        .library(name: "SearchFeatureCore", targets: ["SearchFeatureCore"]),
     ],
     dependencies: [
         .package(path: "../RadioDirectory"),
         .package(url: "https://github.com/apple/swift-async-algorithms.git", from: "1.1.5"),
-        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2")
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2"),
     ],
     targets: [
         .target(
@@ -24,13 +24,13 @@ let package = Package(
             dependencies: [
                 "RadioDirectory",
                 .product(name: "AsyncAlgorithms", package: "swift-async-algorithms"),
-                .product(name: "FactoryKit", package: "Factory")
+                .product(name: "FactoryKit", package: "Factory"),
             ],
-            swiftSettings: [.defaultIsolation(MainActor.self)]
+            swiftSettings: [.defaultIsolation(MainActor.self)],
         ),
         .testTarget(
             name: "SearchFeatureCoreTests",
-            dependencies: ["SearchFeatureCore"]
-        )
-    ]
+            dependencies: ["SearchFeatureCore"],
+        ),
+    ],
 )

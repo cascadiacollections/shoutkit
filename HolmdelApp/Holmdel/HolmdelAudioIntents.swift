@@ -86,7 +86,7 @@ struct WarmupRadioAudioQueueIntent {
                 """
                 Failed to resolve Siri warmup endpoint for \
                 \(station.name, privacy: .public): \(errorDescription, privacy: .private)
-                """
+                """,
             )
         }
         return .result(value: WarmupAudioQueueResult())
@@ -142,7 +142,7 @@ enum PlaybackAttributes: String {
     static let caseDisplayRepresentations: [Self: DisplayRepresentation] = [
         .none: DisplayRepresentation(title: "None"),
         .shuffle: DisplayRepresentation(title: "Shuffle"),
-        .repeat: DisplayRepresentation(title: "Repeat")
+        .repeat: DisplayRepresentation(title: "Repeat"),
     ]
 }
 
@@ -159,7 +159,7 @@ enum QueueInsertionLocation: String {
     static let caseDisplayRepresentations: [Self: DisplayRepresentation] = [
         .now: DisplayRepresentation(title: "Now"),
         .next: DisplayRepresentation(title: "Next"),
-        .tail: DisplayRepresentation(title: "End of Queue")
+        .tail: DisplayRepresentation(title: "End of Queue"),
     ]
 }
 
@@ -206,10 +206,15 @@ struct LiveRadioStationEntity: Sendable {
     let streamURLString: String?
 
     /// The schema's canonical display name.
-    var title: String { name }
+    var title: String {
+        name
+    }
+
     /// The network/broadcaster behind the stream (e.g. "NPR"). Holmdel doesn't
     /// track this separately from the station itself.
-    var providerName: String? { nil }
+    var providerName: String? {
+        nil
+    }
 
     var displayRepresentation: DisplayRepresentation {
         DisplayRepresentation(title: "\(name)", subtitle: "\(genre)")
@@ -231,11 +236,13 @@ struct LiveRadioStationEntity: Sendable {
             name: name,
             genre: genre,
             artworkURLString: artworkURLString,
-            streamURLString: streamURLString
+            streamURLString: streamURLString,
         )
     }
 
-    var station: Station { stationEntity.station }
+    var station: Station {
+        stationEntity.station
+    }
 }
 
 /// Delegates wholesale to ``StationEntityQuery`` and maps the result, so the

@@ -1,8 +1,7 @@
 import Foundation
+@testable import Playback
 import RadioDirectory
 import Testing
-
-@testable import Playback
 
 // What happens to a listener's station when the OS takes the audio session away
 // and hands it back: a call, an alarm, Siri, another app claiming playback.
@@ -23,12 +22,12 @@ struct PlaybackInterruptionTests {
     /// case below starts from.
     private func playing(
         output: FakeAudioOutput,
-        hintlessResumeWindow: Duration = .seconds(90)
+        hintlessResumeWindow: Duration = .seconds(90),
     ) async -> PlaybackController {
         let controller = makeController(
             stations: [station()],
             output: output,
-            hintlessResumeWindow: hintlessResumeWindow
+            hintlessResumeWindow: hintlessResumeWindow,
         )
         controller.play(station())
         await waitForStart(output)
@@ -39,7 +38,7 @@ struct PlaybackInterruptionTests {
 
     // MARK: - Ending without the system's resume hint
 
-    @Test func hintlessInterruptionResumesWhenNothingElseHoldsAudio() async {
+    @Test func `hintless interruption resumes when nothing else holds audio`() async {
         let output = FakeAudioOutput()
         let controller = await playing(output: output)
 
@@ -53,7 +52,7 @@ struct PlaybackInterruptionTests {
         #expect(controller.state == .playing(station()))
     }
 
-    @Test func hintlessInterruptionStaysPausedWhileAnotherAppHoldsAudio() async {
+    @Test func `hintless interruption stays paused while another app holds audio`() async {
         let output = FakeAudioOutput()
         let controller = await playing(output: output)
 
@@ -66,7 +65,7 @@ struct PlaybackInterruptionTests {
         #expect(output.resumeCount == 0)
     }
 
-    @Test func hintlessResumeExpiresWithItsWindow() async {
+    @Test func `hintless resume expires with its window`() async {
         let output = FakeAudioOutput()
         let controller = await playing(output: output, hintlessResumeWindow: Self.shortWindow)
 
@@ -79,7 +78,7 @@ struct PlaybackInterruptionTests {
         #expect(output.resumeCount == 0)
     }
 
-    @Test func systemHintResumesEvenAfterTheHintlessWindowCloses() async {
+    @Test func `system hint resumes even after the hintless window closes`() async {
         let output = FakeAudioOutput()
         let controller = await playing(output: output, hintlessResumeWindow: Self.shortWindow)
 
@@ -94,7 +93,7 @@ struct PlaybackInterruptionTests {
 
     // MARK: - Arming
 
-    @Test func interruptionBeginningWhilePausedCannotAutoResume() async {
+    @Test func `interruption beginning while paused cannot auto resume`() async {
         let output = FakeAudioOutput()
         let controller = await playing(output: output)
 
@@ -114,7 +113,7 @@ struct PlaybackInterruptionTests {
         #expect(output.resumeCount == 0)
     }
 
-    @Test func interruptionEndedWithoutABeginningDoesNotStartPlayback() async {
+    @Test func `interruption ended without A beginning does not start playback`() async {
         let output = FakeAudioOutput()
         let controller = await playing(output: output)
 
@@ -127,7 +126,7 @@ struct PlaybackInterruptionTests {
         #expect(output.resumeCount == 0)
     }
 
-    @Test func pausingDuringAnInterruptionSuppressesAutoResume() async {
+    @Test func `pausing during an interruption suppresses auto resume`() async {
         let output = FakeAudioOutput()
         let controller = await playing(output: output)
 
@@ -141,7 +140,7 @@ struct PlaybackInterruptionTests {
         #expect(output.resumeCount == 0)
     }
 
-    @Test func choosingAStationDuringAnInterruptionSuppressesAutoResume() async {
+    @Test func `choosing A station during an interruption suppresses auto resume`() async {
         let output = FakeAudioOutput()
         let controller = await playing(output: output)
 
@@ -156,7 +155,7 @@ struct PlaybackInterruptionTests {
         #expect(output.resumeCount == 0, "the new station is starting; there is nothing to resume")
     }
 
-    @Test func routeReturningResumesOnlyPlaybackPausedByRouteLoss() async {
+    @Test func `route returning resumes only playback paused by route loss`() async {
         let output = FakeAudioOutput()
         let controller = await playing(output: output)
 
@@ -168,7 +167,7 @@ struct PlaybackInterruptionTests {
         #expect(output.resumeCount == 1)
     }
 
-    @Test func routeReturningDoesNotResumeAfterExplicitPauseOrStop() async {
+    @Test func `route returning does not resume after explicit pause or stop`() async {
         let output = FakeAudioOutput()
         let controller = await playing(output: output)
 
@@ -182,7 +181,7 @@ struct PlaybackInterruptionTests {
         #expect(output.resumeCount == 0)
     }
 
-    @Test func startingPlaybackReleasesRouteResumeClaim() async {
+    @Test func `starting playback releases route resume claim`() async {
         let output = FakeAudioOutput()
         let controller = await playing(output: output)
 

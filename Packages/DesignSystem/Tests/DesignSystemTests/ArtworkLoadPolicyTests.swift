@@ -1,18 +1,17 @@
+@testable import DesignSystem
 import Foundation
 import Testing
 
-@testable import DesignSystem
-
 struct ArtworkLoadPolicyTests {
     @Test
-    func retriesPrimaryURLBeforeReturningLoadedArtwork() async throws {
+    func `retries primary URL before returning loaded artwork`() async throws {
         let primaryURL = try #require(URL(string: "https://example.com/album.jpg"))
         let request = ArtworkLoadRequest(primaryURL: primaryURL)
         var attempts = 0
 
         let loaded: Int? = await ArtworkLoadPolicy.load(
             request,
-            retryDelays: [.zero, .zero]
+            retryDelays: [.zero, .zero],
         ) { _ in
             attempts += 1
             return attempts == 3 ? 7 : nil
@@ -23,7 +22,7 @@ struct ArtworkLoadPolicyTests {
     }
 
     @Test
-    func fallsBackToStationArtworkAfterPrimaryMisses() async throws {
+    func `falls back to station artwork after primary misses`() async throws {
         let primaryURL = try #require(URL(string: "https://example.com/album.jpg"))
         let fallbackURL = try #require(URL(string: "https://example.com/station.jpg"))
         let request = ArtworkLoadRequest(primaryURL: primaryURL, fallbackURL: fallbackURL)
@@ -32,7 +31,7 @@ struct ArtworkLoadPolicyTests {
 
         let loaded = await ArtworkLoadPolicy.loadWithSource(
             request,
-            retryDelays: [.zero]
+            retryDelays: [.zero],
         ) { url in
             if url == primaryURL {
                 primaryAttempts += 1

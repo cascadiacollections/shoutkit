@@ -6,10 +6,10 @@ let package = Package(
     name: "SearchFeature",
     defaultLocalization: "en",
     platforms: [
-        .iOS(.v26)
+        .iOS(.v26),
     ],
     products: [
-        .library(name: "SearchFeature", targets: ["SearchFeature"])
+        .library(name: "SearchFeature", targets: ["SearchFeature"]),
     ],
     dependencies: [
         .package(path: "../../SearchFeatureCore"),
@@ -18,7 +18,7 @@ let package = Package(
         .package(path: "../../Persistence"),
         .package(path: "../../RadioDirectory"),
         .package(url: "https://github.com/apple/swift-async-algorithms.git", from: "1.1.5"),
-        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2")
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2"),
     ],
     targets: [
         .target(
@@ -30,10 +30,10 @@ let package = Package(
                 "Persistence",
                 "RadioDirectory",
                 .product(name: "AsyncAlgorithms", package: "swift-async-algorithms"),
-                .product(name: "FactoryKit", package: "Factory")
+                .product(name: "FactoryKit", package: "Factory"),
             ],
             resources: [.process("Resources/Localizable.xcstrings")],
-            swiftSettings: [.defaultIsolation(MainActor.self)]
-        )
-    ]
+            swiftSettings: [.defaultIsolation(MainActor.self)],
+        ),
+    ],
 )

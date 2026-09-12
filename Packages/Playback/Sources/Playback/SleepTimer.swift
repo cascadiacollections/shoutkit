@@ -28,7 +28,9 @@ public final class SleepTimer {
         self.now = now
     }
 
-    public var isActive: Bool { fireDate != nil }
+    public var isActive: Bool {
+        fireDate != nil
+    }
 
     /// Starts (or restarts) the timer. A running timer is replaced.
     public func start(duration: TimeInterval) {

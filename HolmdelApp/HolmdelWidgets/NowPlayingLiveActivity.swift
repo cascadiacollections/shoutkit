@@ -23,7 +23,7 @@ struct NowPlayingLiveActivity: Widget {
                         token: context.state.artworkToken,
                         fallbackSymbol: playbackSymbol(context),
                         size: 38,
-                        cornerRadius: 9
+                        cornerRadius: 9,
                     )
                     .padding(.leading, 4)
                 }
@@ -49,7 +49,7 @@ struct NowPlayingLiveActivity: Widget {
                     token: context.state.artworkToken,
                     fallbackSymbol: "dot.radiowaves.left.and.right",
                     size: 22,
-                    cornerRadius: 5
+                    cornerRadius: 5,
                 )
             } compactTrailing: {
                 Image(systemName: playbackSymbol(context))
@@ -83,7 +83,7 @@ private struct LockScreenView: View {
                 token: context.state.artworkToken,
                 fallbackSymbol: context.state.isPlaying ? "waveform" : "pause.fill",
                 size: 40,
-                cornerRadius: 10
+                cornerRadius: 10,
             )
 
             VStack(alignment: .leading, spacing: 2) {

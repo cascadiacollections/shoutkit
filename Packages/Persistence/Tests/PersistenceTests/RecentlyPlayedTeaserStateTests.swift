@@ -1,9 +1,8 @@
+@testable import Persistence
 import Testing
 
-@testable import Persistence
-
 struct RecentlyPlayedTeaserStateTests {
-    @Test func firstSyncSeedsUpToCapacity() {
+    @Test func `first sync seeds up to capacity`() {
         var teaser = RecentlyPlayedTeaserState(capacity: 5)
 
         teaser.sync(withVisibleIDsNewestFirst: ["a", "b", "c", "d", "e", "f", "g"])
@@ -11,7 +10,7 @@ struct RecentlyPlayedTeaserStateTests {
         #expect(teaser.displayedIDs == ["a", "b", "c", "d", "e"])
     }
 
-    @Test func firstSyncWithFewerThanCapacityShowsAllOfThem() {
+    @Test func `first sync with fewer than capacity shows all of them`() {
         var teaser = RecentlyPlayedTeaserState(capacity: 5)
 
         teaser.sync(withVisibleIDsNewestFirst: ["a", "b"])
@@ -19,7 +18,7 @@ struct RecentlyPlayedTeaserStateTests {
         #expect(teaser.displayedIDs == ["a", "b"])
     }
 
-    @Test func removingAnEntryShrinksTheListWithoutBackfill() {
+    @Test func `removing an entry shrinks the list without backfill`() {
         var teaser = RecentlyPlayedTeaserState(capacity: 5)
         teaser.sync(withVisibleIDsNewestFirst: ["a", "b", "c", "d", "e", "f"])
 
@@ -34,7 +33,7 @@ struct RecentlyPlayedTeaserStateTests {
         #expect(teaser.displayedIDs == ["a", "b", "d", "e"])
     }
 
-    @Test func removingAllEntriesDoesNotTriggerMassBackfill() {
+    @Test func `removing all entries does not trigger mass backfill`() {
         var teaser = RecentlyPlayedTeaserState(capacity: 5)
         teaser.sync(withVisibleIDsNewestFirst: ["a", "b", "c", "d", "e", "f"])
 
@@ -50,7 +49,7 @@ struct RecentlyPlayedTeaserStateTests {
         #expect(teaser.displayedIDs == ["z"])
     }
 
-    @Test func newTopPlayPromotesAndTrimsOldestOverCapacity() {
+    @Test func `new top play promotes and trims oldest over capacity`() {
         var teaser = RecentlyPlayedTeaserState(capacity: 5)
         teaser.sync(withVisibleIDsNewestFirst: ["a", "b", "c", "d", "e"])
 
@@ -60,7 +59,7 @@ struct RecentlyPlayedTeaserStateTests {
         #expect(teaser.displayedIDs == ["z", "a", "b", "c", "d"])
     }
 
-    @Test func replayingAnAlreadyDisplayedStationMovesItToFrontWithoutDuplicating() {
+    @Test func `replaying an already displayed station moves it to front without duplicating`() {
         var teaser = RecentlyPlayedTeaserState(capacity: 5)
         teaser.sync(withVisibleIDsNewestFirst: ["a", "b", "c"])
 
@@ -70,7 +69,7 @@ struct RecentlyPlayedTeaserStateTests {
         #expect(teaser.displayedIDs == ["c", "a", "b"])
     }
 
-    @Test func emptyHistoryClearsTheTeaser() {
+    @Test func `empty history clears the teaser`() {
         var teaser = RecentlyPlayedTeaserState(capacity: 5)
         teaser.sync(withVisibleIDsNewestFirst: ["a", "b"])
 
@@ -79,7 +78,7 @@ struct RecentlyPlayedTeaserStateTests {
         #expect(teaser.displayedIDs.isEmpty)
     }
 
-    @Test func syncWithUnchangedTopIsANoOp() {
+    @Test func `sync with unchanged top is A no op`() {
         var teaser = RecentlyPlayedTeaserState(capacity: 5)
         teaser.sync(withVisibleIDsNewestFirst: ["a", "b", "c", "d", "e", "f"])
         let before = teaser.displayedIDs
@@ -93,7 +92,7 @@ struct RecentlyPlayedTeaserStateTests {
 
     // MARK: - restore (undo)
 
-    @Test func restoreReinsertsAtTheGivenIndex() {
+    @Test func `restore reinserts at the given index`() {
         var teaser = RecentlyPlayedTeaserState(capacity: 5)
         teaser.sync(withVisibleIDsNewestFirst: ["a", "b", "c", "d"])
         teaser.remove("b")
@@ -103,7 +102,7 @@ struct RecentlyPlayedTeaserStateTests {
         #expect(teaser.displayedIDs == ["a", "b", "c", "d"])
     }
 
-    @Test func restoreClampsAnOutOfRangeIndexToTheEnd() {
+    @Test func `restore clamps an out of range index to the end`() {
         var teaser = RecentlyPlayedTeaserState(capacity: 5)
         teaser.sync(withVisibleIDsNewestFirst: ["a", "b"])
         teaser.remove("b")
@@ -113,7 +112,7 @@ struct RecentlyPlayedTeaserStateTests {
         #expect(teaser.displayedIDs == ["a", "b"])
     }
 
-    @Test func restoreIsANoOpWhenTheIDIsAlreadyDisplayed() {
+    @Test func `restore is A no op when the ID is already displayed`() {
         var teaser = RecentlyPlayedTeaserState(capacity: 5)
         teaser.sync(withVisibleIDsNewestFirst: ["a", "b"])
 
@@ -122,7 +121,7 @@ struct RecentlyPlayedTeaserStateTests {
         #expect(teaser.displayedIDs == ["a", "b"])
     }
 
-    @Test func restoreReTrimsToCapacityIfANewPlayFilledTheSlotMeanwhile() {
+    @Test func `restore re trims to capacity if A new play filled the slot meanwhile`() {
         var teaser = RecentlyPlayedTeaserState(capacity: 3)
         teaser.sync(withVisibleIDsNewestFirst: ["a", "b", "c"])
         teaser.remove("b")

@@ -48,11 +48,10 @@ extension PlaybackController {
                 // Reconnects reuse the endpoint resolved for the first attempt
                 // rather than re-running resolution each backoff; a fresh
                 // `play(_:)` clears the cache so it can't go stale across choices.
-                let endpoint: StreamEndpoint
-                if isReconnect, let cached = self.resolvedEndpoint {
-                    endpoint = cached
+                let endpoint: StreamEndpoint = if isReconnect, let cached = self.resolvedEndpoint {
+                    cached
                 } else {
-                    endpoint = try await directory.streamEndpoint(for: station)
+                    try await directory.streamEndpoint(for: station)
                 }
                 guard Task.isCancelled == false, self.activeStation?.id == station.id else { return }
                 self.resolvedEndpoint = endpoint
@@ -102,7 +101,7 @@ extension PlaybackController {
             station: station,
             track: nowPlaying,
             isPlaying: isPlaying,
-            artwork: .resolved(albumArtURL)
+            artwork: .resolved(albumArtURL),
         )
     }
 
@@ -116,7 +115,9 @@ extension PlaybackController {
     }
 
     var isOutputPlaying: Bool {
-        if case .playing = state { return true }
+        if case .playing = state {
+            return true
+        }
         return false
     }
 
@@ -208,7 +209,8 @@ extension PlaybackController {
         if let current = nowPlaying,
            current.stationID == station.id,
            current.title == info.title,
-           current.artist == info.artist {
+           current.artist == info.artist
+        {
             // A repeated push is also the only signal on which a transiently
             // failed resource lookup can retry: AlbumArtLookup caches hits and
             // definitive misses but deliberately not transient failures, yet
@@ -234,7 +236,7 @@ extension PlaybackController {
             stationID: station.id,
             title: info.title,
             artist: info.artist,
-            receivedAt: Date()
+            receivedAt: Date(),
         )
         nowPlaying = metadata
         onTrackHeard?(HeardTrack(station: station, track: metadata, artworkURL: nil, appleMusicURL: nil))
@@ -250,7 +252,7 @@ extension PlaybackController {
             station: station,
             track: metadata,
             isPlaying: isOutputPlaying,
-            artwork: artwork
+            artwork: artwork,
         )
 
         resolveTrackResources(for: info)
@@ -282,8 +284,8 @@ extension PlaybackController {
                         station: station,
                         track: metadata,
                         artworkURL: resources.artworkURL,
-                        appleMusicURL: resources.appleMusicURL
-                    )
+                        appleMusicURL: resources.appleMusicURL,
+                    ),
                 )
             }
             // Pushed even for a miss: the track-start push left the surface
@@ -293,7 +295,7 @@ extension PlaybackController {
                 station: station,
                 track: self.nowPlaying,
                 isPlaying: self.isOutputPlaying,
-                artwork: .resolved(resources.artworkURL)
+                artwork: .resolved(resources.artworkURL),
             )
         }
     }

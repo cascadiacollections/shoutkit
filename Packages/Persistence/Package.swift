@@ -12,10 +12,10 @@ let package = Package(
         // (`swift test`); the app product itself remains iOS-only. Pinned to
         // v26 because DiagnosticsService uses the Observation `Observations`
         // async sequence, which is macOS 26+.
-        .macOS(.v26)
+        .macOS(.v26),
     ],
     products: [
-        .library(name: "Persistence", targets: ["Persistence"])
+        .library(name: "Persistence", targets: ["Persistence"]),
     ],
     dependencies: [
         .package(path: "../RadioDirectory"),
@@ -25,7 +25,7 @@ let package = Package(
         // `extension Container` is public API surface, so a version drift here
         // is a resolution failure for an adopter on a different Factory version,
         // not a routine bump. The dependabot `factory` group spans all of them.
-        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2")
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2"),
     ],
     targets: [
         .target(
@@ -34,12 +34,12 @@ let package = Package(
                 "RadioDirectory",
                 "FeatureFlags",
                 .product(name: "GRDB", package: "GRDB.swift"),
-                .product(name: "FactoryKit", package: "Factory")
-            ]
+                .product(name: "FactoryKit", package: "Factory"),
+            ],
         ),
         .testTarget(
             name: "PersistenceTests",
-            dependencies: ["Persistence"]
-        )
-    ]
+            dependencies: ["Persistence"],
+        ),
+    ],
 )

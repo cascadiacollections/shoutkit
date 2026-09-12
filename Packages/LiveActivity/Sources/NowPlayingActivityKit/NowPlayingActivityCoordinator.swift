@@ -178,11 +178,11 @@ public final class NowPlayingActivityCoordinator {
 
         let attributes = NowPlayingActivityAttributes(
             stationName: station.name,
-            genre: station.genre
+            genre: station.genre,
         )
         let content = ActivityContent(
             state: contentState(isPlaying: isPlaying),
-            staleDate: nil
+            staleDate: nil,
         )
 
         activity = try? Activity.request(attributes: attributes, content: content)
@@ -245,7 +245,7 @@ public final class NowPlayingActivityCoordinator {
             await previous?.value
             await endingActivity.end(
                 ActivityContent(state: finalState, staleDate: nil),
-                dismissalPolicy: .immediate
+                dismissalPolicy: .immediate,
             )
             // Sweep only after the activity is actually gone — it can still
             // re-render its last state until the end applies. Anything a
@@ -269,7 +269,7 @@ public final class NowPlayingActivityCoordinator {
             trackTitle: latestMetadata?.title,
             artist: latestMetadata?.artist,
             artworkToken: latestArtworkToken,
-            isPlaying: isPlaying
+            isPlaying: isPlaying,
         )
     }
 

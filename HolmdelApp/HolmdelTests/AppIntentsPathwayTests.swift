@@ -1,7 +1,7 @@
 import AppIntentsTesting
 import Foundation
-import Testing
 @testable import Holmdel
+import Testing
 
 /// Exercises Holmdel's App Intents through the **real system pathways** using
 /// the iOS 27 App Intents Testing framework: `IntentDefinitions` resolves the
@@ -27,7 +27,7 @@ import Testing
 /// is iOS 27-only, and the whole target failed to build without it. A runtime
 /// `guard #available` is what the macros permit, and it costs nothing here
 /// because the case is `.disabled` in CI regardless.
-@Suite struct AppIntentsPathwayTests {
+struct AppIntentsPathwayTests {
     /// The `StationEntity` query must surface stations even before the user has
     /// favorited or played anything — the curated `PreferredStations` seed the
     /// suggestions — otherwise Siri has nothing to resolve "play ⟨station⟩"
@@ -52,7 +52,7 @@ import Testing
     /// diagnostics for a 600 s timeout, so the job runs ~15 min instead of ~8
     /// even though the tests themselves finish in 8 s.
     @Test(.disabled("IntentDefinitions has no live intents session in CI — run it on a host"))
-    func stationEntityQuerySuggestsStationsOnAFreshLibrary() async throws {
+    func `station entity query suggests stations on A fresh library`() async throws {
         // `IntentDefinitions` and the entity accessors it vends are iOS 27-only,
         // and the app's floor is iOS 26 — so the availability check is what keeps
         // this target compiling, not a choice about what to exercise. Below 27

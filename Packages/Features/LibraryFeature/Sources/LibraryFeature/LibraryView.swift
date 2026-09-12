@@ -39,7 +39,7 @@ public struct LibraryView: View {
 
     public var body: some View {
         Group {
-            if favorites.isEmpty && recents.isEmpty && recentlyHeardTracks.isEmpty {
+            if favorites.isEmpty, recents.isEmpty, recentlyHeardTracks.isEmpty {
                 emptyState
             } else {
                 List {
@@ -117,7 +117,7 @@ public struct LibraryView: View {
             phase: playback?.phase(for: station) ?? .idle,
             isFavorite: library?.isFavorite(station) ?? false,
             onTap: { playback?.toggle(station) },
-            onToggleFavorite: library.map { store in { store.toggleFavorite(station) } }
+            onToggleFavorite: library.map { store in { store.toggleFavorite(station) } },
         )
         .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
         .listRowBackground(Color.clear)
@@ -167,7 +167,7 @@ public struct LibraryView: View {
     private func deleteRecents(at offsets: IndexSet) {
         let stationIDs = LibraryListEditing.stationIDsForRecentDeletion(
             recentStationIDsNewestFirst: recents.map(\.stationID),
-            offsets: offsets
+            offsets: offsets,
         )
         for stationID in stationIDs {
             library?.removeRecent(stationID: stationID)
@@ -177,7 +177,7 @@ public struct LibraryView: View {
     private func deleteFavorites(at offsets: IndexSet) {
         let stationIDs = LibraryListEditing.stationIDsForFavoriteDeletion(
             favoriteStationIDs: favorites.map(\.stationID),
-            offsets: offsets
+            offsets: offsets,
         )
         for stationID in stationIDs {
             library?.removeFavorite(stationID: stationID)

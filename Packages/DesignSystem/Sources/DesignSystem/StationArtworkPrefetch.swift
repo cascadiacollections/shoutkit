@@ -20,7 +20,7 @@ public extension View {
         in stations: [Station],
         lookahead: Int = 6,
         displayScale: CGFloat,
-        maxPixelSize: CGFloat? = nil
+        maxPixelSize: CGFloat? = nil,
     ) -> some View {
         onAppear {
             let start = index + 1
@@ -28,9 +28,9 @@ public extension View {
             guard start < end else { return }
 
             ArtworkThumbnailLoader.prefetch(
-                stations[start..<end].map(\.artworkURL),
+                stations[start ..< end].map(\.artworkURL),
                 maxPixelSize: maxPixelSize
-                    ?? StationArtworkView.listPixelSize(displayScale: displayScale)
+                    ?? StationArtworkView.listPixelSize(displayScale: displayScale),
             )
         }
     }

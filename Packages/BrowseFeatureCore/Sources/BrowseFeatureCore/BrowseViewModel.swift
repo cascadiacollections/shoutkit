@@ -22,7 +22,7 @@ public struct BrowseContent: Equatable, Sendable {
         spotlight: Station?,
         stations: [Station],
         genres: [Genre],
-        origin: BrowseContentOrigin = .live
+        origin: BrowseContentOrigin = .live,
     ) {
         self.spotlight = spotlight
         self.stations = stations
@@ -81,7 +81,7 @@ public final class BrowseViewModel {
 
     public init(
         directory: any RadioDirectoryProviding = Container.shared.radioDirectory(),
-        discoveryCache: any DirectoryDiscoveryCaching = Container.shared.directoryDiscoveryCache()
+        discoveryCache: any DirectoryDiscoveryCaching = Container.shared.directoryDiscoveryCache(),
     ) {
         self.directory = directory
         self.discoveryCache = discoveryCache
@@ -96,7 +96,9 @@ public final class BrowseViewModel {
         // spinner, and a snapshot inside its stability window is the whole answer.
         if source == .automatic {
             let savedContentIsFresh = await presentSavedContent(generation: generation)
-            if savedContentIsFresh { return }
+            if savedContentIsFresh {
+                return
+            }
         }
 
         if case .loaded = phase {} else {
@@ -135,8 +137,8 @@ public final class BrowseViewModel {
                 // The stations' own capture date, not the snapshot's oldest half:
                 // the note this feeds is about the stations, so older genres (from
                 // a genres fetch that failed on its own) mustn't backdate it.
-                origin: .saved(capturedAt: state.snapshot.topStations?.capturedAt)
-            )
+                origin: .saved(capturedAt: state.snapshot.topStations?.capturedAt),
+            ),
         )
         genresError = nil
         refreshError = nil
@@ -175,8 +177,8 @@ public final class BrowseViewModel {
                     spotlight: stations.first,
                     stations: stations,
                     genres: genres,
-                    origin: .live
-                )
+                    origin: .live,
+                ),
             )
         } catch let error as RadioDirectoryError {
             guard refreshGeneration == generation else { return }
@@ -203,10 +205,10 @@ public final class BrowseViewModel {
     /// throwing — genres are non-fatal to the browse screen, so `refresh()`
     /// can run this concurrently with the fatal top-stations fetch.
     private static func loadGenres(
-        from directory: any RadioDirectoryProviding
+        from directory: any RadioDirectoryProviding,
     ) async -> ([Genre], RadioDirectoryError?) {
         do {
-            return (try await directory.genres(), nil)
+            return try await (directory.genres(), nil)
         } catch {
             return ([], error)
         }
@@ -229,7 +231,7 @@ public final class BrowseViewModel {
             do {
                 let stations = try await directory.stations(
                     inGenre: genre,
-                    limit: Configuration.genreStationsLimit
+                    limit: Configuration.genreStationsLimit,
                 )
                 guard Task.isCancelled == false, self.selectedGenre == genre else { return }
                 self.genrePhase = .loaded(stations)

@@ -30,10 +30,10 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         }
     }
 
-    // `streamGeneration` tags ICY metadata so the controller can discard track
-    // callbacks from a superseded stream after a fast station switch (see
-    // AudioStreamingPlaybackEngine). This engine emits no track info, so it only
-    // needs to satisfy the `AudioOutput` signature.
+    /// `streamGeneration` tags ICY metadata so the controller can discard track
+    /// callbacks from a superseded stream after a fast station switch (see
+    /// AudioStreamingPlaybackEngine). This engine emits no track info, so it only
+    /// needs to satisfy the `AudioOutput` signature.
     func start(url: URL, streamGeneration _: UInt64) {
         tearDownPlayer()
 
@@ -73,7 +73,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     private func observe(player: AVPlayer, item: AVPlayerItem) {
         timeControlObservation = player.observe(
             \.timeControlStatus,
-            options: [.initial, .new]
+            options: [.initial, .new],
         ) { [weak self] player, _ in
             Task { @MainActor [weak self] in
                 guard let self, self.player === player else { return }
@@ -105,7 +105,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         failedToEndObserver = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemFailedToPlayToEndTime,
             object: item,
-            queue: .main
+            queue: .main,
         ) { [weak self] notification in
             let failedItem = notification.object as? AVPlayerItem
             let reportedError = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
@@ -135,7 +135,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         playedToEndObserver = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime,
             object: item,
-            queue: .main
+            queue: .main,
         ) { [weak self] notification in
             let endedItem = notification.object as? AVPlayerItem
             MainActor.assumeIsolated {
@@ -164,7 +164,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     private func handleItemStatus(_ status: AVPlayerItem.Status, item: AVPlayerItem) {
         if status == .failed {
             onStatusChange?(.failed(.streamFailed(
-                item.error?.localizedDescription ?? "The stream stopped unexpectedly."
+                item.error?.localizedDescription ?? "The stream stopped unexpectedly.",
             )))
         }
     }
@@ -212,10 +212,11 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         interruptionObserver = center.addObserver(
             forName: AVAudioSession.interruptionNotification,
             object: session,
-            queue: nil
+            queue: nil,
         ) { [weak self] notification in
             guard let rawType = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
-                  let type = AVAudioSession.InterruptionType(rawValue: rawType) else {
+                  let type = AVAudioSession.InterruptionType(rawValue: rawType)
+            else {
                 return
             }
 
@@ -234,7 +235,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
                     // only when nothing else holds audio.
                     self.onStatusChange?(.interruptionEnded(
                         shouldResume: shouldResume,
-                        otherAudioIsPlaying: AVAudioSession.sharedInstance().isOtherAudioPlaying
+                        otherAudioIsPlaying: AVAudioSession.sharedInstance().isOtherAudioPlaying,
                     ))
                 @unknown default:
                     break
@@ -247,10 +248,11 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         routeChangeObserver = center.addObserver(
             forName: AVAudioSession.routeChangeNotification,
             object: session,
-            queue: nil
+            queue: nil,
         ) { [weak self] notification in
             guard let rawReason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
-                  let reason = AVAudioSession.RouteChangeReason(rawValue: rawReason) else {
+                  let reason = AVAudioSession.RouteChangeReason(rawValue: rawReason)
+            else {
                 return
             }
             Task { @MainActor [weak self] in

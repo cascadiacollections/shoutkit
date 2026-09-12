@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Persistence
+import Testing
 
 @MainActor
 struct SettingsStoreTests {
@@ -12,12 +11,12 @@ struct SettingsStoreTests {
         return defaults
     }
 
-    @Test func playReportingDefaultsToEnabled() throws {
-        let store = SettingsStore(defaults: try makeDefaults())
+    @Test func `play reporting defaults to enabled`() throws {
+        let store = try SettingsStore(defaults: makeDefaults())
         #expect(store.isPlayReportingEnabled == true)
     }
 
-    @Test func togglePersistsAcrossInstances() throws {
+    @Test func `toggle persists across instances`() throws {
         let defaults = try makeDefaults()
 
         let store = SettingsStore(defaults: defaults)
@@ -31,12 +30,12 @@ struct SettingsStoreTests {
         #expect(reloadedAgain.isPlayReportingEnabled == true)
     }
 
-    @Test func albumArtDefaultsToEnabled() throws {
-        let store = SettingsStore(defaults: try makeDefaults())
+    @Test func `album art defaults to enabled`() throws {
+        let store = try SettingsStore(defaults: makeDefaults())
         #expect(store.isAlbumArtEnabled == true)
     }
 
-    @Test func albumArtTogglePersistsAcrossInstances() throws {
+    @Test func `album art toggle persists across instances`() throws {
         let defaults = try makeDefaults()
 
         let store = SettingsStore(defaults: defaults)
@@ -50,12 +49,12 @@ struct SettingsStoreTests {
         #expect(reloadedAgain.isAlbumArtEnabled == true)
     }
 
-    @Test func preciseGeoStationLocationDefaultsToDisabled() throws {
-        let store = SettingsStore(defaults: try makeDefaults())
+    @Test func `precise geo station location defaults to disabled`() throws {
+        let store = try SettingsStore(defaults: makeDefaults())
         #expect(store.isPreciseGeoStationLocationEnabled == false)
     }
 
-    @Test func preciseGeoStationLocationTogglePersistsAcrossInstances() throws {
+    @Test func `precise geo station location toggle persists across instances`() throws {
         let defaults = try makeDefaults()
 
         let store = SettingsStore(defaults: defaults)
@@ -69,12 +68,12 @@ struct SettingsStoreTests {
         #expect(reloadedAgain.isPreciseGeoStationLocationEnabled == false)
     }
 
-    @Test func diagnosticsSharingDefaultsToDisabled() throws {
-        let store = SettingsStore(defaults: try makeDefaults())
+    @Test func `diagnostics sharing defaults to disabled`() throws {
+        let store = try SettingsStore(defaults: makeDefaults())
         #expect(store.isDiagnosticsSharingEnabled == false)
     }
 
-    @Test func diagnosticsSharingTogglePersistsAcrossInstances() throws {
+    @Test func `diagnostics sharing toggle persists across instances`() throws {
         let defaults = try makeDefaults()
 
         let store = SettingsStore(defaults: defaults)

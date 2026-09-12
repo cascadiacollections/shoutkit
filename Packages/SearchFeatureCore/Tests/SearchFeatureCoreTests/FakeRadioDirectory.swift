@@ -39,7 +39,7 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
         }
     }
 
-    func topStations(limit: Int) async throws(RadioDirectoryError) -> [Station] {
+    func topStations(limit _: Int) async throws(RadioDirectoryError) -> [Station] {
         []
     }
 
@@ -49,8 +49,8 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
 
     func searchStations(
         matching query: String,
-        limit: Int,
-        filters: StationSearchFilters
+        limit _: Int,
+        filters: StationSearchFilters,
     ) async throws(RadioDirectoryError) -> [Station] {
         searchCallCount += 1
         searchedQueries.append(query)
@@ -70,8 +70,8 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
 
     func stations(
         inGenre genre: String,
-        limit: Int,
-        filters: StationSearchFilters
+        limit _: Int,
+        filters: StationSearchFilters,
     ) async throws(RadioDirectoryError) -> [Station] {
         genreStationQueries.append(genre)
         genreStationFilters.append(filters)
@@ -84,7 +84,7 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
         }
     }
 
-    func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
+    func streamEndpoint(for _: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
         throw .invalidResponse
     }
 }

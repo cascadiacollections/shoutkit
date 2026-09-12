@@ -45,7 +45,7 @@ public struct DirectoryDiscoverySnapshot: Codable, Equatable, Sendable {
     public init(
         topStations: TopStations? = nil,
         genres: Genres? = nil,
-        sourceIdentity: String? = nil
+        sourceIdentity: String? = nil,
     ) {
         self.topStations = topStations
         self.genres = genres
@@ -57,7 +57,7 @@ public struct DirectoryDiscoverySnapshot: Codable, Equatable, Sendable {
     /// the right one; a reader being told how old the *stations* are wants
     /// ``TopStations/capturedAt`` instead.
     public var capturedAt: Date? {
-        [topStations?.capturedAt, genres?.capturedAt].compactMap { $0 }.min()
+        [topStations?.capturedAt, genres?.capturedAt].compactMap(\.self).min()
     }
 
     /// Saved popular stations, empty when that half was never captured.
@@ -142,7 +142,7 @@ public actor FileDirectorySnapshotStore: DirectorySnapshotStoring {
 
     private static let logger = Logger(
         subsystem: "ShoutKit.RadioDirectory",
-        category: "FileDirectorySnapshotStore"
+        category: "FileDirectorySnapshotStore",
     )
 
     private let fileURL: URL
@@ -173,7 +173,7 @@ public actor FileDirectorySnapshotStore: DirectorySnapshotStoring {
             for: .applicationSupportDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
-            create: true
+            create: true,
         ) else {
             logger.error("Application Support unavailable; running without a persisted directory snapshot")
             return nil
@@ -182,7 +182,7 @@ public actor FileDirectorySnapshotStore: DirectorySnapshotStoring {
         return FileDirectorySnapshotStore(
             fileURL: container
                 .appendingPathComponent(directoryName, isDirectory: true)
-                .appendingPathComponent(fileName, isDirectory: false)
+                .appendingPathComponent(fileName, isDirectory: false),
         )
     }
 
@@ -198,7 +198,7 @@ public actor FileDirectorySnapshotStore: DirectorySnapshotStoring {
             // truncated or stale-shaped file is equally non-fatal: the caller
             // refetches either way.
             Self.logger.debug(
-                "No usable directory snapshot on disk: \(error.localizedDescription, privacy: .public)"
+                "No usable directory snapshot on disk: \(error.localizedDescription, privacy: .public)",
             )
             return nil
         }
@@ -211,7 +211,7 @@ public actor FileDirectorySnapshotStore: DirectorySnapshotStoring {
             excludeFromBackup()
         } catch {
             Self.logger.error(
-                "Failed to persist directory snapshot: \(error.localizedDescription, privacy: .public)"
+                "Failed to persist directory snapshot: \(error.localizedDescription, privacy: .public)",
             )
         }
     }
@@ -221,7 +221,7 @@ public actor FileDirectorySnapshotStore: DirectorySnapshotStoring {
     private func createContainerDirectoryIfNeeded() throws {
         try FileManager.default.createDirectory(
             at: fileURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
+            withIntermediateDirectories: true,
         )
     }
 

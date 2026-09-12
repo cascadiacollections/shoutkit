@@ -27,7 +27,7 @@ public enum EffectiveArtwork {
     public static func selection(
         isAlbumArtEnabled: Bool,
         albumArtURL: URL?,
-        stationArtworkURL: URL?
+        stationArtworkURL: URL?,
     ) -> EffectiveArtworkSelection {
         guard isAlbumArtEnabled, let albumArtURL else {
             // No fallback in this branch, deliberately: the station's artwork is

@@ -72,7 +72,7 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
         snapshotStore: (any DirectorySnapshotStoring)? = nil,
         snapshotTimeToLive: TimeInterval = CachingRadioDirectory.defaultSnapshotTimeToLive,
         snapshotIdentity: @escaping @Sendable () async -> String? = { nil },
-        now: @escaping @Sendable () -> Date = { Date() }
+        now: @escaping @Sendable () -> Date = { Date() },
     ) {
         self.base = base
         self.timeToLive = timeToLive
@@ -92,13 +92,13 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
         if let inFlight = genresInFlight {
             // Coalescing intentionally awaits the shared unstructured task to
             // completion; cancelling one caller does not cancel the base fetch.
-            return try (await inFlight.value).get()
+            return try await (inFlight.value).get()
         }
 
         let base = self.base
         let task = Task<Result<[Genre], RadioDirectoryError>, Never> {
             do {
-                return .success(try await base.genres())
+                return try await .success(base.genres())
             } catch let error as RadioDirectoryError {
                 return .failure(error)
             } catch {
@@ -126,7 +126,7 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
         if let inFlight = topStationsInFlight, inFlight.limit >= limit {
             // Coalescing intentionally awaits the shared unstructured task to
             // completion; cancelling one caller does not cancel the base fetch.
-            let stations = try (await inFlight.task.value).get()
+            let stations = try await (inFlight.task.value).get()
             return Array(stations.prefix(limit))
         }
 
@@ -151,7 +151,7 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
         let base = self.base
         let task = Task<Result<[Station], RadioDirectoryError>, Never> {
             do {
-                return .success(try await base.topStations(limit: limit))
+                return try await .success(base.topStations(limit: limit))
             } catch let error as RadioDirectoryError {
                 return .failure(error)
             } catch {
@@ -181,7 +181,7 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
         guard let capturedAt = snapshot.capturedAt else { return nil }
         return DirectoryDiscoverySnapshotState(
             snapshot: snapshot,
-            isFresh: now().timeIntervalSince(capturedAt) < snapshotTimeToLive
+            isFresh: now().timeIntervalSince(capturedAt) < snapshotTimeToLive,
         )
     }
 
@@ -237,7 +237,7 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
     private func persist(
         topStations: [Station]? = nil,
         limit: Int? = nil,
-        genres: [Genre]? = nil
+        genres: [Genre]? = nil,
     ) async {
         guard let snapshotStore else { return }
 
@@ -256,13 +256,13 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
                 DirectoryDiscoverySnapshot.TopStations(
                     stations: $0,
                     limit: limit ?? $0.count,
-                    capturedAt: capturedAt
+                    capturedAt: capturedAt,
                 )
             } ?? existing?.topStations,
             genres: genres.map {
                 DirectoryDiscoverySnapshot.Genres(genres: $0, capturedAt: capturedAt)
             } ?? existing?.genres,
-            sourceIdentity: sourceIdentity
+            sourceIdentity: sourceIdentity,
         )
 
         // In-memory truth is updated synchronously with the merge; the file write
@@ -281,7 +281,7 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
     public func searchStations(
         matching query: String,
         limit: Int,
-        filters: StationSearchFilters
+        filters: StationSearchFilters,
     ) async throws(RadioDirectoryError) -> [Station] {
         try await base.searchStations(matching: query, limit: limit, filters: filters)
     }
@@ -293,7 +293,7 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
     public func stations(
         inGenre genre: String,
         limit: Int,
-        filters: StationSearchFilters
+        filters: StationSearchFilters,
     ) async throws(RadioDirectoryError) -> [Station] {
         try await base.stations(inGenre: genre, limit: limit, filters: filters)
     }

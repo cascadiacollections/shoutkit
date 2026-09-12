@@ -24,7 +24,7 @@ public struct Feature: Hashable, Sendable {
         title: String,
         summary: String,
         stage: FeatureStage,
-        defaultEnabled: Bool
+        defaultEnabled: Bool,
     ) {
         self.key = key
         self.title = title
@@ -40,7 +40,7 @@ public enum FeatureCatalog {
         title: "Diagnostics",
         summary: "Enable optional local MetricKit diagnostics collection.",
         stage: .internalOnly,
-        defaultEnabled: false
+        defaultEnabled: false,
     )
 
     public static let geoStations = Feature(
@@ -48,7 +48,7 @@ public enum FeatureCatalog {
         title: "Geo Stations",
         summary: "Filter Radio-Browser discovery by region; optional precise location is separate and off by default.",
         stage: .internalOnly,
-        defaultEnabled: false
+        defaultEnabled: false,
     )
 
     public static let prewarmStations = Feature(
@@ -56,7 +56,7 @@ public enum FeatureCatalog {
         title: "Prewarm Stations",
         summary: "At launch, warm the network path (DNS/TLS) to your top stations so playback starts faster.",
         stage: .internalOnly,
-        defaultEnabled: false
+        defaultEnabled: false,
     )
 
     public static let liveActivity = Feature(
@@ -66,14 +66,14 @@ public enum FeatureCatalog {
             + "Off by default: its artwork can lag the current track, and it adds little "
             + "over the system Now Playing surface.",
         stage: .internalOnly,
-        defaultEnabled: false
+        defaultEnabled: false,
     )
 
     public static let all: [Feature] = [
         diagnosticsFeature,
         geoStations,
         prewarmStations,
-        liveActivity
+        liveActivity,
     ]
 
     public static let diagnostics = diagnosticsFeature

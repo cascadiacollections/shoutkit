@@ -1,8 +1,7 @@
+@testable import FeatureFlags
 import Foundation
 import Observation
 import Testing
-
-@testable import FeatureFlags
 
 @MainActor
 struct DefaultsFeatureFlagServiceTests {
@@ -17,7 +16,7 @@ struct DefaultsFeatureFlagServiceTests {
         DefaultsFeatureFlagService(defaults: defaults)
     }
 
-    @Test func defaultsUseFeatureDefaultValue() throws {
+    @Test func `defaults use feature default value`() throws {
         let defaults = try makeDefaults()
         let service = makeService(defaults: defaults)
         let diagnostics = try #require(FeatureCatalog.all.first(where: { $0.key == "diagnostics" }))
@@ -26,7 +25,7 @@ struct DefaultsFeatureFlagServiceTests {
         #expect(service.isEnabled(diagnostics) == false)
     }
 
-    @Test func overrideTakesPrecedenceOverDefault() throws {
+    @Test func `override takes precedence over default`() throws {
         let defaults = try makeDefaults()
         let service = makeService(defaults: defaults)
         let diagnostics = try #require(FeatureCatalog.all.first(where: { $0.key == "diagnostics" }))
@@ -40,7 +39,7 @@ struct DefaultsFeatureFlagServiceTests {
         #expect(service.isEnabled(diagnostics) == false)
     }
 
-    @Test func overridesPersistAcrossInstances() throws {
+    @Test func `overrides persist across instances`() throws {
         let defaults = try makeDefaults()
         let diagnostics = try #require(FeatureCatalog.all.first(where: { $0.key == "diagnostics" }))
 
@@ -52,7 +51,7 @@ struct DefaultsFeatureFlagServiceTests {
         #expect(reloaded.isEnabled(diagnostics) == true)
     }
 
-    @Test func settingUseDefaultRemovesPersistedOverride() throws {
+    @Test func `setting use default removes persisted override`() throws {
         let defaults = try makeDefaults()
         let service = makeService(defaults: defaults)
         let diagnostics = try #require(FeatureCatalog.all.first(where: { $0.key == "diagnostics" }))
@@ -65,7 +64,7 @@ struct DefaultsFeatureFlagServiceTests {
         #expect(defaults.object(forKey: "featureFlags.diagnostics.override") == nil)
     }
 
-    @Test func mutationsNotifyObservers() throws {
+    @Test func `mutations notify observers`() throws {
         let defaults = try makeDefaults()
         let service = makeService(defaults: defaults)
         let diagnostics = try #require(FeatureCatalog.all.first(where: { $0.key == "diagnostics" }))
@@ -87,7 +86,7 @@ struct DefaultsFeatureFlagServiceTests {
         #expect(flag.wasInvalidated)
     }
 
-    @Test func resetAllClearsAllOverrides() throws {
+    @Test func `reset all clears all overrides`() throws {
         let defaults = try makeDefaults()
         let service = makeService(defaults: defaults)
         for feature in FeatureCatalog.all {
@@ -102,7 +101,7 @@ struct DefaultsFeatureFlagServiceTests {
         }
     }
 
-    @Test func unknownFeatureDoesNotPersistOrCrash() throws {
+    @Test func `unknown feature does not persist or crash`() throws {
         let defaults = try makeDefaults()
         let service = makeService(defaults: defaults)
         let unknown = Feature(
@@ -110,7 +109,7 @@ struct DefaultsFeatureFlagServiceTests {
             title: "Unknown",
             summary: "Not in catalog",
             stage: .internalOnly,
-            defaultEnabled: true
+            defaultEnabled: true,
         )
 
         service.setOverride(.disabled, for: unknown)
@@ -120,7 +119,7 @@ struct DefaultsFeatureFlagServiceTests {
         #expect(defaults.object(forKey: "featureFlags.unknownFeature.override") == nil)
     }
 
-    @Test func cleanupHookRunsOnDeinit() throws {
+    @Test func `cleanup hook runs on deinit`() throws {
         let defaults = try makeDefaults()
         final class Flag: @unchecked Sendable {
             var didRun = false
@@ -131,7 +130,7 @@ struct DefaultsFeatureFlagServiceTests {
             defaults: defaults,
             cleanupOnDeinit: {
                 flag.didRun = true
-            }
+            },
         )
         #expect(service != nil)
         service = nil

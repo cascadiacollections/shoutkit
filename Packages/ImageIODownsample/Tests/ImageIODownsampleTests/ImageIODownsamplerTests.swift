@@ -1,10 +1,9 @@
 import CoreGraphics
 import Foundation
 import ImageIO
+@testable import ImageIODownsample
 import Testing
 import UniformTypeIdentifiers
-
-@testable import ImageIODownsample
 
 struct ImageIODownsamplerTests {
     /// Builds a solid-color PNG of the requested pixel size to use as decode
@@ -20,8 +19,8 @@ struct ImageIODownsamplerTests {
                 bitsPerComponent: 8,
                 bytesPerRow: 0,
                 space: space,
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            )
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue,
+            ),
         )
         context.setFillColor(red: 0.2, green: 0.6, blue: 0.9, alpha: 1)
         context.fill(CGRect(x: 0, y: 0, width: width, height: height))
@@ -33,31 +32,31 @@ struct ImageIODownsamplerTests {
                 encoded as CFMutableData,
                 UTType.png.identifier as CFString,
                 1,
-                nil
-            )
+                nil,
+            ),
         )
         CGImageDestinationAddImage(destination, cgImage, nil)
         #expect(CGImageDestinationFinalize(destination))
         return encoded as Data
     }
 
-    @Test func decodeReturnsNilForInvalidData() {
+    @Test func `decode returns nil for invalid data`() {
         let garbage = Data([0x00, 0x01, 0x02, 0x03])
         #expect(ImageIODownsampler.decodeCGImage(garbage, maxPixelSize: 256) == nil)
     }
 
-    @Test func encodeReturnsNilForInvalidData() {
+    @Test func `encode returns nil for invalid data`() {
         let garbage = Data("definitely not an image".utf8)
         #expect(ImageIODownsampler.encode(garbage, maxPixelSize: 256, outputType: .png) == nil)
     }
 
-    @Test func decodeCapsLongerEdgeToMaxPixelSize() throws {
+    @Test func `decode caps longer edge to max pixel size`() throws {
         let source = try makePNG(width: 200, height: 100)
         let decoded = try #require(ImageIODownsampler.decodeCGImage(source, maxPixelSize: 50))
         #expect(max(decoded.width, decoded.height) <= 50)
     }
 
-    @Test func encodeProducesPNGSignature() throws {
+    @Test func `encode produces PNG signature`() throws {
         let source = try makePNG(width: 120, height: 120)
         let encoded = try #require(ImageIODownsampler.encode(source, maxPixelSize: 64, outputType: .png))
         // The 8-byte PNG magic number every PNG stream begins with.
@@ -67,7 +66,7 @@ struct ImageIODownsamplerTests {
 
     /// A `CGFloat` ceiling with a fractional part must be coerced to an integer
     /// pixel count rather than rejected or truncated past the cap.
-    @Test func fractionalMaxPixelSizeIsCoerced() throws {
+    @Test func `fractional max pixel size is coerced`() throws {
         let source = try makePNG(width: 200, height: 100)
         let decoded = try #require(ImageIODownsampler.decodeCGImage(source, maxPixelSize: 49.7))
         #expect(max(decoded.width, decoded.height) <= 50)

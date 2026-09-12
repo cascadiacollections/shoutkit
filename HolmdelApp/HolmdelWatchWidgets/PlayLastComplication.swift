@@ -6,15 +6,15 @@ struct PlayLastComplicationEntry: TimelineEntry {
 }
 
 struct PlayLastComplicationProvider: TimelineProvider {
-    func placeholder(in context: Context) -> PlayLastComplicationEntry {
+    func placeholder(in _: Context) -> PlayLastComplicationEntry {
         PlayLastComplicationEntry(date: .now)
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (PlayLastComplicationEntry) -> Void) {
+    func getSnapshot(in _: Context, completion: @escaping (PlayLastComplicationEntry) -> Void) {
         completion(PlayLastComplicationEntry(date: .now))
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<PlayLastComplicationEntry>) -> Void) {
+    func getTimeline(in _: Context, completion: @escaping (Timeline<PlayLastComplicationEntry>) -> Void) {
         completion(Timeline(entries: [PlayLastComplicationEntry(date: .now)], policy: .never))
     }
 }

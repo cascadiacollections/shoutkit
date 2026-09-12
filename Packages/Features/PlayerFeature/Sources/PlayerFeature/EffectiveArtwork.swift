@@ -17,11 +17,11 @@ import RadioDirectory
 func effectiveArtworkSelection(
     settings: SettingsStore?,
     playback: PlaybackController?,
-    station: Station?
+    station: Station?,
 ) -> EffectiveArtworkSelection {
     EffectiveArtwork.selection(
         isAlbumArtEnabled: settings?.isAlbumArtEnabled == true,
         albumArtURL: playback?.albumArtURL,
-        stationArtworkURL: station?.artworkURL
+        stationArtworkURL: station?.artworkURL,
     )
 }

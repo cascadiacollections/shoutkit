@@ -1,8 +1,7 @@
 import Foundation
+@testable import Playback
 import RadioDirectory
 import Testing
-
-@testable import Playback
 
 // A station that broadcasts a fixed-length programme (NPR's hourly newscast is
 // the reported case) reaches the end of its content. That is not a dropped
@@ -17,11 +16,11 @@ import Testing
 struct PlaybackEndOfStreamTests {
     private static let fastDelay: Duration = .milliseconds(10)
 
-    @Test func endOfStreamStopsInsteadOfLoopingByDefault() async {
+    @Test func `end of stream stops instead of looping by default`() async {
         let output = FakeAudioOutput()
         let controller = makeController(
             stations: [station()], output: output,
-            maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay
+            maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay,
         )
 
         controller.play(station())
@@ -40,7 +39,7 @@ struct PlaybackEndOfStreamTests {
         #expect(controller.state == .paused(station()))
     }
 
-    @Test func endOfStreamKeepsTheStationRecoverable() async {
+    @Test func `end of stream keeps the station recoverable`() async {
         let output = FakeAudioOutput()
         let presenter = NowPlayingPresenterSpy()
         let controller = makeController(stations: [station()], output: output, presenter: presenter)
@@ -56,7 +55,7 @@ struct PlaybackEndOfStreamTests {
             stationID: station().id,
             trackTitle: nil,
             isPlaying: false,
-            artwork: .resolved(nil)
+            artwork: .resolved(nil),
         ))
         #expect(controller.currentStation == station())
 
@@ -67,7 +66,7 @@ struct PlaybackEndOfStreamTests {
         #expect(output.startedURLs.count == 2)
     }
 
-    @Test func endOfStreamRestartsTheStreamWhenLoopingIsEnabled() async {
+    @Test func `end of stream restarts the stream when looping is enabled`() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
         controller.isStreamLoopingEnabledProvider = { true }
@@ -85,7 +84,7 @@ struct PlaybackEndOfStreamTests {
         #expect(controller.state == .playing(station()))
     }
 
-    @Test func loopingIsReadAtEachEndingRatherThanAtPlay() async {
+    @Test func `looping is read at each ending rather than at play`() async {
         let output = FakeAudioOutput()
         var isLoopingEnabled = false
         let controller = makeController(stations: [station()], output: output)
@@ -103,7 +102,7 @@ struct PlaybackEndOfStreamTests {
         #expect(output.startedURLs.count == 2)
     }
 
-    @Test func loopRestartIsNotANewListeningChoice() async {
+    @Test func `loop restart is not A new listening choice`() async {
         let output = FakeAudioOutput()
         let directory = CountingRadioDirectory(stations: [station()])
         let controller = makeController(directory: directory, output: output)
@@ -125,11 +124,11 @@ struct PlaybackEndOfStreamTests {
         #expect(await directory.streamEndpointCallCount == 1, "a loop restart reuses the resolved endpoint")
     }
 
-    @Test func endOfStreamRefillsTheReconnectBudget() async {
+    @Test func `end of stream refills the reconnect budget`() async {
         let output = FakeAudioOutput()
         let controller = makeController(
             stations: [station()], output: output,
-            maxReconnectAttempts: 2, reconnectBaseDelay: Self.fastDelay
+            maxReconnectAttempts: 2, reconnectBaseDelay: Self.fastDelay,
         )
 
         controller.play(station())
@@ -153,7 +152,7 @@ struct PlaybackEndOfStreamTests {
         #expect(output.startedURLs.count == 5)
     }
 
-    @Test func pauseWinsOverALoopRestartAlreadyUnderway() async {
+    @Test func `pause wins over A loop restart already underway`() async {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
         controller.isStreamLoopingEnabledProvider = { true }

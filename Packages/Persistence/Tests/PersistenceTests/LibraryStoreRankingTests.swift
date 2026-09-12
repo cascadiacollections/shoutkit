@@ -1,12 +1,11 @@
 import Foundation
+@testable import Persistence
 import RadioDirectory
 import SwiftData
 import Testing
 
-@testable import Persistence
-
-// Fixtures duplicated from LibraryStoreTests.swift: file-private on purpose so
-// each suite file stays self-contained.
+/// Fixtures duplicated from LibraryStoreTests.swift: file-private on purpose so
+/// each suite file stays self-contained.
 @MainActor
 private func makeStoreAndContext() -> (LibraryStore, ModelContext) {
     let container = ShoutKitModelContainer.makeContainer(inMemory: true)
@@ -22,7 +21,7 @@ private func station(_ id: String) -> Station {
 struct LibraryStoreRankingTests {
     private func favoritesBySortIndex(_ context: ModelContext) throws -> [FavoriteStation] {
         try context.fetch(
-            FetchDescriptor<FavoriteStation>(sortBy: [SortDescriptor(\.sortIndex, order: .forward)])
+            FetchDescriptor<FavoriteStation>(sortBy: [SortDescriptor(\.sortIndex, order: .forward)]),
         )
     }
 
@@ -32,11 +31,11 @@ struct LibraryStoreRankingTests {
             name: "Station \(id)",
             genre: "Test",
             listenerCount: 10,
-            preferredStreamURL: URL(string: "https://example.com/\(id).aac")
+            preferredStreamURL: URL(string: "https://example.com/\(id).aac"),
         )
     }
 
-    @Test func prewarmURLsRankFavoritesFirstThenMostPlayedRecents() throws {
+    @Test func `prewarm UR ls rank favorites first then most played recents`() throws {
         let (store, _) = makeStoreAndContext()
 
         // "b" is played most; "a" played once; "fav" is a favorite (weaker
@@ -55,7 +54,7 @@ struct LibraryStoreRankingTests {
         #expect(bIndex < aIndex)
     }
 
-    @Test func rankedStationsFollowFavoriteThenMostPlayedRecentOrdering() throws {
+    @Test func `ranked stations follow favorite then most played recent ordering`() {
         let (store, _) = makeStoreAndContext()
 
         store.logRecent(streamableStation("a"))
@@ -68,7 +67,7 @@ struct LibraryStoreRankingTests {
         #expect(rankedIDs == ["fav", "b", "a"])
     }
 
-    @Test func rankedStationsDeduplicateFavoritesAndRecents() throws {
+    @Test func `ranked stations deduplicate favorites and recents`() {
         let (store, _) = makeStoreAndContext()
         let station = streamableStation("dup")
 
@@ -81,9 +80,11 @@ struct LibraryStoreRankingTests {
         #expect(rankedIDs == ["dup", "other"])
     }
 
-    @Test func prewarmURLsAreCappedAtLimitAndDeduplicated() throws {
+    @Test func `prewarm UR ls are capped at limit and deduplicated`() {
         let (store, _) = makeStoreAndContext()
-        for index in 0..<10 { store.logRecent(streamableStation("s\(index)")) }
+        for index in 0 ..< 10 {
+            store.logRecent(streamableStation("s\(index)"))
+        }
 
         let urls = store.prewarmStreamURLs(limit: 3)
 
@@ -91,23 +92,25 @@ struct LibraryStoreRankingTests {
         #expect(Set(urls).count == 3)
     }
 
-    @Test func prewarmURLsSkipStationsWithoutASnapshotURL() throws {
+    @Test func `prewarm UR ls skip stations without A snapshot URL`() {
         let (store, _) = makeStoreAndContext()
         store.logRecent(station("no-url")) // helper leaves preferredStreamURL nil
 
         #expect(store.prewarmStreamURLs(limit: 5).isEmpty)
     }
 
-    @Test func favoriteStationsRespectManualOrdering() throws {
+    @Test func `favorite stations respect manual ordering`() throws {
         let (store, context) = makeStoreAndContext()
-        for id in ["a", "b", "c"] { store.addFavorite(streamableStation(id)) }
+        for id in ["a", "b", "c"] {
+            store.addFavorite(streamableStation(id))
+        }
 
-        store.moveFavorites(try favoritesBySortIndex(context), from: IndexSet(integer: 2), to: 0)
+        try store.moveFavorites(favoritesBySortIndex(context), from: IndexSet(integer: 2), to: 0)
 
         #expect(store.favoriteStations().map(\.id) == ["c", "a", "b"])
     }
 
-    @Test func refreshingStreamURLSnapshotUpdatesFavoritesAndMatchingRecents() throws {
+    @Test func `refreshing stream URL snapshot updates favorites and matching recents`() throws {
         let (store, context) = makeStoreAndContext()
         let stale = try #require(URL(string: "https://example.com/stale.aac"))
         let fresh = try #require(URL(string: "https://example.com/fresh.aac"))
@@ -116,7 +119,7 @@ struct LibraryStoreRankingTests {
             name: "Favorite",
             genre: "Test",
             listenerCount: 10,
-            preferredStreamURL: stale
+            preferredStreamURL: stale,
         )
 
         store.addFavorite(station)

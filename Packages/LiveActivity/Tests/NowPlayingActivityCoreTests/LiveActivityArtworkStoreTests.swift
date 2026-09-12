@@ -1,17 +1,16 @@
 import Foundation
-import Testing
-
 @testable import NowPlayingActivityCore
+import Testing
 
 struct LiveActivityArtworkStoreTests {
     @Test
-    func tokenIsDeterministicForURL() throws {
+    func `token is deterministic for URL`() throws {
         let url = try #require(URL(string: "https://example.com/artwork.png"))
         #expect(LiveActivityArtworkStore.token(for: url) == LiveActivityArtworkStore.token(for: url))
     }
 
     @Test
-    func stageOverwritesExistingTokenFile() throws {
+    func `stage overwrites existing token file`() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         LiveActivityArtworkStore.directoryURLOverride = directory
@@ -29,7 +28,7 @@ struct LiveActivityArtworkStoreTests {
     }
 
     @Test
-    func purgeRemovesStaleTokensAndKeepsCurrentOne() throws {
+    func `purge removes stale tokens and keeps current one`() {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         LiveActivityArtworkStore.directoryURLOverride = directory
@@ -49,7 +48,7 @@ struct LiveActivityArtworkStoreTests {
     }
 
     @Test
-    func purgeKeepingRetainsEveryListedTokenAndDropsTheRest() throws {
+    func `purge keeping retains every listed token and drops the rest`() {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         LiveActivityArtworkStore.directoryURLOverride = directory

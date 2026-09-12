@@ -30,7 +30,7 @@ private extension DefaultsFeatureFlagService {
                 """
                 Could not create ephemeral UserDefaults suite '\(suiteName)'. \
                 This may indicate insufficient system resources.
-                """
+                """,
             )
         }
         defaults.removePersistentDomain(forName: suiteName)
@@ -38,7 +38,7 @@ private extension DefaultsFeatureFlagService {
             defaults: defaults,
             cleanupOnDeinit: {
                 UserDefaults(suiteName: suiteName)?.removePersistentDomain(forName: suiteName)
-            }
+            },
         )
     }
 }

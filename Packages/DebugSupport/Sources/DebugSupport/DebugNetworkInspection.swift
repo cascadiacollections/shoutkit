@@ -2,7 +2,7 @@ import Foundation
 import RadioDirectory
 
 #if DEBUG
-import Pulse
+    import Pulse
 #endif
 
 /// Debug-only network inspection. Every Pulse reference in the repo lives in
@@ -25,14 +25,14 @@ public enum DebugNetworkInspection {
     /// session is currently wired through Pulse.
     public static func install() {
         #if DEBUG
-        // Build from the same latency-tuned configuration the Release session
-        // uses (see `AppDependencies.bootstrap`) so Debug network behaviour
-        // matches — this just layers Pulse's proxy delegate on top.
-        URLSessionHTTPTransport.installSharedSession(URLSession(
-            configuration: URLSessionHTTPTransport.interactiveConfiguration(),
-            delegate: URLSessionProxyDelegate(logger: .shared),
-            delegateQueue: nil
-        ))
+            // Build from the same latency-tuned configuration the Release session
+            // uses (see `AppDependencies.bootstrap`) so Debug network behaviour
+            // matches — this just layers Pulse's proxy delegate on top.
+            URLSessionHTTPTransport.installSharedSession(URLSession(
+                configuration: URLSessionHTTPTransport.interactiveConfiguration(),
+                delegate: URLSessionProxyDelegate(logger: .shared),
+                delegateQueue: nil,
+            ))
         #endif
     }
 }

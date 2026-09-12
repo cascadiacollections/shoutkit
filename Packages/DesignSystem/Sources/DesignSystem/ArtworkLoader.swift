@@ -54,7 +54,7 @@ public enum ArtworkLoader {
     /// a weak connection (see `URLSessionHTTPTransport.artworkConfiguration()`).
     public nonisolated static func load(
         _ url: URL?,
-        transport: any HTTPTransporting = URLSessionHTTPTransport.artwork
+        transport: any HTTPTransporting = URLSessionHTTPTransport.artwork,
     ) async -> LoadedArtwork? {
         guard let url else { return nil }
         return await ArtworkStore.shared.artwork(for: url, transport: transport)
@@ -65,7 +65,7 @@ public enum ArtworkLoader {
     /// a 3×3 palette — all off the main actor.
     fileprivate nonisolated static func fetchAndDecode(
         _ url: URL,
-        transport: any HTTPTransporting
+        transport: any HTTPTransporting,
     ) async -> LoadedArtwork? {
         var request = URLRequest(url: url)
         request.cachePolicy = requestCachePolicy
@@ -80,7 +80,7 @@ public enum ArtworkLoader {
             image: image,
             pixelSize: CGSize(width: cgImage.width, height: cgImage.height),
             paletteGrid: samples.map(ambientColor),
-            accentColor: accentColor(from: samples)
+            accentColor: accentColor(from: samples),
         )
     }
 
@@ -134,7 +134,7 @@ public enum ArtworkLoader {
 
             let source = DispatchSource.makeMemoryPressureSource(
                 eventMask: [.warning, .critical],
-                queue: .global(qos: .utility)
+                queue: .global(qos: .utility),
             )
             // Explicitly @Sendable: the handler leaves the actor and only
             // captures a weak actor reference, which is safe to send.
@@ -179,7 +179,7 @@ public enum ArtworkLoader {
                       bitsPerComponent: 8,
                       bytesPerRow: side * 4,
                       space: space,
-                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue,
                   )
             else { return false }
 
@@ -201,7 +201,7 @@ public enum ArtworkLoader {
                     red: CGFloat(pixels[offset]) / 255,
                     green: CGFloat(pixels[offset + 1]) / 255,
                     blue: CGFloat(pixels[offset + 2]) / 255,
-                    alpha: 1
+                    alpha: 1,
                 ).getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil)
                 return HSBSample(hue: hue, saturation: saturation, brightness: brightness)
             }
@@ -215,7 +215,7 @@ public enum ArtworkLoader {
         Color(
             hue: sample.hue,
             saturation: min(1, sample.saturation * 1.25),
-            brightness: min(0.88, max(0.22, sample.brightness))
+            brightness: min(0.88, max(0.22, sample.brightness)),
         )
     }
 
@@ -234,7 +234,7 @@ public enum ArtworkLoader {
         return Color(
             hue: best.hue,
             saturation: max(0.55, min(1, best.saturation * 1.3)),
-            brightness: min(0.72, max(0.38, best.brightness))
+            brightness: min(0.72, max(0.38, best.brightness)),
         )
     }
 

@@ -135,9 +135,9 @@ final class TVNowPlayingCenter: NowPlayingPresenting {
         artworkCacheURL = nil
     }
 
-    // MediaRemote may invoke these handlers on an arbitrary queue, so they must be
-    // @Sendable (non-isolated) and hop to the main actor to touch the callbacks —
-    // an inherited-@MainActor closure called off-main traps under Swift 6.
+    /// MediaRemote may invoke these handlers on an arbitrary queue, so they must be
+    /// @Sendable (non-isolated) and hop to the main actor to touch the callbacks —
+    /// an inherited-@MainActor closure called off-main traps under Swift 6.
     private func configureRemoteCommands() {
         let center = MPRemoteCommandCenter.shared()
         var targets: [(MPRemoteCommand, Any)] = []
@@ -159,7 +159,7 @@ final class TVNowPlayingCenter: NowPlayingPresenting {
             center.togglePlayPauseCommand.addTarget { @Sendable [weak self] _ in
                 Task { @MainActor in self?.onToggle?() }
                 return .success
-            }
+            },
         ))
 
         commandTargets = targets

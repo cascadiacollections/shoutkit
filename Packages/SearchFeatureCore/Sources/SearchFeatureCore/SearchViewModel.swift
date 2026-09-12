@@ -12,9 +12,9 @@ public enum SearchPhase: Equatable, Sendable {
     case failed(RadioDirectoryError)
 }
 
-// Explicitly @MainActor (not just the target's default isolation): the
-// isolated deinit below requires the class itself to carry the actor
-// annotation.
+/// Explicitly @MainActor (not just the target's default isolation): the
+/// isolated deinit below requires the class itself to carry the actor
+/// annotation.
 @MainActor
 @Observable
 public final class SearchViewModel {
@@ -66,6 +66,7 @@ public final class SearchViewModel {
             rerunCurrentQueryForFilterChange()
         }
     }
+
     /// The genre chip whose stations are on screen, if the current results came
     /// from a chip rather than from typing. Drives the chip's selected state and
     /// picks the genre query over the name search below.
@@ -188,13 +189,13 @@ public final class SearchViewModel {
             return try await directory.stations(
                 inGenre: activeGenreQuery,
                 limit: Configuration.resultLimit,
-                filters: normalizedFilters
+                filters: normalizedFilters,
             )
         }
         return try await directory.searchStations(
             matching: query,
             limit: Configuration.resultLimit,
-            filters: normalizedFilters
+            filters: normalizedFilters,
         )
     }
 

@@ -88,7 +88,7 @@ public struct StationArtworkView: View {
         size: CGFloat = StationArtworkView.listSize,
         cornerRadius: CGFloat = ShoutKitRadius.small,
         isPlaying: Bool = false,
-        placeholderSeed: String? = nil
+        placeholderSeed: String? = nil,
     ) {
         self.artworkURL = artworkURL
         self.fallbackArtworkURL = fallbackArtworkURL
@@ -105,7 +105,7 @@ public struct StationArtworkView: View {
         cornerRadius: CGFloat = ShoutKitRadius.card,
         isPlaying: Bool = false,
         decodeSize: CGFloat = StationArtworkView.posterDecodeSize,
-        placeholderSeed: String? = nil
+        placeholderSeed: String? = nil,
     ) -> StationArtworkView {
         StationArtworkView(
             artworkURL: artworkURL,
@@ -113,7 +113,7 @@ public struct StationArtworkView: View {
             sizing: .flexible(decode: decodeSize),
             cornerRadius: cornerRadius,
             isPlaying: isPlaying,
-            placeholderSeed: placeholderSeed
+            placeholderSeed: placeholderSeed,
         )
     }
 
@@ -123,7 +123,7 @@ public struct StationArtworkView: View {
         sizing: Sizing,
         cornerRadius: CGFloat,
         isPlaying: Bool,
-        placeholderSeed: String?
+        placeholderSeed: String?,
     ) {
         self.artworkURL = artworkURL
         self.fallbackArtworkURL = fallbackArtworkURL
@@ -252,7 +252,7 @@ public struct StationArtworkView: View {
 
     private var insetPadding: CGFloat {
         switch sizing {
-        case .fixed(let size): size * 0.16
+        case let .fixed(size): size * 0.16
         case .flexible: ShoutKitSpacing.large
         }
     }
@@ -271,7 +271,7 @@ public struct StationArtworkView: View {
         let loaded = await ArtworkLoadPolicy.loadWithSource(artworkRequest) { url in
             await ArtworkThumbnailLoader.thumbnail(
                 for: url,
-                maxPixelSize: sizing.decodeSize * displayScale
+                maxPixelSize: sizing.decodeSize * displayScale,
             )
         }
         // A task cancelled by a URL change can still resume here with a stale

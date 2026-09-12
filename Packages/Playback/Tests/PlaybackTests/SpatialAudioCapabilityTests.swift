@@ -1,8 +1,7 @@
 import Foundation
+@testable import Playback
 import RadioDirectory
 import Testing
-
-@testable import Playback
 
 /// A minimal ``RadioPlaybackEngine`` double for exercising
 /// ``PlaybackController/supportsSpatialAudio``/``setSpatialAudioEnabled(_:)``
@@ -18,7 +17,7 @@ private final class FakeRadioPlaybackEngine: RadioPlaybackEngine {
         self.supportsSpatialAudio = supportsSpatialAudio
     }
 
-    func start(url: URL, streamGeneration: UInt64) {}
+    func start(url _: URL, streamGeneration _: UInt64) {}
     func pause() {}
     func resume() {}
     func stop() {}
@@ -30,33 +29,33 @@ private final class FakeRadioPlaybackEngine: RadioPlaybackEngine {
 
 @MainActor
 struct SpatialAudioCapabilityTests {
-    @Test func plainAudioOutputReportsNoSpatialAudioSupport() {
+    @Test func `plain audio output reports no spatial audio support`() {
         let controller = makeController(stations: [station()], output: FakeAudioOutput())
         #expect(controller.supportsSpatialAudio == false)
     }
 
-    @Test func enablingSpatialAudioOnAPlainAudioOutputIsANoOp() {
+    @Test func `enabling spatial audio on A plain audio output is A no op`() {
         let controller = makeController(stations: [station()], output: FakeAudioOutput())
         // Must not crash or throw; there is simply nothing to apply it to.
         controller.setSpatialAudioEnabled(true)
     }
 
-    @Test func engineWithoutSpatialAudioSupportReportsFalse() {
+    @Test func `engine without spatial audio support reports false`() {
         let engine = FakeRadioPlaybackEngine(supportsSpatialAudio: false)
         let controller = PlaybackController(
             directory: BundledRadioDirectory(stations: [station()]),
             output: engine,
-            nowPlayingCenter: NowPlayingPresenterSpy()
+            nowPlayingCenter: NowPlayingPresenterSpy(),
         )
         #expect(controller.supportsSpatialAudio == false)
     }
 
-    @Test func engineWithSpatialAudioSupportForwardsTheToggle() {
+    @Test func `engine with spatial audio support forwards the toggle`() {
         let engine = FakeRadioPlaybackEngine(supportsSpatialAudio: true)
         let controller = PlaybackController(
             directory: BundledRadioDirectory(stations: [station()]),
             output: engine,
-            nowPlayingCenter: NowPlayingPresenterSpy()
+            nowPlayingCenter: NowPlayingPresenterSpy(),
         )
         #expect(controller.supportsSpatialAudio)
 

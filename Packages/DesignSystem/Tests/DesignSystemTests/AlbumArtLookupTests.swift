@@ -1,20 +1,19 @@
+@testable import DesignSystem
 import Foundation
 import RadioDirectory
 import Testing
 
-@testable import DesignSystem
-
 struct AlbumArtLookupTests {
     @Test
-    func buildSearchURLIncludesExpectedQueryItems() throws {
+    func `build search URL includes expected query items`() throws {
         let url = try #require(AlbumArtLookup.buildSearchURL(
             artist: "Florence + The Machine",
             title: "Dog Days Are Over",
-            regionIdentifier: "GB"
+            regionIdentifier: "GB",
         ))
         let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
-        let queryItems = Dictionary(
-            uniqueKeysWithValues: try #require(components.queryItems).map { ($0.name, $0.value ?? "") }
+        let queryItems = try Dictionary(
+            uniqueKeysWithValues: #require(components.queryItems).map { ($0.name, $0.value ?? "") },
         )
 
         #expect(components.scheme == "https")
@@ -29,14 +28,14 @@ struct AlbumArtLookupTests {
     }
 
     @Test
-    func buildSearchURLOmitsCountryWhenRegionUnavailable() throws {
+    func `build search URL omits country when region unavailable`() throws {
         let url = try #require(AlbumArtLookup.buildSearchURL(
             artist: "Artist",
             title: "Title",
-            regionIdentifier: nil
+            regionIdentifier: nil,
         ))
         let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
-        let queryNames = Set(try #require(components.queryItems).map(\.name))
+        let queryNames = try Set(#require(components.queryItems).map(\.name))
         #expect(queryNames.contains("country") == false)
     }
 
@@ -48,21 +47,21 @@ struct AlbumArtLookupTests {
     @Test(arguments: [
         UpsizeCase(
             source: "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/x/y/z/100x100bb.jpg",
-            expected: "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/x/y/z/600x600bb.jpg"
+            expected: "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/x/y/z/600x600bb.jpg",
         ),
         UpsizeCase(
             source: "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/x/y/z/300x300bb.jpg",
-            expected: "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/x/y/z/300x300bb.jpg"
+            expected: "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/x/y/z/300x300bb.jpg",
         ),
         UpsizeCase(source: nil, expected: nil),
-        UpsizeCase(source: "not a url", expected: nil)
+        UpsizeCase(source: "not a url", expected: nil),
     ])
-    func artworkURLUpsizingIsDeterministic(testCase: UpsizeCase) {
+    func `artwork URL upsizing is deterministic`(testCase: UpsizeCase) {
         #expect(AlbumArtLookup.upsizedArtworkURL(from: testCase.source)?.absoluteString == testCase.expected)
     }
 
     @Test
-    func lookupCacheSeparatesStorefronts() async throws {
+    func `lookup cache separates storefronts`() async {
         let transport = StubLookupTransport { request in
             guard let requestURL = request.url else { throw URLError(.badURL) }
             let components = URLComponents(url: requestURL, resolvingAgainstBaseURL: false)
@@ -71,17 +70,17 @@ struct AlbumArtLookupTests {
             case "US":
                 return Self.makeLookupResponseData(
                     artwork: "https://is1-ssl.mzstatic.com/image/thumb/Music123/v4/us/100x100bb.jpg",
-                    link: "https://music.apple.com/us/song/us-song/1"
+                    link: "https://music.apple.com/us/song/us-song/1",
                 )
             case "GB":
                 return Self.makeLookupResponseData(
                     artwork: "https://is1-ssl.mzstatic.com/image/thumb/Music123/v4/gb/100x100bb.jpg",
-                    link: "https://music.apple.com/gb/song/gb-song/2"
+                    link: "https://music.apple.com/gb/song/gb-song/2",
                 )
             default:
                 return Self.makeLookupResponseData(
                     artwork: "https://is1-ssl.mzstatic.com/image/thumb/Music123/v4/default/100x100bb.jpg",
-                    link: "https://music.apple.com/song/default-song/3"
+                    link: "https://music.apple.com/song/default-song/3",
                 )
             }
         }
@@ -92,19 +91,19 @@ struct AlbumArtLookupTests {
             artist: artist,
             title: title,
             regionIdentifier: "US",
-            transport: transport
+            transport: transport,
         )
         let gbResult = await AlbumArtLookup.lookup(
             artist: artist,
             title: title,
             regionIdentifier: "GB",
-            transport: transport
+            transport: transport,
         )
         let usCached = await AlbumArtLookup.lookup(
             artist: artist,
             title: title,
             regionIdentifier: "US",
-            transport: transport
+            transport: transport,
         )
 
         #expect(usResult == usCached)
@@ -113,12 +112,12 @@ struct AlbumArtLookupTests {
     }
 
     @Test
-    func lookupCoalescesConcurrentRequestsForSameStorefront() async throws {
+    func `lookup coalesces concurrent requests for same storefront`() async {
         let transport = StubLookupTransport { _ in
             try await Task.sleep(for: .milliseconds(100))
             return Self.makeLookupResponseData(
                 artwork: "https://is1-ssl.mzstatic.com/image/thumb/Music123/v4/inflight/100x100bb.jpg",
-                link: "https://music.apple.com/us/song/inflight-song/4"
+                link: "https://music.apple.com/us/song/inflight-song/4",
             )
         }
 
@@ -128,13 +127,13 @@ struct AlbumArtLookupTests {
             artist: artist,
             title: title,
             regionIdentifier: "US",
-            transport: transport
+            transport: transport,
         )
         async let second = AlbumArtLookup.lookup(
             artist: artist,
             title: title,
             regionIdentifier: "US",
-            transport: transport
+            transport: transport,
         )
         let firstMatch = await first
         let secondMatch = await second
@@ -162,7 +161,7 @@ struct AlbumArtLookupTests {
                 url: url,
                 statusCode: 200,
                 httpVersion: nil,
-                headerFields: nil
+                headerFields: nil,
             ) else { throw URLError(.badServerResponse) }
             return (data, response)
         }

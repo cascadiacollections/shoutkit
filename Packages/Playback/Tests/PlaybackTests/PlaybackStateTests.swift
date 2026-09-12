@@ -1,7 +1,6 @@
+@testable import Playback
 import RadioDirectory
 import Testing
-
-@testable import Playback
 
 // Shared builders such as station(_) live in PlaybackTestSupport.swift.
 
@@ -9,9 +8,9 @@ struct PlaybackStateTests {
     @Test(arguments: [
         PlaybackState.loading(station()),
         .buffering(station()),
-        .playing(station())
+        .playing(station()),
     ])
-    func exposesHandoffStationForActivePlayback(state: PlaybackState) {
+    func `exposes handoff station for active playback`(state: PlaybackState) {
         #expect(state.handoffStation == station())
     }
 
@@ -20,7 +19,7 @@ struct PlaybackStateTests {
         .paused(station()),
         .failed(.noInternet)
     ])
-    func omitsHandoffStationForInactivePlayback(state: PlaybackState) {
+    func `omits handoff station for inactive playback`(state: PlaybackState) {
         #expect(state.handoffStation == nil)
     }
 }

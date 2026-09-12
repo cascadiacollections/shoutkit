@@ -1,18 +1,18 @@
 import Foundation
 
-// Radio-Browser DTO -> domain `Station` mapping, split out of
-// RadioBrowserDirectoryClient.swift when that file crossed SwiftLint's 400-line
-// `file_length` limit. It is a clean seam rather than an arbitrary cut: purely a
-// translation layer that touches no actor state, performs no I/O, and whose
-// every member is already `static`. Splitting it is also what let the client
-// file drop its blanket `type_body_length` suppression — the house remedy for a
-// long type is a real seam, not a rule opt-out.
-//
-// Note for future editors: do not write that opt-out directive literally in
-// prose here. SwiftLint scans every comment for the directive token, so even
-// inside backticks it is parsed as a real command — and the words following it
-// are read as rule names. Doing exactly that is what turned this comment into
-// 11 violations once.
+/// Radio-Browser DTO -> domain `Station` mapping, split out of
+/// RadioBrowserDirectoryClient.swift when that file crossed SwiftLint's 400-line
+/// `file_length` limit. It is a clean seam rather than an arbitrary cut: purely a
+/// translation layer that touches no actor state, performs no I/O, and whose
+/// every member is already `static`. Splitting it is also what let the client
+/// file drop its blanket `type_body_length` suppression — the house remedy for a
+/// long type is a real seam, not a rule opt-out.
+///
+/// Note for future editors: do not write that opt-out directive literally in
+/// prose here. SwiftLint scans every comment for the directive token, so even
+/// inside backticks it is parsed as a real command — and the words following it
+/// are read as rule names. Doing exactly that is what turned this comment into
+/// 11 violations once.
 extension RadioBrowserDirectoryClient {
     static func station(from dto: RadioBrowserStation) -> Station? {
         let name = dto.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -42,7 +42,7 @@ extension RadioBrowserDirectoryClient {
             clickTrend: dto.clicktrend,
             votes: dto.votes,
             artworkURL: artworkURL(from: dto.favicon),
-            preferredStreamURL: streamURL
+            preferredStreamURL: streamURL,
         )
     }
 

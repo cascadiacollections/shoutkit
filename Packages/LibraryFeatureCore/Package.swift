@@ -15,10 +15,10 @@ let package = Package(
         .iOS(.v26),
         // Declared so the suite can run on the mac host (`swift test`), same
         // pattern as BrowseFeatureCore/SearchFeatureCore/PlayerFeatureCore.
-        .macOS(.v15)
+        .macOS(.v15),
     ],
     products: [
-        .library(name: "LibraryFeatureCore", targets: ["LibraryFeatureCore"])
+        .library(name: "LibraryFeatureCore", targets: ["LibraryFeatureCore"]),
     ],
     targets: [
         // No `.defaultIsolation(MainActor.self)`, like PlayerFeatureCore: pure
@@ -26,7 +26,7 @@ let package = Package(
         .target(name: "LibraryFeatureCore"),
         .testTarget(
             name: "LibraryFeatureCoreTests",
-            dependencies: ["LibraryFeatureCore"]
-        )
-    ]
+            dependencies: ["LibraryFeatureCore"],
+        ),
+    ],
 )

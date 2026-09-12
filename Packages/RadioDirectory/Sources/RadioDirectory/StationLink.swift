@@ -23,7 +23,7 @@ public struct StationLink: Equatable, Sendable {
     public init(
         station: Station,
         autoPlay: Bool = true,
-        presentNowPlaying: Bool = true
+        presentNowPlaying: Bool = true,
     ) {
         self.station = station
         self.autoPlay = autoPlay
@@ -36,7 +36,8 @@ public struct StationLink: Equatable, Sendable {
               // Accept both a noun (`station`) and a verb (`play`) so promos,
               // notifications, and shortcuts can use whichever reads best.
               let route = components.host?.lowercased(),
-              route == "station" || route == "play" else {
+              route == "station" || route == "play"
+        else {
             return nil
         }
 
@@ -64,7 +65,7 @@ public struct StationLink: Equatable, Sendable {
             clickTrend: Int(Self.value(in: items, named: "clickTrend") ?? ""),
             votes: Int(Self.value(in: items, named: "votes") ?? ""),
             artworkURL: Self.httpsURLValue(in: items, named: "artworkURL"),
-            preferredStreamURL: streamURL
+            preferredStreamURL: streamURL,
         )
         autoPlay = Self.boolValue(in: items, named: "autoPlay") ?? true
         presentNowPlaying = Self.boolValue(in: items, named: "presentNowPlaying") ?? true
@@ -81,7 +82,7 @@ public struct StationLink: Equatable, Sendable {
             // URLComponents percent-encodes query-item values.
             preconditionFailure(
                 "StationLink produced an invalid shoutkit URL for station '\(station.id)'. " +
-                    "One of the station fields may contain characters that cannot be URL-encoded."
+                    "One of the station fields may contain characters that cannot be URL-encoded.",
             )
         }
 
@@ -92,7 +93,7 @@ public struct StationLink: Equatable, Sendable {
         var userInfo: [String: Any] = [
             HandoffKey.stationID: station.id,
             HandoffKey.autoPlay: autoPlay,
-            HandoffKey.presentNowPlaying: presentNowPlaying
+            HandoffKey.presentNowPlaying: presentNowPlaying,
         ]
 
         // Handoff is best-effort: if the snapshot can't be encoded, publish the
@@ -103,7 +104,7 @@ public struct StationLink: Equatable, Sendable {
         } catch {
             assertionFailure(
                 "Unable to encode station '\(station.id)' for handoff. " +
-                    "This indicates Station no longer round-trips through Codable: \(error)"
+                    "This indicates Station no longer round-trips through Codable: \(error)",
             )
         }
 
@@ -114,14 +115,15 @@ public struct StationLink: Equatable, Sendable {
         guard let stationID = userInfo[HandoffKey.stationID] as? String,
               let stationSnapshot = userInfo[HandoffKey.stationSnapshot] as? Data,
               let station = try? JSONDecoder().decode(Station.self, from: stationSnapshot),
-              station.id == stationID else {
+              station.id == stationID
+        else {
             return nil
         }
 
         self.init(
             station: station,
             autoPlay: userInfo[HandoffKey.autoPlay] as? Bool ?? true,
-            presentNowPlaying: userInfo[HandoffKey.presentNowPlaying] as? Bool ?? true
+            presentNowPlaying: userInfo[HandoffKey.presentNowPlaying] as? Bool ?? true,
         )
     }
 
@@ -132,7 +134,7 @@ public struct StationLink: Equatable, Sendable {
             URLQueryItem(name: "genre", value: station.genre),
             URLQueryItem(name: "listenerCount", value: String(station.listenerCount)),
             URLQueryItem(name: "autoPlay", value: autoPlay ? "1" : "0"),
-            URLQueryItem(name: "presentNowPlaying", value: presentNowPlaying ? "1" : "0")
+            URLQueryItem(name: "presentNowPlaying", value: presentNowPlaying ? "1" : "0"),
         ]
 
         if let bitrate = station.bitrate {
@@ -191,7 +193,8 @@ public struct StationLink: Equatable, Sendable {
     /// local-scheme resources.
     private static func httpsURLValue(in items: [URLQueryItem], named name: String) -> URL? {
         guard let url = value(in: items, named: name).flatMap(URL.init(string:)),
-              url.scheme?.caseInsensitiveCompare("https") == .orderedSame else {
+              url.scheme?.caseInsensitiveCompare("https") == .orderedSame
+        else {
             return nil
         }
 
@@ -205,11 +208,11 @@ public struct StationLink: Equatable, Sendable {
     private static func boolValue(in items: [URLQueryItem], named name: String) -> Bool? {
         switch value(in: items, named: name)?.lowercased() {
         case "1", "true":
-            return true
+            true
         case "0", "false":
-            return false
+            false
         default:
-            return nil
+            nil
         }
     }
 }

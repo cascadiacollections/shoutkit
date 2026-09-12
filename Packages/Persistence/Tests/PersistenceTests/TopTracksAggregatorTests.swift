@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Persistence
+import Testing
 
 struct TopTracksAggregatorTests {
     private func track(
@@ -9,7 +8,7 @@ struct TopTracksAggregatorTests {
         artist: String?,
         heardAt: Date,
         artworkURLString: String? = nil,
-        appleMusicURLString: String? = nil
+        appleMusicURLString: String? = nil,
     ) -> RecentlyHeardTrack {
         RecentlyHeardTrack(
             stationID: "kexp",
@@ -18,16 +17,16 @@ struct TopTracksAggregatorTests {
             artist: artist,
             heardAt: heardAt,
             appleMusicURLString: appleMusicURLString,
-            artworkURLString: artworkURLString
+            artworkURLString: artworkURLString,
         )
     }
 
-    @Test func countsRepeatedPlaysOfTheSameTrack() {
+    @Test func `counts repeated plays of the same track`() {
         let now = Date()
         let tracks = [
             track(title: "Song", artist: "Band", heardAt: now),
             track(title: "Song", artist: "Band", heardAt: now.addingTimeInterval(-60)),
-            track(title: "Other", artist: "Band", heardAt: now.addingTimeInterval(-120))
+            track(title: "Other", artist: "Band", heardAt: now.addingTimeInterval(-120)),
         ]
 
         let top = TopTracksAggregator.aggregate(tracks, timeframe: .allTime, now: now)
@@ -37,11 +36,11 @@ struct TopTracksAggregatorTests {
         #expect(top.first?.playCount == 2)
     }
 
-    @Test func matchingIsCaseInsensitiveOnTitleAndArtist() {
+    @Test func `matching is case insensitive on title and artist`() {
         let now = Date()
         let tracks = [
             track(title: "Song", artist: "Band", heardAt: now),
-            track(title: "SONG", artist: "band", heardAt: now.addingTimeInterval(-60))
+            track(title: "SONG", artist: "band", heardAt: now.addingTimeInterval(-60)),
         ]
 
         let top = TopTracksAggregator.aggregate(tracks, timeframe: .allTime, now: now)
@@ -50,11 +49,11 @@ struct TopTracksAggregatorTests {
         #expect(top.first?.playCount == 2)
     }
 
-    @Test func tracksMissingTitleOrArtistAreExcluded() {
+    @Test func `tracks missing title or artist are excluded`() {
         let now = Date()
         let tracks = [
             track(title: "Song", artist: nil, heardAt: now),
-            track(title: nil, artist: "Band", heardAt: now)
+            track(title: nil, artist: "Band", heardAt: now),
         ]
 
         let top = TopTracksAggregator.aggregate(tracks, timeframe: .allTime, now: now)
@@ -62,11 +61,11 @@ struct TopTracksAggregatorTests {
         #expect(top.isEmpty)
     }
 
-    @Test func timeframeExcludesPlaysOutsideTheWindow() {
+    @Test func `timeframe excludes plays outside the window`() {
         let now = Date()
         let tracks = [
             track(title: "Recent", artist: "Band", heardAt: now.addingTimeInterval(-3600)),
-            track(title: "Old", artist: "Band", heardAt: now.addingTimeInterval(-60 * 60 * 24 * 30))
+            track(title: "Old", artist: "Band", heardAt: now.addingTimeInterval(-60 * 60 * 24 * 30)),
         ]
 
         let top = TopTracksAggregator.aggregate(tracks, timeframe: .week, now: now)
@@ -74,13 +73,13 @@ struct TopTracksAggregatorTests {
         #expect(top.map(\.title) == ["Recent"])
     }
 
-    @Test func mostRecentArtworkWinsWhenPlaysDisagree() {
+    @Test func `most recent artwork wins when plays disagree`() {
         let now = Date()
         let olderArt = "https://example.com/old.jpg"
         let newerArt = "https://example.com/new.jpg"
         let tracks = [
             track(title: "Song", artist: "Band", heardAt: now, artworkURLString: newerArt),
-            track(title: "Song", artist: "Band", heardAt: now.addingTimeInterval(-60), artworkURLString: olderArt)
+            track(title: "Song", artist: "Band", heardAt: now.addingTimeInterval(-60), artworkURLString: olderArt),
         ]
 
         let top = TopTracksAggregator.aggregate(tracks, timeframe: .allTime, now: now)
@@ -88,12 +87,12 @@ struct TopTracksAggregatorTests {
         #expect(top.first?.artworkURLString == newerArt)
     }
 
-    @Test func sortsByPlayCountThenRecency() {
+    @Test func `sorts by play count then recency`() {
         let now = Date()
         let tracks = [
             track(title: "Once", artist: "Band", heardAt: now),
             track(title: "Twice", artist: "Band", heardAt: now.addingTimeInterval(-60)),
-            track(title: "Twice", artist: "Band", heardAt: now.addingTimeInterval(-120))
+            track(title: "Twice", artist: "Band", heardAt: now.addingTimeInterval(-120)),
         ]
 
         let top = TopTracksAggregator.aggregate(tracks, timeframe: .allTime, now: now)
@@ -101,9 +100,9 @@ struct TopTracksAggregatorTests {
         #expect(top.map(\.title) == ["Twice", "Once"])
     }
 
-    @Test func limitCapsTheReturnedRowCount() {
+    @Test func `limit caps the returned row count`() {
         let now = Date()
-        let tracks = (0..<5).map { index in
+        let tracks = (0 ..< 5).map { index in
             track(title: "Song \(index)", artist: "Band", heardAt: now.addingTimeInterval(TimeInterval(-index)))
         }
 

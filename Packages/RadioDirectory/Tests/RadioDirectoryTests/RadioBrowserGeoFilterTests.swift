@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import RadioDirectory
+import Testing
 
 private actor RequestRecordingTransport: HTTPTransporting {
     private(set) var requests: [URLRequest] = []
@@ -22,7 +22,7 @@ private actor RequestRecordingTransport: HTTPTransporting {
         requests.compactMap { request in
             URLComponents(
                 url: request.url ?? URL(fileURLWithPath: "/"),
-                resolvingAgainstBaseURL: false
+                resolvingAgainstBaseURL: false,
             )?.queryItems
         }
     }
@@ -38,34 +38,34 @@ private struct StaticGeoFilterProvider: RadioBrowserGeoFilterProviding {
 
 struct RadioBrowserGeoFilterTests {
     @Test
-    func localeFilterPrefersRegionAndFallsBackToLanguage() {
+    func `locale filter prefers region and falls back to language`() {
         let locale = Locale(identifier: "en_US")
         let filter = RadioBrowserGeoFilter(locale: locale)
 
         #expect(filter.countryCode == "US")
         #expect(filter.languageCode == "en")
         #expect(
-            filter.queryItemSets.map { $0.first?.name } == ["countrycode", "language"]
+            filter.queryItemSets.map { $0.first?.name } == ["countrycode", "language"],
         )
         #expect(
-            filter.queryItemSets.map { $0.first?.value } == ["US", "en"]
+            filter.queryItemSets.map { $0.first?.value } == ["US", "en"],
         )
     }
 
     @Test
-    func localeFilterCanUseGeocodedCountryOverride() {
+    func `locale filter can use geocoded country override`() {
         let locale = Locale(identifier: "fr_CA")
         let filter = RadioBrowserGeoFilter(locale: locale, countryCodeOverride: "US")
 
         #expect(filter.countryCode == "US")
         #expect(filter.languageCode == "fr")
         #expect(
-            filter.queryItemSets.map { $0.first?.value } == ["US", "fr"]
+            filter.queryItemSets.map { $0.first?.value } == ["US", "fr"],
         )
     }
 
     @Test
-    func localeFilterDropsEmptyComponents() {
+    func `locale filter drops empty components`() {
         let filter = RadioBrowserGeoFilter(countryCode: "  ", languageCode: "\n")
 
         #expect(filter.countryCode == nil)
@@ -74,7 +74,7 @@ struct RadioBrowserGeoFilterTests {
     }
 
     @Test
-    func mutableProviderReturnsLatestFilter() async {
+    func `mutable provider returns latest filter`() async {
         let provider = MutableRadioBrowserGeoFilterProvider()
         #expect(await provider.currentGeoFilter() == nil)
 
@@ -85,13 +85,13 @@ struct RadioBrowserGeoFilterTests {
     }
 
     @Test
-    func directoryFallsBackFromCountryToLanguageQuery() async throws {
+    func `directory falls back from country to language query`() async throws {
         let endpointURL = try #require(URL(string: "https://all.api.radio-browser.info/json/stations/topclick"))
         let response = try #require(HTTPURLResponse(
             url: endpointURL,
             statusCode: 200,
             httpVersion: nil,
-            headerFields: nil
+            headerFields: nil,
         ))
         let stationJSON = """
         [{
@@ -105,15 +105,15 @@ struct RadioBrowserGeoFilterTests {
         """
         let transport = RequestRecordingTransport([
             .success((Data("[]".utf8), response)),
-            .success((Data(stationJSON.utf8), response))
+            .success((Data(stationJSON.utf8), response)),
         ])
         let provider = StaticGeoFilterProvider(
-            geoFilter: RadioBrowserGeoFilter(countryCode: "US", languageCode: "en")
+            geoFilter: RadioBrowserGeoFilter(countryCode: "US", languageCode: "en"),
         )
         let directory = RadioBrowserDirectoryClient(
             transport: transport,
             retryPolicy: RetryPolicy(maximumRetries: 0, timeout: 1, baseDelay: 0),
-            geoFilterProvider: provider
+            geoFilterProvider: provider,
         )
 
         let stations = try await directory.topStations(limit: 5)
@@ -126,13 +126,13 @@ struct RadioBrowserGeoFilterTests {
     }
 
     @Test
-    func directoryFallsBackToLanguageWhenCountryQueryErrors() async throws {
+    func `directory falls back to language when country query errors`() async throws {
         let endpointURL = try #require(URL(string: "https://all.api.radio-browser.info/json/stations/topclick"))
         let response = try #require(HTTPURLResponse(
             url: endpointURL,
             statusCode: 200,
             httpVersion: nil,
-            headerFields: nil
+            headerFields: nil,
         ))
         let stationJSON = """
         [{
@@ -145,15 +145,15 @@ struct RadioBrowserGeoFilterTests {
         """
         let transport = RequestRecordingTransport([
             .failure(HTTPTransportError.transport("timeout")),
-            .success((Data(stationJSON.utf8), response))
+            .success((Data(stationJSON.utf8), response)),
         ])
         let provider = StaticGeoFilterProvider(
-            geoFilter: RadioBrowserGeoFilter(countryCode: "US", languageCode: "en")
+            geoFilter: RadioBrowserGeoFilter(countryCode: "US", languageCode: "en"),
         )
         let directory = RadioBrowserDirectoryClient(
             transport: transport,
             retryPolicy: RetryPolicy(maximumRetries: 0, timeout: 1, baseDelay: 0),
-            geoFilterProvider: provider
+            geoFilterProvider: provider,
         )
 
         let stations = try await directory.topStations(limit: 5)

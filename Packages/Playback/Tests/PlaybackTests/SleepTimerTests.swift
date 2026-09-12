@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Playback
+import Testing
 
 @MainActor
 struct SleepTimerTests {
@@ -13,7 +12,7 @@ struct SleepTimerTests {
         }
     }
 
-    @Test func firesOnceAfterDurationAndDeactivates() async {
+    @Test func `fires once after duration and deactivates`() async {
         let timer = SleepTimer()
         var fireCount = 0
         timer.onFire = { fireCount += 1 }
@@ -28,7 +27,7 @@ struct SleepTimerTests {
         #expect(timer.fireDate == nil)
     }
 
-    @Test func cancelPreventsFiring() async {
+    @Test func `cancel prevents firing`() async {
         let timer = SleepTimer()
         var fired = false
         timer.onFire = { fired = true }
@@ -41,7 +40,7 @@ struct SleepTimerTests {
         #expect(fired == false)
     }
 
-    @Test func restartReplacesThePreviousSchedule() async {
+    @Test func `restart replaces the previous schedule`() async {
         let timer = SleepTimer()
         var fireCount = 0
         timer.onFire = { fireCount += 1 }
@@ -57,8 +56,8 @@ struct SleepTimerTests {
         #expect(timer.fireDate == nil)
     }
 
-    @Test func remainingIsDerivedFromInjectedClock() {
-        let epoch = Date(timeIntervalSinceReferenceDate: 1_000)
+    @Test func `remaining is derived from injected clock`() {
+        let epoch = Date(timeIntervalSinceReferenceDate: 1000)
         let timer = SleepTimer(now: { epoch })
 
         timer.start(duration: 60)

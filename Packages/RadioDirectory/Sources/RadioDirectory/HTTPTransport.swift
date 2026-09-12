@@ -14,11 +14,11 @@ public protocol HTTPTransporting: Sendable {
 public actor URLSessionHTTPTransport: HTTPTransporting {
     private static let logger = Logger(
         subsystem: "ShoutKit.RadioDirectory",
-        category: "URLSessionHTTPTransport"
+        category: "URLSessionHTTPTransport",
     )
     private static let signposter = OSSignposter(
         subsystem: "ShoutKit.RadioDirectory",
-        category: "URLSessionHTTPTransport"
+        category: "URLSessionHTTPTransport",
     )
 
     /// The session `shared` is built with on first access, defaulting to
@@ -35,10 +35,10 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
         let sharedAlreadyResolved = sharedSessionResolved.withLock { resolved in resolved }
         if sharedAlreadyResolved {
             logger.error(
-                "installSharedSession ignored because URLSessionHTTPTransport.shared was already resolved"
+                "installSharedSession ignored because URLSessionHTTPTransport.shared was already resolved",
             )
             assertionFailure(
-                "URLSessionHTTPTransport.installSharedSession must run before first access of .shared."
+                "URLSessionHTTPTransport.installSharedSession must run before first access of .shared.",
             )
             return
         }
@@ -51,7 +51,7 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
         if !installed {
             logger.error("installSharedSession ignored because a shared session is already installed")
             assertionFailure(
-                "URLSessionHTTPTransport.installSharedSession called more than once; first install wins."
+                "URLSessionHTTPTransport.installSharedSession called more than once; first install wins.",
             )
         }
     }
@@ -59,7 +59,7 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
     public static let shared: URLSessionHTTPTransport = {
         sharedSessionResolved.withLock { $0 = true }
         return URLSessionHTTPTransport(
-            session: sharedSessionOverride.withLock { $0 } ?? .shared
+            session: sharedSessionOverride.withLock { $0 } ?? .shared,
         )
     }()
 
@@ -110,7 +110,7 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
     /// mirroring `shared`'s install hook: this carries no user-visible traffic,
     /// so it isn't worth routing through the Debug inspection proxy.
     public static let speculative = URLSessionHTTPTransport(
-        session: URLSession(configuration: URLSessionHTTPTransport.speculativeConfiguration())
+        session: URLSession(configuration: URLSessionHTTPTransport.speculativeConfiguration()),
     )
 
     /// A configuration for artwork a listener can see *right now* — a visible
@@ -146,7 +146,7 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
     /// traffic, so a future need to inspect it in Pulse is a real possibility,
     /// not a hypothetical.
     public static let artwork = URLSessionHTTPTransport(
-        session: URLSession(configuration: URLSessionHTTPTransport.artworkConfiguration())
+        session: URLSession(configuration: URLSessionHTTPTransport.artworkConfiguration()),
     )
 
     /// A configuration for the single image a *system* now-playing surface is
@@ -181,7 +181,7 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
     /// `URLSessionConfiguration.default`, so art already fetched for an in-app
     /// surface is served from cache here rather than re-downloaded.
     public static let nowPlayingArtwork = URLSessionHTTPTransport(
-        session: URLSession(configuration: URLSessionHTTPTransport.nowPlayingArtworkConfiguration())
+        session: URLSession(configuration: URLSessionHTTPTransport.nowPlayingArtworkConfiguration()),
     )
 
     private let session: URLSession
@@ -203,7 +203,7 @@ public actor URLSessionHTTPTransport: HTTPTransporting {
             Self.logTaskMetrics(
                 metricsObserver?.metrics,
                 request: request,
-                response: response.1
+                response: response.1,
             )
             Self.signposter.endInterval("HTTP request", interval)
             return response
@@ -226,7 +226,7 @@ private extension URLSessionHTTPTransport {
     static func logTaskMetrics(
         _ metrics: URLSessionTaskMetrics?,
         request: URLRequest,
-        response: URLResponse
+        response: URLResponse,
     ) {
         guard let metrics else { return }
 
@@ -246,7 +246,7 @@ private extension URLSessionHTTPTransport {
             responseMs=\(summary.describe(summary.responseMilliseconds), privacy: .public) \
             totalMs=\(summary.describe(summary.totalMilliseconds), privacy: .public) \
             reusedConnection=\(transaction?.isReusedConnection ?? false)
-            """
+            """,
         )
     }
 
@@ -260,7 +260,7 @@ private extension URLSessionHTTPTransport {
         func urlSession(
             _: URLSession,
             task _: URLSessionTask,
-            didFinishCollecting metrics: URLSessionTaskMetrics
+            didFinishCollecting metrics: URLSessionTaskMetrics,
         ) {
             lock.withLock { $0 = metrics }
         }
@@ -277,25 +277,25 @@ private extension URLSessionHTTPTransport {
         init(transaction: URLSessionTaskTransactionMetrics?, taskInterval: DateInterval) {
             dnsMilliseconds = Self.milliseconds(
                 from: transaction?.domainLookupStartDate,
-                to: transaction?.domainLookupEndDate
+                to: transaction?.domainLookupEndDate,
             )
             connectMilliseconds = Self.milliseconds(
                 from: transaction?.connectStartDate,
-                to: transaction?.connectEndDate
+                to: transaction?.connectEndDate,
             )
             tlsMilliseconds = Self.milliseconds(
                 from: transaction?.secureConnectionStartDate,
-                to: transaction?.secureConnectionEndDate
+                to: transaction?.secureConnectionEndDate,
             )
             requestMilliseconds = Self.milliseconds(
                 from: transaction?.requestStartDate,
-                to: transaction?.requestEndDate
+                to: transaction?.requestEndDate,
             )
             responseMilliseconds = Self.milliseconds(
                 from: transaction?.responseStartDate,
-                to: transaction?.responseEndDate
+                to: transaction?.responseEndDate,
             )
-            totalMilliseconds = taskInterval.duration * 1_000
+            totalMilliseconds = taskInterval.duration * 1000
         }
 
         func describe(_ value: Double?) -> String {
@@ -305,7 +305,7 @@ private extension URLSessionHTTPTransport {
 
         private static func milliseconds(from start: Date?, to end: Date?) -> Double? {
             guard let start, let end else { return nil }
-            return end.timeIntervalSince(start) * 1_000
+            return end.timeIntervalSince(start) * 1000
         }
     }
 }
@@ -317,7 +317,7 @@ public extension HTTPTransporting {
             throw HTTPTransportError.invalidResponse
         }
 
-        guard 200..<300 ~= httpResponse.statusCode else {
+        guard 200 ..< 300 ~= httpResponse.statusCode else {
             throw HTTPTransportError.httpStatus(httpResponse.statusCode)
         }
 
@@ -334,7 +334,7 @@ public extension HTTPTransporting {
         totalAttempts: Int,
         shouldRetry: @Sendable (Error) -> Bool = { _ in true },
         onRetry: @Sendable (_ attempt: Int, _ delay: TimeInterval) -> Void = { _, _ in },
-        request: @Sendable (_ attempt: Int) throws -> URLRequest
+        request: @Sendable (_ attempt: Int) throws -> URLRequest,
     ) async throws -> Data {
         let maximumAttempts = max(totalAttempts, 1)
         var lastError: Error?
@@ -348,7 +348,8 @@ public extension HTTPTransporting {
                 // Cancellation is never retryable, whatever `shouldRetry`
                 // says: the caller has already abandoned the result.
                 guard error is CancellationError == false,
-                      shouldRetry(error), attempt < maximumAttempts - 1 else {
+                      shouldRetry(error), attempt < maximumAttempts - 1
+                else {
                     break
                 }
 

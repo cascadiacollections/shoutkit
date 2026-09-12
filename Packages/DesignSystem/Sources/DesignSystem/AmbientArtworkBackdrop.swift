@@ -99,9 +99,9 @@ public struct AmbientArtworkBackdrop: View {
             points: [
                 [0, 0], [0.5, 0], [1, 0],
                 [0, 0.5], [0.5, 0.5], [1, 0.5],
-                [0, 1], [0.5, 1], [1, 1]
+                [0, 1], [0.5, 1], [1, 1],
             ],
-            colors: colors
+            colors: colors,
         )
     }
 
@@ -109,7 +109,7 @@ public struct AmbientArtworkBackdrop: View {
         LinearGradient(
             colors: [.black.opacity(0.05), .black.opacity(0.30)],
             startPoint: .top,
-            endPoint: .bottom
+            endPoint: .bottom,
         )
     }
 

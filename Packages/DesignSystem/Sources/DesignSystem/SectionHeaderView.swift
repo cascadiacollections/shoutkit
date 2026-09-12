@@ -11,7 +11,7 @@ public struct SectionHeaderView: View {
         _ title: String,
         subtitle: String? = nil,
         actionTitle: String? = nil,
-        action: (() -> Void)? = nil
+        action: (() -> Void)? = nil,
     ) {
         self.title = title
         self.subtitle = subtitle

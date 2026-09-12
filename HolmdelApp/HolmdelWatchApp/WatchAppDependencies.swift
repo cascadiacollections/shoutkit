@@ -4,7 +4,7 @@ import Playback
 import RadioDirectory
 import SwiftData
 #if canImport(WatchConnectivity)
-import WatchConnectivity
+    import WatchConnectivity
 #endif
 
 @MainActor
@@ -30,13 +30,13 @@ enum WatchAppDependencies {
         let directory = CachingRadioDirectory(
             base: PreferredRadioDirectory(
                 base: RadioBrowserDirectoryClient(userAgent: "Holmdel/0.1"),
-                preferredStations: PreferredStations.all
-            )
+                preferredStations: PreferredStations.all,
+            ),
         )
         let playbackController = PlaybackController(
             directory: directory,
             output: WatchRadioPlaybackEngine(),
-            nowPlayingCenter: WatchNoopNowPlayingCenter()
+            nowPlayingCenter: WatchNoopNowPlayingCenter(),
         )
         watchLastStationSync.activate()
         playbackController.onStationPlayed = { station in
@@ -46,7 +46,7 @@ enum WatchAppDependencies {
         let services = WatchAppServices(
             container: container,
             libraryStore: libraryStore,
-            playbackController: playbackController
+            playbackController: playbackController,
         )
         Self.services = services
         return services
@@ -73,55 +73,57 @@ enum WatchAppDependencies {
 
 #if canImport(WatchConnectivity)
 
-private final class WatchLastStationSync: NSObject, WCSessionDelegate {
-    private enum Keys {
-        static let lastStation = "watchSync.lastStation"
-    }
-
-    private let session: WCSession?
-    private let decoder = JSONDecoder()
-    private let defaults: UserDefaults
-
-    override init() {
-        defaults = .standard
-        if WCSession.isSupported() {
-            let session = WCSession.default
-            self.session = session
-        } else {
-            session = nil
+    private final class WatchLastStationSync: NSObject, WCSessionDelegate {
+        private enum Keys {
+            static let lastStation = "watchSync.lastStation"
         }
-        super.init()
-    }
 
-    func activate() {
-        session?.delegate = self
-        session?.activate()
-    }
+        private let session: WCSession?
+        private let decoder = JSONDecoder()
+        private let defaults: UserDefaults
 
-    func syncedStation() -> Station? {
-        guard let data = defaults.data(forKey: Keys.lastStation) else { return nil }
-        // Best effort: an old/corrupt payload should simply clear the watch-side
-        // fallback and let normal station discovery continue.
-        return try? decoder.decode(Station.self, from: data)
-    }
+        override init() {
+            defaults = .standard
+            if WCSession.isSupported() {
+                let session = WCSession.default
+                self.session = session
+            } else {
+                session = nil
+            }
+            super.init()
+        }
 
-    func session(
-        _ session: WCSession,
-        activationDidCompleteWith activationState: WCSessionActivationState,
-        error: Error?
-    ) {}
+        func activate() {
+            session?.delegate = self
+            session?.activate()
+        }
 
-    func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
-        guard let data = applicationContext[Keys.lastStation] as? Data else { return }
-        defaults.set(data, forKey: Keys.lastStation)
+        func syncedStation() -> Station? {
+            guard let data = defaults.data(forKey: Keys.lastStation) else { return nil }
+            // Best effort: an old/corrupt payload should simply clear the watch-side
+            // fallback and let normal station discovery continue.
+            return try? decoder.decode(Station.self, from: data)
+        }
+
+        func session(
+            _: WCSession,
+            activationDidCompleteWith _: WCSessionActivationState,
+            error _: Error?,
+        ) {}
+
+        func session(_: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+            guard let data = applicationContext[Keys.lastStation] as? Data else { return }
+            defaults.set(data, forKey: Keys.lastStation)
+        }
     }
-}
 
 #else
 
-private final class WatchLastStationSync {
-    func activate() {}
-    func syncedStation() -> Station? { nil }
-}
+    private final class WatchLastStationSync {
+        func activate() {}
+        func syncedStation() -> Station? {
+            nil
+        }
+    }
 
 #endif

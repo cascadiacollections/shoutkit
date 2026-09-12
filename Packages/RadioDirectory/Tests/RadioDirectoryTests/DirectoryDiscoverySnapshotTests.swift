@@ -1,8 +1,7 @@
 import Foundation
 import os
-import Testing
-
 @testable import RadioDirectory
+import Testing
 
 /// In-memory `DirectorySnapshotStoring` that records what was written and can be
 /// seeded with content, standing in for a previous launch.
@@ -32,28 +31,28 @@ private func seededSnapshot(
     stationCount: Int = 5,
     limit: Int = 24,
     capturedAt: Date = referenceDate,
-    sourceIdentity: String? = "test"
+    sourceIdentity: String? = "test",
 ) -> DirectoryDiscoverySnapshot {
     DirectoryDiscoverySnapshot(
         topStations: DirectoryDiscoverySnapshot.TopStations(
-            stations: (0..<stationCount).map {
+            stations: (0 ..< stationCount).map {
                 Station(id: "saved\($0)", name: "Saved \($0)", genre: "Test", listenerCount: 0)
             },
             limit: limit,
-            capturedAt: capturedAt
+            capturedAt: capturedAt,
         ),
         genres: DirectoryDiscoverySnapshot.Genres(genres: [Genre(name: "Test")], capturedAt: capturedAt),
-        sourceIdentity: sourceIdentity
+        sourceIdentity: sourceIdentity,
     )
 }
 
 struct CachingRadioDirectorySnapshotTests {
-    @Test func successfulTopStationsFetchIsPersisted() async throws {
+    @Test func `successful top stations fetch is persisted`() async throws {
         let store = InMemorySnapshotStore()
         let cache = CachingRadioDirectory(
             base: CountingDirectory(),
             snapshotStore: store,
-            snapshotIdentity: { "radio-browser;country=US" }
+            snapshotIdentity: { "radio-browser;country=US" },
         )
 
         _ = try await cache.topStations(limit: 24)
@@ -64,7 +63,7 @@ struct CachingRadioDirectorySnapshotTests {
         #expect(saved?.sourceIdentity == "radio-browser;country=US")
     }
 
-    @Test func genresFetchDoesNotDropSavedStations() async throws {
+    @Test func `genres fetch does not drop saved stations`() async throws {
         let store = InMemorySnapshotStore()
         let cache = CachingRadioDirectory(base: CountingDirectory(), snapshotStore: store)
 
@@ -78,7 +77,7 @@ struct CachingRadioDirectorySnapshotTests {
         #expect(saved?.genres?.genres.isEmpty == false)
     }
 
-    @Test func failedFetchIsNotPersisted() async throws {
+    @Test func `failed fetch is not persisted`() async throws {
         let counting = CountingDirectory()
         await counting.setFailNextTopStations(true)
         let store = InMemorySnapshotStore()
@@ -91,13 +90,13 @@ struct CachingRadioDirectorySnapshotTests {
         #expect(await store.saveCount == 0)
     }
 
-    @Test func savedSnapshotIsFreshInsideItsWindow() async throws {
+    @Test func `saved snapshot is fresh inside its window`() async {
         let cache = CachingRadioDirectory(
             base: CountingDirectory(),
             snapshotStore: InMemorySnapshotStore(seeded: seededSnapshot()),
             snapshotTimeToLive: 60,
             snapshotIdentity: { "test" },
-            now: { referenceDate.addingTimeInterval(59) }
+            now: { referenceDate.addingTimeInterval(59) },
         )
 
         let state = await cache.discoverySnapshotState()
@@ -107,13 +106,13 @@ struct CachingRadioDirectorySnapshotTests {
         #expect(state?.snapshot.capturedAt == referenceDate)
     }
 
-    @Test func savedSnapshotOutsideItsWindowIsStillReturnedButNotFresh() async throws {
+    @Test func `saved snapshot outside its window is still returned but not fresh`() async {
         let cache = CachingRadioDirectory(
             base: CountingDirectory(),
             snapshotStore: InMemorySnapshotStore(seeded: seededSnapshot()),
             snapshotTimeToLive: 60,
             snapshotIdentity: { "test" },
-            now: { referenceDate.addingTimeInterval(61) }
+            now: { referenceDate.addingTimeInterval(61) },
         )
 
         let state = await cache.discoverySnapshotState()
@@ -124,24 +123,24 @@ struct CachingRadioDirectorySnapshotTests {
         #expect(state?.snapshot.topStations?.stations.count == 5)
     }
 
-    @Test func snapshotCapturedUnderAnotherSourceIdentityIsIgnored() async throws {
+    @Test func `snapshot captured under another source identity is ignored`() async {
         let cache = CachingRadioDirectory(
             base: CountingDirectory(),
             snapshotStore: InMemorySnapshotStore(seeded: seededSnapshot(sourceIdentity: "country=US")),
             snapshotIdentity: { "country=JP" },
-            now: { referenceDate }
+            now: { referenceDate },
         )
 
         #expect(await cache.discoverySnapshotState() == nil)
     }
 
-    @Test func snapshotStopsBeingServedWhenTheIdentityChangesMidSession() async throws {
+    @Test func `snapshot stops being served when the identity changes mid session`() async {
         let identity = OSAllocatedUnfairLock(initialState: "country=US")
         let cache = CachingRadioDirectory(
             base: CountingDirectory(),
             snapshotStore: InMemorySnapshotStore(seeded: seededSnapshot(sourceIdentity: "country=US")),
             snapshotIdentity: { identity.withLock { $0 } },
-            now: { referenceDate }
+            now: { referenceDate },
         )
 
         #expect(await cache.discoverySnapshotState() != nil)
@@ -152,14 +151,14 @@ struct CachingRadioDirectorySnapshotTests {
         #expect(await cache.discoverySnapshotState() == nil)
     }
 
-    @Test func persistedHalvesAreNotCarriedAcrossAnIdentityChange() async throws {
+    @Test func `persisted halves are not carried across an identity change`() async throws {
         let identity = OSAllocatedUnfairLock(initialState: "country=US")
         let store = InMemorySnapshotStore(seeded: seededSnapshot(sourceIdentity: "country=US"))
         let cache = CachingRadioDirectory(
             base: CountingDirectory(),
             snapshotStore: store,
             snapshotIdentity: { identity.withLock { $0 } },
-            now: { referenceDate }
+            now: { referenceDate },
         )
 
         _ = await cache.discoverySnapshotState()
@@ -174,13 +173,13 @@ struct CachingRadioDirectorySnapshotTests {
         #expect(saved?.genres?.genres.isEmpty == false)
     }
 
-    @Test func snapshotIsReadFromDiskOnlyOnce() async throws {
+    @Test func `snapshot is read from disk only once`() async {
         let store = InMemorySnapshotStore(seeded: seededSnapshot())
         let cache = CachingRadioDirectory(
             base: CountingDirectory(),
             snapshotStore: store,
             snapshotIdentity: { "test" },
-            now: { referenceDate }
+            now: { referenceDate },
         )
 
         _ = await cache.discoverySnapshotState()
@@ -189,13 +188,13 @@ struct CachingRadioDirectorySnapshotTests {
         #expect(await store.loadCount == 1)
     }
 
-    @Test func concurrentFirstReadsShareOneDiskLoad() async throws {
+    @Test func `concurrent first reads share one disk load`() async {
         let store = InMemorySnapshotStore(seeded: seededSnapshot())
         let cache = CachingRadioDirectory(
             base: CountingDirectory(),
             snapshotStore: store,
             snapshotIdentity: { "test" },
-            now: { referenceDate }
+            now: { referenceDate },
         )
 
         let first = Task { await cache.discoverySnapshotState() }
@@ -206,13 +205,13 @@ struct CachingRadioDirectorySnapshotTests {
         #expect(await store.loadCount == 1)
     }
 
-    @Test func discoverySnapshotStateIsNilWithoutAStore() async throws {
+    @Test func `discovery snapshot state is nil without A store`() async {
         let cache = CachingRadioDirectory(base: CountingDirectory())
 
         #expect(await cache.discoverySnapshotState() == nil)
     }
 
-    @Test func invalidateMemoryCacheSendsTheNextReadToTheDirectory() async throws {
+    @Test func `invalidate memory cache sends the next read to the directory`() async throws {
         let counting = CountingDirectory()
         let cache = CachingRadioDirectory(base: counting)
 
@@ -227,13 +226,13 @@ struct CachingRadioDirectorySnapshotTests {
         #expect(await counting.genresCalls == 2)
     }
 
-    @Test func savedContentIsNotServedFromTheLiveDiscoveryCalls() async throws {
+    @Test func `saved content is not served from the live discovery calls`() async throws {
         let counting = CountingDirectory()
         let cache = CachingRadioDirectory(
             base: counting,
             snapshotStore: InMemorySnapshotStore(seeded: seededSnapshot()),
             snapshotIdentity: { "test" },
-            now: { referenceDate }
+            now: { referenceDate },
         )
 
         let stations = try await cache.topStations(limit: 24)
@@ -253,7 +252,7 @@ struct FileDirectorySnapshotStoreTests {
             .appendingPathComponent("DiscoverySnapshot.v1.json", isDirectory: false)
     }
 
-    @Test func snapshotRoundTripsThroughTheFile() async throws {
+    @Test func `snapshot round trips through the file`() async {
         let fileURL = temporaryFileURL()
         defer { try? FileManager.default.removeItem(at: fileURL.deletingLastPathComponent()) }
         let store = FileDirectorySnapshotStore(fileURL: fileURL)
@@ -265,18 +264,18 @@ struct FileDirectorySnapshotStoreTests {
         #expect(loaded == snapshot)
     }
 
-    @Test func missingFileLoadsAsNoSnapshot() async throws {
+    @Test func `missing file loads as no snapshot`() async {
         let store = FileDirectorySnapshotStore(fileURL: temporaryFileURL())
 
         #expect(await store.load() == nil)
     }
 
-    @Test func corruptFileLoadsAsNoSnapshot() async throws {
+    @Test func `corrupt file loads as no snapshot`() async throws {
         let fileURL = temporaryFileURL()
         defer { try? FileManager.default.removeItem(at: fileURL.deletingLastPathComponent()) }
         try FileManager.default.createDirectory(
             at: fileURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
+            withIntermediateDirectories: true,
         )
         try Data("not json".utf8).write(to: fileURL)
         let store = FileDirectorySnapshotStore(fileURL: fileURL)
@@ -285,7 +284,7 @@ struct FileDirectorySnapshotStoreTests {
         #expect(await store.load() == nil)
     }
 
-    @Test func emptySnapshotLoadsAsNoSnapshot() async throws {
+    @Test func `empty snapshot loads as no snapshot`() async {
         let fileURL = temporaryFileURL()
         defer { try? FileManager.default.removeItem(at: fileURL.deletingLastPathComponent()) }
         let store = FileDirectorySnapshotStore(fileURL: fileURL)

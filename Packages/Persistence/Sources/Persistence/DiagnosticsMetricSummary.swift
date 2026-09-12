@@ -12,7 +12,7 @@ public struct DiagnosticsMetricPayloadSummary: Equatable, Sendable {
     public init(
         receivedAt: Date,
         launch: DiagnosticsAppLaunchSummary?,
-        networkTransactions: [DiagnosticsNetworkTransactionSummary]
+        networkTransactions: [DiagnosticsNetworkTransactionSummary],
     ) {
         self.receivedAt = receivedAt
         self.launch = launch
@@ -30,14 +30,13 @@ public struct DiagnosticsAppLaunchSummary: Equatable, Sendable {
         meanTimeToFirstDrawMilliseconds: Double?,
         timeToFirstDrawSampleCount: Int,
         meanResumeTimeMilliseconds: Double?,
-        resumeSampleCount: Int
+        resumeSampleCount: Int,
     ) {
         self.meanTimeToFirstDrawMilliseconds = meanTimeToFirstDrawMilliseconds
         self.timeToFirstDrawSampleCount = timeToFirstDrawSampleCount
         self.meanResumeTimeMilliseconds = meanResumeTimeMilliseconds
         self.resumeSampleCount = resumeSampleCount
     }
-
 }
 
 public struct DiagnosticsNetworkTransactionSummary: Equatable, Sendable {
@@ -60,7 +59,7 @@ public struct DiagnosticsNetworkTransactionSummary: Equatable, Sendable {
         averageTLSMilliseconds: Double?,
         averageRequestMilliseconds: Double?,
         averageResponseMilliseconds: Double?,
-        averageTotalMilliseconds: Double?
+        averageTotalMilliseconds: Double?,
     ) {
         self.host = host
         self.requestCount = requestCount
@@ -96,7 +95,8 @@ public struct DiagnosticsNetworkTransactionSummary: Equatable, Sendable {
 enum DiagnosticsMetricSummaryExtractor {
     static func summary(from payload: Data, receivedAt: Date) -> DiagnosticsMetricPayloadSummary? {
         guard let json = try? JSONSerialization.jsonObject(with: payload),
-              let object = json as? [String: Any] else {
+              let object = json as? [String: Any]
+        else {
             return nil
         }
 
@@ -106,25 +106,25 @@ enum DiagnosticsMetricSummaryExtractor {
         return DiagnosticsMetricPayloadSummary(
             receivedAt: receivedAt,
             launch: launch,
-            networkTransactions: networkTransactions
+            networkTransactions: networkTransactions,
         )
     }
 
     private static func appLaunchSummary(from object: [String: Any]) -> DiagnosticsAppLaunchSummary? {
         guard let launchMetrics = dictionary(
             forKeys: ["applicationLaunchMetrics", "appLaunchMetrics"],
-            in: object
+            in: object,
         ) else {
             return nil
         }
 
         let firstDraw = histogramSummary(
             from: launchMetrics,
-            keys: ["histogrammedTimeToFirstDraw", "histogrammedTimeToFirstDrawKey"]
+            keys: ["histogrammedTimeToFirstDraw", "histogrammedTimeToFirstDrawKey"],
         )
         let resume = histogramSummary(
             from: launchMetrics,
-            keys: ["histogrammedApplicationResumeTime", "histogrammedApplicationResumeTimeKey"]
+            keys: ["histogrammedApplicationResumeTime", "histogrammedApplicationResumeTimeKey"],
         )
 
         guard firstDraw != nil || resume != nil else { return nil }
@@ -132,12 +132,12 @@ enum DiagnosticsMetricSummaryExtractor {
             meanTimeToFirstDrawMilliseconds: firstDraw?.meanMilliseconds,
             timeToFirstDrawSampleCount: firstDraw?.sampleCount ?? 0,
             meanResumeTimeMilliseconds: resume?.meanMilliseconds,
-            resumeSampleCount: resume?.sampleCount ?? 0
+            resumeSampleCount: resume?.sampleCount ?? 0,
         )
     }
 
     private static func networkTransactionSummaries(
-        from object: [String: Any]
+        from object: [String: Any],
     ) -> [DiagnosticsNetworkTransactionSummary] {
         guard let entries = array(forKeys: ["networkTransactionMetrics"], in: object) else {
             return []
@@ -146,7 +146,8 @@ enum DiagnosticsMetricSummaryExtractor {
         return entries.compactMap { item in
             guard let metric = item as? [String: Any],
                   let host = string(forKeys: ["domain", "host"], in: metric),
-                  host.isEmpty == false else {
+                  host.isEmpty == false
+            else {
                 return nil
             }
 
@@ -157,33 +158,33 @@ enum DiagnosticsMetricSummaryExtractor {
                 averageDNSMilliseconds: durationMilliseconds(
                     dictionaryKeys: ["dns"],
                     scalarKeys: ["cumulativeDNSLookupTime", "averageDNSLookupTime"],
-                    in: metric
+                    in: metric,
                 ),
                 averageConnectMilliseconds: durationMilliseconds(
                     dictionaryKeys: ["connect"],
                     scalarKeys: ["cumulativeConnectTime", "cumulativeTCPConnectionTime", "averageConnectTime"],
-                    in: metric
+                    in: metric,
                 ),
                 averageTLSMilliseconds: durationMilliseconds(
                     dictionaryKeys: ["tls"],
                     scalarKeys: ["cumulativeTLSHandshakeTime", "averageTLSHandshakeTime"],
-                    in: metric
+                    in: metric,
                 ),
                 averageRequestMilliseconds: durationMilliseconds(
                     dictionaryKeys: ["request"],
                     scalarKeys: ["cumulativeRequestTime", "averageRequestTime"],
-                    in: metric
+                    in: metric,
                 ),
                 averageResponseMilliseconds: durationMilliseconds(
                     dictionaryKeys: ["response"],
                     scalarKeys: ["cumulativeResponseTime", "averageResponseTime"],
-                    in: metric
+                    in: metric,
                 ),
                 averageTotalMilliseconds: durationMilliseconds(
                     dictionaryKeys: ["cumulative"],
                     scalarKeys: ["cumulativeDuration", "averageDuration"],
-                    in: metric
-                )
+                    in: metric,
+                ),
             )
         }
     }
@@ -198,7 +199,8 @@ enum DiagnosticsMetricSummaryExtractor {
            let counts = numberArray(forKeys: ["bucketCounts"], in: histogram),
            starts.count == ends.count,
            starts.count == counts.count,
-           starts.isEmpty == false {
+           starts.isEmpty == false
+        {
             let multiplier = durationUnitMultiplier(from: histogram["unit"])
             var totalSamples = 0.0
             var weightedTotal = 0.0
@@ -213,26 +215,27 @@ enum DiagnosticsMetricSummaryExtractor {
             guard totalSamples > 0 else { return nil }
             return HistogramSummary(
                 meanMilliseconds: (weightedTotal / totalSamples) * multiplier,
-                sampleCount: Int(totalSamples.rounded())
+                sampleCount: Int(totalSamples.rounded()),
             )
         }
 
         guard let values = durationValues(forKeys: ["histogramValue", "histogramValues"], in: histogram),
-              values.isEmpty == false else {
+              values.isEmpty == false
+        else {
             return nil
         }
 
         let total = values.reduce(0, +)
         return HistogramSummary(
             meanMilliseconds: total / Double(values.count),
-            sampleCount: values.count
+            sampleCount: values.count,
         )
     }
 
     private static func durationMilliseconds(
         dictionaryKeys: [String],
         scalarKeys: [String],
-        in object: [String: Any]
+        in object: [String: Any],
     ) -> Double? {
         if let dictionary = dictionary(forKeys: dictionaryKeys, in: object) {
             if let duration = dictionary["duration"] {
@@ -309,7 +312,7 @@ enum DiagnosticsMetricSummaryExtractor {
                 }
                 guard indexedValues.count == values.count else { return nil }
                 let sorted = indexedValues.sorted { $0.0 < $1.0 }
-                let expectedIndices = 0..<sorted.count
+                let expectedIndices = 0 ..< sorted.count
                 guard zip(expectedIndices, sorted).allSatisfy({ expected, actual in
                     expected == actual.0
                 }) else { return nil }
@@ -348,7 +351,7 @@ enum DiagnosticsMetricSummaryExtractor {
 
     private static func parseDurationStringMilliseconds(
         _ raw: String,
-        defaultUnit: DurationUnit
+        defaultUnit: DurationUnit,
     ) -> Double? {
         // Supports "1810", "1810 ms", "+1.5ms", and "-2.3 s".
         // Returns nil for malformed numeric components such as "1.2-3.4ms".
@@ -362,7 +365,8 @@ enum DiagnosticsMetricSummaryExtractor {
         let components = trimmed.split(whereSeparator: \.isWhitespace)
         if components.count >= 2,
            let value = Double(components[0]),
-           let unit = DurationUnit(rawValue: String(components[1]).lowercased()) {
+           let unit = DurationUnit(rawValue: String(components[1]).lowercased())
+        {
             return value * unit.multiplierToMilliseconds
         }
 
@@ -374,11 +378,12 @@ enum DiagnosticsMetricSummaryExtractor {
         let firstNonNumber = trimmed[index...].firstIndex {
             $0.isNumber == false && $0 != "."
         } ?? trimmed.endIndex
-        let numberPart = String(trimmed[numberStart..<firstNonNumber])
+        let numberPart = String(trimmed[numberStart ..< firstNonNumber])
         guard numberPart.isEmpty == false,
               numberPart != "+",
               numberPart != "-",
-              let value = Double(numberPart) else {
+              let value = Double(numberPart)
+        else {
             return nil
         }
         let unitSuffix = trimmed[firstNonNumber...]
@@ -409,13 +414,13 @@ enum DiagnosticsMetricSummaryExtractor {
         var multiplierToMilliseconds: Double {
             switch self {
             case .seconds:
-                return 1_000
+                1000
             case .milliseconds:
-                return 1
+                1
             case .microseconds:
-                return 0.001
+                0.001
             case .nanoseconds:
-                return 0.000_001
+                0.000_001
             }
         }
     }

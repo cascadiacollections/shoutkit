@@ -16,24 +16,24 @@ let package = Package(
         .iOS(.v26),
         // Declared so the suite can run on the mac host (`swift test`), same
         // pattern as BrowseFeatureCore/SearchFeatureCore/PlayerFeatureCore.
-        .macOS(.v15)
+        .macOS(.v15),
     ],
     products: [
-        .library(name: "SettingsFeatureCore", targets: ["SettingsFeatureCore"])
+        .library(name: "SettingsFeatureCore", targets: ["SettingsFeatureCore"]),
     ],
     dependencies: [
-        .package(path: "../Playback")
+        .package(path: "../Playback"),
     ],
     targets: [
         // No `.defaultIsolation(MainActor.self)`, like PlayerFeatureCore: pure
         // value-in/value-out with no observable state and no UI work.
         .target(
             name: "SettingsFeatureCore",
-            dependencies: ["Playback"]
+            dependencies: ["Playback"],
         ),
         .testTarget(
             name: "SettingsFeatureCoreTests",
-            dependencies: ["SettingsFeatureCore"]
-        )
-    ]
+            dependencies: ["SettingsFeatureCore"],
+        ),
+    ],
 )

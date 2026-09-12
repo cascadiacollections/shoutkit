@@ -29,22 +29,22 @@ public enum EqualizerPreset: Int, CaseIterable, Hashable, Sendable {
     public var curve: (@Sendable (Float) -> Float)? {
         switch self {
         case .normal:
-            return nil
+            nil
         case .bassBoost:
-            return { position in (1 - position) * Self.tilt }
+            { position in (1 - position) * Self.tilt }
         case .vocal:
-            return { position in
+            { position in
                 switch position {
                 case ..<0.3:
-                    return 0.1 // cut bass
+                    0.1 // cut bass
                 case ..<0.7:
-                    return 0.7 // boost mids
+                    0.7 // boost mids
                 default:
-                    return 0.4 // slight boost highs
+                    0.4 // slight boost highs
                 }
             }
         case .treble:
-            return { position in position * Self.tilt }
+            { position in position * Self.tilt }
         }
     }
 
@@ -52,13 +52,13 @@ public enum EqualizerPreset: Int, CaseIterable, Hashable, Sendable {
     public var displayName: String {
         switch self {
         case .normal:
-            return String(localized: "Normal", bundle: .module)
+            String(localized: "Normal", bundle: .module)
         case .bassBoost:
-            return String(localized: "Bass Boost", bundle: .module)
+            String(localized: "Bass Boost", bundle: .module)
         case .vocal:
-            return String(localized: "Vocal", bundle: .module)
+            String(localized: "Vocal", bundle: .module)
         case .treble:
-            return String(localized: "Treble", bundle: .module)
+            String(localized: "Treble", bundle: .module)
         }
     }
 }

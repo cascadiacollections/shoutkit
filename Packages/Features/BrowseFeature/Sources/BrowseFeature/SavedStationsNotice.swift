@@ -46,7 +46,7 @@ struct SavedStationsNotice: View {
 #Preview("Saved") {
     SavedStationsNotice(
         origin: .saved(capturedAt: Date(timeIntervalSinceNow: -3600)),
-        refreshError: .transport(nil)
+        refreshError: .transport(nil),
     )
     .padding()
 }

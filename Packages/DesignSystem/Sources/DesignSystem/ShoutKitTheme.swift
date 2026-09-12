@@ -28,8 +28,8 @@ public enum ShoutKitLayout {
         GridItem(
             .adaptive(minimum: 288, maximum: 640),
             spacing: ShoutKitSpacing.small,
-            alignment: .top
-        )
+            alignment: .top,
+        ),
     ]
 
     /// Adaptive columns for poster tiles — square artwork with a name and one
@@ -47,8 +47,8 @@ public enum ShoutKitLayout {
         GridItem(
             .adaptive(minimum: 140, maximum: 220),
             spacing: ShoutKitSpacing.medium,
-            alignment: .top
-        )
+            alignment: .top,
+        ),
     ]
 }
 
@@ -96,7 +96,7 @@ public extension LinearGradient {
     static let shoutKitSpotlight = LinearGradient(
         colors: [Color.shoutKitAccent, Color.shoutKitAccent.opacity(0.65), Color.shoutKitHighlight.opacity(0.75)],
         startPoint: .topLeading,
-        endPoint: .bottomTrailing
+        endPoint: .bottomTrailing,
     )
 }
 

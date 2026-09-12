@@ -62,17 +62,17 @@ struct QuickPlayEntry: TimelineEntry {
 }
 
 struct QuickPlayProvider: AppIntentTimelineProvider {
-    func placeholder(in context: Context) -> QuickPlayEntry {
+    func placeholder(in _: Context) -> QuickPlayEntry {
         QuickPlayEntry(date: .now, station: QuickPlayFavoritesStore.load().first)
     }
 
-    func snapshot(for configuration: SelectFavoriteStationIntent, in context: Context) async -> QuickPlayEntry {
+    func snapshot(for configuration: SelectFavoriteStationIntent, in _: Context) async -> QuickPlayEntry {
         QuickPlayEntry(date: .now, station: resolved(configuration))
     }
 
     func timeline(
         for configuration: SelectFavoriteStationIntent,
-        in context: Context
+        in _: Context,
     ) async -> Timeline<QuickPlayEntry> {
         // Favorites change rarely, and the app reloads this timeline on every
         // change, so a single never-expiring entry is all that's needed.
@@ -162,7 +162,7 @@ struct QuickPlayWidget: Widget {
         AppIntentConfiguration(
             kind: QuickPlayFavoritesStore.widgetKind,
             intent: SelectFavoriteStationIntent.self,
-            provider: QuickPlayProvider()
+            provider: QuickPlayProvider(),
         ) { entry in
             QuickPlayWidgetEntryView(entry: entry)
         }
