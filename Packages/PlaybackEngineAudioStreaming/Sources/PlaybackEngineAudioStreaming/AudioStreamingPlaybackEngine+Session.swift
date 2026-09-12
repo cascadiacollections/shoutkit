@@ -266,8 +266,8 @@ extension AudioStreamingPlaybackEngine {
     /// is now dead — including the `AVAudioEngine` inside AudioStreaming's player
     /// — and the session's configuration went with it, so no amount of retrying
     /// the *existing* player recovers: playback stayed silent until the app was
-    /// relaunched. Rebuild both, then report a retryable failure so the
-    /// controller's bounded reconnect rejoins the stream from a clean player.
+    /// relaunched. Rebuild both, then report a media-services reset so the
+    /// controller cancels pending playback and waits for a fresh listener action.
     private func handleMediaServicesReset() {
         Self.logger.error("Media services were reset; rebuilding the player and audio session")
         cancelPendingSessionActivation()
