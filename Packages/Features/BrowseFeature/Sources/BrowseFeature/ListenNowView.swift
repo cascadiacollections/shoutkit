@@ -217,7 +217,7 @@ public struct ListenNowView: View {
         // would otherwise let the stale timer clear the fresh banner early.
         dismissUndoExpiryTask?.cancel()
         dismissUndoExpiryTask = Task {
-            guard try? await Task.sleep(for: .seconds(4)) != nil else { return }
+            guard (try? await Task.sleep(for: .seconds(4))) != nil else { return }
             dismissUndo = nil
         }
     }

@@ -208,7 +208,7 @@ public final class BrowseViewModel {
         from directory: any RadioDirectoryProviding,
     ) async -> ([Genre], RadioDirectoryError?) {
         do {
-            return try await (directory.genres(), nil)
+            return (try await directory.genres(), nil)
         } catch {
             return ([], error)
         }
