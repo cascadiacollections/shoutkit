@@ -2,13 +2,11 @@ name: Reformat
 
 # On-demand `swiftformat` run that pushes its own result.
 #
-# Why a workflow rather than "just run swiftformat": the format check in ci.yml
-# is `continue-on-error: true` because 58 of 90 files fail `--lint`, and closing
-# that needs a byte-exact run from a real toolchain. Not every contributor —
-# and no Linux environment at all — has one, so the reformat is done by the same
-# pinned-ish macOS toolchain that judges it. Run it, review the diff on the
-# branch, then drop `continue-on-error` from ci.yml in the same PR and record
-# the resulting SHA in .git-blame-ignore-revs.
+# Why a workflow rather than "just run swiftformat": not every contributor —
+# and no Linux environment at all — has the macOS toolchain CI uses. This runs
+# the reformat on the same pinned-ish macOS image that judges it. Review a
+# whole-tree reformat before pushing it and record its SHA in
+# .git-blame-ignore-revs.
 #
 # Manual only. This is not a bot that reformats behind your back: a formatter
 # that rewrites code without a human asking is how a merge conflict appears in
@@ -40,7 +38,7 @@ jobs:
         with:
           # The default token's push is fine here; a PAT would be needed only to
           # retrigger CI on the pushed commit, which is not the point — CI runs
-          # on the PR that flips continue-on-error.
+          # on the PR that adds a reformat commit.
           persist-credentials: true
 
       - name: Install SwiftFormat

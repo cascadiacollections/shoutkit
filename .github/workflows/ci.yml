@@ -107,14 +107,9 @@ jobs:
           HOMEBREW_NO_INSTALL_CLEANUP: "1"
         run: brew install swiftformat
 
-      # continue-on-error: the tree has never had swiftformat enforced (58/90
-      # files fail --lint today, mostly indent/brace-wrap rules), and fixing
-      # that needs a byte-exact `swiftformat` run from a real toolchain, which
-      # isn't available in every contributor's environment. Surfaces drift
-      # without blocking merges until a one-time reformat lands (see
-      # DECISIONS.md); drop continue-on-error once the tree is clean.
+      # The one-time whole-tree reformat is recorded in
+      # `.git-blame-ignore-revs`, so all subsequent format drift blocks CI.
       - name: Format check
-        continue-on-error: true
         run: swiftformat HolmdelApp Packages --lint
 
   host-tests:
