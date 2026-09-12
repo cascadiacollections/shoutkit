@@ -111,7 +111,7 @@ SHOUTCAST_DEV_KEY = your_key_here
   `AudioStreamingPlaybackEngine`, AVAudioEngine-backed via the MIT-licensed
   [AudioStreaming](https://github.com/dimitris-c/AudioStreaming) library — with audio-session
   ownership (interruptions, route changes, media-services reset) and the equalizer attach point.
-  iOS and Mac Catalyst only, linked by the app target alone: AudioStreaming pulls the ogg/vorbis xcframeworks,
+  iOS, Mac Catalyst, and tvOS, linked by the phone/Mac and TV app targets: AudioStreaming pulls the ogg/vorbis xcframeworks,
   which have no watchOS slice, and SwiftPM fetches binary artifacts regardless of platform
   conditions. The watch app supplies its own `AVPlayer`-backed engine.
 - `Packages/Persistence`: SwiftData models and `LibraryStore` for favorites and recents.
