@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-09-13 (the marketing site heads to Manasquan after summer)
+
+The Labor Day promotion had expired, and the page still described Holmdel as source-only even
+after the iPhone and iPad build reached TestFlight and the shared app gained a Mac Catalyst
+destination. The seasonal refresh replaces the generic sunset with a CSS-drawn September view
+across Manasquan Inlet: Atlantic blue, dune sand, the north jetty and its red channel marker. It
+keeps the existing plain-HTML, no-font, no-tracking approach while giving the project a more
+specific sense of place.
+
+The availability language is deliberately precise. TestFlight is stated for iPhone and iPad;
+Mac Catalyst is called a preview available from source, not a distributed Mac release. The same
+distinction appears in visible copy, social metadata, JSON-LD and the FAQ. The social card source
+uses the same inlet palette and status language so shares do not preserve the retired Labor Day
+campaign.
+
 ## 2026-09-12 (playback intent owns asynchronous engine observations)
 
 The TestFlight playback audit exposed four related boundary failures: an output could start

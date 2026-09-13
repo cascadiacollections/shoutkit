@@ -18,7 +18,7 @@
   -->
   <style>
     * { box-sizing: border-box; margin: 0; }
-    html, body { width: 1200px; height: 630px; overflow: hidden; background: #4A1B4E; }
+    html, body { width: 1200px; height: 630px; overflow: hidden; background: #183F4C; }
     body {
       position: fixed;
       inset: 0;
@@ -26,11 +26,35 @@
       flex-direction: column;
       justify-content: space-between;
       padding: 62px 76px;
-      color: #FFF6EA;
+      color: #F9F3E8;
       font-family: "Liberation Sans", Arial, Helvetica, sans-serif;
       background:
-        radial-gradient(120% 95% at 50% 122%, #FFD37A 0%, #FF9A3C 26%, #F0532B 52%, #A32856 78%, #4A1B4E 100%);
+        linear-gradient(180deg, #183F4C 0%, #377381 46%, #6FA9AD 58%, #176878 59%, #0C4857 78%, #D4B782 79%, #AE8E61 100%);
     }
+    body::before {
+      content: "";
+      position: absolute;
+      right: -30px;
+      bottom: 116px;
+      width: 660px;
+      height: 18px;
+      background: #253B3E;
+      box-shadow: 0 11px 0 rgba(7, 32, 39, 0.28);
+      transform: rotate(-2deg);
+    }
+    body::after {
+      content: "";
+      position: absolute;
+      right: 560px;
+      bottom: 127px;
+      width: 18px;
+      height: 70px;
+      border-radius: 3px 3px 0 0;
+      background: #B72E3B;
+      border-top: 10px solid #F9F3E8;
+      box-shadow: 0 0 0 5px rgba(249, 243, 232, 0.12);
+    }
+    body > * { position: relative; z-index: 1; }
     .top { display: flex; align-items: center; gap: 18px; }
     .top svg { width: 62px; height: 62px; border-radius: 16px; display: block; }
     .top span { font-size: 40px; font-weight: 700; letter-spacing: -0.5px; }
@@ -40,7 +64,7 @@
       line-height: 1.02;
       letter-spacing: -2.2px;
       max-width: 15ch;
-      text-shadow: 0 3px 26px rgba(74, 27, 78, 0.4);
+      text-shadow: 0 3px 26px rgba(8, 26, 32, 0.45);
     }
     p {
       margin-top: 20px;
@@ -76,15 +100,15 @@
   </div>
 
   <div>
-    <h1>Every station under the sun.</h1>
-    <p>Free, open-source internet radio for iPhone, iPad, Watch &amp; CarPlay.</p>
+    <h1>One more song before the light goes.</h1>
+    <p>Internet radio for iPhone, iPad &amp; Mac. Now in TestFlight beta.</p>
   </div>
 
   <div class="chips">
     <b>No ads</b>
     <b>No accounts</b>
     <b>No tracking</b>
-    <b>MIT + GPL-3.0</b>
+    <b>Mac preview</b>
   </div>
 </body>
 </html>
