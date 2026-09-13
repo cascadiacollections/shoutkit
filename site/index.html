@@ -3,28 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Holmdel — free, open-source internet radio for iPhone, iPad, Watch, Apple TV &amp; CarPlay</title>
-  <meta name="description" content="Holmdel is a native SwiftUI internet radio app for iOS 26. Keyless station discovery via Radio-Browser, a Liquid Glass player with live track metadata, Siri, CarPlay, Apple Watch and Apple TV — no ads, no accounts, no tracking. Free and open source." />
+  <title>Holmdel — free, open-source internet radio for iPhone, iPad &amp; Mac</title>
+  <meta name="description" content="Holmdel is a native SwiftUI internet radio app, now in TestFlight beta for iPhone and iPad with a Mac Catalyst preview available from source. Live stations, track metadata, Siri, CarPlay, Apple Watch and Apple TV — no ads, accounts or tracking." />
   <link rel="canonical" href="https://cascadiacollections.github.io/shoutkit/" />
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
   <meta name="color-scheme" content="light dark" />
-  <meta name="theme-color" content="#FFF3E4" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#150F0C" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#F3EEE3" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#081A20" media="(prefers-color-scheme: dark)" />
 
   <!-- Open Graph / social -->
   <meta property="og:site_name" content="Holmdel" />
   <meta property="og:locale" content="en_US" />
-  <meta property="og:title" content="Holmdel — free, open-source internet radio for iPhone" />
-  <meta property="og:description" content="A native SwiftUI radio app for iOS 26: keyless discovery, live track metadata, Siri, CarPlay, Apple Watch and Apple TV. No ads, no accounts, no tracking." />
+  <meta property="og:title" content="Holmdel — internet radio for iPhone, iPad &amp; Mac" />
+  <meta property="og:description" content="Now in TestFlight beta, with a Mac Catalyst preview available from source. Live radio without ads, accounts or tracking." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://cascadiacollections.github.io/shoutkit/" />
   <meta property="og:image" content="https://cascadiacollections.github.io/shoutkit/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="Holmdel — every station under the sun. Free and open-source internet radio for iPhone." />
+  <meta property="og:image:alt" content="Holmdel — internet radio for iPhone, iPad and Mac, now in TestFlight beta." />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Holmdel — free, open-source internet radio for iPhone" />
-  <meta name="twitter:description" content="A native SwiftUI radio app for iOS 26. No ads, no accounts, no tracking. MIT packages, GPL-3.0 app." />
+  <meta name="twitter:title" content="Holmdel — internet radio for iPhone, iPad &amp; Mac" />
+  <meta name="twitter:description" content="Now in TestFlight beta, with a Mac Catalyst preview available from source. No ads, accounts or tracking." />
   <meta name="twitter:image" content="https://cascadiacollections.github.io/shoutkit/og-image.png" />
 
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23F0532B'/%3E%3Ccircle cx='50' cy='50' r='19' fill='%23FFC24B'/%3E%3Cg fill='none' stroke='%23FFF3E4' stroke-width='6' stroke-linecap='round'%3E%3Cpath d='M50 10v8'/%3E%3Cpath d='M50 82v8'/%3E%3Cpath d='M10 50h8'/%3E%3Cpath d='M82 50h8'/%3E%3Cpath d='M22 22l6 6'/%3E%3Cpath d='M72 72l6 6'/%3E%3Cpath d='M78 22l-6 6'/%3E%3Cpath d='M28 72l-6 6'/%3E%3C/g%3E%3C/svg%3E" />
@@ -35,18 +35,18 @@
        the OS preference and once for an explicit theme stamp. Components
        always read tokens, never raw colours, so both themes stay in sync. */
     :root {
-      --sand:        #FFF3E4;
-      --sand-deep:   #FBE7D0;
-      --surface:     #FFFBF4;
-      --border:      #F0D8BC;
-      --border-firm: #E3C29E;
-      --ink:         #2B1A12;
-      --muted:       #7A6355;
-      --sunset:      #D6431E;
-      --sunset-soft: #F0532B;
-      --amber:       #E08A00;
-      --sea:         #0F6F77;
-      --shadow:      0 1px 2px rgba(74, 38, 18, 0.05), 0 8px 24px -12px rgba(74, 38, 18, 0.22);
+      --sand:        #F3EEE3;
+      --sand-deep:   #E8E0D1;
+      --surface:     #FAF7F0;
+      --border:      #D8CEBD;
+      --border-firm: #BFB19B;
+      --ink:         #102D35;
+      --muted:       #617176;
+      --sunset:      #9C3F55;
+      --sunset-soft: #C85C58;
+      --amber:       #D49A3A;
+      --sea:         #0D6570;
+      --shadow:      0 1px 2px rgba(16, 45, 53, 0.06), 0 12px 30px -16px rgba(16, 45, 53, 0.28);
 
       --font-display: ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN",
                       "Segoe UI Variable Display", system-ui, sans-serif;
@@ -61,33 +61,33 @@
 
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
-        --sand:        #150F0C;
-        --sand-deep:   #1A120E;
-        --surface:     #211812;
-        --border:      #382720;
-        --border-firm: #4C352A;
-        --ink:         #F8EADB;
-        --muted:       #B49C89;
-        --sunset:      #FF8155;
-        --sunset-soft: #FF7A4D;
-        --amber:       #FFC24B;
-        --sea:         #5BD3DB;
+        --sand:        #081A20;
+        --sand-deep:   #0D232A;
+        --surface:     #112C33;
+        --border:      #24424A;
+        --border-firm: #3B5960;
+        --ink:         #F2EBDD;
+        --muted:       #AAB8B8;
+        --sunset:      #F08B7D;
+        --sunset-soft: #E0716C;
+        --amber:       #F3BC5B;
+        --sea:         #65CDD2;
         --shadow:      0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
       }
     }
 
     :root[data-theme="dark"] {
-      --sand:        #150F0C;
-      --sand-deep:   #1A120E;
-      --surface:     #211812;
-      --border:      #382720;
-      --border-firm: #4C352A;
-      --ink:         #F8EADB;
-      --muted:       #B49C89;
-      --sunset:      #FF8155;
-      --sunset-soft: #FF7A4D;
-      --amber:       #FFC24B;
-      --sea:         #5BD3DB;
+      --sand:        #081A20;
+      --sand-deep:   #0D232A;
+      --surface:     #112C33;
+      --border:      #24424A;
+      --border-firm: #3B5960;
+      --ink:         #F2EBDD;
+      --muted:       #AAB8B8;
+      --sunset:      #F08B7D;
+      --sunset-soft: #E0716C;
+      --amber:       #F3BC5B;
+      --sea:         #65CDD2;
       --shadow:      0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
     }
 
@@ -211,34 +211,79 @@
     @media (max-width: 680px) { .nav-links .opt { display: none; } }
 
     /* ── Hero ─────────────────────────────────────────────────────────
-       The one place the page raises its voice: a sunset panel that keeps
-       its own colours in both themes, so the accent never washes out. */
+       A September evening at Manasquan Inlet: cool Atlantic water, warm
+       sand, a long jetty and the red marker at the end of the channel. */
     .hero { padding: 40px 0 0; }
     .sunset {
       position: relative;
       overflow: hidden;
       border-radius: 28px;
       padding: clamp(44px, 7vw, 84px) clamp(24px, 5vw, 64px) clamp(52px, 7vw, 76px);
-      color: #FFF6EA;
+      color: #F9F3E8;
       background:
-        radial-gradient(120% 90% at 50% 118%, #FFD37A 0%, #FF9A3C 26%, #F0532B 52%, #A32856 78%, #4A1B4E 100%);
+        linear-gradient(180deg, #183F4C 0%, #377381 46%, #6FA9AD 58%, #176878 59%, #0C4857 78%, #D4B782 79%, #AE8E61 100%);
       box-shadow: var(--shadow);
       isolation: isolate;
     }
-    /* Low sun: a soft disc sitting on the horizon line of the panel. */
+    /* A low September sun beyond the inlet. */
     .sunset::before {
       content: "";
       position: absolute;
-      left: 50%;
-      bottom: -190px;
-      width: 420px;
-      height: 420px;
+      left: 73%;
+      bottom: 34%;
+      width: 130px;
+      height: 130px;
       transform: translateX(-50%);
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(255, 244, 214, 0.92) 0%, rgba(255, 214, 130, 0.5) 45%, transparent 70%);
+      background: radial-gradient(circle, #F9D98D 0 39%, rgba(249, 217, 141, 0.22) 42%, transparent 70%);
       z-index: -1;
     }
-    .sunset > * { position: relative; }
+    /* The north jetty and its red channel marker. */
+    .sunset::after {
+      content: "";
+      position: absolute;
+      right: -3%;
+      bottom: 20%;
+      width: 58%;
+      height: 12px;
+      background: #253B3E;
+      box-shadow: 0 8px 0 rgba(7, 32, 39, 0.28);
+      transform: rotate(-2deg);
+      transform-origin: right center;
+      z-index: -1;
+    }
+    .inlet-marker {
+      position: absolute;
+      right: 51%;
+      bottom: calc(20% + 8px);
+      width: 13px;
+      height: 54px;
+      border-radius: 3px 3px 0 0;
+      background: #B72E3B;
+      box-shadow: 0 0 0 4px rgba(249, 243, 232, 0.12);
+      z-index: -1;
+    }
+    .inlet-marker::before {
+      content: "";
+      position: absolute;
+      left: -7px;
+      top: -8px;
+      width: 27px;
+      height: 9px;
+      border-radius: 2px;
+      background: #F9F3E8;
+    }
+    .inlet-marker::after {
+      content: "";
+      position: absolute;
+      left: -4px;
+      bottom: 0;
+      width: 21px;
+      height: 10px;
+      background: #7C2731;
+    }
+    .sunset > * { position: relative; z-index: 1; }
+    .sunset > .inlet-marker { position: absolute; z-index: 0; }
 
     .eyebrow {
       display: inline-flex;
@@ -273,7 +318,7 @@
       margin: 0 0 32px;
       color: rgba(255, 246, 234, 0.94);
     }
-    .lead strong { color: #FFF6EA; font-weight: 650; }
+    .lead strong { color: #FFF; font-weight: 650; }
 
     .cta-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
     .btn {
@@ -527,12 +572,12 @@
     .footer-links a:hover { color: var(--ink); text-decoration: underline; }
     .footnote { margin: 22px 0 0; font-size: 0.84rem; max-width: 74ch; }
 
-    /* ── Seasonal banner ──────────────────────────────────────────────── */
-    .promo { background: var(--sand-deep); border-bottom: 1px solid var(--border); }
-    .promo-inner { display: flex; justify-content: center; padding: 10px 0; text-align: center; }
-    .promo p { margin: 0; font-size: 0.88rem; color: var(--muted); }
-    .promo strong { color: var(--ink); }
-    .promo a { font-weight: 650; }
+    /* ── Availability banner ──────────────────────────────────────────── */
+    .availability { background: var(--sand-deep); border-bottom: 1px solid var(--border); }
+    .availability-inner { display: flex; justify-content: center; padding: 10px 0; text-align: center; }
+    .availability p { margin: 0; font-size: 0.88rem; color: var(--muted); }
+    .availability strong { color: var(--ink); }
+    .availability a { font-weight: 650; }
   </style>
 
   <script type="application/ld+json">
@@ -544,7 +589,7 @@
         "@id": "https://cascadiacollections.github.io/shoutkit/#website",
         "url": "https://cascadiacollections.github.io/shoutkit/",
         "name": "Holmdel",
-        "description": "Free, open-source internet radio for iPhone, iPad, Apple Watch, Apple TV and CarPlay.",
+        "description": "Free, open-source internet radio for iPhone, iPad and Mac, with Apple Watch, Apple TV and CarPlay.",
         "inLanguage": "en-US"
       },
       {
@@ -553,11 +598,11 @@
         "name": "Holmdel",
         "applicationCategory": "MultimediaApplication",
         "applicationSubCategory": "Internet radio player",
-        "operatingSystem": "iOS 26.0 or later, iPadOS 26.0 or later, watchOS 26.0 or later, tvOS 26.0 or later",
+        "operatingSystem": "iOS 26.0 or later, iPadOS 26.0 or later, macOS 26.0 or later through Mac Catalyst, watchOS 26.0 or later, tvOS 26.0 or later",
         "url": "https://cascadiacollections.github.io/shoutkit/",
         "downloadUrl": "https://github.com/cascadiacollections/shoutkit",
         "image": "https://cascadiacollections.github.io/shoutkit/og-image.png",
-        "description": "A native SwiftUI internet radio client with keyless station discovery via Radio-Browser, a Liquid Glass player with live ICY track metadata, Siri and Shortcuts, CarPlay, an Apple Watch app, and an Apple TV app. No ads, no accounts, no tracking.",
+        "description": "A native SwiftUI internet radio client in TestFlight beta for iPhone and iPad, with a Mac Catalyst preview available from source, keyless station discovery, live ICY track metadata, Siri and Shortcuts, CarPlay, Apple Watch, and Apple TV. No ads, no accounts, no tracking.",
         "isAccessibleForFree": true,
         "license": "https://github.com/cascadiacollections/shoutkit/blob/main/LICENSE",
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -585,7 +630,7 @@
           {
             "@type": "Question",
             "name": "Which devices does Holmdel run on?",
-            "acceptedAnswer": { "@type": "Answer", "text": "iPhone and iPad on iOS or iPadOS 26 and later, Apple Watch on watchOS 26 and later, and Apple TV on tvOS 26 and later, plus CarPlay and a Home Screen widget." }
+            "acceptedAnswer": { "@type": "Answer", "text": "The TestFlight beta runs on iPhone and iPad with iOS or iPadOS 26 and later. Apple Watch, Apple TV and CarPlay are supported, and a Mac Catalyst preview can be built from source on macOS 26 and later." }
           },
           {
             "@type": "Question",
@@ -630,9 +675,9 @@
     </div>
   </header>
 
-  <div class="promo">
-    <div class="wrap promo-inner">
-      <p>🎉 <strong>Labor Day weekend:</strong> no sale, because it's always free — always has been. <a href="https://github.com/cascadiacollections/shoutkit">Grab the source →</a></p>
+  <div class="availability">
+    <div class="wrap availability-inner">
+      <p><strong>Now in TestFlight:</strong> the iPhone and iPad beta is underway. Mac Catalyst is available as a preview from source. <a href="https://github.com/cascadiacollections/shoutkit">Follow development →</a></p>
     </div>
   </div>
 
@@ -640,15 +685,16 @@
     <div id="top" class="hero">
       <div class="wrap">
         <div class="sunset">
+          <span class="inlet-marker" aria-hidden="true"></span>
           <p class="eyebrow">
             <span class="meter" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></span>
-            Open source · iOS 26 · SwiftUI
+            TestFlight beta · iOS 26 · SwiftUI
           </p>
-          <h1>Every station under the sun.</h1>
+          <h1>One more song before the light goes.</h1>
           <p class="lead">
-            <strong>Internet radio for iPhone, iPad, Watch, Apple TV and CarPlay.</strong> Thousands
-            of live stations, a Liquid Glass player, Siri to start it — no ads, no accounts,
-            no tracking, no API keys. Free and open source, forever.
+            <strong>Internet radio for iPhone, iPad and the places in between.</strong> Thousands
+            of live stations, a Liquid Glass player, Siri to start it — no ads, accounts,
+            tracking or API keys. Now on TestFlight, with a Mac preview in the source.
           </p>
           <div class="cta-row">
             <a class="btn btn-primary" href="https://github.com/cascadiacollections/shoutkit">
@@ -762,6 +808,11 @@
               <p class="tag">iPad</p>
               <h4>Not a stretched iPhone</h4>
               <p>An adaptive sidebar and multi-column grids for full screen, Split View and Stage Manager.</p>
+            </article>
+            <article class="card">
+              <p class="tag">Mac Catalyst · Preview</p>
+              <h4>The same stations at your desk</h4>
+              <p>Build the Mac preview from source for the full library, search and playback experience.</p>
             </article>
             <article class="card">
               <p class="tag">Home Screen</p>
@@ -881,7 +932,8 @@ open Holmdel.xcworkspace <span class="c"># then ⌘R</span></code></pre>
           <h2>Modern Apple foundations, no shortcuts.</h2>
         </div>
         <dl class="specs">
-          <div><dt>Deployment target</dt><dd>iOS 26+</dd></div>
+          <div><dt>Beta</dt><dd>TestFlight</dd></div>
+          <div><dt>Desktop preview</dt><dd>Mac Catalyst</dd></div>
           <div><dt>Interface</dt><dd>SwiftUI</dd></div>
           <div><dt>Concurrency</dt><dd>Swift 6</dd></div>
           <div><dt>Storage</dt><dd>SwiftData</dd></div>
@@ -911,7 +963,7 @@ open Holmdel.xcworkspace <span class="c"># then ⌘R</span></code></pre>
           </details>
           <details>
             <summary>Which devices does it run on?</summary>
-            <p>iPhone, iPad, Apple Watch and Apple TV, plus CarPlay and a Home Screen widget.</p>
+            <p>The TestFlight beta runs on iPhone and iPad. Apple Watch, Apple TV and CarPlay are supported; the Mac Catalyst preview builds from source.</p>
           </details>
           <details>
             <summary>Can I add a station that isn't listed?</summary>
