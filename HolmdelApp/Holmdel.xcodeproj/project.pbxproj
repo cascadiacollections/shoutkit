@@ -27,7 +27,7 @@
 		00000000000000000000006A /* PlaybackEngineAudioStreaming in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005C /* PlaybackEngineAudioStreaming */; };
 		000000000000000000000079 /* HolmdelWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000071 /* HolmdelWidgetsBundle.swift */; };
 		00000000000000000000007A /* NowPlayingLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000072 /* NowPlayingLiveActivity.swift */; };
-		00000000000000000000007F /* HolmdelWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 000000000000000000000070 /* HolmdelWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		00000000000000000000007F /* HolmdelWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 000000000000000000000070 /* HolmdelWidgets.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		000000000000000000000082 /* SettingsFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005A /* SettingsFeature */; };
 		000000000000000000000084 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000083 /* Localizable.xcstrings */; };
 		000000000000000000000086 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000085 /* Localizable.xcstrings */; };
@@ -42,7 +42,7 @@
 		0000000000000000000000C2 /* QuickPlayWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000D1 /* QuickPlayWidget.swift */; };
 		0000000000000000000000ED /* IntentSupportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000EB /* IntentSupportTests.swift */; };
 		0000000000000000000000EE /* AppIntentsPathwayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000EC /* AppIntentsPathwayTests.swift */; };
-		0000000000000000000000F0 /* HolmdelWatchApp.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 1F9BBE8DA0AFDC04C965EF42 /* HolmdelWatchApp.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		0000000000000000000000F0 /* HolmdelWatchApp.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 1F9BBE8DA0AFDC04C965EF42 /* HolmdelWatchApp.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		0000000000000000000000FC /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000FA /* PrivacyInfo.xcprivacy */; };
 		000000000000000000000110 /* AppDependencies+Networking.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000100 /* AppDependencies+Networking.swift */; };
 		000000000000000000000111 /* AppDependencies+Factories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000101 /* AppDependencies+Factories.swift */; };
@@ -747,6 +747,7 @@
 /* Begin PBXTargetDependency section */
 		000000000000000000000081 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
+			platformFilter = ios;
 			target = 000000000000000000000075 /* HolmdelWidgets */;
 			targetProxy = 000000000000000000000080 /* PBXContainerItemProxy */;
 		};
@@ -758,6 +759,7 @@
 		0000000000000000000000F2 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = HolmdelWatchApp;
+			platformFilter = ios;
 			target = 3A593819EC2EC0E4966C890C /* HolmdelWatchApp */;
 			targetProxy = 0000000000000000000000F1 /* PBXContainerItemProxy */;
 		};
@@ -894,8 +896,8 @@
 				);
 				MARKETING_VERSION = 0.5.1;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -917,8 +919,8 @@
 				);
 				MARKETING_VERSION = 0.5.1;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

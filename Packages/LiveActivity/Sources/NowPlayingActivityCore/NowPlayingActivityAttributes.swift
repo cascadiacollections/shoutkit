@@ -1,5 +1,10 @@
-import ActivityKit
 import Foundation
+
+// Keeping this declaration at its established indentation avoids a whole-file
+// formatting diff for a platform guard.
+// swiftformat:disable indent
+#if !targetEnvironment(macCatalyst)
+import ActivityKit
 
 /// The now-playing Live Activity contract, shared between the app (which starts,
 /// updates, and ends the activity) and the widget extension (which renders it).
@@ -44,3 +49,5 @@ public struct NowPlayingActivityAttributes: ActivityAttributes, Sendable {
         self.genre = genre
     }
 }
+#endif
+// swiftformat:enable indent

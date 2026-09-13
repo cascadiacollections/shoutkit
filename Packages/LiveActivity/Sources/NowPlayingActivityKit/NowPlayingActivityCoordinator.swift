@@ -1,3 +1,25 @@
+import Playback
+import RadioDirectory
+
+// Keeping the iOS implementation at its established indentation avoids a
+// whole-file formatting diff for this platform guard.
+// swiftformat:disable indent
+#if targetEnvironment(macCatalyst)
+
+/// Mac Catalyst has no Live Activities. Keeping the coordinator's public
+/// surface as a no-op lets the shared app dependency graph remain identical
+/// across iOS and macOS without linking unavailable ActivityKit APIs.
+@MainActor
+public final class NowPlayingActivityCoordinator {
+    public init(transport _: any HTTPTransporting = URLSessionHTTPTransport.nowPlayingArtwork) {}
+
+    public func observe(_: PlaybackController) {}
+
+    public func endAnyExistingActivities() {}
+}
+
+#else
+
 import ActivityKit
 import AsyncAlgorithms
 import CoreGraphics
@@ -5,8 +27,6 @@ import Foundation
 import ImageIODownsample
 import NowPlayingActivityCore
 import Observation
-import Playback
-import RadioDirectory
 
 /// Drives the now-playing Live Activity from playback state by observing
 /// `PlaybackController`'s `@Observable` state directly (`Observations` async
@@ -362,3 +382,6 @@ public final class NowPlayingActivityCoordinator {
         ImageIODownsampler.encode(data, maxPixelSize: CGFloat(maxPixelSize), outputType: .png)
     }
 }
+
+#endif
+// swiftformat:enable indent
