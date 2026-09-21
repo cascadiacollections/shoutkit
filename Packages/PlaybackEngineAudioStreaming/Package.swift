@@ -29,7 +29,7 @@ import PackageDescription
 /// `.tvOS` is here because the whole chain genuinely supports it, checked at the
 /// exact tags in `Package.resolved` rather than taken from the manifests: both
 /// xcframeworks carry real `tvos-arm64` and `tvos-arm64_x86_64-simulator` slices,
-/// and AudioStreaming 1.4.4 declares `.tvOS(.v16)`. That is the difference from
+/// and AudioStreaming 1.4.5 declares `.tvOS(.v16)`. That is the difference from
 /// watchOS, and it is why `ShoutKitTVApp` can link this product and drop its own
 /// AVPlayer engine (DECISIONS.md 2026-08-12).
 let package = Package(
@@ -50,7 +50,7 @@ let package = Package(
         // dependabot `factory` group spans all of them for that reason, and this
         // directory is in its list.
         .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2"),
-        .package(url: "https://github.com/dimitris-c/AudioStreaming.git", exact: "1.4.4"),
+        .package(url: "https://github.com/dimitris-c/AudioStreaming.git", exact: "1.4.5"),
     ],
     targets: [
         .target(
