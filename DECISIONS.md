@@ -1,5 +1,57 @@
 # Decisions
 
+## 2026-09-21 (AudioStreaming 1.4.5 carries the timer fix, so the discarded-player grace period comes out)
+
+Closes out the 2026-09-07 entry, which ended with the condition for removal: "if it lands and
+a release carries it, pin the release … and this reduces back to a bare reassignment". Both
+halves now hold, so `replacePlayer()` is a bare reassignment again and
+`discardedPlayerTeardownGrace` is gone.
+
+**Verified at the tag, not from the release notes.** `1.4.5` (14 Sep 2026, `e28a74b7`) contains
+<https://github.com/dimitris-c/AudioStreaming/pull/138> — `DispatchTimerSource.deinit` now
+computes `needsResume` under `UnfairLock` and resumes only a source it finds `.suspended`, and
+`activate()`/`suspend()` do their check-and-change under the same lock. That is exactly the
+shape the 2026-09-07 entry asked for, including the lock: `Retrier` builds its timer with
+`underlyingQueue: nil`, so the torn suspend count was reachable and a conditional resume alone
+would not have settled it.
+
+**The pin moves by one patch and nothing else in the graph moves.** `git diff 1.4.4..1.4.5` is
+two PRs, their tests, and a README line. The manifest is untouched: still
+`swift-tools-version:5.10`, still `.iOS(.v15)/.macOS(.v13)/.tvOS(.v16)` with no watchOS, still
+`exact: "0.1.2"` on both sbooth xcframeworks. So the load-bearing platform reasoning in
+`Packages/PlaybackEngineAudioStreaming/Package.swift` — tvOS in because the slices are real,
+watchOS out because they are not — survives the bump untouched, and no new binary artifact
+enters the graph (the thing CI asserts about `Packages/Playback`).
+
+**The second PR in that tag is the reason to say what we accepted.** 1.4.5 also carries
+<https://github.com/dimitris-c/AudioStreaming/pull/136>, optional mTLS client certificates,
+which touches `NetworkSessionDelegate`, `NetworkingClient`, and `AudioPlayer.init` — our
+streaming path. It is additive and the provider defaults to `nil`, so our `AudioPlayer()` call
+resolves to the same behaviour; taking the timer fix means taking it, and the alternative was a
+fork, which the 2026-08-07 entry (#124) already ruled out for the `binaryTarget` shape it
+re-opens. Noted so the next unexplained networking regression has a suspect.
+
+**Still not verified against a real crash — in both directions.** The 2026-09-07 entry was
+explicit that the abort was read out of the dependency's source rather than observed, and no
+`MXCrashDiagnostic` with `_dispatch_source_dispose` was ever found, because
+`DiagnosticsService`'s store lives in the on-device container and MetricKit does not deliver in
+the simulator. Removing the mitigation inherits that: there is no signal that would tell us if
+this regressed. The argument for removing it anyway is that the workaround was never free — it
+held a dead player's buffers for a second after every media-services reset, and a one-second
+sleep is a fixed guess at a queue hop.
+
+**No test covers this, for the reason the 2026-08-20 volume-ramp entry gives.** `AudioPlayer` is
+a concrete type from the dependency with no protocol seam, and `PlaybackEngineAudioStreaming`
+has no test target on the mac host — it cannot build there at all. The check that this did not
+break anything is the simulator test plan plus the Release and tvOS builds in CI.
+
+**`Package.resolved` was hand-edited in all eight files** (the two workspace copies and six
+package copies), because no Swift toolchain was available where the change was made. The pins
+are correct — version `1.4.5`, revision `e28a74b7b863…` as `git rev-parse 1.4.5^{commit}`
+reports it — but each file's `originHash` still reflects the old dependency declaration, so the
+first `swift build`/`xcodebuild` on a real toolchain will rewrite that field. That is a
+re-resolution, not a failure; commit the churn when it appears.
+
 ## 2026-09-13 (the marketing site heads to Manasquan after summer)
 
 The Labor Day promotion had expired, and the page still described Holmdel as source-only even
