@@ -1,0 +1,115 @@
+name: Dependabot Swift watch
+
+# Watches for the one change that lets the `swift` ecosystem back into
+# .github/dependabot.yml — see DECISIONS.md 2026-09-22.
+#
+# Dependabot resolves Swift packages inside its own container, and that image
+# pins a Swift toolchain that is older than the one this tree requires. Every
+# manifest under `Packages/` is `swift-tools-version: 6.4`, so resolution
+# aborts before it reads a dependency and the weekly run just fails.
+#
+# The failure mode that motivated this job is that it fails *quietly*: a failed
+# Dependabot run is not a failed check on any PR, so seven consecutive weeks
+# (2026-08-10 through 2026-09-21) produced no PRs and no notification. The
+# ecosystem is disabled rather than left to rot, which trades a silent failure
+# for a silent gap — Factory is `exact`-pinned in seven manifests and nothing
+# watches it now. This job is what closes that gap: check weekly, and say so
+# the week the toolchain lands.
+#
+# Costs nothing to run (ubuntu, ~15 seconds), same as runner-image-watch.yml.
+
+on:
+  schedule:
+    # Mondays, a little after the runner-image watch so the two don't interleave.
+    - cron: "45 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: dependabot-swift-watch
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check dependabot-core's Swift toolchain
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Read the pinned Swift version from dependabot-core
+        id: check
+        run: |
+          set -euo pipefail
+
+          # Source of truth for the updater image's toolchain. `swift/Dockerfile`
+          # carries a single `ARG SWIFT_VERSION=x.y.z` that the build resolves
+          # into a download.swift.org tarball URL.
+          DOCKERFILE="https://raw.githubusercontent.com/dependabot/dependabot-core/main/swift/Dockerfile"
+          curl -fsSL "$DOCKERFILE" -o Dockerfile
+
+          FOUND="$(grep -oE '^ARG SWIFT_VERSION=[0-9]+\.[0-9]+(\.[0-9]+)?' Dockerfile | head -1 | cut -d= -f2 || true)"
+          if [ -z "$FOUND" ]; then
+            # Upstream moved the pin. That is itself worth knowing about, and is
+            # not the same as "still too old" — fail loudly instead of silently
+            # reporting no-change forever, which is the exact bug this watches for.
+            echo "::error::Could not find 'ARG SWIFT_VERSION=' in $DOCKERFILE — the pin moved and this workflow needs updating."
+            exit 1
+          fi
+
+          # The tree needs 6.4. Compare with sort -V so 6.10 reads as newer
+          # than 6.4 rather than older, and a future 7.x also satisfies it.
+          REQUIRED="6.4"
+          echo "found=$FOUND" >> "$GITHUB_OUTPUT"
+          if [ "$(printf '%s\n%s\n' "$REQUIRED" "$FOUND" | sort -V | head -1)" = "$REQUIRED" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Summarize
+        run: |
+          if [ "${{ steps.check.outputs.ready }}" = "true" ]; then
+            echo "### dependabot-core now ships Swift ${{ steps.check.outputs.found }} — the \`swift\` ecosystem can go back in" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "dependabot-core still pins Swift ${{ steps.check.outputs.found }}; this tree needs 6.4. \`swift\` stays disabled." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # Opened once, not once a week — same reasoning as runner-image-watch.yml:
+      # a weekly duplicate is how a useful alert becomes noise that gets muted.
+      - name: Open a re-enable issue
+        if: steps.check.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: "Dependabot: re-enable the `swift` ecosystem"
+          FOUND: ${{ steps.check.outputs.found }}
+        run: |
+          set -euo pipefail
+          EXISTING="$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number // empty')"
+          if [ -n "$EXISTING" ]; then
+            echo "Issue #$EXISTING is already open — nothing to do."
+            exit 0
+          fi
+          {
+            echo "\`dependabot/dependabot-core\`'s \`swift/Dockerfile\` now pins **Swift \`$FOUND\`**,"
+            echo "which satisfies this tree's \`swift-tools-version: 6.4\` manifests."
+            echo
+            echo "Uncomment the \`package-ecosystem: swift\` block in \`.github/dependabot.yml\` —"
+            echo "it was left in place verbatim for exactly this. Then confirm a run actually"
+            echo "resolves rather than assuming it does:"
+            echo
+            echo '```'
+            echo "gh run list --workflow 'Dependabot Updates' --limit 5"
+            echo '```'
+            echo
+            echo "Worth a look in the same pass, since nothing has watched them while this was off:"
+            echo
+            echo "- Factory is \`exact: \"3.3.2\"\`-pinned in seven manifests — all must move together."
+            echo "- AudioStreaming is \`exact\`-pinned in \`Packages/PlaybackEngineAudioStreaming\`."
+            echo
+            echo "Once it is back and green, delete this workflow — it has no other purpose."
+            echo
+            echo "_Filed automatically by \`.github/workflows/dependabot-swift-watch.yml\`._"
+          } > body.md
+          gh issue create --title "$TITLE" --body-file body.md

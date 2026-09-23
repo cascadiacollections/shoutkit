@@ -13,38 +13,54 @@ updates:
     labels:
       - dependencies
 
-  # Every package with a remote `.package(url:)` dependency needs a directory
-  # here — the rest resolve exclusively through local `.package(path:)`
-  # references (see THIRD_PARTY_LICENSES.md for the full inventory). One
-  # multi-directory entry, not one entry per package, so `groups` can span
-  # directories: Factory is `exact`-pinned in seven of these manifests, and an
-  # ungrouped bump of just one would leave the graph with conflicting exact
-  # pins — so all directories that reference it must live under this single
-  # entry for the `factory` group below to cover them together.
-  - package-ecosystem: swift
-    directories:
-      - "/Packages/RadioDirectory"
-      - "/Packages/DesignSystem"
-      - "/Packages/LiveActivity"
-      - "/Packages/Playback"
-      # The only manifest that declares AudioStreaming, since #122 moved the
-      # engine out of Playback. Missing from this list, its `exact: "1.4.4"` pin
-      # would simply never be offered a bump.
-      - "/Packages/PlaybackEngineAudioStreaming"
-      - "/Packages/Persistence"
-      - "/Packages/DebugSupport"
-      - "/Packages/FeatureFlags"
-      - "/Packages/BrowseFeatureCore"
-      - "/Packages/SearchFeatureCore"
-      - "/Packages/Features/BrowseFeature"
-      - "/Packages/Features/SearchFeature"
-    schedule:
-      interval: weekly
-    commit-message:
-      prefix: deps
-    labels:
-      - dependencies
-    groups:
-      factory:
-        patterns:
-          - "*actory*"
+  # The `swift` ecosystem is DISABLED, not deleted — see DECISIONS.md 2026-09-22.
+  #
+  # Dependabot's Swift updater runs `swift package` inside its own container,
+  # and that image pins `ARG SWIFT_VERSION=6.3.1`
+  # (dependabot/dependabot-core, swift/Dockerfile). Every manifest in
+  # `Packages/` declares `swift-tools-version: 6.4` and uses PackageDescription
+  # API that does not exist before it — `.iOS(.v26)` and
+  # `.defaultIsolation(MainActor.self)` — so resolution aborts before it reads
+  # a single dependency:
+  #
+  #   error: 'browsefeaturecore': package 'browsefeaturecore' is using Swift
+  #   tools version 6.4.0 but the installed version is 6.3.1
+  #
+  # This failed silently every week from 2026-08-10 to 2026-09-21 — seven runs,
+  # no PRs, no notification, because a failed Dependabot run is not a failed
+  # check on anything. Lowering the tools version is not available: the
+  # manifests would no longer parse. So the entry comes out until the updater
+  # image catches up, and `dependabot-swift-watch.yml` opens an issue the week
+  # it does. Restore the block below verbatim at that point.
+  #
+  # What this costs in the meantime: Factory is `exact: "3.3.2"`-pinned in
+  # seven manifests and AudioStreaming `exact: "1.4.4"` in an eighth, and
+  # nothing now watches any of them. Those are hand-bumps until this is back.
+  #
+  # - package-ecosystem: swift
+  #   directories:
+  #     - "/Packages/RadioDirectory"
+  #     - "/Packages/DesignSystem"
+  #     - "/Packages/LiveActivity"
+  #     - "/Packages/Playback"
+  #     # The only manifest that declares AudioStreaming, since #122 moved the
+  #     # engine out of Playback. Missing from this list, its `exact: "1.4.4"`
+  #     # pin would simply never be offered a bump.
+  #     - "/Packages/PlaybackEngineAudioStreaming"
+  #     - "/Packages/Persistence"
+  #     - "/Packages/DebugSupport"
+  #     - "/Packages/FeatureFlags"
+  #     - "/Packages/BrowseFeatureCore"
+  #     - "/Packages/SearchFeatureCore"
+  #     - "/Packages/Features/BrowseFeature"
+  #     - "/Packages/Features/SearchFeature"
+  #   schedule:
+  #     interval: weekly
+  #   commit-message:
+  #     prefix: deps
+  #   labels:
+  #     - dependencies
+  #   groups:
+  #     factory:
+  #       patterns:
+  #         - "*actory*"
