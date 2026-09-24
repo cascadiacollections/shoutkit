@@ -1,5 +1,51 @@
 # Decisions
 
+## 2026-09-22 (Dependabot's `swift` ecosystem comes out until its image ships 6.4)
+
+Seven consecutive weekly Dependabot runs failed — 2026-08-10 through 2026-09-21 — and not one
+of them was noticed, because a failed Dependabot run is not a failed check on anything. There
+is no red X on a PR, no annotation, nothing in the merge queue. It is only visible if you go
+looking at `gh run list` for a workflow nobody reads. That is the part worth recording: the
+bug was not that the updater broke, it was that it broke in the one place in this repo where
+breakage is silent.
+
+**The cause is a toolchain floor we cannot lower.** Dependabot resolves Swift packages inside
+its own container, and `dependabot/dependabot-core`'s `swift/Dockerfile` pins
+`ARG SWIFT_VERSION=6.3.1`. Every manifest under `Packages/` is `swift-tools-version: 6.4`, so
+resolution aborts before reading a single dependency:
+
+```
+error: 'browsefeaturecore': package 'browsefeaturecore' is using Swift tools version 6.4.0
+but the installed version is 6.3.1
+```
+
+The obvious fix — drop the manifests to 6.3 — is not available, and not for a taste reason.
+The manifests use `PackageDescription` API that does not exist before 6.4: `.iOS(.v26)` as a
+platform (the 2026-07-13 entry's `.iOS(.v27)` reasoning is the same constraint one version up)
+and `swiftSettings: [.defaultIsolation(MainActor.self)]` in BrowseFeatureCore and
+SearchFeatureCore. A 6.3 toolchain would not parse them, so the downgrade trades a failing
+updater for a tree that does not build. The floor is real.
+
+**Disabled, not deleted.** The whole `package-ecosystem: swift` block stays in
+`.github/dependabot.yml`, commented out verbatim, because the comments on it are load-bearing:
+which directories exist only because Factory is `exact`-pinned and must move as a group, and
+why `PlaybackEngineAudioStreaming` is listed separately since #122 moved the engine out of
+Playback. Re-deriving that from scratch in six months is how the `factory` group silently
+stops covering a directory.
+
+**What this costs, stated plainly.** Factory is `exact: "3.3.2"` in seven manifests and
+AudioStreaming `exact: "1.4.4"` in an eighth, and nothing watches any of them now. Trading a
+silent failure for a silent gap would be no improvement on its own — so
+`.github/workflows/dependabot-swift-watch.yml` polls that `ARG SWIFT_VERSION` line weekly and
+opens an issue the week it reaches 6.4. Same shape as `runner-image-watch.yml` and for the same
+reason: this is another fact that changes on someone else's schedule, in a file this repo does
+not otherwise read. It errors rather than reporting no-change if the `ARG` line ever moves,
+because a watch that quietly stops watching is the failure it exists to prevent.
+
+Both watches are now waiting on the same thing from different directions — the free `macos-26`
+image needs Xcode 27, and dependabot-core needs Swift 6.4. They will likely resolve in the same
+quarter, and neither should be closed on the assumption that the other one landing settled it.
+
 ## 2026-09-21 (AudioStreaming 1.4.5 carries the timer fix, so the discarded-player grace period comes out)
 
 Closes out the 2026-09-07 entry, which ended with the condition for removal: "if it lands and
