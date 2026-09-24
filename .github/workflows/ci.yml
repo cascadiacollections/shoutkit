@@ -288,12 +288,30 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Select latest Xcode
+      # Chosen together, not independently, and not "latest Xcode" like the
+      # compile-only jobs: this job *runs* tests, and a test bundle built with
+      # Xcode N only loads on an iOS N runtime. The image rotates in Xcode
+      # betas (27.2 beta on 20260921) without installing their runtimes, and
+      # `sort -V | tail -1` then paired Xcode 27.2's AppIntentsTesting with the
+      # iOS 27.0 runtime — the bundle failed to dlopen and the job sat for 20
+      # billed minutes before saying so (run 35958089959). The script picks the
+      # newest Xcode whose simulator SDK has a matching runtime with an iPhone.
+      #
+      # Resolved by UDID at runtime rather than pinned by device name: the
+      # images also rotate which iPhone models ship, and a stale `name=iPhone
+      # NN` destination fails the whole job with an unhelpful "unable to find a
+      # device" error.
+      - name: Select Xcode and an iOS Simulator
         id: toolchain
         run: |
-          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
+          set -euo pipefail
+          python3 .github/scripts/select_xcode_and_simulator.py > selection.env
+          DEVELOPER_DIR="$(sed -n 's/^developer_dir=//p' selection.env)"
+          UDID="$(sed -n 's/^udid=//p' selection.env)"
+          sudo xcode-select -s "$DEVELOPER_DIR"
           xcodebuild -version
           echo "id=$(xcodebuild -version | shasum -a 256 | cut -c1-12)" >> "$GITHUB_OUTPUT"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
 
       # Same rationale as the host-tests cache above. Two paths, because Xcode
       # splits the work: the shared store under ~/Library/Caches holds the
@@ -315,44 +333,6 @@ jobs:
           restore-keys: |
             spm-app-${{ steps.toolchain.outputs.id }}-
 
-      # Resolved by UDID at runtime rather than pinned by device name: the
-      # Xcode beta runner images rotate which iPhone models and iOS runtimes
-      # ship, and a stale `name=iPhone NN` destination fails the whole job with
-      # an unhelpful "unable to find a device" error.
-      - name: Select an iOS Simulator
-        id: simulator
-        run: |
-          set -euo pipefail
-          UDID="$(xcrun simctl list devices available --json | python3 -c '
-          import json, re, sys
-
-          def version(runtime_identifier):
-              # ...SimRuntime.iOS-27-1 -> (27, 1). Compared as numbers, not as
-              # text: lexicographically "iOS-9-0" sorts above "iOS-27-0", and
-              # "iOS-27-10" below "iOS-27-2".
-              return tuple(int(part) for part in re.findall(r"\d+", runtime_identifier.rsplit(".", 1)[-1]))
-
-          runtimes = json.load(sys.stdin)["devices"]
-          candidates = [
-              (version(runtime), device["name"], device["udid"])
-              for runtime, devices in runtimes.items()
-              if "iOS" in runtime
-              for device in devices
-              if device.get("isAvailable") and "iPhone" in device["name"]
-          ]
-          # Device name is the tiebreak so a runner with several iPhones on the
-          # newest runtime still resolves to the same one every run.
-          candidates.sort(key=lambda candidate: candidate[:2])
-          print(candidates[-1][2] if candidates else "")
-          ')"
-          if [ -z "$UDID" ]; then
-            echo "::error::No available iPhone simulator on the runner image"
-            xcrun simctl list devices available
-            exit 1
-          fi
-          echo "Using simulator $UDID"
-          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
-
       # `test`, not `build`: this is the only job that runs HolmdelTests and
       # the iOS-only package suites (DesignSystemTests,
       # NowPlayingActivityCoreTests) — none of them can run on the macOS host,
@@ -366,7 +346,7 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
-            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
+            -destination "platform=iOS Simulator,id=${{ steps.toolchain.outputs.udid }}" \
             -derivedDataPath DerivedData \
             -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO \
