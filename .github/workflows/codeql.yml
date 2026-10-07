@@ -124,6 +124,18 @@ jobs:
             -workspace Holmdel.xcworkspace -scheme Holmdel \
             -derivedDataPath DerivedData
 
+      # Compiled-language tracing on Apple Silicon requires Rosetta. Install
+      # before init: the tracer itself can interfere with softwareupdate.
+      # https://codeql.github.com/docs/codeql-overview/system-requirements/
+      - name: Ensure Rosetta is available for CodeQL tracing
+        run: |
+          if [ "$(uname -m)" = "arm64" ]; then
+            if ! arch -x86_64 /usr/bin/true; then
+              sudo softwareupdate --install-rosetta --agree-to-license
+            fi
+            arch -x86_64 /usr/bin/true
+          fi
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4.38.2
         with:

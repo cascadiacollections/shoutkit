@@ -21,7 +21,12 @@ The October 5 CodeQL run failed launching package manifests with `Bad CPU type i
 on the arm64 runner. Select Xcode before CodeQL initialization, restore only downloads
 instead of compiled manifest caches, key the cache by architecture and compiler, and resolve
 packages before tracing starts. This keeps manifest executables out of the traced build's
-initial resolution; the runner-specific fix still needs a successful hosted CodeQL run.
+initial resolution. Pre-resolution alone still reproduced the error during the traced build.
+GitHub's CodeQL system requirements explicitly require Rosetta 2 for compiled-language
+analysis on Apple Silicon. Verify an x86_64 process can run and install Rosetta when needed
+before CodeQL initialization, where tracing can interfere with softwareupdate. A successful
+hosted scan remains the validation for this runner-specific repair.
+<https://codeql.github.com/docs/codeql-overview/system-requirements/>
 
 The first local simulator result contained only HolmdelTests despite the plan listing five
 package suites. The packages were only dependencies of the app, so Xcode did not expose their test products.
