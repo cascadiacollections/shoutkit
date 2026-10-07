@@ -23,6 +23,13 @@ instead of compiled manifest caches, key the cache by architecture and compiler,
 packages before tracing starts. This keeps manifest executables out of the traced build's
 initial resolution; the runner-specific fix still needs a successful hosted CodeQL run.
 
+The first local simulator result contained only HolmdelTests despite the plan listing five
+package suites. The packages were only dependencies of the app, so Xcode did not expose their test products.
+Add the five packages as workspace roots, resolve test-plan paths from HolmdelApp with
+`../Packages/`, and check every non-skipped plan target appears as
+a unit-test bundle in the xcresult tree. A green xcodebuild exit alone did not prove those
+suites ran; the new CI guard makes that omission fail.
+
 SwiftLint moves to 0.65.1. SwiftFormat is now pinned to 0.63.1 through a shared download
 script used by both CI and the manual Reformat workflow, so a Homebrew formula update cannot
 silently change the formatting gate. This replaces the earlier unpinned Homebrew choice.

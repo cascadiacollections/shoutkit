@@ -348,6 +348,10 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" test 2>&1 | tee build.log
 
+      # Xcode can succeed while silently omitting unresolved package targets.
+      - name: Verify every test plan target ran
+        run: python3 .github/scripts/check-simulator-test-targets.py HolmdelApp/Holmdel.xctestplan TestResults.xcresult
+
       # Surface compiler errors and test failures as check annotations. Raw job
       # logs live on Azure blob storage, which repo-scoped tokens (and remote
       # agents working a PR) can't always reach — annotations are readable via

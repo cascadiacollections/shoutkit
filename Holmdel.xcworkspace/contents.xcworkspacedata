@@ -4,4 +4,19 @@
    <FileRef
       location = "group:HolmdelApp/Holmdel.xcodeproj">
    </FileRef>
+   <FileRef
+      location = "group:Packages/RadioDirectory">
+   </FileRef>
+   <FileRef
+      location = "group:Packages/Playback">
+   </FileRef>
+   <FileRef
+      location = "group:Packages/Persistence">
+   </FileRef>
+   <FileRef
+      location = "group:Packages/DesignSystem">
+   </FileRef>
+   <FileRef
+      location = "group:Packages/LiveActivity">
+   </FileRef>
 </Workspace>
