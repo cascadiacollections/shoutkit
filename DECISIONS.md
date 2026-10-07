@@ -41,6 +41,12 @@ sandbox-exec contains only arm64e slices, which CodeQL cannot trace. Xcode expos
 by local package resolution). Set it only for this isolated CodeQL job. Normal CI retains
 manifest sandboxing, and the scan still compiles and extracts the full app. Log the system
 binary architectures so a future runner change is visible.
+The scan then reached compilation but failed launching Xcode 27's arm64-only macro servers
+from the Rosetta compiler. Capture the native host architecture before tracer initialization
+and explicitly launch Xcode in that architecture for resolution and compilation. Rosetta
+remains available for system tools; the manifest sandbox workaround remains confined to
+this job. Swift 6.4 is newer than CodeQL's documented 6.3 ceiling, so scan completion and
+extraction diagnostics must be assessed separately from a normal successful app build.
 <https://codeql.github.com/docs/codeql-overview/system-requirements/>
 
 The first local simulator result contained only HolmdelTests despite the plan listing five
