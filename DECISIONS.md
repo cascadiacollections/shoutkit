@@ -16,6 +16,10 @@ its 10 ms poll can resume after the 10 ms backoff has already changed buffering 
 The stale-generation assertion now compares the state immediately before and after the
 callback, and also verifies rejection after the replacement stream starts. This preserves
 the behavioral contract without relying on observing a brief intermediate state.
+The restored simulator run also exposed SleepTimerTests' two-second polling deadline: parallel
+suites occupied the main actor for about five seconds, and the test resumed before the timer
+task could fire. Use a ten-second monotonic deadline for this completion assertion; production
+scheduling stays unchanged, and the test still fails when the callback never arrives.
 
 The October 5 CodeQL run failed launching package manifests with `Bad CPU type in executable`
 on the arm64 runner. Select Xcode before CodeQL initialization, restore only downloads
