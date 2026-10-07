@@ -31,6 +31,12 @@ incompatible with tracer injection and recommend running the build in an x86_64 
 Use that shell for both pre-resolution and compilation, and keep the build log outside the
 checkout so an untracked log does not change SwiftPM's manifest Git context.
 <https://github.com/github/codeql-action/issues/2347>
+The x86_64 shell still failed at sandbox-exec. On macOS 27, `lipo -info` confirms
+sandbox-exec contains only arm64e slices, which CodeQL cannot trace. Xcode exposes
+`IDEPackageSupportDisableManifestSandbox` (verified in IDESwiftPackageCore and accepted
+by local package resolution). Set it only for this isolated CodeQL job. Normal CI retains
+manifest sandboxing, and the scan still compiles and extracts the full app. Log the system
+binary architectures so a future runner change is visible.
 <https://codeql.github.com/docs/codeql-overview/system-requirements/>
 
 The first local simulator result contained only HolmdelTests despite the plan listing five
