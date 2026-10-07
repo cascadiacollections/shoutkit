@@ -10,7 +10,8 @@ Requirements: Xcode 27 with the iOS 27 SDK. Note this is a *build* requirement, 
 deployment floor: the manifests are `swift-tools-version: 6.4` and the MediaSession
 now-playing path needs the iOS 27 SDK to compile, so an earlier Xcode can't open or build the
 project. The app itself ships a deployment floor of **iOS 26.0** and runs there — see
-`DECISIONS.md`.
+`DECISIONS.md`. If a standalone Swift installation shadows Xcode in your shell, use
+`/usr/bin/xcrun swift` for package commands to select Xcode's bundled compiler.
 
 ```sh
 xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
@@ -90,9 +91,10 @@ swift test --skip-build
 - **Record significant decisions in `DECISIONS.md`** — a dated entry explaining *why*, not just
   what. Read it before proposing architectural changes; it's the project's memory.
 - **Style** is enforced by the checked-in `.swiftformat` and `.swiftlint.yml`. CI runs
-  SwiftLint **0.65.0** with `--strict` (warnings fail the build), pinned in `.github/workflows/ci.yml`;
-  install that version locally (e.g. `mise use swiftlint@0.65.0`) so your results match CI. CI also
-  runs blocking `swiftformat --lint` — run `swiftformat HolmdelApp Packages` locally before
+  SwiftLint **0.65.1** with `--strict` (warnings fail the build), pinned in `.github/workflows/ci.yml`;
+  install that version locally (e.g. `mise use swiftlint@0.65.1`) so your results match CI. CI also
+  runs blocking `swiftformat --lint` with **SwiftFormat 0.63.1** (pinned by
+  `.github/scripts/install-swiftformat.sh`) — run `swiftformat HolmdelApp Packages` locally before
   pushing. Without a local toolchain, run the **Reformat** workflow
   (`.github/workflows/format.yml`) from the Actions tab instead; it runs the same command on a
   macOS runner and can push the result to your branch.

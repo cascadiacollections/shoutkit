@@ -89,34 +89,51 @@ jobs:
         with:
           fetch-depth: 2
 
+      # Select before initialization so tracing and package resolution use the
+      # same compiler. A rotating runner image may change the default Xcode.
+      - name: Select Xcode
+        id: toolchain
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
+          xcodebuild -version
+          xcrun swift --version
+          echo "id=$(xcrun swift --version 2>&1 | shasum -a 256 | cut -c1-12)" >> "$GITHUB_OUTPUT"
+
+      # This job used to cold-resolve the whole workspace graph every run —
+      # including the AudioStreaming ogg/vorbis xcframework download that
+      # ci.yml's `build` job caches — on the most expensive runner in the repo.
+      # Cache downloaded sources and artifacts, never compiled manifests.
+      # Manifest executables are tied to the host architecture and toolchain.
+      - name: Cache SwiftPM clones and binary artifacts
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/Library/Caches/org.swift.swiftpm/repositories
+            ~/Library/Caches/org.swift.swiftpm/artifacts
+            DerivedData/SourcePackages
+          key: spm-codeql-v2-${{ runner.arch }}-${{ steps.toolchain.outputs.id }}-${{ hashFiles('Holmdel.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: |
+            spm-codeql-v2-${{ runner.arch }}-${{ steps.toolchain.outputs.id }}-
+
+      # Resolve manifests outside tracing. CodeQL only needs the app source
+      # compilation, and manifest compilation under tracing failed to launch
+      # with "Bad CPU type in executable" on the arm64 runner.
+      - name: Resolve packages
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -workspace Holmdel.xcworkspace -scheme Holmdel \
+            -derivedDataPath DerivedData
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4.38.2
         with:
           languages: swift
           build-mode: manual
 
-      # This job used to cold-resolve the whole workspace graph every run —
-      # including the AudioStreaming ogg/vorbis xcframework download that
-      # ci.yml's `build` job caches — on the most expensive runner in the repo.
-      # Same key space as ci.yml so the two warm each other's store rather than
-      # each paying its own resolve.
-      - name: Cache SwiftPM clones and binary artifacts
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/Library/Caches/org.swift.swiftpm
-            DerivedData/SourcePackages
-          key: spm-app-codeql-${{ hashFiles('Holmdel.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
-          restore-keys: |
-            spm-app-codeql-
-
-      # Mirrors ci.yml: select the newest Xcode and build the app for the iOS
-      # Simulator so CodeQL can trace the Swift compilation. Keep the xcodebuild
-      # flags in sync with the CI build job.
+      # Build with the compiler selected before CodeQL initialization.
       - name: Build app (Swift)
         run: |
           set -o pipefail
-          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
           xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
             -configuration Release \
             -destination 'generic/platform=iOS Simulator' \

@@ -16,7 +16,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-algorithms.git", from: "1.2.1"),
-        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2"),
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.4.1"),
     ],
     targets: [
         .target(

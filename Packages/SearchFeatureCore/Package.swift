@@ -15,8 +15,8 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../RadioDirectory"),
-        .package(url: "https://github.com/apple/swift-async-algorithms.git", from: "1.1.5"),
-        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2"),
+        .package(url: "https://github.com/apple/swift-async-algorithms.git", from: "1.1.7"),
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.4.1"),
     ],
     targets: [
         .target(

@@ -54,9 +54,9 @@ xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
   more than once. **The house remedy is to split along a real seam, not to add a
   `swiftlint:disable`** — see the `+Networking` / `+Factories` / `+Callbacks` / `+Warmups`
   and `PlaybackController+Internals` / `+Recovery` splits.
-- **`swiftformat --lint` is currently non-blocking** because most of the tree predates it.
-  Don't reformat files you're otherwise not touching; the one-time run is its own task with
-  its own workflow (`.github/workflows/format.yml`).
+- **`swiftformat --lint` is blocking**, following the one-time mechanical reformat.
+  Don't reformat files you're otherwise not touching; explicit formatting runs use
+  `.github/workflows/format.yml`. CI and that workflow both pin SwiftFormat 0.63.1.
 - **The app target is not a SwiftPM package.** New files under `HolmdelApp/` need
   `PBXFileReference`, `PBXBuildFile`, group-child, and Sources entries hand-added to
   `project.pbxproj`. A file that fails to register still builds green — it just silently

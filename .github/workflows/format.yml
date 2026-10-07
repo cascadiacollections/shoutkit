@@ -41,13 +41,8 @@ jobs:
           # on the PR that adds a reformat commit.
           persist-credentials: true
 
-      - name: Install SwiftFormat
-        env:
-          HOMEBREW_NO_AUTO_UPDATE: "1"
-          HOMEBREW_NO_INSTALL_CLEANUP: "1"
-        run: |
-          brew install swiftformat
-          swiftformat --version
+      - name: Install SwiftFormat 0.63.1
+        run: .github/scripts/install-swiftformat.sh
 
       # Same paths as the ci.yml check, so this run and that check cannot
       # disagree about what is in scope.
