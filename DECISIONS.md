@@ -25,7 +25,12 @@ initial resolution. Pre-resolution alone still reproduced the error during the t
 GitHub's CodeQL system requirements explicitly require Rosetta 2 for compiled-language
 analysis on Apple Silicon. Verify an x86_64 process can run and install Rosetta when needed
 before CodeQL initialization, where tracing can interfere with softwareupdate. A successful
-hosted scan remains the validation for this runner-specific repair.
+hosted scan remains the validation for this runner-specific repair. Rosetta availability
+alone also reproduced the failure. CodeQL maintainers identify arm64e system binaries as
+incompatible with tracer injection and recommend running the build in an x86_64 shell.
+Use that shell for both pre-resolution and compilation, and keep the build log outside the
+checkout so an untracked log does not change SwiftPM's manifest Git context.
+<https://github.com/github/codeql-action/issues/2347>
 <https://codeql.github.com/docs/codeql-overview/system-requirements/>
 
 The first local simulator result contained only HolmdelTests despite the plan listing five

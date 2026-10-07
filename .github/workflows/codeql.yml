@@ -115,15 +115,6 @@ jobs:
           restore-keys: |
             spm-codeql-v2-${{ runner.arch }}-${{ steps.toolchain.outputs.id }}-
 
-      # Resolve manifests outside tracing. CodeQL only needs the app source
-      # compilation, and manifest compilation under tracing failed to launch
-      # with "Bad CPU type in executable" on the arm64 runner.
-      - name: Resolve packages
-        run: |
-          xcodebuild -resolvePackageDependencies \
-            -workspace Holmdel.xcworkspace -scheme Holmdel \
-            -derivedDataPath DerivedData
-
       # Compiled-language tracing on Apple Silicon requires Rosetta. Install
       # before init: the tracer itself can interfere with softwareupdate.
       # https://codeql.github.com/docs/codeql-overview/system-requirements/
@@ -136,14 +127,29 @@ jobs:
             arch -x86_64 /usr/bin/true
           fi
 
+      # Resolve manifests outside tracing. CodeQL only needs the app source
+      # compilation, and manifest compilation under tracing failed to launch
+      # with "Bad CPU type in executable" on the arm64 runner.
+      - name: Resolve packages
+        shell: arch -x86_64 bash --noprofile --norc -eo pipefail {0}
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -workspace Holmdel.xcworkspace -scheme Holmdel \
+            -derivedDataPath DerivedData
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4.38.2
         with:
           languages: swift
           build-mode: manual
 
-      # Build with the compiler selected before CodeQL initialization.
+      # CodeQL cannot inject its tracer into arm64e system binaries. Run the
+      # build under Rosetta as recommended by the CodeQL maintainers.
+      # https://github.com/github/codeql-action/issues/2347
+      # Keep logs outside the checkout: untracked files alter SwiftPM manifest
+      # context and invalidate the manifests resolved before initialization.
       - name: Build app (Swift)
+        shell: arch -x86_64 bash --noprofile --norc -eo pipefail {0}
         run: |
           set -o pipefail
           xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
@@ -151,7 +157,7 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath DerivedData \
             CODE_SIGNING_ALLOWED=NO \
-            GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" build 2>&1 | tee build-release.log
+            GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" build 2>&1 | tee "$RUNNER_TEMP/build-release.log"
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4.38.2
