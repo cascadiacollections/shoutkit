@@ -134,8 +134,9 @@ jobs:
       # only the manifest sandbox in this isolated scan job; app compilation
       # and extraction remain enabled. Normal CI keeps manifest sandboxing.
       - name: Resolve packages
+        shell: arch -x86_64 bash --noprofile --norc -eo pipefail {0}
         run: |
-          arch "-$CODEQL_BUILD_ARCH" "$(xcode-select -p)/usr/bin/xcodebuild" -resolvePackageDependencies \
+          xcodebuild -resolvePackageDependencies \
             -workspace Holmdel.xcworkspace -scheme Holmdel \
             -derivedDataPath DerivedData \
             -IDEPackageSupportDisableManifestSandbox=1
@@ -146,22 +147,23 @@ jobs:
           languages: swift
           build-mode: manual
 
-      # Xcode 27 macro servers contain only arm64. Force the native host
-      # architecture so CodeQL's Rosetta system tools do not turn the Swift
-      # compiler into an x86_64 process that cannot launch those servers.
+      # Swift wraps macro servers in sandbox-exec too. Disable that wrapper
+      # only in this scan job, retaining macro expansion and source extraction.
+      # https://github.com/swiftlang/swift/blob/main/lib/AST/PluginRegistry.cpp
       # Keep logs outside the checkout: untracked files alter SwiftPM manifest
       # context and invalidate the manifests resolved before initialization.
       - name: Build app (Swift)
+        shell: arch -x86_64 bash --noprofile --norc -eo pipefail {0}
         run: |
           set -o pipefail
-          arch "-$CODEQL_BUILD_ARCH" "$(xcode-select -p)/usr/bin/xcodebuild" \
-            -workspace Holmdel.xcworkspace -scheme Holmdel \
+          xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
             -configuration Release \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath DerivedData \
             -IDEPackageSupportDisableManifestSandbox=1 \
             CODE_SIGNING_ALLOWED=NO \
             ARCHS="$CODEQL_BUILD_ARCH" ONLY_ACTIVE_ARCH=YES \
+            OTHER_SWIFT_FLAGS='$(inherited) -disable-sandbox' \
             GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" build 2>&1 | tee "$RUNNER_TEMP/build-release.log"
 
       - name: Perform CodeQL Analysis

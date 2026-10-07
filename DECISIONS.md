@@ -22,35 +22,23 @@ task could fire. Use a ten-second monotonic deadline for this completion asserti
 scheduling stays unchanged, and the test still fails when the callback never arrives.
 
 The October 5 CodeQL run failed launching package manifests with `Bad CPU type in executable`
-on the arm64 runner. Select Xcode before CodeQL initialization, restore only downloads
-instead of compiled manifest caches, key the cache by architecture and compiler, and resolve
-packages before tracing starts. This keeps manifest executables out of the traced build's
-initial resolution. Pre-resolution alone still reproduced the error during the traced build.
-GitHub's CodeQL system requirements explicitly require Rosetta 2 for compiled-language
-analysis on Apple Silicon. Verify an x86_64 process can run and install Rosetta when needed
-before CodeQL initialization, where tracing can interfere with softwareupdate. A successful
-hosted scan remains the validation for this runner-specific repair. Rosetta availability
-alone also reproduced the failure. CodeQL maintainers identify arm64e system binaries as
-incompatible with tracer injection and recommend running the build in an x86_64 shell.
-Use that shell for both pre-resolution and compilation, and keep the build log outside the
-checkout so an untracked log does not change SwiftPM's manifest Git context.
-<https://github.com/github/codeql-action/issues/2347>
-The x86_64 shell still failed at sandbox-exec. On macOS 27, `lipo -info` confirms
-sandbox-exec contains only arm64e slices, which CodeQL cannot trace. Xcode exposes
-`IDEPackageSupportDisableManifestSandbox` (verified in Xcode's SwiftPM framework and accepted
-by local package resolution). Set it only for this isolated CodeQL job. Normal CI retains
-manifest sandboxing, and the scan still compiles and extracts the full app. Log the system
-binary architectures so a future runner change is visible.
-The scan then reached compilation but failed launching Xcode 27's arm64-only macro servers
-from the Rosetta compiler. Capture the native host architecture before tracer initialization
-and explicitly launch Xcode in that architecture for resolution and compilation. Rosetta
-remains available for system tools; the manifest sandbox workaround remains confined to
-this job. Swift 6.4 is newer than CodeQL's documented 6.3 ceiling, so scan completion and
-extraction diagnostics must be assessed separately from a normal successful app build.
-The scan compiles only the native simulator architecture: source security analysis does
-not need duplicate arm64 and x86_64 compilation, which doubles expensive traced work.
-Normal Release checks continue building every default architecture.
+on the arm64 runner. macOS 27's sandbox-exec contains only arm64e slices, which CodeQL's
+tracer cannot inject into. Select Xcode and ensure Rosetta is available before initialization,
+use an x86_64 shell for the traced build, and bypass only manifest and Swift macro subprocess
+sandboxing in this isolated scan job. Swift's PluginRegistry applies the same sandbox wrapper
+before launching macro servers, so its error names the server even when the wrapper cannot
+launch. Normal CI retains both sandboxes; the scan still expands macros, compiles the app,
+and extracts its sources. Log binary architectures for future runner changes.
 <https://codeql.github.com/docs/codeql-overview/system-requirements/>
+<https://github.com/github/codeql-action/issues/2347>
+<https://github.com/swiftlang/swift/blob/main/lib/AST/PluginRegistry.cpp>
+
+Restore only source and artifact downloads, key caches by architecture/compiler, resolve
+before tracing, and keep build logs outside the checkout so they do not invalidate SwiftPM's
+Git context. Compile only the native simulator architecture for security analysis to avoid
+tracing every source twice; normal Release checks still build all default architectures.
+Swift 6.4 is newer than CodeQL's documented 6.3 ceiling, so scan completion and extraction
+diagnostics must be assessed separately from a successful app build.
 
 The first local simulator result contained only HolmdelTests despite the plan listing five
 package suites. The packages were only dependencies of the app, so Xcode did not expose their test products.
