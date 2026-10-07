@@ -47,6 +47,9 @@ and explicitly launch Xcode in that architecture for resolution and compilation.
 remains available for system tools; the manifest sandbox workaround remains confined to
 this job. Swift 6.4 is newer than CodeQL's documented 6.3 ceiling, so scan completion and
 extraction diagnostics must be assessed separately from a normal successful app build.
+The scan compiles only the native simulator architecture: source security analysis does
+not need duplicate arm64 and x86_64 compilation, which doubles expensive traced work.
+Normal Release checks continue building every default architecture.
 <https://codeql.github.com/docs/codeql-overview/system-requirements/>
 
 The first local simulator result contained only HolmdelTests despite the plan listing five

@@ -161,6 +161,7 @@ jobs:
             -derivedDataPath DerivedData \
             -IDEPackageSupportDisableManifestSandbox=1 \
             CODE_SIGNING_ALLOWED=NO \
+            ARCHS="$CODEQL_BUILD_ARCH" ONLY_ACTIVE_ARCH=YES \
             GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" build 2>&1 | tee "$RUNNER_TEMP/build-release.log"
 
       - name: Perform CodeQL Analysis
