@@ -33,7 +33,7 @@ checkout so an untracked log does not change SwiftPM's manifest Git context.
 <https://github.com/github/codeql-action/issues/2347>
 The x86_64 shell still failed at sandbox-exec. On macOS 27, `lipo -info` confirms
 sandbox-exec contains only arm64e slices, which CodeQL cannot trace. Xcode exposes
-`IDEPackageSupportDisableManifestSandbox` (verified in IDESwiftPackageCore and accepted
+`IDEPackageSupportDisableManifestSandbox` (verified in Xcode's SwiftPM framework and accepted
 by local package resolution). Set it only for this isolated CodeQL job. Normal CI retains
 manifest sandboxing, and the scan still compiles and extracts the full app. Log the system
 binary architectures so a future runner change is visible.
