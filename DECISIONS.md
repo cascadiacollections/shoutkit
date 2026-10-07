@@ -28,7 +28,10 @@ package suites. The packages were only dependencies of the app, so Xcode did not
 Add the five packages as workspace roots, resolve test-plan paths from HolmdelApp with
 `../Packages/`, and check every non-skipped plan target appears as
 a unit-test bundle in the xcresult tree. A green xcodebuild exit alone did not prove those
-suites ran; the new CI guard makes that omission fail.
+suites ran; the new CI guard makes that omission fail. Compiling the restored DesignSystem
+suite exposed missing main-actor isolation in two suites and an ambiguous optional artwork
+result, now explicit. Serialize the Live Activity artwork suite to honor the shared directory
+override's existing requirement that tests never mutate it concurrently.
 
 SwiftLint moves to 0.65.1. SwiftFormat is now pinned to 0.63.1 through a shared download
 script used by both CI and the manual Reformat workflow, so a Homebrew formula update cannot

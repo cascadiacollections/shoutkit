@@ -3,6 +3,7 @@ import CoreGraphics
 import Testing
 import UIKit
 
+@MainActor
 struct ArtworkLoaderTests {
     @Test
     func `palette samples preserve top left row major order`() throws {

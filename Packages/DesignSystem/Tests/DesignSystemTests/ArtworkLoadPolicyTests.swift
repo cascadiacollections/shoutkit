@@ -2,6 +2,7 @@
 import Foundation
 import Testing
 
+@MainActor
 struct ArtworkLoadPolicyTests {
     @Test
     func `retries primary URL before returning loaded artwork`() async throws {
@@ -29,7 +30,7 @@ struct ArtworkLoadPolicyTests {
         var primaryAttempts = 0
         var fallbackAttempts = 0
 
-        let loaded = await ArtworkLoadPolicy.loadWithSource(
+        let loaded: (artwork: Int, sourceURL: URL)? = await ArtworkLoadPolicy.loadWithSource(
             request,
             retryDelays: [.zero],
         ) { url in
