@@ -55,6 +55,9 @@ struct AlbumArtLookupTests {
         ),
         UpsizeCase(source: nil, expected: nil),
         UpsizeCase(source: "not a url", expected: nil),
+        UpsizeCase(source: "/image/100x100bb.jpg", expected: nil),
+        UpsizeCase(source: "file:///tmp/100x100bb.jpg", expected: nil),
+        UpsizeCase(source: "https:///100x100bb.jpg", expected: nil),
     ])
     func `artwork URL upsizing is deterministic`(testCase: UpsizeCase) {
         #expect(AlbumArtLookup.upsizedArtworkURL(from: testCase.source)?.absoluteString == testCase.expected)

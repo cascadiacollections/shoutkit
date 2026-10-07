@@ -33,6 +33,13 @@ suite exposed missing main-actor isolation in two suites and an ambiguous option
 result, now explicit. Serialize the Live Activity artwork suite to honor the shared directory
 override's existing requirement that tests never mutate it concurrently.
 
+Running the restored artwork suite exposed two production bugs: a check and insertion under
+separate locks allowed duplicate concurrent iTunes requests, and Foundation accepts malformed
+artwork strings as relative URLs. Keep completed and pending lookups under one lock so checking
+the cache and claiming a task is atomic; network work and awaiting still happen outside the
+lock. Artwork URLs must have an HTTP(S) scheme and a nonempty host. Existing regression tests
+caught both failures; malformed-URL coverage now also includes relative paths and file URLs.
+
 SwiftLint moves to 0.65.1. SwiftFormat is now pinned to 0.63.1 through a shared download
 script used by both CI and the manual Reformat workflow, so a Homebrew formula update cannot
 silently change the formatting gate. This replaces the earlier unpinned Homebrew choice.

@@ -59,7 +59,6 @@ public nonisolated enum AlbumArtLookup {
     /// than LRU bookkeeping on every lookup).
     private static let maxCacheEntries = 256
 
-    private static let cache = OSAllocatedUnfairLock<[String: CachedLookup]>(initialState: [:])
     private struct InFlightLookup {
         let token = UUID()
         let task: Task<Match, Never>
@@ -67,7 +66,17 @@ public nonisolated enum AlbumArtLookup {
 
     /// Prevents duplicate network hits when the same track/storefront lookup
     /// is requested concurrently.
-    private static let inFlight = OSAllocatedUnfairLock<[String: InFlightLookup]>(initialState: [:])
+    private struct LookupState {
+        var cache: [String: CachedLookup] = [:]
+        var inFlight: [String: InFlightLookup] = [:]
+    }
+
+    private enum LookupResolution {
+        case cached(Match)
+        case pending(InFlightLookup)
+    }
+
+    private static let lookups = OSAllocatedUnfairLock(initialState: LookupState())
 
     /// Resolves artwork and an Apple Music link for the given artist and title.
     ///
@@ -106,34 +115,41 @@ public nonisolated enum AlbumArtLookup {
         else { return .empty }
 
         let cacheKey = cacheKey(artist: artist, title: title, regionIdentifier: regionIdentifier)
-        if let cached = cache.withLock({ $0[cacheKey] }) {
-            switch cached {
-            case let .match(match): return match
-            case .noMatch: return .empty
+        // Cache lookup and claiming a pending request must be atomic. Separate
+        // check/insert locks let concurrent callers both start the same fetch.
+        let resolution = lookups.withLock { state -> LookupResolution in
+            if let cached = state.cache[cacheKey] {
+                switch cached {
+                case let .match(match): return .cached(match)
+                case .noMatch: return .cached(.empty)
+                }
             }
-        }
-
-        if let existing = inFlight.withLock({ $0[cacheKey] }) {
-            return await existing.task.value
-        }
-
-        let inFlightLookup = InFlightLookup(task: Task {
-            await uncachedLookup(
-                artist: artist,
-                title: title,
-                regionIdentifier: regionIdentifier,
-                cacheKey: cacheKey,
-                transport: transport,
-            )
-        })
-        inFlight.withLock { $0[cacheKey] = inFlightLookup }
-        let match = await inFlightLookup.task.value
-        inFlight.withLock {
-            if $0[cacheKey]?.token == inFlightLookup.token {
-                $0.removeValue(forKey: cacheKey)
+            if let existing = state.inFlight[cacheKey] {
+                return .pending(existing)
             }
+            let pending = InFlightLookup(task: Task {
+                await uncachedLookup(
+                    artist: artist,
+                    title: title,
+                    regionIdentifier: regionIdentifier,
+                    cacheKey: cacheKey,
+                    transport: transport,
+                )
+            })
+            state.inFlight[cacheKey] = pending
+            return .pending(pending)
         }
-        return match
+        switch resolution {
+        case let .cached(match): return match
+        case let .pending(pending):
+            let match = await pending.task.value
+            lookups.withLock {
+                if $0.inFlight[cacheKey]?.token == pending.token {
+                    $0.inFlight.removeValue(forKey: cacheKey)
+                }
+            }
+            return match
+        }
     }
 
     private static func uncachedLookup(
@@ -201,11 +217,11 @@ public nonisolated enum AlbumArtLookup {
     }
 
     private static func store(_ value: CachedLookup, forKey key: String) {
-        cache.withLock {
-            if $0.count >= maxCacheEntries {
-                $0.removeAll(keepingCapacity: true)
+        lookups.withLock {
+            if $0.cache.count >= maxCacheEntries {
+                $0.cache.removeAll(keepingCapacity: true)
             }
-            $0[key] = value
+            $0.cache[key] = value
         }
     }
 
@@ -250,8 +266,12 @@ public nonisolated enum AlbumArtLookup {
     }
 
     static func upsizedArtworkURL(from artworkURL100: String?) -> URL? {
-        artworkURL100
-            .map { $0.replacingOccurrences(of: "100x100bb", with: "600x600bb") }
-            .flatMap(URL.init(string:))
+        guard let artworkURL100,
+              let url = URL(string: artworkURL100.replacingOccurrences(of: "100x100bb", with: "600x600bb")),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "https" || scheme == "http",
+              let host = url.host, host.isEmpty == false
+        else { return nil }
+        return url
     }
 }
