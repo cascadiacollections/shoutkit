@@ -23,7 +23,7 @@ env:
   # Pin SwiftLint so `--strict` is deterministic — an upstream release adding a
   # new rule can't fail CI without a deliberate bump here. Keep in sync with the
   # version contributors run locally (see CONTRIBUTING).
-  SWIFTLINT_VERSION: "0.65.0"
+  SWIFTLINT_VERSION: "0.65.1"
 
 # Every job below that says `runs-on: xcode-27` is billed. This repo is public,
 # so GitHub's *standard* hosted runners — including `macos-26` — are free, but
@@ -98,14 +98,10 @@ jobs:
       - name: Lint
         run: swiftlint lint --strict --reporter github-actions-logging
 
-      # Homebrew ships current SwiftFormat and is preinstalled on GitHub-hosted
-      # macOS runners; --lint fails instead of rewriting, so drift from the
-      # checked-in `.swiftformat` config shows up as a CI failure.
-      - name: Install SwiftFormat
-        env:
-          HOMEBREW_NO_AUTO_UPDATE: "1"
-          HOMEBREW_NO_INSTALL_CLEANUP: "1"
-        run: brew install swiftformat
+      # Use the same pinned formatter as the manual Reformat workflow.
+      # --lint fails instead of rewriting the checked-in source.
+      - name: Install SwiftFormat 0.63.1
+        run: .github/scripts/install-swiftformat.sh
 
       # The one-time whole-tree reformat is recorded in
       # `.git-blame-ignore-revs`, so all subsequent format drift blocks CI.
@@ -351,6 +347,10 @@ jobs:
             -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" test 2>&1 | tee build.log
+
+      # Xcode can succeed while silently omitting unresolved package targets.
+      - name: Verify every test plan target ran
+        run: python3 .github/scripts/check-simulator-test-targets.py HolmdelApp/Holmdel.xctestplan TestResults.xcresult
 
       # Surface compiler errors and test failures as check annotations. Raw job
       # logs live on Azure blob storage, which repo-scoped tokens (and remote

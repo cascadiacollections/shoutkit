@@ -142,11 +142,17 @@ struct PlaybackReconnectTests {
         // Ceiling fires: the stalled player is torn down and the stream retried.
         let stalledGeneration = output.startedStreamGenerations[0]
         await waitUntil { output.stopCount == 1 }
+        // The retry can already have moved from buffering to loading by the
+        // time polling resumes. A stale callback must preserve either state.
+        let recoveryState = controller.state
         output.emit(.playing, generation: stalledGeneration)
         #expect(controller.isReconnecting)
-        #expect(controller.state == .buffering(station()))
+        #expect(controller.state == recoveryState)
         await waitUntil { output.startedURLs.count == 2 }
         #expect(output.stopCount == 1)
+        #expect(controller.state == .loading(station()))
+        output.emit(.playing, generation: stalledGeneration)
+        #expect(controller.state == .loading(station()))
 
         output.onStatusChange?(.playing)
         #expect(controller.state == .playing(station()))

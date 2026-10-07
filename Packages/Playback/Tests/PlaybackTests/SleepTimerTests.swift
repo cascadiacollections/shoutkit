@@ -5,9 +5,12 @@ import Testing
 @MainActor
 struct SleepTimerTests {
     /// Polls until the timer fires or the deadline passes.
-    private func waitUntilFired(_ fired: () -> Bool, upTo seconds: TimeInterval = 2) async {
-        let deadline = Date().addingTimeInterval(seconds)
-        while fired() == false, Date() < deadline {
+    private func waitUntilFired(_ fired: () -> Bool, upTo timeout: Duration = .seconds(10)) async {
+        // The simulator can starve the main actor for several seconds while
+        // parallel suites start. This checks completion, not scheduler speed.
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: timeout)
+        while fired() == false, clock.now < deadline {
             try? await Task.sleep(for: .milliseconds(10))
         }
     }

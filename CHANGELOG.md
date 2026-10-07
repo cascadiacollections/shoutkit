@@ -52,6 +52,7 @@ below) are documented here. The format follows
   See `DECISIONS.md` (2026-08-24) and `TRADEMARK.md`.
 
 ### Fixed
+- Coalesce concurrent album-art lookups into one request and reject malformed artwork URLs.
 - **Pause now always means silence, even while a station is connecting or switching.** Late
   callbacks from an old connection can no longer restart audio, replace the current station's
   status, or trigger another retry after the listener has paused. Switching stations also stops

@@ -49,7 +49,7 @@ let package = Package(
         // Kept `exact` at the same version as every other manifest — the
         // dependabot `factory` group spans all of them for that reason, and this
         // directory is in its list.
-        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2"),
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.4.1"),
         .package(url: "https://github.com/dimitris-c/AudioStreaming.git", exact: "1.4.5"),
     ],
     targets: [

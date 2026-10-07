@@ -17,7 +17,7 @@ let package = Package(
         .package(path: "../../Playback"),
         .package(path: "../../Persistence"),
         .package(path: "../../RadioDirectory"),
-        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.3.2"),
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.4.1"),
     ],
     targets: [
         .target(

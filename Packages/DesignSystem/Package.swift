@@ -15,7 +15,7 @@ let package = Package(
         .package(path: "../ImageIODownsample"),
         .package(path: "../RadioDirectory"),
         .package(path: "../Playback"),
-        .package(url: "https://github.com/apple/swift-collections.git", from: "1.6.0"),
+        .package(url: "https://github.com/apple/swift-collections.git", from: "1.7.2"),
     ],
     targets: [
         .target(

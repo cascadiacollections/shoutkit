@@ -2,6 +2,8 @@ import Foundation
 @testable import NowPlayingActivityCore
 import Testing
 
+// These tests share the store's test-only directory override.
+@Suite(.serialized)
 struct LiveActivityArtworkStoreTests {
     @Test
     func `token is deterministic for URL`() throws {

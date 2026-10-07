@@ -18,7 +18,7 @@ let package = Package(
         .package(path: "../ImageIODownsample"),
         .package(path: "../Playback"),
         .package(path: "../RadioDirectory"),
-        .package(url: "https://github.com/apple/swift-async-algorithms.git", from: "1.1.5"),
+        .package(url: "https://github.com/apple/swift-async-algorithms.git", from: "1.1.7"),
     ],
     targets: [
         .target(name: "NowPlayingActivityCore"),
