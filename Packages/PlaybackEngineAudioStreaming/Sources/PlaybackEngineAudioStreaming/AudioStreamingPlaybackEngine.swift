@@ -134,13 +134,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         hasReportedEndOfStream = false
         stopClassificationTask?.cancel()
         silenceForUpcomingPlayback()
-        withActiveSession { [weak self] in
-            // A newer start (or a stop) supersedes this one; the pending
-            // activation is cancelled for those, and this is the belt to that
-            // brace — never begin streaming a URL that is no longer current.
-            guard let self, self.currentURL == url else { return }
-            self.player.play(url: url)
-        }
+        startPlayerWhenSessionIsActive(url: url)
     }
 
     public func pause() {
@@ -155,21 +149,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
 
     public func resume() {
         silenceForUpcomingPlayback()
-        withActiveSession { [weak self] in
-            guard let self else { return }
-            // `AudioPlayer.resume()` acts only when AudioStreaming's own state is
-            // exactly `.paused`, and that state can differ from ours: the system
-            // stops the engine for an interruption without telling the library, and
-            // a live stream the server closed leaves it `.stopped`. In those cases
-            // `resume()` returns having done nothing — no audio, no state change —
-            // so playback stayed stuck until the listener picked another station.
-            // Rejoin the stream instead; live radio has no position to preserve.
-            guard self.player.state == .paused else {
-                self.replayCurrentStream()
-                return
-            }
-            self.player.resume()
-        }
+        resumePlayerWhenSessionIsActive()
     }
 
     public func stop() {
@@ -186,7 +166,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
 
     /// Restarts the current stream from scratch — what a station switch does,
     /// minus the switch. Used when the player can't be resumed.
-    private func replayCurrentStream() {
+    func replayCurrentStream() {
         guard let currentURL else { return }
         didRequestStop = false
         hasReportedFailure = false

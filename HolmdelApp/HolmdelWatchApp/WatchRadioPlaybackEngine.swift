@@ -14,6 +14,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     private var playedToEndObserver: NSObjectProtocol?
     private var interruptionObserver: NSObjectProtocol?
     private var routeChangeObserver: NSObjectProtocol?
+    private var sessionActivationTask: Task<Void, Never>?
 
     override init() {
         super.init()
@@ -45,21 +46,28 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
 
         self.player = player
         onStatusChange?(.buffering)
-        activateAudioSession { [weak self] in
-            guard let self, self.player === player else { return }
+        sessionActivationTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.activateAudioSession()
+            guard Task.isCancelled == false, self.player === player else { return }
             player.play()
         }
     }
 
     func pause() {
+        sessionActivationTask?.cancel()
+        sessionActivationTask = nil
         player?.pause()
         onStatusChange?(.paused)
     }
 
     func resume() {
         guard let player else { return }
-        activateAudioSession { [weak self] in
-            guard let self, self.player === player else { return }
+        sessionActivationTask?.cancel()
+        sessionActivationTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.activateAudioSession()
+            guard Task.isCancelled == false, self.player === player else { return }
             player.play()
         }
     }
@@ -170,6 +178,8 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
     }
 
     private func tearDownPlayer() {
+        sessionActivationTask?.cancel()
+        sessionActivationTask = nil
         timeControlObservation?.invalidate()
         itemStatusObservation?.invalidate()
         timeControlObservation = nil
@@ -186,7 +196,7 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         player = nil
     }
 
-    private func activateAudioSession(completion: @escaping @MainActor () -> Void) {
+    private func activateAudioSession() async {
         let session = AVAudioSession.sharedInstance()
         // Best effort: long-form policy improves behavior but playback can still
         // proceed with the session's prior category.
@@ -196,8 +206,10 @@ final class WatchRadioPlaybackEngine: NSObject, RadioPlaybackEngine {
         // omits the resume hint). Genuine interruptions still arrive normally.
         // Best effort: this preference is advisory and unsupported on some routes.
         try? session.setPrefersNoInterruptionsFromSystemAlerts(true)
-        session.activate(options: []) { _, _ in
-            Task { @MainActor in completion() }
+        await withCheckedContinuation { continuation in
+            session.activate(options: []) { _, _ in
+                continuation.resume()
+            }
         }
     }
 

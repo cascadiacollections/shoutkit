@@ -73,34 +73,65 @@ extension AudioStreamingPlaybackEngine {
         }
     }
 
-    /// Runs `body` with an active audio session, retrying activation on a short
-    /// backoff when the system refuses it (see `sessionActivationRetryDelays`).
+    /// Retries audio-session activation on a short backoff when the system
+    /// refuses it (see `sessionActivationRetryDelays`).
     /// If activation never succeeds the stream is *not* started: a player fed by
     /// an inactive session buffers audio nobody can hear while the app reports
     /// playing. A retryable failure is reported instead, so the controller's
     /// bounded reconnect owns the next attempt.
-    func withActiveSession(_ body: @escaping @MainActor () -> Void) {
+    func retrySessionActivation() async -> Bool {
+        for delay in Self.sessionActivationRetryDelays {
+            do {
+                try await Task.sleep(for: delay)
+            } catch {
+                return false
+            }
+            guard Task.isCancelled == false else { return false }
+            if activateSession() {
+                return true
+            }
+        }
+        guard Task.isCancelled == false else { return false }
+        Self.logger.error("Audio session stayed unavailable; reporting a retryable failure")
+        reportFailure(.streamFailed("The audio session was unavailable."))
+        return false
+    }
+
+    func startPlayerWhenSessionIsActive(url: URL) {
         cancelPendingSessionActivation()
         if activateSession() {
-            body()
+            player.play(url: url)
             return
         }
-
         sessionActivationTask = Task { @MainActor [weak self] in
-            for delay in Self.sessionActivationRetryDelays {
-                try? await Task.sleep(for: delay)
-                guard Task.isCancelled == false, let self else { return }
-                if self.activateSession() {
-                    self.sessionActivationTask = nil
-                    body()
-                    return
-                }
-            }
-            guard Task.isCancelled == false, let self else { return }
-            self.sessionActivationTask = nil
-            Self.logger.error("Audio session stayed unavailable; reporting a retryable failure")
-            self.reportFailure(.streamFailed("The audio session was unavailable."))
+            guard let self, await self.retrySessionActivation() else { return }
+            // A newer start (or a stop) supersedes this one. Never begin
+            // streaming a URL that is no longer current.
+            guard self.currentURL == url else { return }
+            self.player.play(url: url)
         }
+    }
+
+    func resumePlayerWhenSessionIsActive() {
+        cancelPendingSessionActivation()
+        if activateSession() {
+            resumePlayerOrReplayStream()
+            return
+        }
+        sessionActivationTask = Task { @MainActor [weak self] in
+            guard let self, await self.retrySessionActivation() else { return }
+            self.resumePlayerOrReplayStream()
+        }
+    }
+
+    private func resumePlayerOrReplayStream() {
+        // AudioStreaming can remain stopped after an interruption or disconnect.
+        // A live stream has no position to preserve, so rejoin it from scratch.
+        guard player.state == .paused else {
+            replayCurrentStream()
+            return
+        }
+        player.resume()
     }
 
     func cancelPendingSessionActivation() {
@@ -111,7 +142,7 @@ extension AudioStreamingPlaybackEngine {
     /// - Returns: whether the session is active. The result is the point: the
     ///   `try?` this replaced hid a failed activation behind a player that then
     ///   played to nobody.
-    private func activateSession() -> Bool {
+    func activateSession() -> Bool {
         sessionDeactivationTask?.cancel()
         let session = AVAudioSession.sharedInstance()
         configureCategory(of: session)
