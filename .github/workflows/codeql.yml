@@ -52,13 +52,13 @@ jobs:
           fetch-depth: 2
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4.38.3
+        uses: github/codeql-action/init@v4.39.0
         with:
           languages: actions
           build-mode: none
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4.38.3
+        uses: github/codeql-action/analyze@v4.39.0
         with:
           category: "/language:actions"
 
@@ -142,7 +142,7 @@ jobs:
             -IDEPackageSupportDisableManifestSandbox=1
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4.38.3
+        uses: github/codeql-action/init@v4.39.0
         with:
           languages: swift
           build-mode: manual
@@ -167,6 +167,6 @@ jobs:
             GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" build 2>&1 | tee "$RUNNER_TEMP/build-release.log"
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4.38.3
+        uses: github/codeql-action/analyze@v4.39.0
         with:
           category: "/language:swift"
