@@ -647,6 +647,7 @@
     ]
   }
   </script>
+<link rel="stylesheet" href="testflight-promo.css">
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -682,6 +683,16 @@
   </div>
 
   <main id="main">
+<section class="halloween-promo" aria-labelledby="testflight-promo-title" hidden>
+  <div>
+    <p class="promo-dates"><span aria-hidden="true">🎃</span> Halloween week · October 25–31, 2026</p>
+    <h2 id="testflight-promo-title">Find your Halloween soundtrack.</h2>
+    <p>Discover live radio with the Squan iPhone and iPad beta.</p>
+    <p class="promo-note">Free to test with Apple TestFlight. Public builds unlock after Apple beta approval. Promo ends November 1 at 12:00 a.m. Pacific.</p>
+  </div>
+  <a class="promo-link" href="https://testflight.apple.com/join/ZBSBTbRU" aria-label="Join the Squan iOS beta on TestFlight">Join the iOS beta <span aria-hidden="true">↗</span></a>
+</section>
+
     <div id="top" class="hero">
       <div class="wrap">
         <div class="sunset">
@@ -694,9 +705,10 @@
           <p class="lead">
             <strong>Internet radio for iPhone, iPad and the places in between.</strong> Thousands
             of live stations, a Liquid Glass player, Siri to start it — no ads, accounts,
-            tracking or API keys. Now on TestFlight, with a Mac preview in the source.
+            tracking or API keys. Public TestFlight access will be available after Apple beta review, with a Mac preview in the source.
           </p>
           <div class="cta-row">
+            <a class="btn btn-ghost" href="https://testflight.apple.com/join/ZBSBTbRU">Join the iOS TestFlight beta</a>
             <a class="btn btn-primary" href="https://github.com/cascadiacollections/shoutkit">
               Get the source
             </a>
@@ -1022,5 +1034,6 @@ open Holmdel.xcworkspace <span class="c"># then ⌘R</span></code></pre>
     // Keep the copyright year current without a build step.
     document.getElementById('year').textContent = new Date().getFullYear();
   </script>
+<script src="testflight-promo.js" defer></script>
 </body>
 </html>
