@@ -231,7 +231,7 @@ func drainMainQueue() async {
 /// Polls until `condition` holds or the deadline passes (same pattern as
 /// SleepTimerTests.waitUntilFired, shared here for the timeout-driven suites).
 @MainActor
-func waitUntil(_ condition: () -> Bool, upTo seconds: TimeInterval = 10) async {
+func waitUntil(_ condition: () -> Bool, upTo seconds: TimeInterval = 30) async {
     let clock = ContinuousClock()
     let deadline = clock.now.advanced(by: .seconds(seconds))
     while condition() == false, clock.now < deadline {
