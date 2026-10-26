@@ -1,5 +1,43 @@
 # Decisions
 
+## 2026-10-25 (iPhone SE (2nd generation) becomes the low-end profiling floor)
+
+The low-end device profiling runs on is an iPhone SE (2nd generation): A13, 3 GB, a 375 × 667 pt
+screen with a home button, a 20 pt status-bar inset and no bottom inset, on iOS 27.
+
+- **Deployment targets need nothing.** Every iOS target is 26.0 (pbxproj, `Debug`/`Release`
+  xcconfigs, and every `Package.swift`), and both 26 and 27 run on A13. Nothing in the tree is
+  chip-gated: no FoundationModels, Apple Intelligence, Image Playground or Writing Tools, and no
+  `UIRequiredDeviceCapabilities` on the iOS app. The only post-26 API is the iOS 27 `AppSchema.audio`
+  intents surface, already `@available(iOS 27, *)` and not hardware-dependent.
+- **One shared preview canvas, `PreviewTrait.iPhoneSE`, in DesignSystem**, paired with
+  `DynamicTypeSize.narrowScreenPreview` (AX3). A fixed 375 × 667 layout rather than a device,
+  so it reproduces the width but not the safe area — the doc comment says so. The key screens
+  (rows, cards, the shelf, mini player, Now Playing, the root tab view) each gained an SE preview.
+- **What the SE simulator at AX3 actually showed**, and the fixes, all scoped to the accessibility
+  sizes so the standard sizes render exactly as before:
+  - Poster-tile captions truncated at one line however high their `lineLimit` went: in a grid
+    cell the aspect-fit artwork is the flexible child and the caption is proposed the leftover
+    height. `fixedSize(horizontal: false, vertical: true)` on the caption, then two lines at the
+    accessibility sizes. `StationRow` and the Top Tracks rows get the same wrapping rule.
+  - The Recently Played shelf tile's `@ScaledMetric` width was unbounded — ~350 pt at AX3, wider
+    than the SE's content area, so the next tile stopped peeking in and artwork decoded at a size
+    nobody sees. Capped at 1.6× the requested width.
+  - The mini player's second line was clipped in half: the tab bar accessory is a fixed height the
+    system owns. Capped at `.xxxLarge`, the tab bar's own treatment of its labels; Now Playing
+    still scales without limit.
+  - No hardcoded safe-area or notch insets exist anywhere in the views; Now Playing's vertical
+    layout already lives in a `ScrollView`, so its transport row scrolls into view rather than
+    overflowing at AX3.
+- **Memory headroom and thermal state are logged into Pulse in Debug** (`DebugResourceMonitor`,
+  in DebugSupport, so no reusable package gains anything): at launch, on
+  `thermalStateDidChangeNotification`, on memory warnings, and every 30 s. This is logging, not
+  the thermal throttling the 2026-08-03 power review declined — nothing reacts to the values. The
+  `Pulse` call itself goes through a small `DebugConsoleLog` in `DebugNetworkInspection.swift` so
+  that file stays the only one naming Pulse. `os_proc_available_memory()` returns 0 with no
+  jetsam limit, which is every Simulator run, so 0 is logged as "unavailable" rather than as an
+  empty tank; only the device produces a real headroom number.
+
 ## 2026-10-06 (dependency refresh and CI recovery)
 
 Swift dependency updates remain disabled because dependabot-core still pins Swift 6.3.1.

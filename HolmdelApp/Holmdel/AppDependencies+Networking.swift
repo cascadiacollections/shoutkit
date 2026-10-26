@@ -18,6 +18,10 @@ extension AppDependencies {
     /// belongs here rather than as another line up there.
     static func installProcessWideServices() {
         installSharedNetworking()
+        // Debug-only memory-headroom and thermal logging into Pulse; a no-op
+        // in Release. Before the graph exists, so its launch sample is the
+        // baseline the graph's own allocations are measured against.
+        DebugResourceMonitor.start()
         // `PlaybackController`'s production init resolves its engine through
         // Factory, and `Playback` ships only the stub — the concrete engine
         // lives in the iOS-only PlaybackEngineAudioStreaming package (#122).

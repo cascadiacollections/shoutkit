@@ -329,3 +329,14 @@ nonisolated enum TransportGlassID: Hashable {
     case playPause
     case sleepTimer
 }
+
+#Preview("iPhone SE", traits: .iPhoneSE) {
+    NowPlayingView()
+        .playbackController(previewPlaybackWithStation())
+}
+
+#Preview("iPhone SE · AX3", traits: .iPhoneSE) {
+    NowPlayingView()
+        .playbackController(previewPlaybackWithStation())
+        .dynamicTypeSize(.narrowScreenPreview)
+}

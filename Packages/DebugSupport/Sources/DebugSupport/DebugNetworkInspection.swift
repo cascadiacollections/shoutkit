@@ -36,3 +36,25 @@ public enum DebugNetworkInspection {
         #endif
     }
 }
+
+/// Debug-only messages into Pulse's console, for the non-network diagnostics
+/// in this package (``DebugResourceMonitor``). Here rather than beside its
+/// caller so this file stays the only one that names Pulse. Compiles to a no-op
+/// in Release.
+enum DebugConsoleLog {
+    static func record(
+        _ message: String,
+        label: String,
+        isWarning: Bool,
+        metadata: [String: String],
+    ) {
+        #if DEBUG
+            LoggerStore.shared.storeMessage(
+                label: label,
+                level: isWarning ? .warning : .info,
+                message: message,
+                metadata: metadata.mapValues { .string($0) },
+            )
+        #endif
+    }
+}

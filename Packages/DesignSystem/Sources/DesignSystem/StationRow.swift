@@ -42,6 +42,7 @@ public struct StationRow: View {
     private let onTap: () -> Void
     private let onToggleFavorite: (() -> Void)?
     private let removeAction: StationRowAction?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     public init(
         station: Station,
@@ -76,13 +77,18 @@ public struct StationRow: View {
                     Text(station.name)
                         .font(.headline)
                         .foregroundStyle(.primary)
-                        .lineLimit(1)
+                        .lineLimit(nameLineLimit)
 
                     Text(subtitle)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        .lineLimit(subtitleLineLimit)
                 }
+                // Claim the wrapped height rather than whatever the row is
+                // proposed, so the line limits above are what decides. The same
+                // guard `StationCard`'s caption needed in a grid cell, where
+                // without it the text truncated at one line whatever its limit.
+                .fixedSize(horizontal: false, vertical: true)
 
                 Spacer(minLength: ShoutKitSpacing.small)
 
@@ -156,6 +162,19 @@ public struct StationRow: View {
         .glassControlBackground(in: Circle())
     }
 
+    /// One line at the standard sizes, where a row is a scannable list entry.
+    /// At the accessibility sizes the text column between the 56 pt artwork and
+    /// the 44 pt indicator is ~200 pt on a 375 pt-wide iPhone SE, which at
+    /// `.headline` AX3 is a handful of glyphs — a station name cut to "KEX…"
+    /// identifies nothing. Wrapping there is what the system lists do.
+    private var nameLineLimit: Int {
+        dynamicTypeSize.isAccessibilitySize ? 3 : 1
+    }
+
+    private var subtitleLineLimit: Int {
+        dynamicTypeSize.isAccessibilitySize ? 2 : 1
+    }
+
     private var subtitle: String {
         if station.listenerCount > 0 {
             return "\(station.genre) · \(station.listenerCount.formatted()) listeners"
@@ -187,5 +206,22 @@ public struct StationRow: View {
         )
     }
     .padding()
+    .tint(.shoutKitAccent)
+}
+
+#Preview("iPhone SE · AX3", traits: .iPhoneSE) {
+    ScrollView {
+        VStack {
+            ForEach(PreviewRadioDirectory.sampleStations) { station in
+                StationRow(
+                    station: station,
+                    phase: station.id == PreviewRadioDirectory.sampleStations.first?.id ? .playing : .idle,
+                    onTap: {},
+                )
+            }
+        }
+        .padding()
+    }
+    .dynamicTypeSize(.narrowScreenPreview)
     .tint(.shoutKitAccent)
 }

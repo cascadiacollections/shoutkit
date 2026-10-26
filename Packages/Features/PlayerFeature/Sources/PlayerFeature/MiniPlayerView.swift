@@ -26,11 +26,21 @@ public struct MiniPlayerView: View {
     }
 
     public var body: some View {
-        if let playback, let station = playback.currentStation {
-            content(playback: playback, station: station)
-        } else {
-            idlePlaceholder
+        Group {
+            if let playback, let station = playback.currentStation {
+                content(playback: playback, station: station)
+            } else {
+                idlePlaceholder
+            }
         }
+        // The tab bar accessory is a fixed height the system owns, so text that
+        // keeps scaling into the accessibility sizes doesn't wrap or grow the
+        // bar — it is clipped. On an iPhone SE at AX3 the second line was cut
+        // in half and the station name reduced to its first word. Capped at the
+        // largest standard size, the tab bar's own treatment of its labels;
+        // the full name and track are one tap away in Now Playing, which
+        // scales without limit, and VoiceOver reads the bar regardless.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
     private var idlePlaceholder: some View {
@@ -154,4 +164,23 @@ public struct MiniPlayerView: View {
             "Play"
         }
     }
+}
+
+#Preview("iPhone SE", traits: .iPhoneSE) {
+    VStack {
+        Spacer()
+        MiniPlayerView(onExpand: {})
+            .playbackController(previewPlaybackWithStation())
+    }
+    .tint(.shoutKitAccent)
+}
+
+#Preview("iPhone SE · AX3", traits: .iPhoneSE) {
+    VStack {
+        Spacer()
+        MiniPlayerView(onExpand: {})
+            .playbackController(previewPlaybackWithStation())
+    }
+    .dynamicTypeSize(.narrowScreenPreview)
+    .tint(.shoutKitAccent)
 }
