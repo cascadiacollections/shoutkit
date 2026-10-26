@@ -76,8 +76,9 @@ public enum DebugResourceMonitor {
                 "trigger": trigger.rawValue,
                 "thermalState": thermalState.debugName,
             ]
-            let headroom = availableMemory.map(formatBytes) ?? "unavailable (no process limit)"
-            metadata["availableMemory"] = headroom
+            let headroom = availableMemory.map { "\(formatBytes($0)) available" }
+                ?? "headroom unavailable (no process limit)"
+            metadata["availableMemory"] = availableMemory.map(formatBytes) ?? "unavailable"
             if trigger == .launch {
                 metadata["physicalMemory"] = formatBytes(ProcessInfo.processInfo.physicalMemory)
             }
@@ -85,7 +86,7 @@ public enum DebugResourceMonitor {
                 || thermalState == .serious
                 || thermalState == .critical
             DebugConsoleLog.record(
-                "Resources (\(trigger.rawValue)): \(headroom) available, thermal \(thermalState.debugName)",
+                "Resources (\(trigger.rawValue)): \(headroom), thermal \(thermalState.debugName)",
                 label: "resources",
                 isWarning: isWarning,
                 metadata: metadata,
