@@ -219,9 +219,7 @@ func makeController(
 
 @MainActor
 func waitForStart(_ output: FakeAudioOutput, count: Int = 1) async {
-    for _ in 0 ..< 200 where output.startedURLs.count < count {
-        await Task.yield()
-    }
+    await waitUntil { output.startedURLs.count >= count }
 }
 
 func drainMainQueue() async {
@@ -233,9 +231,10 @@ func drainMainQueue() async {
 /// Polls until `condition` holds or the deadline passes (same pattern as
 /// SleepTimerTests.waitUntilFired, shared here for the timeout-driven suites).
 @MainActor
-func waitUntil(_ condition: () -> Bool, upTo seconds: TimeInterval = 2) async {
-    let deadline = Date().addingTimeInterval(seconds)
-    while condition() == false, Date() < deadline {
+func waitUntil(_ condition: () -> Bool, upTo seconds: TimeInterval = 10) async {
+    let clock = ContinuousClock()
+    let deadline = clock.now.advanced(by: .seconds(seconds))
+    while condition() == false, clock.now < deadline {
         try? await Task.sleep(for: .milliseconds(10))
     }
 }

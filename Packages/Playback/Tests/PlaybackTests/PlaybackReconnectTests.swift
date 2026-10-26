@@ -8,153 +8,155 @@ import Testing
 // user pause must always win over a pending retry. Short delays and small
 // budgets are injected here; production defaults are seconds and 3 attempts.
 
-@MainActor
-struct PlaybackReconnectTests {
-    private static let fastDelay: Duration = .milliseconds(10)
+extension PlaybackTimingTests {
+    @MainActor
+    struct PlaybackReconnectTests {
+        private static let fastDelay: Duration = .milliseconds(10)
 
-    @Test func `failure reconnects then recovers`() async {
-        let output = FakeAudioOutput()
-        let controller = makeController(
-            stations: [station()], output: output,
-            maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay,
-        )
+        @Test func `failure reconnects then recovers`() async {
+            let output = FakeAudioOutput()
+            let controller = makeController(
+                stations: [station()], output: output,
+                maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay,
+            )
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
 
-        // A mid-play failure retries rather than surfacing `.failed` at once.
-        let failedGeneration = output.startedStreamGenerations[0]
-        output.onStatusChange?(.failed(.streamFailed("drop")))
-        output.emit(.playing, generation: failedGeneration)
-        #expect(controller.isReconnecting)
-        #expect(controller.state == .buffering(station()))
-        await waitUntil { output.startedURLs.count == 2 }
-        #expect(output.startedURLs.count == 2)
+            // A mid-play failure retries rather than surfacing `.failed` at once.
+            let failedGeneration = output.startedStreamGenerations[0]
+            output.onStatusChange?(.failed(.streamFailed("drop")))
+            output.emit(.playing, generation: failedGeneration)
+            #expect(controller.isReconnecting)
+            #expect(controller.state == .buffering(station()))
+            await waitUntil { output.startedURLs.count == 2 }
+            #expect(output.startedURLs.count == 2)
 
-        // The reconnect succeeds.
-        output.onStatusChange?(.playing)
-        #expect(controller.state == .playing(station()))
-    }
+            // The reconnect succeeds.
+            output.onStatusChange?(.playing)
+            #expect(controller.state == .playing(station()))
+        }
 
-    @Test func `reconnect reuses resolved endpoint instead of re resolving`() async {
-        let output = FakeAudioOutput()
-        let directory = CountingRadioDirectory(stations: [station()])
-        let controller = makeController(
-            directory: directory, output: output,
-            maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay,
-        )
+        @Test func `reconnect reuses resolved endpoint instead of re resolving`() async {
+            let output = FakeAudioOutput()
+            let directory = CountingRadioDirectory(stations: [station()])
+            let controller = makeController(
+                directory: directory, output: output,
+                maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay,
+            )
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
-        #expect(await directory.streamEndpointCallCount == 1)
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
+            #expect(await directory.streamEndpointCallCount == 1)
 
-        // A mid-play failure reconnects — but must reuse the endpoint resolved
-        // for the first attempt rather than resolving again.
-        output.onStatusChange?(.failed(.streamFailed("drop")))
-        await waitUntil { output.startedURLs.count == 2 }
-        #expect(output.startedURLs.count == 2)
-        #expect(await directory.streamEndpointCallCount == 1, "reconnect must reuse the cached endpoint")
+            // A mid-play failure reconnects — but must reuse the endpoint resolved
+            // for the first attempt rather than resolving again.
+            output.onStatusChange?(.failed(.streamFailed("drop")))
+            await waitUntil { output.startedURLs.count == 2 }
+            #expect(output.startedURLs.count == 2)
+            #expect(await directory.streamEndpointCallCount == 1, "reconnect must reuse the cached endpoint")
 
-        // A fresh play() re-resolves.
-        controller.play(station())
-        await waitUntil { output.startedURLs.count == 3 }
-        #expect(await directory.streamEndpointCallCount == 2)
-    }
+            // A fresh play() re-resolves.
+            controller.play(station())
+            await waitUntil { output.startedURLs.count == 3 }
+            #expect(await directory.streamEndpointCallCount == 2)
+        }
 
-    @Test func `failure reconnects up to budget then surfaces failure`() async {
-        let output = FakeAudioOutput()
-        let controller = makeController(
-            stations: [station()], output: output,
-            maxReconnectAttempts: 2, reconnectBaseDelay: Self.fastDelay,
-        )
+        @Test func `failure reconnects up to budget then surfaces failure`() async {
+            let output = FakeAudioOutput()
+            let controller = makeController(
+                stations: [station()], output: output,
+                maxReconnectAttempts: 2, reconnectBaseDelay: Self.fastDelay,
+            )
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
 
-        output.onStatusChange?(.failed(.streamFailed("boom"))) // attempt 1
-        await waitUntil { output.startedURLs.count == 2 }
-        output.onStatusChange?(.failed(.streamFailed("boom"))) // attempt 2
-        await waitUntil { output.startedURLs.count == 3 }
-        output.onStatusChange?(.failed(.streamFailed("boom"))) // budget spent → give up
+            output.onStatusChange?(.failed(.streamFailed("boom"))) // attempt 1
+            await waitUntil { output.startedURLs.count == 2 }
+            output.onStatusChange?(.failed(.streamFailed("boom"))) // attempt 2
+            await waitUntil { output.startedURLs.count == 3 }
+            output.onStatusChange?(.failed(.streamFailed("boom"))) // budget spent → give up
 
-        await waitUntil { controller.state == .failed(.streamFailed("boom")) }
-        #expect(output.startedURLs.count == 3, "two reconnects (start #2, #3), then no more")
-        #expect(controller.state == .failed(.streamFailed("boom")))
-    }
+            await waitUntil { controller.state == .failed(.streamFailed("boom")) }
+            #expect(output.startedURLs.count == 3, "two reconnects (start #2, #3), then no more")
+            #expect(controller.state == .failed(.streamFailed("boom")))
+        }
 
-    @Test func `recovery resets reconnect budget`() async {
-        let output = FakeAudioOutput()
-        // Budget of 1: without a reset, the second drop could never retry.
-        let controller = makeController(
-            stations: [station()], output: output,
-            maxReconnectAttempts: 1, reconnectBaseDelay: Self.fastDelay,
-        )
+        @Test func `recovery resets reconnect budget`() async {
+            let output = FakeAudioOutput()
+            // Budget of 1: without a reset, the second drop could never retry.
+            let controller = makeController(
+                stations: [station()], output: output,
+                maxReconnectAttempts: 1, reconnectBaseDelay: Self.fastDelay,
+            )
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
 
-        output.onStatusChange?(.failed(.streamFailed("drop")))
-        #expect(controller.isReconnecting)
-        await waitUntil { output.startedURLs.count == 2 }
-        output.onStatusChange?(.playing) // recovered → budget refreshes
-        #expect(controller.isReconnecting == false)
-        output.onStatusChange?(.failed(.streamFailed("drop")))
-        await waitUntil { output.startedURLs.count == 3 }
+            output.onStatusChange?(.failed(.streamFailed("drop")))
+            #expect(controller.isReconnecting)
+            await waitUntil { output.startedURLs.count == 2 }
+            output.onStatusChange?(.playing) // recovered → budget refreshes
+            #expect(controller.isReconnecting == false)
+            output.onStatusChange?(.failed(.streamFailed("drop")))
+            await waitUntil { output.startedURLs.count == 3 }
 
-        #expect(output.startedURLs.count == 3, "a recovery between drops must refresh the budget")
-    }
+            #expect(output.startedURLs.count == 3, "a recovery between drops must refresh the budget")
+        }
 
-    @Test func `pause cancels pending reconnect`() async {
-        let output = FakeAudioOutput()
-        // A long backoff so the test can pause before the retry fires.
-        let controller = makeController(
-            stations: [station()], output: output,
-            maxReconnectAttempts: 3, reconnectBaseDelay: .milliseconds(200),
-        )
+        @Test func `pause cancels pending reconnect`() async {
+            let output = FakeAudioOutput()
+            // A long backoff so the test can pause before the retry fires.
+            let controller = makeController(
+                stations: [station()], output: output,
+                maxReconnectAttempts: 3, reconnectBaseDelay: .milliseconds(200),
+            )
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
-        output.onStatusChange?(.failed(.streamFailed("drop"))) // schedules a retry in 200ms
-        controller.pause() // must beat it
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
+            output.onStatusChange?(.failed(.streamFailed("drop"))) // schedules a retry in 200ms
+            controller.pause() // must beat it
 
-        try? await Task.sleep(for: .milliseconds(300))
-        #expect(output.startedURLs.count == 1, "a paused stream must not auto-reconnect")
-        #expect(controller.state == .paused(station()))
-    }
+            try? await Task.sleep(for: .milliseconds(300))
+            #expect(output.startedURLs.count == 1, "a paused stream must not auto-reconnect")
+            #expect(controller.state == .paused(station()))
+        }
 
-    @Test func `stall reconnects before parking`() async {
-        let output = FakeAudioOutput()
-        let controller = makeController(
-            stations: [station()], output: output,
-            stallTimeout: .milliseconds(30),
-            maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay,
-        )
+        @Test func `stall reconnects before parking`() async {
+            let output = FakeAudioOutput()
+            let controller = makeController(
+                stations: [station()], output: output,
+                stallTimeout: .milliseconds(30),
+                maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay,
+            )
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.buffering) // arms the stall ceiling
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.buffering) // arms the stall ceiling
 
-        // Ceiling fires: the stalled player is torn down and the stream retried.
-        let stalledGeneration = output.startedStreamGenerations[0]
-        await waitUntil { output.stopCount == 1 }
-        // The retry can already have moved from buffering to loading by the
-        // time polling resumes. A stale callback must preserve either state.
-        let recoveryState = controller.state
-        output.emit(.playing, generation: stalledGeneration)
-        #expect(controller.isReconnecting)
-        #expect(controller.state == recoveryState)
-        await waitUntil { output.startedURLs.count == 2 }
-        #expect(output.stopCount == 1)
-        #expect(controller.state == .loading(station()))
-        output.emit(.playing, generation: stalledGeneration)
-        #expect(controller.state == .loading(station()))
+            // Ceiling fires: the stalled player is torn down and the stream retried.
+            let stalledGeneration = output.startedStreamGenerations[0]
+            await waitUntil { output.stopCount == 1 }
+            // The retry can already have moved from buffering to loading by the
+            // time polling resumes. A stale callback must preserve either state.
+            let recoveryState = controller.state
+            output.emit(.playing, generation: stalledGeneration)
+            #expect(controller.isReconnecting)
+            #expect(controller.state == recoveryState)
+            await waitUntil { output.startedURLs.count == 2 }
+            #expect(output.stopCount == 1)
+            #expect(controller.state == .loading(station()))
+            output.emit(.playing, generation: stalledGeneration)
+            #expect(controller.state == .loading(station()))
 
-        output.onStatusChange?(.playing)
-        #expect(controller.state == .playing(station()))
+            output.onStatusChange?(.playing)
+            #expect(controller.state == .playing(station()))
+        }
     }
 }

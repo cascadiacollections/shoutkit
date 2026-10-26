@@ -14,181 +14,183 @@ import Testing
 // holds audio now, and the interruption ended inside `hintlessResumeWindow`.
 // Short injected windows here; the production default is 90 s.
 
-@MainActor
-struct PlaybackInterruptionTests {
-    private static let shortWindow: Duration = .milliseconds(50)
+extension PlaybackTimingTests {
+    @MainActor
+    struct PlaybackInterruptionTests {
+        private static let shortWindow: Duration = .milliseconds(50)
 
-    /// Plays a station and reports `.playing`, i.e. the state every interruption
-    /// case below starts from.
-    private func playing(
-        output: FakeAudioOutput,
-        hintlessResumeWindow: Duration = .seconds(90),
-    ) async -> PlaybackController {
-        let controller = makeController(
-            stations: [station()],
-            output: output,
-            hintlessResumeWindow: hintlessResumeWindow,
-        )
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
-        #expect(controller.state == .playing(station()))
-        return controller
-    }
+        /// Plays a station and reports `.playing`, i.e. the state every interruption
+        /// case below starts from.
+        private func playing(
+            output: FakeAudioOutput,
+            hintlessResumeWindow: Duration = .seconds(90),
+        ) async -> PlaybackController {
+            let controller = makeController(
+                stations: [station()],
+                output: output,
+                hintlessResumeWindow: hintlessResumeWindow,
+            )
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
+            #expect(controller.state == .playing(station()))
+            return controller
+        }
 
-    // MARK: - Ending without the system's resume hint
+        // MARK: - Ending without the system's resume hint
 
-    @Test func `hintless interruption resumes when nothing else holds audio`() async {
-        let output = FakeAudioOutput()
-        let controller = await playing(output: output)
+        @Test func `hintless interruption resumes when nothing else holds audio`() async {
+            let output = FakeAudioOutput()
+            let controller = await playing(output: output)
 
-        output.onStatusChange?(.interruptionBegan)
-        #expect(controller.state == .paused(station()))
+            output.onStatusChange?(.interruptionBegan)
+            #expect(controller.state == .paused(station()))
 
-        // The reported case: iOS ends the interruption without `.shouldResume`,
-        // and honoring only the hint left the station silent until the listener
-        // noticed and pressed play.
-        output.onStatusChange?(.interruptionEnded(shouldResume: false, otherAudioIsPlaying: false))
-        #expect(controller.state == .playing(station()))
-    }
+            // The reported case: iOS ends the interruption without `.shouldResume`,
+            // and honoring only the hint left the station silent until the listener
+            // noticed and pressed play.
+            output.onStatusChange?(.interruptionEnded(shouldResume: false, otherAudioIsPlaying: false))
+            #expect(controller.state == .playing(station()))
+        }
 
-    @Test func `hintless interruption stays paused while another app holds audio`() async {
-        let output = FakeAudioOutput()
-        let controller = await playing(output: output)
+        @Test func `hintless interruption stays paused while another app holds audio`() async {
+            let output = FakeAudioOutput()
+            let controller = await playing(output: output)
 
-        output.onStatusChange?(.interruptionBegan)
-        // The listener started something else during the interruption. Resuming
-        // would yank the session back from it.
-        output.onStatusChange?(.interruptionEnded(shouldResume: false, otherAudioIsPlaying: true))
+            output.onStatusChange?(.interruptionBegan)
+            // The listener started something else during the interruption. Resuming
+            // would yank the session back from it.
+            output.onStatusChange?(.interruptionEnded(shouldResume: false, otherAudioIsPlaying: true))
 
-        #expect(controller.state == .paused(station()))
-        #expect(output.resumeCount == 0)
-    }
+            #expect(controller.state == .paused(station()))
+            #expect(output.resumeCount == 0)
+        }
 
-    @Test func `hintless resume expires with its window`() async {
-        let output = FakeAudioOutput()
-        let controller = await playing(output: output, hintlessResumeWindow: Self.shortWindow)
+        @Test func `hintless resume expires with its window`() async {
+            let output = FakeAudioOutput()
+            let controller = await playing(output: output, hintlessResumeWindow: Self.shortWindow)
 
-        output.onStatusChange?(.interruptionBegan)
-        // A long interruption is a listener who moved on, not an alert.
-        await waitUntil { controller.mayResumeWithoutSystemHint == false }
-        output.onStatusChange?(.interruptionEnded(shouldResume: false, otherAudioIsPlaying: false))
+            output.onStatusChange?(.interruptionBegan)
+            // A long interruption is a listener who moved on, not an alert.
+            await waitUntil { controller.mayResumeWithoutSystemHint == false }
+            output.onStatusChange?(.interruptionEnded(shouldResume: false, otherAudioIsPlaying: false))
 
-        #expect(controller.state == .paused(station()))
-        #expect(output.resumeCount == 0)
-    }
+            #expect(controller.state == .paused(station()))
+            #expect(output.resumeCount == 0)
+        }
 
-    @Test func `system hint resumes even after the hintless window closes`() async {
-        let output = FakeAudioOutput()
-        let controller = await playing(output: output, hintlessResumeWindow: Self.shortWindow)
+        @Test func `system hint resumes even after the hintless window closes`() async {
+            let output = FakeAudioOutput()
+            let controller = await playing(output: output, hintlessResumeWindow: Self.shortWindow)
 
-        output.onStatusChange?(.interruptionBegan)
-        await waitUntil { controller.mayResumeWithoutSystemHint == false }
-        // The window bounds hintless resumes only; the system's own hint always
-        // wins, however long the call ran.
-        output.onStatusChange?(.interruptionEnded(shouldResume: true, otherAudioIsPlaying: false))
+            output.onStatusChange?(.interruptionBegan)
+            await waitUntil { controller.mayResumeWithoutSystemHint == false }
+            // The window bounds hintless resumes only; the system's own hint always
+            // wins, however long the call ran.
+            output.onStatusChange?(.interruptionEnded(shouldResume: true, otherAudioIsPlaying: false))
 
-        #expect(controller.state == .playing(station()))
-    }
+            #expect(controller.state == .playing(station()))
+        }
 
-    // MARK: - Arming
+        // MARK: - Arming
 
-    @Test func `interruption beginning while paused cannot auto resume`() async {
-        let output = FakeAudioOutput()
-        let controller = await playing(output: output)
+        @Test func `interruption beginning while paused cannot auto resume`() async {
+            let output = FakeAudioOutput()
+            let controller = await playing(output: output)
 
-        // A first interruption that the system never ends — iOS doesn't guarantee
-        // an `.ended` for every `.began` (a disconnected route, or the app
-        // suspended through the interruption).
-        output.onStatusChange?(.interruptionBegan)
-        #expect(controller.state == .paused(station()))
+            // A first interruption that the system never ends — iOS doesn't guarantee
+            // an `.ended` for every `.began` (a disconnected route, or the app
+            // suspended through the interruption).
+            output.onStatusChange?(.interruptionBegan)
+            #expect(controller.state == .paused(station()))
 
-        // A second interruption begins from that paused state, and *this* one
-        // ends with a resume hint. Arming is per-interruption, so the stale arm
-        // from the first must not turn this into unrequested audio.
-        output.onStatusChange?(.interruptionBegan)
-        output.onStatusChange?(.interruptionEnded(shouldResume: true, otherAudioIsPlaying: false))
+            // A second interruption begins from that paused state, and *this* one
+            // ends with a resume hint. Arming is per-interruption, so the stale arm
+            // from the first must not turn this into unrequested audio.
+            output.onStatusChange?(.interruptionBegan)
+            output.onStatusChange?(.interruptionEnded(shouldResume: true, otherAudioIsPlaying: false))
 
-        #expect(controller.state == .paused(station()))
-        #expect(output.resumeCount == 0)
-    }
+            #expect(controller.state == .paused(station()))
+            #expect(output.resumeCount == 0)
+        }
 
-    @Test func `interruption ended without A beginning does not start playback`() async {
-        let output = FakeAudioOutput()
-        let controller = await playing(output: output)
+        @Test func `interruption ended without A beginning does not start playback`() async {
+            let output = FakeAudioOutput()
+            let controller = await playing(output: output)
 
-        controller.pause()
-        #expect(controller.state == .paused(station()))
+            controller.pause()
+            #expect(controller.state == .paused(station()))
 
-        output.onStatusChange?(.interruptionEnded(shouldResume: true, otherAudioIsPlaying: false))
+            output.onStatusChange?(.interruptionEnded(shouldResume: true, otherAudioIsPlaying: false))
 
-        #expect(controller.state == .paused(station()))
-        #expect(output.resumeCount == 0)
-    }
+            #expect(controller.state == .paused(station()))
+            #expect(output.resumeCount == 0)
+        }
 
-    @Test func `pausing during an interruption suppresses auto resume`() async {
-        let output = FakeAudioOutput()
-        let controller = await playing(output: output)
+        @Test func `pausing during an interruption suppresses auto resume`() async {
+            let output = FakeAudioOutput()
+            let controller = await playing(output: output)
 
-        output.onStatusChange?(.interruptionBegan)
-        // Pausing during the call means "stay paused" when it ends — for the
-        // hintless path as much as the hinted one.
-        controller.pause()
-        output.onStatusChange?(.interruptionEnded(shouldResume: false, otherAudioIsPlaying: false))
+            output.onStatusChange?(.interruptionBegan)
+            // Pausing during the call means "stay paused" when it ends — for the
+            // hintless path as much as the hinted one.
+            controller.pause()
+            output.onStatusChange?(.interruptionEnded(shouldResume: false, otherAudioIsPlaying: false))
 
-        #expect(controller.state == .paused(station()))
-        #expect(output.resumeCount == 0)
-    }
+            #expect(controller.state == .paused(station()))
+            #expect(output.resumeCount == 0)
+        }
 
-    @Test func `choosing A station during an interruption suppresses auto resume`() async {
-        let output = FakeAudioOutput()
-        let controller = await playing(output: output)
+        @Test func `choosing A station during an interruption suppresses auto resume`() async {
+            let output = FakeAudioOutput()
+            let controller = await playing(output: output)
 
-        output.onStatusChange?(.interruptionBegan)
-        // A fresh listening choice mid-interruption owns the outcome; the
-        // interruption ending must not re-drive playback behind it.
-        controller.play(station("other"))
-        await waitForStart(output, count: 2)
-        output.onStatusChange?(.interruptionEnded(shouldResume: true, otherAudioIsPlaying: false))
+            output.onStatusChange?(.interruptionBegan)
+            // A fresh listening choice mid-interruption owns the outcome; the
+            // interruption ending must not re-drive playback behind it.
+            controller.play(station("other"))
+            await waitForStart(output, count: 2)
+            output.onStatusChange?(.interruptionEnded(shouldResume: true, otherAudioIsPlaying: false))
 
-        #expect(controller.currentStation?.id == "other")
-        #expect(output.resumeCount == 0, "the new station is starting; there is nothing to resume")
-    }
+            #expect(controller.currentStation?.id == "other")
+            #expect(output.resumeCount == 0, "the new station is starting; there is nothing to resume")
+        }
 
-    @Test func `route returning resumes only playback paused by route loss`() async {
-        let output = FakeAudioOutput()
-        let controller = await playing(output: output)
+        @Test func `route returning resumes only playback paused by route loss`() async {
+            let output = FakeAudioOutput()
+            let controller = await playing(output: output)
 
-        output.onStatusChange?(.routeLost)
-        #expect(controller.state == .paused(station()))
-        output.onStatusChange?(.routeAvailable)
+            output.onStatusChange?(.routeLost)
+            #expect(controller.state == .paused(station()))
+            output.onStatusChange?(.routeAvailable)
 
-        #expect(controller.state == .playing(station()))
-        #expect(output.resumeCount == 1)
-    }
+            #expect(controller.state == .playing(station()))
+            #expect(output.resumeCount == 1)
+        }
 
-    @Test func `route returning does not resume after explicit pause or stop`() async {
-        let output = FakeAudioOutput()
-        let controller = await playing(output: output)
+        @Test func `route returning does not resume after explicit pause or stop`() async {
+            let output = FakeAudioOutput()
+            let controller = await playing(output: output)
 
-        output.onStatusChange?(.routeLost)
-        controller.pause()
-        output.onStatusChange?(.routeAvailable)
-        #expect(output.resumeCount == 0)
+            output.onStatusChange?(.routeLost)
+            controller.pause()
+            output.onStatusChange?(.routeAvailable)
+            #expect(output.resumeCount == 0)
 
-        controller.stop()
-        output.onStatusChange?(.routeAvailable)
-        #expect(output.resumeCount == 0)
-    }
+            controller.stop()
+            output.onStatusChange?(.routeAvailable)
+            #expect(output.resumeCount == 0)
+        }
 
-    @Test func `starting playback releases route resume claim`() async {
-        let output = FakeAudioOutput()
-        let controller = await playing(output: output)
+        @Test func `starting playback releases route resume claim`() async {
+            let output = FakeAudioOutput()
+            let controller = await playing(output: output)
 
-        output.onStatusChange?(.routeLost)
-        controller.resume()
-        output.onStatusChange?(.routeAvailable)
+            output.onStatusChange?(.routeLost)
+            controller.resume()
+            output.onStatusChange?(.routeAvailable)
 
-        #expect(output.resumeCount == 1)
+            #expect(output.resumeCount == 1)
+        }
     }
 }

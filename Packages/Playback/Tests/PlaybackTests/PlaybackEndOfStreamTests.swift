@@ -12,164 +12,166 @@ import Testing
 // Default: play once, then park as `.paused` with a play button that replays it.
 // Opted in: start over, as an internal restart rather than a new listening choice.
 
-@MainActor
-struct PlaybackEndOfStreamTests {
-    private static let fastDelay: Duration = .milliseconds(10)
+extension PlaybackTimingTests {
+    @MainActor
+    struct PlaybackEndOfStreamTests {
+        private static let fastDelay: Duration = .milliseconds(10)
 
-    @Test func `end of stream stops instead of looping by default`() async {
-        let output = FakeAudioOutput()
-        let controller = makeController(
-            stations: [station()], output: output,
-            maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay,
-        )
+        @Test func `end of stream stops instead of looping by default`() async {
+            let output = FakeAudioOutput()
+            let controller = makeController(
+                stations: [station()], output: output,
+                maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay,
+            )
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
 
-        output.onStatusChange?(.endOfStream)
+            output.onStatusChange?(.endOfStream)
 
-        #expect(controller.state == .paused(station()))
-        #expect(output.stopCalled, "the spent player must not stay resident")
+            #expect(controller.state == .paused(station()))
+            #expect(output.stopCalled, "the spent player must not stay resident")
 
-        // The one regression this suite exists for: no restart, now or after the
-        // reconnect backoff would have fired.
-        try? await Task.sleep(for: .milliseconds(60))
-        #expect(output.startedURLs.count == 1, "a finished broadcast must not replay itself")
-        #expect(controller.state == .paused(station()))
-    }
+            // The one regression this suite exists for: no restart, now or after the
+            // reconnect backoff would have fired.
+            try? await Task.sleep(for: .milliseconds(60))
+            #expect(output.startedURLs.count == 1, "a finished broadcast must not replay itself")
+            #expect(controller.state == .paused(station()))
+        }
 
-    @Test func `end of stream keeps the station recoverable`() async {
-        let output = FakeAudioOutput()
-        let presenter = NowPlayingPresenterSpy()
-        let controller = makeController(stations: [station()], output: output, presenter: presenter)
+        @Test func `end of stream keeps the station recoverable`() async {
+            let output = FakeAudioOutput()
+            let presenter = NowPlayingPresenterSpy()
+            let controller = makeController(stations: [station()], output: output, presenter: presenter)
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
-        output.onStatusChange?(.endOfStream)
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
+            output.onStatusChange?(.endOfStream)
 
-        // The lock screen shows the station, paused — not a cleared surface and
-        // not a stream still claiming to play.
-        #expect(presenter.lastUpdate == .update(
-            stationID: station().id,
-            trackTitle: nil,
-            isPlaying: false,
-            artwork: .resolved(nil),
-        ))
-        #expect(controller.currentStation == station())
+            // The lock screen shows the station, paused — not a cleared surface and
+            // not a stream still claiming to play.
+            #expect(presenter.lastUpdate == .update(
+                stationID: station().id,
+                trackTitle: nil,
+                isPlaying: false,
+                artwork: .resolved(nil),
+            ))
+            #expect(controller.currentStation == station())
 
-        // Play replays the programme: the player was torn down, so this takes
-        // the restart path rather than resuming a stream parked at its end.
-        controller.resume()
-        await waitUntil { output.startedURLs.count == 2 }
-        #expect(output.startedURLs.count == 2)
-    }
+            // Play replays the programme: the player was torn down, so this takes
+            // the restart path rather than resuming a stream parked at its end.
+            controller.resume()
+            await waitUntil { output.startedURLs.count == 2 }
+            #expect(output.startedURLs.count == 2)
+        }
 
-    @Test func `end of stream restarts the stream when looping is enabled`() async {
-        let output = FakeAudioOutput()
-        let controller = makeController(stations: [station()], output: output)
-        controller.isStreamLoopingEnabledProvider = { true }
+        @Test func `end of stream restarts the stream when looping is enabled`() async {
+            let output = FakeAudioOutput()
+            let controller = makeController(stations: [station()], output: output)
+            controller.isStreamLoopingEnabledProvider = { true }
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
 
-        output.onStatusChange?(.endOfStream)
-        await waitUntil { output.startedURLs.count == 2 }
-        #expect(output.startedURLs.count == 2)
-        #expect(output.startedURLs[0] == output.startedURLs[1])
+            output.onStatusChange?(.endOfStream)
+            await waitUntil { output.startedURLs.count == 2 }
+            #expect(output.startedURLs.count == 2)
+            #expect(output.startedURLs[0] == output.startedURLs[1])
 
-        output.onStatusChange?(.playing)
-        #expect(controller.state == .playing(station()))
-    }
+            output.onStatusChange?(.playing)
+            #expect(controller.state == .playing(station()))
+        }
 
-    @Test func `looping is read at each ending rather than at play`() async {
-        let output = FakeAudioOutput()
-        var isLoopingEnabled = false
-        let controller = makeController(stations: [station()], output: output)
-        controller.isStreamLoopingEnabledProvider = { isLoopingEnabled }
+        @Test func `looping is read at each ending rather than at play`() async {
+            let output = FakeAudioOutput()
+            var isLoopingEnabled = false
+            let controller = makeController(stations: [station()], output: output)
+            controller.isStreamLoopingEnabledProvider = { isLoopingEnabled }
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
 
-        // Flipping the setting mid-programme applies to the programme playing,
-        // not only to the next station the listener picks.
-        isLoopingEnabled = true
-        output.onStatusChange?(.endOfStream)
-        await waitUntil { output.startedURLs.count == 2 }
-        #expect(output.startedURLs.count == 2)
-    }
+            // Flipping the setting mid-programme applies to the programme playing,
+            // not only to the next station the listener picks.
+            isLoopingEnabled = true
+            output.onStatusChange?(.endOfStream)
+            await waitUntil { output.startedURLs.count == 2 }
+            #expect(output.startedURLs.count == 2)
+        }
 
-    @Test func `loop restart is not A new listening choice`() async {
-        let output = FakeAudioOutput()
-        let directory = CountingRadioDirectory(stations: [station()])
-        let controller = makeController(directory: directory, output: output)
-        controller.isStreamLoopingEnabledProvider = { true }
+        @Test func `loop restart is not A new listening choice`() async {
+            let output = FakeAudioOutput()
+            let directory = CountingRadioDirectory(stations: [station()])
+            let controller = makeController(directory: directory, output: output)
+            controller.isStreamLoopingEnabledProvider = { true }
 
-        var playedCount = 0
-        controller.onStationPlayed = { _ in playedCount += 1 }
+            var playedCount = 0
+            controller.onStationPlayed = { _ in playedCount += 1 }
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
 
-        output.onStatusChange?(.endOfStream)
-        await waitUntil { output.startedURLs.count == 2 }
+            output.onStatusChange?(.endOfStream)
+            await waitUntil { output.startedURLs.count == 2 }
 
-        // Recents and Radio-Browser play reporting hang off `onStationPlayed`;
-        // a loop would otherwise log one listening session as many.
-        #expect(playedCount == 1)
-        #expect(await directory.streamEndpointCallCount == 1, "a loop restart reuses the resolved endpoint")
-    }
+            // Recents and Radio-Browser play reporting hang off `onStationPlayed`;
+            // a loop would otherwise log one listening session as many.
+            #expect(playedCount == 1)
+            #expect(await directory.streamEndpointCallCount == 1, "a loop restart reuses the resolved endpoint")
+        }
 
-    @Test func `end of stream refills the reconnect budget`() async {
-        let output = FakeAudioOutput()
-        let controller = makeController(
-            stations: [station()], output: output,
-            maxReconnectAttempts: 2, reconnectBaseDelay: Self.fastDelay,
-        )
+        @Test func `end of stream refills the reconnect budget`() async {
+            let output = FakeAudioOutput()
+            let controller = makeController(
+                stations: [station()], output: output,
+                maxReconnectAttempts: 2, reconnectBaseDelay: Self.fastDelay,
+            )
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
 
-        // Spend one attempt on a genuine drop — and deliberately don't report
-        // `.playing` for the retry, so nothing else refills the budget.
-        output.onStatusChange?(.failed(.streamFailed("drop")))
-        await waitUntil { output.startedURLs.count == 2 }
-        output.onStatusChange?(.endOfStream)
+            // Spend one attempt on a genuine drop — and deliberately don't report
+            // `.playing` for the retry, so nothing else refills the budget.
+            output.onStatusChange?(.failed(.streamFailed("drop")))
+            await waitUntil { output.startedURLs.count == 2 }
+            output.onStatusChange?(.endOfStream)
 
-        // Replay it, then drop twice: a clean ending is a success, so both
-        // attempts are available rather than only the one the drop left behind.
-        controller.resume()
-        await waitUntil { output.startedURLs.count == 3 }
-        output.onStatusChange?(.failed(.streamFailed("drop")))
-        await waitUntil { output.startedURLs.count == 4 }
-        output.onStatusChange?(.failed(.streamFailed("drop")))
-        await waitUntil { output.startedURLs.count == 5 }
-        #expect(output.startedURLs.count == 5)
-    }
+            // Replay it, then drop twice: a clean ending is a success, so both
+            // attempts are available rather than only the one the drop left behind.
+            controller.resume()
+            await waitUntil { output.startedURLs.count == 3 }
+            output.onStatusChange?(.failed(.streamFailed("drop")))
+            await waitUntil { output.startedURLs.count == 4 }
+            output.onStatusChange?(.failed(.streamFailed("drop")))
+            await waitUntil { output.startedURLs.count == 5 }
+            #expect(output.startedURLs.count == 5)
+        }
 
-    @Test func `pause wins over A loop restart already underway`() async {
-        let output = FakeAudioOutput()
-        let controller = makeController(stations: [station()], output: output)
-        controller.isStreamLoopingEnabledProvider = { true }
+        @Test func `pause wins over A loop restart already underway`() async {
+            let output = FakeAudioOutput()
+            let controller = makeController(stations: [station()], output: output)
+            controller.isStreamLoopingEnabledProvider = { true }
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
 
-        output.onStatusChange?(.endOfStream)
-        await waitUntil { output.startedURLs.count == 2 }
-        output.onStatusChange?(.playing)
+            output.onStatusChange?(.endOfStream)
+            await waitUntil { output.startedURLs.count == 2 }
+            output.onStatusChange?(.playing)
 
-        // A listener who pauses the second play-through stays paused: the loop
-        // restarts an ending, and a pause is not one.
-        controller.pause()
-        #expect(controller.state == .paused(station()))
-        try? await Task.sleep(for: .milliseconds(60))
-        #expect(output.startedURLs.count == 2)
+            // A listener who pauses the second play-through stays paused: the loop
+            // restarts an ending, and a pause is not one.
+            controller.pause()
+            #expect(controller.state == .paused(station()))
+            try? await Task.sleep(for: .milliseconds(60))
+            #expect(output.startedURLs.count == 2)
+        }
     }
 }
