@@ -19,6 +19,7 @@ public struct LibraryView: View {
     @Environment(\.libraryStore) private var library
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @Query(sort: \FavoriteStation.sortIndex, order: .forward)
     private var favorites: [FavoriteStation]
@@ -137,11 +138,11 @@ public struct LibraryView: View {
             VStack(alignment: .leading, spacing: ShoutKitSpacing.extraSmall) {
                 Text(track.title)
                     .font(.headline)
-                    .lineLimit(1)
+                    .lineLimit(trackLineLimit)
                 Text(track.artist)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(trackLineLimit)
             }
             Spacer()
             Text("\(track.playCount)×")
@@ -162,6 +163,13 @@ public struct LibraryView: View {
                 content
             }
         }
+    }
+
+    /// Same rule as `StationRow`: one line at the standard sizes, wrapping at
+    /// the accessibility sizes, where a 375 pt-wide iPhone SE leaves a track
+    /// title a few glyphs between the artwork and the play count.
+    private var trackLineLimit: Int {
+        dynamicTypeSize.isAccessibilitySize ? 2 : 1
     }
 
     private func deleteRecents(at offsets: IndexSet) {

@@ -27,6 +27,22 @@ public struct StationCard: View {
     /// `nil` fills the container; a value pins the tile to that width.
     @ScaledMetric(relativeTo: .headline) private var fixedWidth: CGFloat = 150
     private let hasFixedWidth: Bool
+    /// The unscaled width a fixed tile was asked for — the base of ``cardWidth``.
+    private let baseFixedWidth: CGFloat
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// How far a fixed tile may grow with Dynamic Type, as a multiple of the
+    /// width it was asked for.
+    ///
+    /// Unbounded, a 150 pt shelf tile scaled with `.headline` reaches ~350 pt at
+    /// AX3 — more than the 343 pt between an iPhone SE's margins — and ~470 pt
+    /// at AX5, wider than its whole screen. Either way the next tile no longer
+    /// peeks in (the only cue the shelf scrolls) and the artwork decodes at a
+    /// size nobody can see. 1.6× is roughly where scaling stops at the first
+    /// accessibility size: 240 pt on the SE leaves the next tile visibly
+    /// peeking past the 16 pt margins. The caption still grows; it wraps
+    /// instead (see ``captionLineLimit``).
+    private static let maximumFixedWidthScale: CGFloat = 1.6
 
     /// A tile that fills the width its container gives it — the poster grid.
     public init(
@@ -44,6 +60,7 @@ public struct StationCard: View {
         self.onToggleFavorite = onToggleFavorite
         self.removeAction = removeAction
         hasFixedWidth = false
+        baseFixedWidth = 150
     }
 
     /// A tile pinned to `width`, for horizontal carousels.
@@ -64,6 +81,19 @@ public struct StationCard: View {
         self.removeAction = removeAction
         _fixedWidth = ScaledMetric(wrappedValue: width, relativeTo: .headline)
         hasFixedWidth = true
+        baseFixedWidth = width
+    }
+
+    /// The fixed tile's width: scaled with Dynamic Type, capped at
+    /// ``maximumFixedWidthScale``.
+    private var cardWidth: CGFloat {
+        min(fixedWidth, baseFixedWidth * Self.maximumFixedWidthScale)
+    }
+
+    /// One line per caption row at the standard sizes; at the accessibility
+    /// sizes a name cut to its first few glyphs identifies nothing, so it wraps.
+    private var captionLineLimit: Int {
+        dynamicTypeSize.isAccessibilitySize ? 2 : 1
     }
 
     private var isActive: Bool {
@@ -76,7 +106,7 @@ public struct StationCard: View {
                 artwork
                 caption
             }
-            .frame(width: hasFixedWidth ? fixedWidth : nil, alignment: .leading)
+            .frame(width: hasFixedWidth ? cardWidth : nil, alignment: .leading)
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
@@ -139,7 +169,7 @@ public struct StationCard: View {
         if hasFixedWidth {
             StationArtworkView(
                 artworkURL: station.artworkURL,
-                size: fixedWidth,
+                size: cardWidth,
                 cornerRadius: ShoutKitRadius.card,
                 isPlaying: phase == .playing,
                 placeholderSeed: station.name,
@@ -176,13 +206,18 @@ public struct StationCard: View {
             Text(station.name)
                 .font(.shoutKitCardTitle)
                 .foregroundStyle(isActive ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
-                .lineLimit(1)
+                .lineLimit(captionLineLimit)
 
             Text(subtitle)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
+                .lineLimit(captionLineLimit)
         }
+        // Without this the line limit is never reached: in a grid cell the
+        // aspect-fit artwork above is the flexible child, and the caption is
+        // proposed only the height left over — one line — and truncates there
+        // regardless of `lineLimit`. Seen on an iPhone SE simulator at AX3.
+        .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -219,5 +254,18 @@ public struct StationCard: View {
         }
         .padding()
     }
+    .tint(.shoutKitAccent)
+}
+
+#Preview("iPhone SE · AX3", traits: .iPhoneSE) {
+    ScrollView {
+        LazyVGrid(columns: ShoutKitLayout.artworkColumns, spacing: ShoutKitSpacing.large) {
+            ForEach(PreviewRadioDirectory.sampleStations) { station in
+                StationCard(station: station, phase: .idle, onTap: {})
+            }
+        }
+        .padding()
+    }
+    .dynamicTypeSize(.narrowScreenPreview)
     .tint(.shoutKitAccent)
 }
