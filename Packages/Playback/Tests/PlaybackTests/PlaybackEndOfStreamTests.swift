@@ -79,7 +79,7 @@ extension PlaybackTimingTests {
             output.onStatusChange?(.endOfStream)
             await waitUntil { output.startedURLs.count == 2 }
             #expect(output.startedURLs.count == 2)
-            #expect(output.startedURLs[0] == output.startedURLs[1])
+            #expect(output.startedURLs.first == output.startedURLs.last)
 
             output.onStatusChange?(.playing)
             #expect(controller.state == .playing(station()))
