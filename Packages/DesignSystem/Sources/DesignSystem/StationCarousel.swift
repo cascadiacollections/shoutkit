@@ -73,3 +73,14 @@ public struct StationCarousel: View {
     .padding()
     .tint(.shoutKitAccent)
 }
+
+#Preview("iPhone SE · AX3", traits: .iPhoneSE) {
+    StationCarousel(
+        stations: PreviewRadioDirectory.sampleStations,
+        phase: { _ in .idle },
+        onTap: { _ in },
+    )
+    .padding()
+    .dynamicTypeSize(.narrowScreenPreview)
+    .tint(.shoutKitAccent)
+}

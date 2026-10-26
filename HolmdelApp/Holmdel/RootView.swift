@@ -219,3 +219,12 @@ private enum HolmdelTab: Hashable {
     )
     .tint(.shoutKitAccent)
 }
+
+#Preview("iPhone SE · AX3", traits: .iPhoneSE) {
+    RootView(
+        launchRouter: StationLaunchRouter(),
+        isPersistentStoreAvailable: true,
+    )
+    .dynamicTypeSize(.narrowScreenPreview)
+    .tint(.shoutKitAccent)
+}
