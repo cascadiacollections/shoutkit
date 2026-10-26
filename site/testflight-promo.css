@@ -1,0 +1,12 @@
+/* Halloween campaign: hidden by default and outside the campaign window. */
+.halloween-promo[hidden] { display: none; }
+.halloween-promo { box-sizing: border-box; margin: 1.5rem auto; padding: clamp(1.25rem, 4vw, 2.5rem); max-width: 1120px; border: 2px solid #fb923c; border-radius: 16px; background: radial-gradient(ellipse at top right, #653213 0, transparent 65%), #17121f; color: #fff5e6; font-family: system-ui, sans-serif; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 1.5rem; box-shadow: 0 8px 0 #17121f22; }
+.halloween-promo .promo-dates { margin: 0 0 .6rem; color: #ffba70; font-size: .8rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.halloween-promo h2 { color: #fff5e6; margin: 0 0 .6rem; font-size: clamp(1.6rem, 3vw, 2.4rem); line-height: 1.15; text-transform: none; letter-spacing: -.02em; }
+.halloween-promo h2::before { display: none; }
+.halloween-promo p { margin: 0; line-height: 1.6; max-width: 62ch; }
+.halloween-promo .promo-note { margin-top: .6rem; color: #e5d4c8; font-size: .85rem; }
+.halloween-promo .promo-link { display: inline-block; padding: 1rem 1.3rem; background: #ffae55; color: #21130c; border: 2px solid #ffae55; border-radius: 8px; font-weight: 800; text-decoration: none; text-align: center; white-space: nowrap; }
+.halloween-promo .promo-link:hover { background: #ffd29e; border-color: #ffd29e; }
+.halloween-promo a:focus-visible { outline: 3px solid #fff; outline-offset: 5px; }
+@media (max-width: 700px) { .halloween-promo { margin: 1rem; grid-template-columns: 1fr; gap: 1rem; } .halloween-promo .promo-link { white-space: normal; } }

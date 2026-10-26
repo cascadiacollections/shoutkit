@@ -14,162 +14,164 @@ import Testing
 // acknowledges rejoins the stream instead of leaving playback stuck. Short
 // injected watchdog windows; the production default is 2 s.
 
-@MainActor
-struct PlaybackResumeRecoveryTests {
-    private static let shortTimeout: Duration = .milliseconds(50)
+extension PlaybackTimingTests {
+    @MainActor
+    struct PlaybackResumeRecoveryTests {
+        private static let shortTimeout: Duration = .milliseconds(50)
 
-    // MARK: - Resume watchdog
+        // MARK: - Resume watchdog
 
-    @Test func `resume the output never acknowledges rejoins stream`() async {
-        let output = FakeAudioOutput()
-        let controller = makeController(
-            stations: [station()], output: output,
-            resumeWatchdogTimeout: Self.shortTimeout,
-        )
+        @Test func `resume the output never acknowledges rejoins stream`() async {
+            let output = FakeAudioOutput()
+            let controller = makeController(
+                stations: [station()], output: output,
+                resumeWatchdogTimeout: Self.shortTimeout,
+            )
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
-        controller.pause()
-        #expect(controller.state == .paused(station()))
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
+            controller.pause()
+            #expect(controller.state == .paused(station()))
 
-        // The engine's player is past resuming, and says nothing about it.
-        output.resumeSilentlyFails = true
-        controller.togglePlayPause()
-        #expect(output.resumeCount == 1)
+            // The engine's player is past resuming, and says nothing about it.
+            output.resumeSilentlyFails = true
+            controller.togglePlayPause()
+            #expect(output.resumeCount == 1)
 
-        await waitUntil { output.startedURLs.count == 2 }
-        #expect(output.startedURLs.count == 2, "an unacknowledged resume must rejoin the stream")
-        #expect(output.stopCount == 1, "the dead player is torn down before the rejoin")
+            await waitUntil { output.startedURLs.count == 2 }
+            #expect(output.startedURLs.count == 2, "an unacknowledged resume must rejoin the stream")
+            #expect(output.stopCount == 1, "the dead player is torn down before the rejoin")
 
-        output.onStatusChange?(.playing)
-        #expect(controller.state == .playing(station()))
-    }
+            output.onStatusChange?(.playing)
+            #expect(controller.state == .playing(station()))
+        }
 
-    @Test func `acknowledged resume does not rejoin stream`() async {
-        let output = FakeAudioOutput()
-        let controller = makeController(
-            stations: [station()], output: output,
-            resumeWatchdogTimeout: Self.shortTimeout,
-        )
+        @Test func `acknowledged resume does not rejoin stream`() async {
+            let output = FakeAudioOutput()
+            let controller = makeController(
+                stations: [station()], output: output,
+                resumeWatchdogTimeout: Self.shortTimeout,
+            )
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
-        controller.pause()
-        controller.togglePlayPause()
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
+            controller.pause()
+            controller.togglePlayPause()
 
-        try? await Task.sleep(for: .milliseconds(150))
-        #expect(output.startedURLs.count == 1, "a resume that took effect must not restart the stream")
-        #expect(output.stopCount == 0)
-        #expect(controller.state == .playing(station()))
-    }
+            try? await Task.sleep(for: .milliseconds(150))
+            #expect(output.startedURLs.count == 1, "a resume that took effect must not restart the stream")
+            #expect(output.stopCount == 0)
+            #expect(controller.state == .playing(station()))
+        }
 
-    @Test func `pause cancels resume watchdog`() async {
-        let output = FakeAudioOutput()
-        let controller = makeController(
-            stations: [station()], output: output,
-            resumeWatchdogTimeout: Self.shortTimeout,
-        )
+        @Test func `pause cancels resume watchdog`() async {
+            let output = FakeAudioOutput()
+            let controller = makeController(
+                stations: [station()], output: output,
+                resumeWatchdogTimeout: Self.shortTimeout,
+            )
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
-        controller.pause()
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
+            controller.pause()
 
-        output.resumeSilentlyFails = true
-        controller.resume() // arms the watchdog
-        controller.pause() // must beat it
+            output.resumeSilentlyFails = true
+            controller.resume() // arms the watchdog
+            controller.pause() // must beat it
 
-        try? await Task.sleep(for: .milliseconds(150))
-        #expect(output.startedURLs.count == 1, "a paused stream must not be rejoined")
-        #expect(controller.state == .paused(station()))
-    }
+            try? await Task.sleep(for: .milliseconds(150))
+            #expect(output.startedURLs.count == 1, "a paused stream must not be rejoined")
+            #expect(controller.state == .paused(station()))
+        }
 
-    @Test func `stop cancels resume watchdog`() async {
-        let output = FakeAudioOutput()
-        let controller = makeController(
-            stations: [station()], output: output,
-            resumeWatchdogTimeout: Self.shortTimeout,
-        )
+        @Test func `stop cancels resume watchdog`() async {
+            let output = FakeAudioOutput()
+            let controller = makeController(
+                stations: [station()], output: output,
+                resumeWatchdogTimeout: Self.shortTimeout,
+            )
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
-        controller.pause()
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
+            controller.pause()
 
-        output.resumeSilentlyFails = true
-        controller.resume()
-        controller.stop()
+            output.resumeSilentlyFails = true
+            controller.resume()
+            controller.stop()
 
-        try? await Task.sleep(for: .milliseconds(150))
-        #expect(output.startedURLs.count == 1)
-        #expect(controller.state == .idle)
-    }
+            try? await Task.sleep(for: .milliseconds(150))
+            #expect(output.startedURLs.count == 1)
+            #expect(controller.state == .idle)
+        }
 
-    @Test func `rejoin reuses resolved endpoint and is not A new choice`() async {
-        let output = FakeAudioOutput()
-        let directory = CountingRadioDirectory(stations: [station()])
-        let controller = makeController(
-            directory: directory, output: output,
-            resumeWatchdogTimeout: Self.shortTimeout,
-        )
-        var playedCount = 0
-        controller.onStationPlayed = { _ in playedCount += 1 }
+        @Test func `rejoin reuses resolved endpoint and is not A new choice`() async {
+            let output = FakeAudioOutput()
+            let directory = CountingRadioDirectory(stations: [station()])
+            let controller = makeController(
+                directory: directory, output: output,
+                resumeWatchdogTimeout: Self.shortTimeout,
+            )
+            var playedCount = 0
+            controller.onStationPlayed = { _ in playedCount += 1 }
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
-        output.emitTrackInfo("Song", "Band")
-        controller.pause()
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
+            output.emitTrackInfo("Song", "Band")
+            controller.pause()
 
-        output.resumeSilentlyFails = true
-        controller.resume()
-        await waitUntil { output.startedURLs.count == 2 }
+            output.resumeSilentlyFails = true
+            controller.resume()
+            await waitUntil { output.startedURLs.count == 2 }
 
-        #expect(output.startedURLs.count == 2)
-        #expect(await directory.streamEndpointCallCount == 1, "a rejoin must reuse the cached endpoint")
-        #expect(playedCount == 1, "a rejoin is not a new listening choice")
-        #expect(controller.nowPlaying?.title == "Song", "the last-known track stays put while re-buffering")
-    }
+            #expect(output.startedURLs.count == 2)
+            #expect(await directory.streamEndpointCallCount == 1, "a rejoin must reuse the cached endpoint")
+            #expect(playedCount == 1, "a rejoin is not a new listening choice")
+            #expect(controller.nowPlaying?.title == "Song", "the last-known track stays put while re-buffering")
+        }
 
-    // MARK: - Keeping the output's state in step
+        // MARK: - Keeping the output's state in step
 
-    @Test func `interruption pauses the output too`() async {
-        let output = FakeAudioOutput()
-        let controller = makeController(stations: [station()], output: output)
+        @Test func `interruption pauses the output too`() async {
+            let output = FakeAudioOutput()
+            let controller = makeController(stations: [station()], output: output)
 
-        controller.play(station())
-        await waitForStart(output)
-        output.onStatusChange?(.playing)
-        output.onStatusChange?(.interruptionBegan)
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.playing)
+            output.onStatusChange?(.interruptionBegan)
 
-        // Not just the controller's own state: the system silences the audio
-        // without telling the streaming engine, and an engine that never learned
-        // it was paused can refuse to resume when the interruption ends.
-        #expect(output.pauseCount == 1)
-        #expect(controller.state == .paused(station()))
-    }
+            // Not just the controller's own state: the system silences the audio
+            // without telling the streaming engine, and an engine that never learned
+            // it was paused can refuse to resume when the interruption ends.
+            #expect(output.pauseCount == 1)
+            #expect(controller.state == .paused(station()))
+        }
 
-    @Test func `interruption during loading tears down A started output`() async {
-        let output = FakeAudioOutput()
-        let controller = makeController(stations: [station()], output: output)
+        @Test func `interruption during loading tears down A started output`() async {
+            let output = FakeAudioOutput()
+            let controller = makeController(stations: [station()], output: output)
 
-        controller.play(station())
-        await waitForStart(output)
-        // No status has landed yet, so the controller is still `.loading` even
-        // though the stream itself is already running.
-        #expect(controller.state == .loading(station()))
+            controller.play(station())
+            await waitForStart(output)
+            // No status has landed yet, so the controller is still `.loading` even
+            // though the stream itself is already running.
+            #expect(controller.state == .loading(station()))
 
-        output.onStatusChange?(.interruptionBegan)
-        #expect(output.stopCount == 1, "a started stream must not run on through the interruption")
-        #expect(output.pauseCount == 0, "there is no player left to pause")
-        #expect(controller.state == .paused(station()))
+            output.onStatusChange?(.interruptionBegan)
+            #expect(output.stopCount == 1, "a started stream must not run on through the interruption")
+            #expect(output.pauseCount == 0, "there is no player left to pause")
+            #expect(controller.state == .paused(station()))
 
-        // Auto-resume restarts instead of resuming a torn-down player.
-        output.onStatusChange?(.interruptionEnded(shouldResume: true, otherAudioIsPlaying: false))
-        await waitForStart(output, count: 2)
-        #expect(output.startedURLs.count == 2)
-        #expect(output.resumeCount == 0)
+            // Auto-resume restarts instead of resuming a torn-down player.
+            output.onStatusChange?(.interruptionEnded(shouldResume: true, otherAudioIsPlaying: false))
+            await waitForStart(output, count: 2)
+            #expect(output.startedURLs.count == 2)
+            #expect(output.resumeCount == 0)
+        }
     }
 }
