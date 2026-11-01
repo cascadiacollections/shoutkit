@@ -1,5 +1,58 @@
 # Decisions
 
+## 2026-11-01 (TestFlight uploads skip commits that do not change the app)
+
+Every push to `main` was starting the Xcode Cloud workflow, and the successful
+archive was going to TestFlight. That included Dependabot bumps of
+`codeql-action`, documentation, and marketing-site edits. Testers were getting
+a new build when the binary could not have changed.
+
+The workflow that uploads is not in this repo. `release.yml` only drafts GitHub
+release notes, and there are still no Apple signing secrets for Actions.
+`HolmdelApp/Holmdel.xcodeproj/xcshareddata/xcodecloud/manifest.json` records
+that the product is connected; the start condition, the archive action, and the
+TestFlight post-action are stored in App Store Connect. Two different levers
+follow from that:
+
+- **In the repo**, `ci_scripts/ci_post_clone.sh` (and the identical copy beside
+  the xcodeproj, because the workflow may be pointed at either the workspace or
+  the project) runs `.github/scripts/testflight-changes.sh gate`. Xcode Cloud
+  has no successful-exit way to cancel a run that has already started. Exiting
+  1 from the post-clone script is what stops the archive, and therefore the
+  upload. The log banner says the run was skipped. This fires for a branch
+  `push` whose diff against the first parent is entirely non-shipping. Manual
+  Start, Rebuild (`manual_rebuild`), a tag, a pull request, and a schedule are
+  left alone, and a commit message containing `[testflight]` or `[ci build]`
+  forces the archive through. Those are the ways to upload when the path rule
+  would not.
+- **In App Store Connect**, the Branch Changes condition on `main` should use
+  Files and Folders → Custom Conditions → **Don't start a build if all changed
+  files match** (`DO_NOT_START_IF_ALL_FILES_MATCH`) for `.github/`, `docs/`,
+  `site/`, and `ci_scripts/`. That mode starts the build when any file falls
+  outside the list, which is the same shape as the script. **Start a build if
+  any file matches**, pointed at the same folders, would invert it and suppress
+  app builds. A Manual Start condition is the force hatch that does not depend
+  on the commit touching those paths; `[testflight]` only affects a run that
+  has already started. The script keeps uploads from happening before that
+  setting is changed, and afterwards it is the backstop if the condition drifts.
+
+The predicate is a denylist, not an allowlist. `HolmdelApp/` (except the hook
+directory), `Packages/` — sources, tests, DocC, `Package.swift`, and
+`Package.resolved` — and `Holmdel.xcworkspace/` always build, because a
+dependency lockfile changes what ships and a DocC article sits next to code.
+Root markdown, the lint/format config, and `LICENSE` do not. Any other path
+builds. An allowlist of today's shipping roots would have dropped a new root on
+the floor; a denylist of the trees that have been producing empty betas fails
+open. Test-only edits under `Packages/` still upload. Splitting them out is how
+a shared scheme or resource change gets classified as "just tests."
+
+The diff is `HEAD^`..`HEAD`, first parent, which is the whole change for the
+squash and merge commits this repo actually pushes. A multi-commit push whose
+tip is docs-only can be missed; Manual Start covers it. If the parent commit is
+not in the clone, the script deepens once and otherwise builds. CI runs the
+script's `--self-test` on Ubuntu (`testflight-paths` in `ci.yml`); Xcode Cloud
+is not available from Actions, so that job is what locks the path list.
+
 ## 2026-10-25 (iPhone SE (2nd generation) becomes the low-end profiling floor)
 
 The low-end device profiling runs on is an iPhone SE (2nd generation): A13, 3 GB, a 375 × 667 pt
