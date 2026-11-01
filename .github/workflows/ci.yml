@@ -75,6 +75,18 @@ jobs:
       - name: Check the registered URL scheme matches StationLink
         run: .github/scripts/check-url-scheme.sh
 
+  # Locks the path predicate the Xcode Cloud post-clone hook uses before a
+  # TestFlight upload. It runs on Ubuntu, so the mac jobs never wait on it.
+  # See docs/RELEASING.md.
+  testflight-paths:
+    name: TestFlight path rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check which pushes should upload to TestFlight
+        run: .github/scripts/testflight-changes.sh --self-test
+
   # Deliberately ungated and first: it is by far the cheapest job here, and both
   # mac jobs below `needs` it.
   lint:

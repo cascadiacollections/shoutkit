@@ -34,9 +34,9 @@ updates:
   # it does. Restore the block below verbatim at that point.
   #
   # What this costs in the meantime: Factory is `exact: "3.5.2"`-pinned in
-  # nine manifests and AudioStreaming `exact: "1.4.5"` in
-  # PlaybackEngineAudioStreaming, and nothing now watches any of them. Those
-  # are hand-bumps until this is back.
+  # nine manifests, and AudioStreaming is `exact: "1.4.5"` in
+  # PlaybackEngineAudioStreaming (one of those nine). Nothing now watches
+  # either pin. Those are hand-bumps until this is back.
   #
   # - package-ecosystem: swift
   #   directories:

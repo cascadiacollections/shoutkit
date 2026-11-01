@@ -110,6 +110,77 @@ struct LibraryStoreRankingTests {
         #expect(store.favoriteStations().map(\.id) == ["c", "a", "b"])
     }
 
+    @Test func `ranked stations stop after the limit instead of later favorites`() {
+        let (store, _) = makeStoreAndContext()
+        for index in 0 ..< 30 {
+            store.addFavorite(streamableStation("fav-\(index)"))
+        }
+        store.logRecent(streamableStation("recent"))
+        store.logRecent(streamableStation("recent"))
+
+        let rankedIDs = store.rankedStations(limit: 5).map(\.id)
+
+        #expect(rankedIDs == ["fav-0", "fav-1", "fav-2", "fav-3", "fav-4"])
+    }
+
+    @Test func `ranked stations skip a duplicate recent while filling the limit`() {
+        let (store, _) = makeStoreAndContext()
+        store.addFavorite(streamableStation("fav"))
+        // Played twice so this recent sorts ahead of "other" and would be the
+        // only row a `fetchLimit` of (limit - favorites) would see.
+        store.logRecent(streamableStation("fav"))
+        store.logRecent(streamableStation("fav"))
+        store.logRecent(streamableStation("other"))
+
+        #expect(store.rankedStations(limit: 2).map(\.id) == ["fav", "other"])
+    }
+
+    @Test func `ranked stations keep a favorite that has no stream URL`() {
+        let (store, _) = makeStoreAndContext()
+        store.addFavorite(station("no-url"))
+        store.logRecent(streamableStation("recent"))
+
+        #expect(store.rankedStations(limit: 5).map(\.id) == ["no-url", "recent"])
+    }
+
+    @Test func `prewarm UR ls keep walking past favorites with no snapshot`() {
+        let (store, _) = makeStoreAndContext()
+        for index in 0 ..< 6 {
+            store.addFavorite(station("no-url-\(index)"))
+        }
+        store.addFavorite(streamableStation("has-url"))
+        store.logRecent(streamableStation("recent-url"))
+
+        let urls = store.prewarmStreamURLs(limit: 2).map(\.absoluteString)
+
+        #expect(urls == [
+            "https://example.com/has-url.aac",
+            "https://example.com/recent-url.aac",
+        ])
+    }
+
+    @Test func `prewarm UR ls collapse stations that share a snapshot URL`() throws {
+        let (store, _) = makeStoreAndContext()
+        let shared = try #require(URL(string: "https://example.com/shared.aac"))
+        let station = { (id: String) in
+            Station(
+                id: id,
+                name: "Station \(id)",
+                genre: "Test",
+                listenerCount: 10,
+                preferredStreamURL: shared,
+            )
+        }
+        store.addFavorite(station("a"))
+        store.addFavorite(station("b"))
+        store.logRecent(streamableStation("c"))
+
+        #expect(store.prewarmStreamURLs(limit: 5).map(\.absoluteString) == [
+            shared.absoluteString,
+            "https://example.com/c.aac",
+        ])
+    }
+
     @Test func `refreshing stream URL snapshot updates favorites and matching recents`() throws {
         let (store, context) = makeStoreAndContext()
         let stale = try #require(URL(string: "https://example.com/stale.aac"))
