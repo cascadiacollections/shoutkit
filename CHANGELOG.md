@@ -5,13 +5,34 @@ below) are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org).
 
-> **0.1.0 through 0.3.0 were internal milestones, not releases.** None was ever tagged, and
-> no build from them reached a user — the repo had zero git tags until `v0.4.0`. Their
-> sections are kept as the development record. `v0.4.0` is the first real release; see
-> `docs/RELEASING.md` for how one is cut and `DECISIONS.md` (2026-08-13) for why the
-> numbering continues rather than restarting at 1.0.0.
+> **0.1.0 through 0.3.0 were internal milestones, not releases.** None was tagged, and
+> no build from them reached a user. `v0.4.0`, tagged 2026-08-30, is the first real release
+> and its GitHub Release is still an unpublished draft. Those milestone sections stay as the
+> development record. See `docs/RELEASING.md` for how a release is cut and `DECISIONS.md`
+> (2026-08-13) for why the numbering continues rather than restarting at 1.0.0.
 
 ## [Unreleased]
+
+## [0.4.0] — 2026-11-01
+
+First public release of Holmdel, the app, and of ShoutKit, the MIT-licensed radio library
+under `Packages/`. 0.1.0 through 0.3.0 were internal milestones; the features recorded in
+those sections are in this build. A draft of the notes below was opened on GitHub on
+2026-09-02 from the 2026-08-30 tag and was never published. Everything merged after that
+draft is included here.
+
+Features that are built and still switched off are listed under **Not yet enabled**. They
+are not part of what this release turns on.
+
+### Added
+
+- **Favorites backup.** Settings → Favorites Backup exports and imports favorites as a JSON
+  file. Import merges by station id: favorites already on the device keep their order, and
+  new ones append. Recents and recently heard tracks stay on the device and are not in the
+  file
+- **iPhone app icon.** The home-screen icon is the Icon Composer beacon (a radio mark on a
+  blue gradient), in place of the generated placeholder. The Apple Watch and Apple TV icons
+  are still their earlier artwork
 
 ### Changed
 - **Holmdel now runs on Mac.** The main app has a Mac Catalyst destination with the same
@@ -52,6 +73,16 @@ below) are documented here. The format follows
   See `DECISIONS.md` (2026-08-24) and `TRADEMARK.md`.
 
 ### Fixed
+- **The Apple Watch app keeps playing after the wrist drops.** Background audio had been
+  declared on `WKBackgroundModes`, a key watchOS only accepts for session types such as
+  workouts, so App Store upload validation rejected the archive. Background audio now uses
+  `UIBackgroundModes`, the same key as the iPhone app, and CI checks the built watch bundle
+  for that
+- **Narrow screens stay readable at the largest text sizes.** On an iPhone SE-sized layout
+  with accessibility text sizes, station captions wrap to two lines, the Recently Played
+  shelf keeps the next tile in view, and the mini player's second line follows the tab bar's
+  own text-size cap. Now Playing already scrolls
+
 - Coalesce concurrent album-art lookups into one request and reject malformed artwork URLs.
 - **Pause now always means silence, even while a station is connecting or switching.** Late
   callbacks from an old connection can no longer restart audio, replace the current station's
@@ -80,9 +111,9 @@ below) are documented here. The format follows
   screen did, so Search opened to an empty space that filled itself in. It now starts with a
   set of genres already there, replaced by the live list as soon as it arrives — and if that
   list can't be fetched, the genres you can browse stay on screen instead of vanishing
-- **Album art shows up again on Bluetooth car stereos.** In a car, artwork either stayed frozen on
-  whatever had played before ShoutKit or never appeared at all — not the track's cover, not even
-  the station's own. Two things were behind it. A change meant to stop artwork downloads from
+- **Bluetooth car stereos are offered album art only once the image is in hand.** In a car,
+  artwork either stayed frozen on whatever had played before Holmdel or never appeared at all —
+  not the track's cover, not even the station's own. Two things were behind it. A change meant to stop artwork downloads from
   competing with the audio stream put them in the queue the system deprioritizes hardest, so while
   a station was playing the image often never arrived at all. And when you started playing, or
   switched stations, the app told the car about artwork it hadn't downloaded yet — a car asks for
@@ -90,14 +121,14 @@ below) are documented here. The format follows
   ready. Artwork the lock screen, Dynamic Island, and car are waiting on now downloads at normal
   priority, and the app waits until it has the image in hand before announcing it, in every case
   rather than most of them. In-app artwork still yields to the stream, which is what that change
-  was for
+  was for. A car has not yet confirmed this; that check is issue #147
 - **Artwork recovers after a tunnel or a dead cell instead of staying blank for the rest of the
   drive.** If a cover failed to download once — no signal for a moment — the app gave up on that
   image until you stopped playback entirely, so a station could go the whole drive with nothing.
   It now retries a few times over a couple of minutes, and picks the artwork back up when signal
   returns
 
-## [0.4.0] — 2026-08-30
+The notes below are the 2026-08-30 draft, corrected where they described a feature that stays off.
 
 ### Fixed
 - **Playback no longer pops when it rejoins a station after Siri, a TTS announcement, or a
@@ -157,13 +188,12 @@ below) are documented here. The format follows
   color tuned for a white background, which left them dim on a dark one. Both now have a dark-mode
   appearance, and station cards use the system's paired background colors so they stay visibly
   distinct from the surface behind them in both appearances
-- **ShoutKit now backs off when your battery is low or your data is limited**: the app used to
-  fetch artwork for stations you hadn't scrolled to yet, and open connections to your top stations
-  at launch, under every condition — including on cellular, in Low Data Mode, and in Low Power
-  Mode. Both are guesses about what you'll do next, so both now stop when the device is trying to
-  conserve, and neither ever uses your cellular allowance for a guess. Nothing you actually look at
-  or listen to is affected: artwork for stations on screen, the station directory, and playback
-  itself are unchanged
+- **Artwork prefetch backs off when the battery is low or data is limited.** Rows about to
+  scroll into view still get their thumbnails ahead of time. That look-ahead stops in Low Power
+  Mode and on a constrained or cellular network, because it is a guess about what you will scroll
+  to next. Artwork for stations on screen, the station directory, and playback are unchanged.
+  Opening connections to top stations at launch is a separate switch and stays off; see
+  "Not yet enabled"
 - **Stations are there the moment you open the app**: Listen Now now saves the
   station list to disk and paints it instantly on the next launch, instead of showing
   "Tuning in…" while the directory answers. Within six hours of the last successful update the
@@ -185,10 +215,13 @@ below) are documented here. The format follows
   visible row never fetch the same image twice
 
 ### Added
+- **Search filters.** Search can narrow stations by minimum and maximum bitrate, a tag,
+  and a country code, using Radio-Browser's own query fields. Genre chips still browse a
+  genre rather than searching for its name
 - **Top Tracks**: the Library tab now shows your most-played songs — over the last week, the
   last month, or all time — with cover art where it's available, right alongside Recently
   Heard
-- **Apple TV app**: ShoutKit on tvOS, built for the Siri Remote — a now-playing banner over
+- **Apple TV app**: Holmdel on tvOS, built for the Siri Remote — a now-playing banner over
   Recent and Popular station shelves, with play/pause and stop, and the system Now Playing panel
   (TV button) showing artwork and responding to the remote's transport controls. It runs the same
   audio engine as the iPhone app, so the current track's title and artist appear alongside the
@@ -196,8 +229,8 @@ below) are documented here. The format follows
   from the Apple TV itself — there is no sync with your phone
 - **Home Screen quick-play widget**: a small/medium Home Screen widget that plays a favorite
   station in one tap. Long-press → **Edit Widget** to choose which favorite it plays (it falls back
-  to your first favorite until you pick one); tapping the tile opens ShoutKit straight onto that
-  station and starts playback via the same `shoutkit://station?…` deep link Shortcuts uses. The app
+  to your first favorite until you pick one); tapping the tile opens Holmdel straight onto that
+  station and starts playback via the same `holmdel://station?…` deep link Shortcuts uses. The app
   mirrors your favorites to the widget through the shared App Group and refreshes it whenever the
   list changes or is reordered
 - **iPadOS support**: on iPad the root tab bar adopts the sidebar-adaptable style (an Apple
@@ -211,11 +244,6 @@ below) are documented here. The format follows
   via a new `sortIndex` on the favorite. New favorites append to the bottom so they never disturb
   your ordering, and existing users' lists are re-based from their previous newest-first order on
   first launch, so nothing looks different until you reorder.
-- **Live Activity artwork**: the lock screen / Dynamic Island now-playing Live Activity now shows
-  the current album (or station) artwork, matching the Now Playing screen and mini-player toolbar.
-  Because Live Activity views can't fetch network images, the app downsamples the art into a shared
-  App Group container (`group.com.cascadiacollections.shoutkit`) and hands the widget a small token;
-  the widget renders the file. Falls back to a playback glyph until art is staged
 - **Album art discovery**: when ICY stream metadata contains both artist and title, the app
   queries the iTunes Search API (keyless, best-effort) and shows the resolved album artwork in
   the Now Playing hero, mini-player thumbnail, and lock screen / Control Center. Falls back to
@@ -261,8 +289,8 @@ below) are documented here. The format follows
   `RadioDirectoryError` inline. No user-visible behavior change
 - Adopted swift-async-algorithms (Apple-maintained, Apache-2.0, pinned to a stable release;
   recorded in `THIRD_PARTY_LICENSES.md` and shown in Settings → Licenses), revisiting the
-  FOSS audit's initial rejection: `removeDuplicates()` replaces the Live Activity
-  coordinator's two hand-rolled duplicate-suppression loops, and Search's 300 ms debounce
+  FOSS audit's initial rejection: `removeDuplicates()` replaces two hand-rolled
+  duplicate-suppression loops, and Search's 300 ms debounce
   moves from a cancel-and-resleep task to a query stream with `debounce(for:)` — behavior
   unchanged (see `DECISIONS.md`)
 - Adopted the first two third-party dependencies after a FOSS audit (both Apple-maintained,
@@ -284,28 +312,28 @@ below) are documented here. The format follows
 - **Background battery hygiene**: playback left paused for 10 minutes now releases the player
   and the audio session (lock-screen controls keep working — play restarts the live stream),
   instead of holding the `audio` background assertion for as long as the app stays paused.
-  A stream that stalls buffering for over 90 seconds is likewise parked as paused instead of
+  A stream that stalls buffering for over 30 seconds is parked as paused instead of
   retrying the network indefinitely in the background
 - Album-art lookups now also cache definitive catalog misses, so a track iTunes doesn't know
   no longer re-queries the API on every ICY repeat; Now Playing artwork is fetched and decoded
   once per URL and shared across the backdrop, hero, and tint views (previously three decodes)
 
 ### Fixed
-- **Album art reaches car stereos over Bluetooth again**: track titles and artists were arriving
-  fine, but the artwork either never changed or stayed on whatever was playing before ShoutKit —
+- **Album art is ready before a Bluetooth track change is announced**: track titles and artists were arriving
+  fine, but the artwork either never changed or stayed on whatever was playing before Holmdel —
   an album cover left over from Apple Music, for instance. A car receives cover art on a separate,
   slow channel *after* it is told the track changed, so it needs the image ready at that moment and
-  it needs to be told once, not twice. ShoutKit was doing neither: it only started downloading
+  it needs to be told once, not twice. Holmdel was doing neither: it only started downloading
   artwork when the system asked for it (with a forced network round-trip in front of every
   request), and it announced a track change twice per song — once with the station's logo the
   instant a new title arrived, then again with the real cover a moment later. Artwork is now
   downloaded and held in memory before the track change is announced, and the announcement happens
   once, with the cover already in hand. The station's own logo still stands in for tracks with no
-  cover art, and lock-screen and CarPlay behaviour is unchanged
+  cover art, and lock-screen behaviour is unchanged
 - **Stations that stream over plain http now play**: a misspelled App Transport Security key meant
   the app's cleartext exception was silently ignored, so any station whose stream isn't served over
   https was blocked by iOS before a single byte arrived. A large share of the Radio-Browser and
-  SHOUTcast catalogue is http-only, and those stations simply failed to start. Everything ShoutKit
+  SHOUTcast catalogue is http-only, and those stations simply failed to start. Everything Holmdel
   itself talks to — the directory, artwork, the album-art lookup — remains https
 - **Scrolling a carousel or swiping a row no longer jumps you to another tab**: a swipe-between-tabs
   gesture on the root view ran alongside, rather than instead of, whatever you were actually
@@ -361,10 +389,6 @@ below) are documented here. The format follows
     than showing a dead stream as playing
   - A resume the engine doesn't act on within a couple of seconds rejoins the stream — the
     switch-stations workaround, done automatically, for any playback backend
-- **Live Activity correctness**: the lock screen / Dynamic Island activity no longer shows
-  "Live" while playback is paused after rapid pause/track-change races (updates are now applied
-  in order with the play state tracked at the source), and a superseded artwork download can no
-  longer delete the artwork file the activity is currently showing
 - **Artwork race fixes**: rapidly switching stations can no longer leave the previous station's
   artwork (or ambient backdrop tint) permanently on the Now Playing screen, and a reused list
   row no longer shows the previous station's logo while the new one loads. The ambient backdrop's
@@ -380,6 +404,50 @@ below) are documented here. The format follows
   scene isn't foreground-active, so hours of background/locked playback do no needless UI work
 - Resuming after a stream failure (or after pausing while a station was still loading) no longer
   re-logs the station to recents and re-reports the play to Radio-Browser
+
+### Library
+
+ShoutKit (`Packages/`) since the 2026-08-30 tag:
+
+- **Pause stays paused.** `Playback` treats the listener's intent as final for that attempt.
+  A late callback from a connection they have already left cannot restart audio, replace the
+  current station's status, or schedule another retry. Switching stations stops the outgoing
+  stream before the next address is resolved. A stream that stalls while buffering gives up
+  sooner. After iOS resets the audio system, playback stays stopped until the listener resumes
+- **AudioStreaming 1.4.5.** `PlaybackEngineAudioStreaming` pins `exact: "1.4.5"`. The
+  one-second grace period that kept a discarded player alive across a media-services reset is
+  gone; the pin moves because that release fixes the upstream timer-lifetime bug the grace
+  period was standing in for
+- **Album art lookups share one request** per track, and relative or non-HTTP(S) artwork URLs
+  are rejected
+- **Favorites transfer.** `LibraryStore` exports and imports a versioned JSON document.
+  Import skips station ids the library already has and appends the rest, preserving order
+- **Deep links use the `holmdel` scheme.** `StationLink.appScheme` matches the app's URL
+  type. The widget, Shortcuts, and shared station links all use it
+- **Dependency pins** (Apple packages remain Apache-2.0; Factory remains MIT): Factory 3.4.1,
+  swift-algorithms 1.2.1, swift-async-algorithms 1.1.7, swift-collections 1.7.2
+
+### Not yet enabled
+
+Built, tested, and off in Release. Issue #146. `recommendations` was deleted on 2026-08-13
+and is not in the app.
+
+- **Geo stations** (`geoStations`, internal-only, off). Region-filtered discovery and the
+  precise-location opt-in do not run. The directory cache still stores a region key so a
+  later opt-in would not reuse another region's saved stations
+- **Station prewarming** (`prewarmStations`, internal-only, off). Launch-time DNS and TLS
+  warming of top stations does not run. Artwork prefetch for rows about to scroll on screen
+  is a different path, and that path does back off when the device is conserving power or data
+- **Live Activity** (`liveActivity`, internal-only, off). The ActivityKit lock screen and
+  Dynamic Island surface, including its artwork, is not shown. Lock screen, Control Center,
+  and the system now-playing UI are on. Pause-state and artwork races on the dormant Live
+  Activity path were fixed in this tree; they have no effect while the flag is off
+- **Diagnostics** (`diagnostics`, internal-only, off, and staying off). Settings includes a
+  Share diagnostics toggle. Collection also requires the internal flag, so a Release build
+  does not subscribe to MetricKit, and nothing is uploaded
+- **CarPlay** is implemented as a list of favorites and recents and does not launch. The
+  restricted CarPlay audio entitlement is not granted to this team; declaring it broke
+  signing, so the entitlement is not in the app
 
 ## [0.2.0] — milestone, never released (planned as the first TestFlight beta)
 
@@ -397,9 +465,11 @@ below) are documented here. The format follows
 - Apple Music-style persistent mini-player docked above the tab bar, expanding to a full
   Now Playing surface with live ICY track metadata
 - Lock screen / Control Center playback controls and artwork
-- Lock screen + Dynamic Island now-playing Live Activity
+- Lock screen + Dynamic Island now-playing Live Activity. Built in this milestone and
+  still off; see the 0.4.0 "Not yet enabled" section. Lock screen and Control Center
+  controls are the system Now Playing surface and are part of the app
 - Favorites and recents (on-device SwiftData); swipe to remove
-- Siri / Shortcuts: "Play ⟨station⟩ on ShoutKit"
+- Siri / Shortcuts: "Play ⟨station⟩ on ShoutKit" (the phrase is now "Play ⟨station⟩ on Holmdel")
 - Audio-session interruption and route-change handling (calls pause and auto-resume;
   unplugging headphones pauses)
 - Retry buttons on recoverable network failures

@@ -188,9 +188,13 @@ something a user receives.
       section at all, `docs/releases/0.3.0.md` said 0.3.0 shipped, this file agreed, and the
       project read `MARKETING_VERSION = 0.2.0`. Worse, the *targets* disagreed with each
       other — phone app at `0.2.0`, watch and tvOS at `0.3.0`, which fails App Store
-      validation for an embedded watch app. All twelve sites now read `0.4.0`.
-- [ ] **Cut `v0.4.0`.** The changelog cut-over and the tag, per `docs/RELEASING.md`. Blocked
-      only on the in-flight PRs that still write to `[Unreleased]`.
+      validation for an embedded watch app. All twelve sites were set to `0.4.0` on
+      2026-08-13. They were later moved together to `0.5.0` and then `0.5.1` for TestFlight
+      (see `DECISIONS.md`, 2026-09-06 and 2026-11-01). They still match each other.
+- [ ] **Publish `v0.4.0`.** The changelog section is current through 2026-11-01 and the
+      publish checklist is in `docs/RELEASING.md`. The tag already exists and points at the
+      2026-08-30 cut, not at `main`. Publishing is Kevin's step; this item stays open until
+      the draft is public.
 - [ ] Build-number (`CURRENT_PROJECT_VERSION`) handling. It is now shared at the project
       level, but has never been incremented automatically; TestFlight rejects a duplicate
       build number for a given version, so this bites on the *second* upload of a version,
@@ -198,8 +202,8 @@ something a user receives.
 - [ ] A CI check that the pushed tag matches `MARKETING_VERSION`. Nothing currently catches
       `v0.5.0` tagged against a tree reading `0.4.0`, and this repo's habit is to assert the
       things it believes (Pulse symbols, the watch payload) rather than trust them.
-- [ ] Professional app icon — 0.2.0 shipped a programmatic Core Graphics placeholder,
-      flagged in `DECISIONS.md` as swap-before-public-release.
+- [x] iPhone app icon — Icon Composer `Squan-AppIcon` replaced the programmatic placeholder
+      on 2026-09-07. Watch and tvOS icons were not part of that swap; see `docs/RELEASING.md`.
 - [ ] Community translations beyond English. String Catalog infra shipped in 0.2.0; this is
       populating it.
 - [ ] The checked-in codesign script (`xattr -cr` + ad-hoc `codesign` + `swift test
