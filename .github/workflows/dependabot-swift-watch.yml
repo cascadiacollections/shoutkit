@@ -12,7 +12,7 @@ name: Dependabot Swift watch
 # Dependabot run is not a failed check on any PR, so seven consecutive weeks
 # (2026-08-10 through 2026-09-21) produced no PRs and no notification. The
 # ecosystem is disabled rather than left to rot, which trades a silent failure
-# for a silent gap — Factory is `exact`-pinned in seven manifests and nothing
+# for a silent gap — Factory is `exact`-pinned in nine manifests and nothing
 # watches it now. This job is what closes that gap: check weekly, and say so
 # the week the toolchain lands.
 #
@@ -105,8 +105,8 @@ jobs:
             echo
             echo "Worth a look in the same pass, since nothing has watched them while this was off:"
             echo
-            echo "- Factory is \`exact: \"3.3.2\"\`-pinned in seven manifests — all must move together."
-            echo "- AudioStreaming is \`exact\`-pinned in \`Packages/PlaybackEngineAudioStreaming\`."
+            echo "- Factory is \`exact: \"3.5.2\"\`-pinned in nine manifests — all must move together."
+            echo "- AudioStreaming is \`exact: \"1.4.5\"\`-pinned in \`Packages/PlaybackEngineAudioStreaming\`."
             echo
             echo "Once it is back and green, delete this workflow — it has no other purpose."
             echo

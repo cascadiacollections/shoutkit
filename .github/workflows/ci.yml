@@ -100,7 +100,7 @@ jobs:
 
       # Use the same pinned formatter as the manual Reformat workflow.
       # --lint fails instead of rewriting the checked-in source.
-      - name: Install SwiftFormat 0.63.1
+      - name: Install SwiftFormat 0.64.5
         run: .github/scripts/install-swiftformat.sh
 
       # The one-time whole-tree reformat is recorded in

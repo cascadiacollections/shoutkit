@@ -33,9 +33,10 @@ updates:
   # image catches up, and `dependabot-swift-watch.yml` opens an issue the week
   # it does. Restore the block below verbatim at that point.
   #
-  # What this costs in the meantime: Factory is `exact: "3.3.2"`-pinned in
-  # seven manifests and AudioStreaming `exact: "1.4.4"` in an eighth, and
-  # nothing now watches any of them. Those are hand-bumps until this is back.
+  # What this costs in the meantime: Factory is `exact: "3.5.2"`-pinned in
+  # nine manifests and AudioStreaming `exact: "1.4.5"` in
+  # PlaybackEngineAudioStreaming, and nothing now watches any of them. Those
+  # are hand-bumps until this is back.
   #
   # - package-ecosystem: swift
   #   directories:
@@ -44,7 +45,7 @@ updates:
   #     - "/Packages/LiveActivity"
   #     - "/Packages/Playback"
   #     # The only manifest that declares AudioStreaming, since #122 moved the
-  #     # engine out of Playback. Missing from this list, its `exact: "1.4.4"`
+  #     # engine out of Playback. Missing from this list, its `exact: "1.4.5"`
   #     # pin would simply never be offered a bump.
   #     - "/Packages/PlaybackEngineAudioStreaming"
   #     - "/Packages/Persistence"
