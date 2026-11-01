@@ -141,16 +141,12 @@ public struct StationLink: Equatable, Sendable {
             items.append(URLQueryItem(name: "bitrate", value: String(bitrate)))
         }
 
-        if let artworkURL = station.artworkURL {
-            if Self.isHTTPSURL(artworkURL) {
-                items.append(URLQueryItem(name: "artworkURL", value: artworkURL.absoluteString))
-            }
+        if let artworkURL = station.artworkURL, Self.isHTTPSURL(artworkURL) {
+            items.append(URLQueryItem(name: "artworkURL", value: artworkURL.absoluteString))
         }
 
-        if let streamURL = station.preferredStreamURL {
-            if Self.isHTTPSURL(streamURL) {
-                items.append(URLQueryItem(name: "streamURL", value: streamURL.absoluteString))
-            }
+        if let streamURL = station.preferredStreamURL, Self.isHTTPSURL(streamURL) {
+            items.append(URLQueryItem(name: "streamURL", value: streamURL.absoluteString))
         }
 
         if let tagsCSV = Station.tagsCSV(from: station.tags) {

@@ -36,7 +36,7 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
 
     func genres() async throws(RadioDirectoryError) -> [Genre] {
         switch genresResult {
-        case let .success(genres): return genres
+        case let .success(genres): genres
         case let .failure(error): throw error
         }
     }
@@ -51,7 +51,7 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
 
     func searchStations(matching _: String, limit _: Int) async throws(RadioDirectoryError) -> [Station] {
         switch searchStationsResult {
-        case let .success(stations): return stations
+        case let .success(stations): stations
         case let .failure(error): throw error
         }
     }

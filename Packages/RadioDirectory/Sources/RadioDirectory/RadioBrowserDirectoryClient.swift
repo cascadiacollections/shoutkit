@@ -32,7 +32,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     private let hosts: [URL]
     private let transport: any HTTPTransporting
     private let retryPolicy: RetryPolicy
-    private let geoFilterProvider: (any RadioBrowserGeoFilterProviding)?
+    private let geoFilterProvider: any RadioBrowserGeoFilterProviding?
     private let userAgent: String
     private let logger = Logger(subsystem: "ShoutKit.RadioDirectory", category: "RadioBrowserDirectoryClient")
 
@@ -49,7 +49,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         hosts: [URL] = RadioBrowserDirectoryClient.defaultHosts,
         transport: any HTTPTransporting = URLSessionHTTPTransport.shared,
         retryPolicy: RetryPolicy = .interactive,
-        geoFilterProvider: (any RadioBrowserGeoFilterProviding)? = nil,
+        geoFilterProvider: any RadioBrowserGeoFilterProviding? = nil,
         userAgent: String = RadioBrowserDirectoryClient.defaultUserAgent,
     ) {
         self.hosts = hosts.isEmpty ? RadioBrowserDirectoryClient.defaultHosts : hosts

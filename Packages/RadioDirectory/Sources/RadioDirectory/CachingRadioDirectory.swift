@@ -28,7 +28,7 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
     /// Injected clock so TTL expiry is testable.
     private let now: @Sendable () -> Date
 
-    private let snapshotStore: (any DirectorySnapshotStoring)?
+    private let snapshotStore: any DirectorySnapshotStoring?
     private let snapshotTimeToLive: TimeInterval
     /// Evaluated per snapshot read/write rather than captured once: the geo
     /// filter it describes changes at runtime.
@@ -69,7 +69,7 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
     public init(
         base: any RadioDirectoryProviding,
         timeToLive: TimeInterval = 60,
-        snapshotStore: (any DirectorySnapshotStoring)? = nil,
+        snapshotStore: any DirectorySnapshotStoring? = nil,
         snapshotTimeToLive: TimeInterval = CachingRadioDirectory.defaultSnapshotTimeToLive,
         snapshotIdentity: @escaping @Sendable () async -> String? = { nil },
         now: @escaping @Sendable () -> Date = { Date() },

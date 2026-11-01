@@ -150,8 +150,7 @@ extension PlaybackController {
         // sane; ICY will refresh the track once the stream is back.
         state = .buffering(station)
         reconnectTimer.schedule(after: delay) { [weak self] in
-            guard let self, self.activeStation?.id == station.id else { return }
-            guard self.playbackRequested else { return }
+            guard let self, self.activeStation?.id == station.id, self.playbackRequested else { return }
             self.startPlayback(of: station, isReconnect: true)
         }
     }

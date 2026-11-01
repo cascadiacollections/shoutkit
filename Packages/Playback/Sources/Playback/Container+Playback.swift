@@ -1,5 +1,6 @@
 import FactoryKit
 
+@MainActor
 public extension Container {
     /// The playback engine backing ``PlaybackController``, resolved via Factory
     /// instead of direct instantiation.
@@ -17,7 +18,6 @@ public extension Container {
     /// `PlaybackController.init(output:)`, and previews and tests want the stub
     /// anyway. `@MainActor` because `AudioOutput` (and therefore
     /// ``RadioPlaybackEngine``) is.
-    @MainActor
     var radioPlaybackEngine: Factory<any RadioPlaybackEngine> {
         self { StubRadioPlaybackEngine() }
             .scope(.singleton)

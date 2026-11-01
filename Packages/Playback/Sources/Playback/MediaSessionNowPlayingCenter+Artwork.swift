@@ -43,8 +43,7 @@
         }
 
         func fetchArtworkIfNeeded(_ url: URL) {
-            guard residentArtwork[url] == nil else { return }
-            guard artworkFetches[url] == nil else { return }
+            guard residentArtwork[url] == nil, artworkFetches[url] == nil else { return }
             if let failure = artworkFailures[url] {
                 let elapsed = Self.clock.now - failure.lastAttempt
                 guard NowPlayingArtworkRetryPolicy.shouldAttempt(

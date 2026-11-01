@@ -1,5 +1,57 @@
 # Decisions
 
+## 2026-11-01 (dependency refresh: Factory 3.5.2, Collections 1.7.5, SwiftFormat 0.64.5)
+
+Swift dependency updates stay disabled. `dependabot/dependabot-core`'s `swift/Dockerfile`
+still pins `ARG SWIFT_VERSION=6.3.1` (checked 2026-11-01), and every manifest is still
+`swift-tools-version: 6.4`, so the commented-out `package-ecosystem: swift` block in
+`.github/dependabot.yml` stays commented out. #228 had already corrected that comment from
+the original Factory 3.3.2 / seven manifests wording to Factory 3.4.1 in nine manifests,
+with AudioStreaming 1.4.5 called out as one of those nine. This refresh moves Factory to
+3.5.2 and keeps that shape. The weekly watch workflow's re-enable issue body was still on
+3.3.2, so it moved with the pin.
+
+**What moved**
+
+- **Factory 3.4.1 → 3.5.2**, `exact`, in all nine manifests, and every `Package.resolved`.
+  3.5.0–3.5.1 add SwiftUI per-scene containers: `withContainer`, and `@InjectedObject` /
+  `@InjectedObservable` / `@InjectedContainer` resolving from the container installed for
+  the scene instead of always reading `Container.shared` at init. 3.5.2 is documentation
+  for those caveats. This tree never uses those wrappers — registration is
+  `Container.shared.…register` and `.scope(.singleton)` — and the `Container` type itself
+  only changed whitespace around the existing `#if swift(>=5.5)` shared-container
+  declaration. No call site changed.
+- **swift-collections 1.7.2 → 1.7.5**, `from:` floor and every lockfile that pins it.
+  1.7.3–1.7.5 are patch fixes (BitSet equality, deque prepend, span bookkeeping). The only
+  type this tree uses is `OrderedDictionary` in the artwork cache, and that API did not
+  change. The package is still `swift-tools-version: 6.4`, the same floor as our manifests.
+- **SwiftFormat 0.63.1 → 0.64.5**, still the single pin in
+  `.github/scripts/install-swiftformat.sh` shared by CI and the manual Reformat workflow.
+  0.64 enables several rules by default (`repeatedGuard`, `nestedIf`, `extensionAttributes`,
+  plus tighter `redundantParens` / `sortImports`). Those reformatted 27 files. The reformat
+  is mechanical — guards and nested conditions with identical structure, attributes hoisted
+  onto extensions whose members already carried them — and its commit is listed in
+  `.git-blame-ignore-revs`.
+
+**What was already current, and what was left behind on purpose**
+
+- AudioStreaming **1.4.5** is the latest stable tag. It `exact`-pins
+  `ogg-binary-xcframework` 0.1.2 and `vorbis-binary-xcframework` 0.1.2, so the newer ogg
+  0.1.3 (libogg 1.3.6) cannot be taken without forking AudioStreaming or overriding a
+  transitive exact pin the codec package does not declare a slice for. Vorbis 0.1.2 is
+  itself the latest tag. Left at the AudioStreaming pin.
+- Pulse 5.2.3, GRDB 7.11.1, swift-algorithms 1.2.1, swift-async-algorithms 1.1.7, and
+  transitive swift-numerics 1.1.1 are the latest stable releases. SwiftLint 0.65.1 is too.
+- GitHub Actions were already on the latest stable majors: `actions/checkout@v7` (v7.0.1),
+  `actions/cache@v6` (v6.1.0), `actions/dependency-review-action@v5` (v5.0.0),
+  `actions/configure-pages@v6`, `actions/upload-pages-artifact@v5`, `actions/deploy-pages@v5`
+  (v5.0.1), and `github/codeql-action` at v4.39.1. The floating `v4` tag is an annotated tag
+  on that same commit.
+
+Lockfiles were updated in place to the tag commits (`Factory` `ab10ce27`,
+`swift-collections` `f96b909e`). `originHash` is a hash of package identities and locations,
+not versions, so it was left alone.
+
 ## 2026-11-01 (v0.4.0 notes describe current main; the binary stays 0.5.1)
 
 The unpublished GitHub draft `v0.4.0` was opened on 2026-09-02 from the tag at `32693e35`

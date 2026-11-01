@@ -2,7 +2,7 @@
 # Share one formatter version between CI and the manual Reformat workflow.
 set -euo pipefail
 
-version="0.63.1"
+version="0.64.5"
 install_dir="${RUNNER_TEMP:?}/swiftformat-${version}"
 mkdir -p "${install_dir}"
 curl -fsSL "https://github.com/nicklockwood/SwiftFormat/releases/download/${version}/swiftformat.zip" \

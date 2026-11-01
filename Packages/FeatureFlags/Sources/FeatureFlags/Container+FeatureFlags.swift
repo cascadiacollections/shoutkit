@@ -1,12 +1,12 @@
 import FactoryKit
 import Foundation
 
+@MainActor
 public extension Container {
     /// The app-wide feature-flag service, resolved via Factory so every consumer
     /// shares one observable instance — observation invalidation is per-instance,
     /// so split instances would not see each other's changes. Previews and tests
     /// resolve against a throwaway suite instead of the user's real defaults.
-    @MainActor
     var featureFlags: Factory<any FeatureFlagProviding> {
         self { DefaultsFeatureFlagService() }
             .scope(.singleton)

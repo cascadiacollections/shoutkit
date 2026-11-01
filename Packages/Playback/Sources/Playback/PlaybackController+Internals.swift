@@ -146,8 +146,7 @@ extension PlaybackController {
     }
 
     func handleStatusChange(_ update: AudioStatusUpdate) {
-        guard let station = activeStation else { return }
-        guard handleSystemStatusUpdate(update, station: station) == false else { return }
+        guard let station = activeStation, handleSystemStatusUpdate(update, station: station) == false else { return }
         // Stream-scoped callbacks must carry the generation handed to `start`.
         // Treating nil as a wildcard defeats the stale-callback boundary for
         // third-party AudioOutput implementations that omit the token.
@@ -252,9 +251,8 @@ extension PlaybackController {
     }
 
     func handleTrackInfo(_ info: AudioTrackInfo) {
-        guard let station = activeStation else { return }
-        guard outputStarted else { return }
-        guard info.streamGeneration == activeStreamGeneration else { return }
+        guard let station = activeStation, outputStarted,
+              info.streamGeneration == activeStreamGeneration else { return }
 
         // Engine metadata callbacks are delivered asynchronously, so an event
         // emitted for the *previous* station can land after a fast station

@@ -23,12 +23,12 @@ public extension LibraryStore {
         singleTrackDescriptor.fetchLimit = 1
 
         if let latest = fetch(
-            singleTrackDescriptor,
-            operation: "fetch latest recently heard track \(sanitizedForLogs(station.id))",
-        )?.first,
-            latest.stationID == station.id,
-            latest.title == title,
-            latest.artist == artist {
+               singleTrackDescriptor,
+               operation: "fetch latest recently heard track \(sanitizedForLogs(station.id))",
+           )?.first,
+           latest.stationID == station.id,
+           latest.title == title,
+           latest.artist == artist {
             // Consecutive dedupe keeps one row but refreshes its timestamp so it
             // reflects the most recent hearing of that still-current track.
             latest.stationName = station.name
