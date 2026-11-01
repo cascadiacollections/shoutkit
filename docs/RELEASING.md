@@ -75,8 +75,11 @@ they now do.
 
 ### App Store and TestFlight metadata
 
-Distribution is still by hand from Xcode. `release.yml` does not sign or upload. There is no
-fastlane metadata directory.
+Pushes to `main` that change the app upload to TestFlight from Xcode Cloud. A push that
+only touches docs, the site, or GitHub Actions does not; see "TestFlight uploads" below.
+Merging this checklist is that kind of push. `release.yml` does not sign or upload, and
+there is no fastlane metadata directory. A hand archive is still how a build is made
+external-eligible (`docs/TESTFLIGHT.md`).
 
 Already in the tree:
 
@@ -146,12 +149,14 @@ Still to do in App Store Connect, by hand:
 matching section from `CHANGELOG.md` and open a **draft** GitHub Release with it as the body.
 
 It does **not** sign, archive, upload to TestFlight, or submit to the App Store. Its own
-header says so, and the reason is that no Apple signing secrets are configured in this repo.
-So "cutting a release" currently means *publishing release notes and a source tag*, not
-shipping a binary to anyone. Distribution is still done by hand from Xcode.
+header says so, and the reason is that no Apple signing secrets are configured in GitHub
+Actions. Cutting the GitHub release publishes notes and a source tag. The binary testers
+install is the Xcode Cloud archive described under "TestFlight uploads" below. A one-off
+archive from Xcode Organizer still works, and is what `docs/TESTFLIGHT.md` walks through
+when a build has to be external-eligible by hand.
 
-That gap is the honest state of things and should be closed deliberately rather than
-discovered mid-release. See "What's still missing" below.
+App Store submission, build numbers, and the version/tag check are still open. See
+"What's still missing" below.
 
 ## The steps
 
@@ -220,22 +225,123 @@ Before tagging, confirm by hand:
   and tvOS still compile their earlier icon sets. Confirm those are the icons you want on
   each store listing.
 
+## TestFlight uploads (Xcode Cloud)
+
+Pushes to `main` archive in Xcode Cloud and upload to TestFlight. The workflow
+itself — start condition, signing, archive action, TestFlight post-action — is
+configured in App Store Connect. This repo only has the product manifest at
+`HolmdelApp/Holmdel.xcodeproj/xcshareddata/xcodecloud/manifest.json`.
+
+A push uploads only when it changes something that ships. The check is
+`.github/scripts/testflight-changes.sh`, run from `ci_scripts/ci_post_clone.sh`
+(and the identical hook next to the xcodeproj). It diffs the commit against its
+first parent.
+
+**These paths upload a build.** Anything not listed in the next group does too,
+including a path the repo does not have yet.
+
+- `HolmdelApp/**` — app, watch, widget, and tvOS sources, tests, resources,
+  `Localizable.xcstrings`, privacy manifests, Info.plists, entitlements,
+  xcconfigs, assets, and `project.pbxproj` / schemes / the test plan.
+- `Packages/**` — library code, tests, DocC, `Package.swift`, and
+  `Package.resolved`. A Dependabot or hand edit of a lockfile changes the
+  binary, so it uploads. A CodeQL or Actions bump does not.
+- `Holmdel.xcworkspace/**` — the workspace and its SwiftPM lockfile.
+
+**These paths do not upload**, and only when every file in the push is one of
+them:
+
+- `.github/**` — Actions workflows, Dependabot, CodeQL, CI scripts.
+- `docs/**` — documentation.
+- `site/**` — the marketing site.
+- `ci_scripts/**` and `HolmdelApp/ci_scripts/**` — the skip hook itself.
+- Markdown outside the shipping trees (`README.md`, `CHANGELOG.md`,
+  `DECISIONS.md`, and the other root `*.md` files).
+- `.editorconfig`, `.gitignore`, `.git-blame-ignore-revs`, `.swiftformat`,
+  `.swiftlint.yml`, `LICENSE`.
+
+`HolmdelApp/ci_scripts/` is the one directory inside `HolmdelApp/` that does
+not upload. It is the Xcode Cloud hook, not the app.
+
+To force a build anyway:
+
+- **Manual Start or Rebuild** of the Xcode Cloud workflow, in Xcode or App
+  Store Connect. Add a Manual Start condition on `main` if the workflow does
+  not already have one. This is the force hatch that works even when the file
+  rule below would not have started a run.
+- A commit message containing `[testflight]` or `[ci build]`. This only changes
+  the post-clone script. It cannot start a run the file rule suppressed.
+
+GitHub Actions has no TestFlight workflow to dispatch: Actions has no Apple
+signing credentials, and adding a `workflow_dispatch` that cannot upload would
+not put a build in front of testers.
+
+### What to set in App Store Connect
+
+On the workflow that archives `main` and posts to TestFlight:
+
+1. Open the **Branch Changes** start condition for `main`.
+2. Set **Files and Folders** to **Custom Conditions**.
+3. Choose **Don't start a build if all changed files match**
+   (`DO_NOT_START_IF_ALL_FILES_MATCH`). A mixed commit (site plus a Swift file)
+   still builds. Do not choose **Start a build if any file matches** with these
+   folders — that inverts the rule and stops app builds.
+4. Add matchers for the directories `.github`, `docs`, `site`, and `ci_scripts`.
+   Add filename matchers for the root metadata files if you want those pushes
+   to avoid starting a run at all. The post-clone script already stops them if
+   a run does start.
+5. Confirm the workflow has a **Manual Start** condition for `main`.
+
+The same files rule belongs on the branch condition only. A pull-request start
+condition that runs tests should keep building docs-only PRs; the script does
+not cancel pull-request, tag, or scheduled runs.
+
+Until step 3 is saved, a non-app push still starts a run. The post-clone script
+then exits 1 with a `BUILD SKIPPED` banner before the archive, so testers still
+do not get a build. The run is marked failed. That failure is the skip. After
+step 3, those pushes do not start a run.
+
+### How to verify
+
+On a machine with the repo:
+
+```sh
+.github/scripts/testflight-changes.sh --self-test
+git diff --name-only HEAD^ HEAD | .github/scripts/testflight-changes.sh --classify
+```
+
+`--classify` prints `build` (exit 0) or `skip` (exit 10). CI runs `--self-test`
+as the `TestFlight path rules` job.
+
+After this lands on `main`:
+
+- The merge commit only touches the gate, docs, and CI. Xcode Cloud should not
+  upload it. Before the App Store Connect change, the run stops in
+  `ci_post_clone` and the log contains `BUILD SKIPPED`. After the change, no
+  run starts.
+- A later commit that touches `HolmdelApp/` or `Packages/` archives and shows
+  up in TestFlight.
+- Manual Start on a docs-only tip still archives. The log says
+  `TestFlight gate: manual start; building.`
+
 ## What's still missing
 
 Tracked here rather than in `docs/ROADMAP.md` because these are release *mechanics*, and the
 roadmap has a habit of drifting on things nobody re-checks:
 
-- **No signing secrets, so no automated TestFlight or App Store upload.** Every binary that
-  has ever reached a device was built by hand from Xcode.
+- **No Apple signing secrets in GitHub Actions, so Actions does not upload.** TestFlight
+  uploads are the Xcode Cloud workflow above, using Apple-managed signing. App Store
+  submission is still a separate step. A one-off Organizer archive is still how a build is
+  made external-eligible by hand (`docs/TESTFLIGHT.md`).
 - **No `CURRENT_PROJECT_VERSION` (build number) automation.** It is defined once at the
   project level (`2` as of 2026-11-01) and still has to be incremented by hand. TestFlight
   already has 0.5.1 (31), so the next upload of that version must be build 32 or higher.
   The committed `2` is behind the upload on purpose; see the checklist above.
 - **iPhone icon is in place; watch and tvOS icons were not part of that swap.**
-- **No verification that the tag matches `MARKETING_VERSION`.** That gap is no longer
-  hypothetical: `v0.4.0` is tagged and the tree reads `0.5.1`. Nothing in CI catches it.
-  A check comparing the two would be the same kind of assertion this repo already makes for
-  the Pulse symbols and the watch payload. Until it exists, the checklist above is the check.
+- **No verification that the tag matches `MARKETING_VERSION`.** The live skew is `v0.4.0`
+  tagged against a tree that reads `0.5.1`. Nothing in CI catches it. A check comparing
+  the two would be the same kind of assertion this repo already makes for the Pulse
+  symbols and the watch payload. Until it exists, the checklist above is the check.
 
 ## History note
 

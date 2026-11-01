@@ -63,7 +63,7 @@ public extension LibraryStore {
     /// this shared ordering so the user's strongest signals appear first.
     func rankedStations(limit: Int) -> [Station] {
         guard limit > 0 else { return [] }
-        return Array(rankedStationCandidates().prefix(limit))
+        return collectRankedStations(limit: limit, requireStreamURL: false)
     }
 
     /// Stream URLs for the stations the user is most likely to play next —
@@ -73,51 +73,86 @@ public extension LibraryStore {
     /// carry a snapshotted stream URL (no directory round-trip needed to warm).
     func prewarmStreamURLs(limit: Int) -> [URL] {
         guard limit > 0 else { return [] }
-
-        var urls: [URL] = []
-        var seen = Set<String>()
-        func appendURL(from url: URL?) {
-            guard urls.count < limit,
-                  let url,
-                  seen.insert(url.absoluteString).inserted else { return }
-            urls.append(url)
-        }
-
-        for station in rankedStationCandidates() {
-            appendURL(from: station.preferredStreamURL)
-        }
-
-        return urls
+        return collectRankedStations(limit: limit, requireStreamURL: true).compactMap(\.preferredStreamURL)
     }
 }
 
 extension LibraryStore {
-    private func rankedStationCandidates() -> [Station] {
-        var stations: [Station] = []
+    /// Favorites (`sortIndex` ascending), then recents (play count, then recency).
+    /// Reads only as far as `limit` accepted stations. Favorites are uncapped, and
+    /// CarPlay calls ``rankedStations(limit:)`` on every station change, so the
+    /// walk is paged instead of materializing the whole table and then dropping
+    /// the tail.
+    ///
+    /// `requireStreamURL` is the prewarm rule: a station with no snapshot URL, or
+    /// one whose URL was already accepted, does not count toward `limit` and does
+    /// not end the walk. Ranked stations count every new station id, URL or not.
+    private func collectRankedStations(limit: Int, requireStreamURL: Bool) -> [Station] {
+        var accepted: [Station] = []
         var seenStationIDs = Set<String>()
+        var seenURLs = Set<String>()
 
-        func append(_ station: Station) {
-            guard seenStationIDs.insert(station.id).inserted else { return }
-            stations.append(station)
+        func accept(_ station: Station) -> Bool {
+            guard seenStationIDs.insert(station.id).inserted else { return false }
+            if requireStreamURL {
+                guard let url = station.preferredStreamURL,
+                      seenURLs.insert(url.absoluteString).inserted else { return false }
+            }
+            accepted.append(station)
+            return accepted.count == limit
         }
 
-        let favoritesDescriptor = FetchDescriptor<FavoriteStation>(
+        let favorites = FetchDescriptor<FavoriteStation>(
             sortBy: [SortDescriptor(\.sortIndex, order: .forward)],
         )
-        for favorite in fetch(favoritesDescriptor, operation: "rank favorites") ?? [] {
-            append(favorite.station)
+        visitRankedPages(favorites, pageSize: limit, operation: "rank favorites") { favorite in
+            accept(favorite.station)
+        }
+        if accepted.count == limit {
+            return accepted
         }
 
-        let recentsDescriptor = FetchDescriptor<RecentStation>(
+        let recents = FetchDescriptor<RecentStation>(
             sortBy: [
                 SortDescriptor(\.playCount, order: .reverse),
                 SortDescriptor(\.playedAt, order: .reverse),
             ],
         )
-        for recent in fetch(recentsDescriptor, operation: "rank recents") ?? [] {
-            append(recent.station)
+        visitRankedPages(recents, pageSize: limit, operation: "rank recents") { recent in
+            accept(recent.station)
         }
+        return accepted
+    }
 
-        return stations
+    /// Grows `fetchLimit` until the visitor stops or the table runs out. Each
+    /// larger page is walked from the start; callers ignore rows they have
+    /// already accepted, so a sort that is only stable inside one fetch cannot
+    /// skip a row. A page that doesn't grow ends the source, including a fetch
+    /// that ignores `fetchLimit`. A failed page ends this source only — the
+    /// caller continues with the next one, matching the old `?? []` fetch.
+    private func visitRankedPages<Model: PersistentModel>(
+        _ descriptor: FetchDescriptor<Model>,
+        pageSize: Int,
+        operation: String,
+        _ visit: (Model) -> Bool,
+    ) {
+        var fetched = 0
+        var window = pageSize
+        while true {
+            var page = descriptor
+            page.fetchLimit = window
+            guard let batch = fetch(page, operation: operation) else { return }
+            if batch.count <= fetched {
+                return
+            }
+            for model in batch where visit(model) {
+                return
+            }
+            if batch.count < window {
+                return
+            }
+            fetched = batch.count
+            window += pageSize
+        }
     }
 }

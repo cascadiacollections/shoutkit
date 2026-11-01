@@ -71,6 +71,9 @@ are not part of what this release turns on.
   identifier (`com.cascadiacollections.holmdel`), its shared app group, and its `holmdel://` deep
   link scheme — a fresh install, not an update, for anyone who had a build under the old identity.
   See `DECISIONS.md` (2026-08-24) and `TRADEMARK.md`.
+- **A docs-only or CI-only push no longer ships a new TestFlight beta.** Pushes to `main`
+  still archive in Xcode Cloud when they change the app or the libraries. A push that only
+  touches GitHub Actions, docs, or the marketing site does not upload. (#229)
 
 ### Fixed
 - **The Apple Watch app keeps playing after the wrist drops.** Background audio had been
@@ -426,6 +429,10 @@ ShoutKit (`Packages/`) since the 2026-08-30 tag:
   type. The widget, Shortcuts, and shared station links all use it
 - **Dependency pins** (Apple packages remain Apache-2.0; Factory remains MIT): Factory 3.4.1,
   swift-algorithms 1.2.1, swift-async-algorithms 1.1.7, swift-collections 1.7.2
+- **Ranked station lists stop reading once they have enough rows.** `LibraryStore` fills a
+  capped favorites-then-recents list (the list CarPlay asks for, and the prewarm candidates)
+  and then stops. Order, station-id dedupe, and shared-URL dedupe are unchanged. Prewarming
+  itself stays off; see "Not yet enabled". (#231)
 
 ### Not yet enabled
 
