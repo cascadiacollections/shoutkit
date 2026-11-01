@@ -145,10 +145,8 @@ extension LibraryStore {
             if batch.count <= fetched {
                 return
             }
-            for model in batch {
-                if visit(model) {
-                    return
-                }
+            for model in batch where visit(model) {
+                return
             }
             if batch.count < window {
                 return
