@@ -360,8 +360,8 @@ The notes below are the 2026-08-30 draft, corrected where they described a featu
   with a silent paused state, or cancels a reconnect that was already in flight
 - iOS playback now declares itself as long-form audio (like the watch app already did), which is
   what the system uses for AirPlay 2 routing and volume handling on shared routes
-- Album artwork now appears on Tesla and other strict Bluetooth AVRCP clients by returning cover
-  art at the exact dimensions requested by the connected device
+- Strict Bluetooth AVRCP clients are answered with cover art at the pixel size they ask for.
+  A car has not confirmed that this is what a Tesla shows; that check is issue #147
 - **Playback recovery hardening** (comprehensive bug sweep):
   - Pausing during a phone call no longer auto-resumes playback against the user's wish when
     the call ends
