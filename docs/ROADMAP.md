@@ -6,15 +6,16 @@ rather than replaces, the per-release plans in `docs/releases/*.md` — those st
 detailed, checkbox-level source of truth for a release in flight; this document is the
 zoomed-out sequencing across releases, revisited every sprint as scope shifts.
 
-**Status snapshot (2026-08-13).** Everything below is a proposal, not a commitment.
+**Status snapshot (2026-11-01).** Everything below is a proposal, not a commitment.
 
-**The thing this document did not say, and should have: nothing has ever been released.**
-0.1.0, 0.2.0, and 0.3.0 all have changelog sections and release plans, and the repo had
-**zero git tags** — `release.yml` is tag-triggered and had never run once. CarPlay, the
-watchOS companion, tvOS, widgets, the equalizer, offline caching, iPadOS layouts, and the
-accessibility pass have all been built and none of them has reached a user. A roadmap that
-sequences the next feature round while the distribution path is untested is measuring the
-wrong thing. `v0.4.0` is the first real release; see `docs/RELEASING.md`.
+The 2026-08-13 snapshot said nothing had ever been released and the repo had zero git tags.
+That is no longer true. `v0.4.0` was tagged in #187 (2026-08-30); `release.yml` ran, and the
+GitHub Release is still a **draft**, which is what `docs/RELEASING.md` calls a cut until
+someone publishes it. 0.1.0, 0.2.0, and 0.3.0 were never tagged. `v0.4.0` is still the first
+real release. The tree's `MARKETING_VERSION` has since moved, all twelve sites together, to
+`0.5.1` (#198, #202) with no `v0.5.x` tag, and a public TestFlight beta of 0.5.1 (31) is
+recorded in `docs/TESTFLIGHT.md`. CarPlay remains unreachable until Apple grants the
+entitlement (see the backlog).
 
 This document was re-baselined on 2026-08-07 after drifting about a release behind the
 tree. It had CarPlay deferred (it shipped), it listed two CI gaps that `ci.yml` had already
@@ -26,7 +27,9 @@ practice that matters is the last bullet of "How to use this doc."
 ## Shipped since the last re-baseline
 
 Recorded here once so the next reader doesn't have to reconstruct it from `git log`. Detail
-for each is in `DECISIONS.md` under its date.
+for each is in `DECISIONS.md` under its date. This list is the 2026-08 re-baseline
+inventory, not a log of everything since; later shipments are in `CHANGELOG.md` and
+`DECISIONS.md`.
 
 - **CarPlay** — `CPListTemplate` (favorites + recents) over `CPNowPlayingTemplate`, on the
   existing `PlaybackController`. **The code shipped; the feature did not.** Declaring
@@ -52,7 +55,9 @@ for each is in `DECISIONS.md` under its date.
 
 ## Now — engineering hardening
 
-The sprint this document scheduled twice and skipped twice. Landing in PR #138.
+The sprint this document scheduled twice and skipped twice. The batch in flight on
+2026-08-13 landed in #138; items that merged later cite their own PRs. The exit criteria
+at the end of this list are met.
 
 - [x] **Code coverage collected and published.** Nothing measured coverage anywhere: the
       test plan had `codeCoverage` off and the host `swift test` runs passed no flag.
@@ -68,54 +73,52 @@ The sprint this document scheduled twice and skipped twice. Landing in PR #138.
 - [x] **Accessibility, first real pass** — the sleep timer announces its remaining time
       (it previously announced only that it was running), the transport button scales with
       Dynamic Type, and station/track read as one VoiceOver element on both player surfaces.
-- [ ] **Make SwiftFormat blocking** (#142). The mechanism landed — a `workflow_dispatch` Reformat
-      job plus `.git-blame-ignore-revs` — but the one-time run has not been done. Dispatch
-      it, review the diff, drop `continue-on-error` from `ci.yml`, record the SHA.
-- [x] **The watch app does not ship with the phone app. Fix the embed** (#141). Fixed
-      2026-08-12. The root cause was a missing `WKCompanionAppBundleIdentifier` — the target
-      was configured as a *standalone* watch app — plus the absent copy phase. A real build
-      now emits `Holmdel.app/Watch/HolmdelWatchApp.app` (watchOS Mach-O, complication
-      nested inside), and the CI warning below is a hard check. **Still unverified: that it
-      installs and pairs**, which needs a paired simulator or hardware — see `DECISIONS.md`.
-      Original entry follows. This started as a
-      suspicion from reading `project.pbxproj` — no `Embed Watch Content` phase, and
-      `HolmdelWatchApp` absent from `Holmdel`'s dependencies — and the CI step added to
-      check it has now confirmed it against a real build: `Holmdel.app` has no `Watch/`
-      payload. So the watchOS companion that `README.md` advertises, and that
-      `DECISIONS.md` recorded on 2026-07-16, has never installed alongside the app.
-      **This is a P1, not a chore**, and it needs someone with Xcode: adding an embed phase
-      by hand-editing the pbxproj is how you get a target that builds green and produces a
-      bundle the App Store rejects. Once it is embedded, turn the CI warning into a hard
-      failure so it can't regress.
-- [x] **Audit the `try?` sites** (#143). Re-checked the gate first: on the current
-      `xcode-27` toolchain, a probe with `Task { try await … }` still emits no
+- [x] **Make SwiftFormat blocking** (#142). Done in #207 (2026-09-12). The one-time
+      reformat is recorded in `.git-blame-ignore-revs`, and `ci.yml` runs
+      `swiftformat HolmdelApp Packages --lint` with no `continue-on-error`.
+- [x] **The watch app does not ship with the phone app. Fix the embed** (#141). Fixed in
+      #166 (merged 2026-08-13). The root cause was a missing `WKCompanionAppBundleIdentifier`
+      — the target was configured as a *standalone* watch app — plus the absent copy phase.
+      A real build emits `Holmdel.app/Watch/HolmdelWatchApp.app` (watchOS Mach-O, complication
+      nested inside), and CI fails the build if that payload is missing. **Still unverified:
+      that it installs and pairs**, which needs a paired simulator or hardware — see
+      `DECISIONS.md`.
+- [x] **Audit the `try?` sites** (#143), done in #153. Re-checked the gate first: on the
+      current `xcode-27` toolchain, a probe with `Task { try await … }` still emits no
       unhandled-error diagnostic, so there is nothing to enable yet. Keep this
       probe command (against a file that contains an unhandled `Task { try await … }`)
       handy to detect when it lands:
       `swiftc -typecheck -warnings-as-errors /tmp/task-unhandled-error-probe.swift`.
       The audited call sites left as `try?` are now explicitly marked best-effort
       where the intent was ambiguous.
-- [x] Extracted `LibraryFeatureCore` and `SettingsFeatureCore` (#144), as `PlayerFeatureCore` did
-      for the player. Both now run host-test suites in CI.
-- [ ] `StationCard` is a fixed 150 pt wide while its labels scale with Dynamic Type (#145). Fixing
-      it moves every adaptive grid that lays cards out, so it needs a simulator, not a diff.
+- [x] Extracted `LibraryFeatureCore` and `SettingsFeatureCore` (#144) in #203, as
+      `PlayerFeatureCore` did for the player. Both now run host-test suites in CI. The
+      2026-08-13 snapshot had this checked off before the extraction had merged.
+- [x] `StationCard` scales with Dynamic Type (#145), done in #158. Fixed-width tiles use a
+      `@ScaledMetric` (base 150 pt), capped so an accessibility size does not grow past the
+      shelf.
 
-**Exit criteria:** coverage published for every package; the watch target's build is a
-required check; the format check blocks; the watch-embed question answered either way.
+**Exit criteria (met):** coverage is published for every package; the watch target's build
+is a required check; the format check blocks (#207); the watch app is embedded and CI fails
+the build if the payload is missing (#166). Pairing on a watch is still unverified — that
+note stays on the embed item above.
 
 ## Next — 0.4.0 feature round
 
 **"None of it has started" was wrong when written and is corrected here** — search filters
-shipped in #157 and issue #151 is closed. That is the third time this document has listed
-completed work as pending (CarPlay for two sprints, then the `try?` audit, now this), which
-is why the last bullet of "How to use this doc" exists.
+shipped in #157 and issue #151 is closed. Favorites export/import, still open at the
+2026-08-13 snapshot, shipped in #156 and #150 is closed. Ambient playback (#4) is the one
+item in this section that is still open. Listing completed work as pending is why the last
+bullet of "How to use this doc" exists.
 
 - [ ] **Ambient playback on ad detection** (#4). Reuse the existing ICY ad-break markers
       (`Spot Block Start/End`, already suppressed from displayed titles) as the trigger.
       Ship a bundled loop first — on-device ML nature-sound generation is a stretch goal,
       not a v1 requirement. Off by default behind a Settings toggle until it is proven not
       to false-trigger on non-Triton/iHeart stations.
-- [ ] Favorites export/import (#150) — plain JSON via the Share sheet. No account, no server.
+- [x] Favorites export/import (#150) — plain JSON, no account, no server. Shipped in #156
+      as Settings → Favorites Backup (`fileExporter` / `fileImporter`, merge by station id).
+      Recents and recently heard tracks are not included.
 - [x] Search filters (#151) — bitrate, tag/genre, country, over Radio-Browser's existing query
       params. **Shipped in #157**; `StationSearchFilters.swift`,
       `RadioBrowserDirectoryClient+Filters.swift`, and three test files are in the tree.
@@ -145,7 +148,7 @@ entry below states what is actually dark.
 - [x] `recommendations` (320 lines) — **deleted 2026-08-13.** The only one of the five that
       could be removed without touching a shipping feature. `BrowseFeature` lost its
       `FeatureFlags` dependency with it, and `RecommendationHashing` went too. See
-      `DECISIONS.md`.
+      `DECISIONS.md`. Deleted in #168.
 - [ ] `prewarmStations` — launch-time DNS/TLS warming of top stations. **Not cleanly
       deletable either**, and the 304-line figure first written here was wrong: the flag
       gates far less than the machinery. `StationConnectionPrewarmer` (133 lines) is called
@@ -169,45 +172,52 @@ entry below states what is actually dark.
       (`QuickPlayWidget.swift:34`), so the package stays either way.
 - [x] `diagnostics` (1,087 lines — 54% of the inventory) — **decided 2026-08-13: stays
       internal-only, permanently.** It is a developer instrument with no user-facing surface,
-      double-gated and with no network egress at all. See `DECISIONS.md`. That entry also
-      flags `DiagnosticsMetricSummary` (422 lines) as a deletion candidate *within* the
-      retained feature — nothing reads its summaries programmatically.
+      double-gated and with no network egress at all. See `DECISIONS.md` (recorded in #167).
+      That entry also flags `DiagnosticsMetricSummary` (422 lines) as a deletion candidate
+      *within* the retained feature — nothing reads its summaries programmatically.
 
 ## Now — release readiness
 
 Everything gating a public listing that isn't distribution mechanics. **Moved from "Later" to
-"Now" on 2026-08-13**, on the argument that a feature round added to software nobody can
-install is the wrong next move: this section is what converts the work already done into
-something a user receives.
+"Now" on 2026-08-13**, when the argument was that a feature round added to software nobody
+could install was the wrong next move. A public TestFlight beta has since gone out by hand
+(`docs/TESTFLIGHT.md`, 0.5.1 (31), 2026-10-25). The unchecked items below are still open.
+`release.yml` still does not sign or upload.
 
-- [x] Release-process doc — `docs/RELEASING.md`, written 2026-08-13. Documents what a release
-      currently *is* (a draft GitHub Release from a CHANGELOG section — no signing, no
-      TestFlight, no App Store upload, because no Apple secrets are configured) and what is
-      still missing.
-- [x] Version numbering reconciled. Four sources disagreed: `CHANGELOG.md` had no `[0.3.0]`
-      section at all, `docs/releases/0.3.0.md` said 0.3.0 shipped, this file agreed, and the
-      project read `MARKETING_VERSION = 0.2.0`. Worse, the *targets* disagreed with each
-      other — phone app at `0.2.0`, watch and tvOS at `0.3.0`, which fails App Store
-      validation for an embedded watch app. All twelve sites now read `0.4.0`.
-- [ ] **Cut `v0.4.0`.** The changelog cut-over and the tag, per `docs/RELEASING.md`. Blocked
-      only on the in-flight PRs that still write to `[Unreleased]`.
-- [ ] Build-number (`CURRENT_PROJECT_VERSION`) handling. It is now shared at the project
-      level, but has never been incremented automatically; TestFlight rejects a duplicate
-      build number for a given version, so this bites on the *second* upload of a version,
-      not the first.
+- [x] Release-process doc — `docs/RELEASING.md`, written 2026-08-13 (#169). A cut is a draft
+      GitHub Release from a CHANGELOG section. The workflow still does not sign, archive, or
+      upload; TestFlight uploads are done by hand.
+- [x] Version numbering reconciled (#169). On 2026-08-13 the phone app read `0.2.0` while
+      the watch and tvOS targets read `0.3.0`, which fails App Store validation for an
+      embedded watch app. All twelve `MARKETING_VERSION` sites were set to `0.4.0` together.
+      They have since moved together to `0.5.1` (#198, #202).
+- [x] **Cut `v0.4.0`.** The changelog cut-over and the tag, in #187 (2026-08-30), per
+      `docs/RELEASING.md`. The GitHub Release is still a draft. `MARKETING_VERSION` is now
+      `0.5.1` and that version has not been tagged; this checkbox was only the `v0.4.0` cut.
+- [ ] Build-number (`CURRENT_PROJECT_VERSION`) handling. It is shared at the project level
+      (both configurations read `2`) and is still incremented by hand. TestFlight rejects a
+      duplicate build number for a given version, so this bites on the *second* upload of a
+      version, not the first. #195, #198, and #206 were manual edits, not automation. No
+      issue is filed for this.
 - [ ] A CI check that the pushed tag matches `MARKETING_VERSION`. Nothing currently catches
-      `v0.5.0` tagged against a tree reading `0.4.0`, and this repo's habit is to assert the
-      things it believes (Pulse symbols, the watch payload) rather than trust them.
-- [ ] Professional app icon — 0.2.0 shipped a programmatic Core Graphics placeholder,
-      flagged in `DECISIONS.md` as swap-before-public-release.
-- [ ] Community translations beyond English. String Catalog infra shipped in 0.2.0; this is
-      populating it.
+      a tag that disagrees with the tree. The live skew is the other direction from the
+      example this item used to give: the project reads `0.5.1` and the only tag is
+      `v0.4.0`. No issue is filed for this.
+- [ ] Professional app icon. Still the programmatic radio-wave placeholder (regenerated for
+      the Holmdel rename in #190), flagged in `DECISIONS.md` as swap-before-public-release.
+      No issue is filed for this.
+- [ ] Community translations beyond English. String Catalog infra shipped in 0.2.0; the
+      catalogs are still English only. No issue is filed for this.
 - [ ] The checked-in codesign script (`xattr -cr` + ad-hoc `codesign` + `swift test
-      --skip-build`) so the headless-test workaround is one command instead of tribal
-      knowledge in `CONTRIBUTING.md`. Still genuinely open — there is no `*.sh` in the repo.
-- [ ] Cold-launch and memory baselines captured per build (#148), as an ongoing regression check.
-- [ ] `GIT_COMMIT_SHA` stamping verified against a real tagged build (the mechanism shipped in
-      0.2.0; it has never been exercised by an actual release).
+      --skip-build`) so the headless-test workaround is one command instead of the commands
+      in `CONTRIBUTING.md`. Still open — `.github/scripts/` has other helpers, and none of
+      them is this one. No issue is filed for this.
+- [ ] Cold-launch and memory baselines captured per build (#148), as an ongoing regression
+      check. Still open. #200 recorded a one-time simulator memgraph in `DECISIONS.md`
+      (2026-09-07); that is not the per-build CI baseline this issue asks for.
+- [ ] `GIT_COMMIT_SHA` stamping verified against a real tagged build (the mechanism shipped
+      in 0.2.0). `release.yml` still only extracts changelog notes, so the `v0.4.0` tag did
+      not exercise it. No issue is filed for this.
 
 ## Next — get off the billed macOS runner
 
@@ -223,10 +233,13 @@ they are not exclusive:
       swapping `runs-on` takes the bill to approximately zero and every rationing measure
       below can be reverted. `.github/workflows/runner-image-watch.yml` checks weekly and
       files an issue when it lands — the point of automating it is that this is otherwise
-      exactly the kind of fact that goes unnoticed for months while the meter runs.
-- [ ] **Self-hosted runner on the Mac mini.** Fixes the cost permanently and is *faster*
-      than hosted, for a reason that has nothing to do with the hardware: a persistent
-      `DerivedData` makes the app build incremental. The 14-minute cold `build` job is
+      exactly the kind of fact that goes unnoticed for months while the meter runs. As of
+      this snapshot it has not: `ci.yml` and `codeql.yml` still run on `xcode-27`, and the
+      `macos-26` image readme lists Xcode 26.6 as the newest installed.
+- [ ] **Self-hosted runner on the Mac mini.** Still open — no workflow uses a self-hosted
+      runner. This route fixes the cost permanently and is *faster* than hosted, for a
+      reason that has nothing to do with the hardware: a persistent `DerivedData` makes
+      the app build incremental. The 14-minute cold `build` job is
       dominated by compiling unchanged code, and the honest estimate for a warm incremental
       run is low single-digit minutes. Order the work as:
       1. One runner, registered to this repo, **`main`-push jobs only**. That is the
@@ -255,13 +268,17 @@ they are not exclusive:
 
 - **File the CarPlay entitlement request with Apple.** Not a commit — a form
   (developer.apple.com/contact/carplay), reviewed by Apple, measured in weeks. The
-  implementation and the `Info.plist` scene configuration are already in the tree, so a grant
-  turns CarPlay back on by re-adding one key to `Holmdel.entitlements`. Until then the code is
-  dead weight in the binary. See `DECISIONS.md`, 2026-09-06.
-- Self-hosted static libogg/libvorbis xcframeworks (#124). Evaluation is complete and parked
-  (see `DECISIONS.md`, 2026-08-07): AudioStreaming hardcodes `exact: "0.1.2"` on the sbooth
-  packages, so this needs a fork or SwiftPM substitution scoped first, and the rest is moot
-  until that is answered. Revisit if app size or the provenance concession actually bites.
+  scene configuration and `HolmdelCarPlaySceneDelegate` are already in the tree. A grant
+  does not turn CarPlay back on by re-adding one key: the 2026-09-06 removal also dropped
+  `UISupportsCarPlay` and `UISupportedInterfaceOrientations~carplay` from `Info.plist`, and
+  `com.apple.developer.carplay-audio` is absent from `Holmdel.entitlements`. Restoring is
+  that small diff. Until then the code is dead weight in the binary. See `DECISIONS.md`,
+  2026-09-06.
+- Self-hosted static libogg/libvorbis xcframeworks. The evaluation issue (#124) is closed
+  by #154: parked (see `DECISIONS.md`, 2026-08-07). AudioStreaming still resolves the sbooth
+  packages at `exact: "0.1.2"` (unchanged at the 1.4.5 pin), so this needs a fork or SwiftPM
+  substitution scoped first, and the rest is moot until that is answered. Revisit if app
+  size or the provenance concession actually bites.
 - On-device ambient-noise generation for the ad-detection feature, only after the
   bundled-loop v1 proves the feature earns its complexity.
 - Home Screen widget variants beyond quick-play (recents, currently playing).
