@@ -136,11 +136,10 @@ final class GeoStationLocationCoordinator: NSObject, @preconcurrency CLLocationM
         let generation = preciseLocationGeneration
 
         Task { @MainActor [weak self] in
-            guard let self else { return }
-            guard let request = MKReverseGeocodingRequest(location: location) else { return }
+            guard let self, let request = MKReverseGeocodingRequest(location: location) else { return }
 
             var resolvedCountryCode: String?
-            var geocodingError: (any Error)?
+            var geocodingError: any Error?
             do {
                 resolvedCountryCode = try await request.mapItems.first?.addressRepresentations?.region?.identifier
             } catch {

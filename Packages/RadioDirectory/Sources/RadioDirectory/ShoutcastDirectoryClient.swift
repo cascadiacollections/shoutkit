@@ -329,11 +329,10 @@ private final class StationParserDelegate: NSObject, XMLParserDelegate {
         attributes attributeDict: [String: String] = [:],
     ) {
         // Locale-independent for the same reason as the genre parser above.
-        guard elementName.caseInsensitiveCompare("station") == .orderedSame else {
-            return
-        }
-
-        guard let id = attributeDict["id"], let name = attributeDict["name"], name.isEmpty == false else {
+        guard elementName.caseInsensitiveCompare("station") == .orderedSame,
+              let id = attributeDict["id"],
+              let name = attributeDict["name"],
+              name.isEmpty == false else {
             return
         }
 

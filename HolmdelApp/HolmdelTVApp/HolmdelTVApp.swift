@@ -26,5 +26,5 @@ extension EnvironmentValues {
     // The station directory, injected the same way `Playback` and `Persistence`
     // inject theirs. Local to this target: the phone app reaches its directory
     // through the `Features/*` view models, which the tvOS MVP does not link.
-    @Entry var tvDirectory: (any RadioDirectoryProviding)?
+    @Entry var tvDirectory: any RadioDirectoryProviding?
 }

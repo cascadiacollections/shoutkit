@@ -16,7 +16,7 @@ enum PlaybackFailure: Equatable, Sendable {
         }
     }
 
-    static func classify(playerError: (any Error)?, itemError: (any Error)?) -> PlaybackFailure {
+    static func classify(playerError: any Error?, itemError: any Error?) -> PlaybackFailure {
         let knownURLCandidateErrors = [playerError, itemError]
         let fallbackErrors = [itemError, playerError]
 
@@ -31,7 +31,7 @@ enum PlaybackFailure: Equatable, Sendable {
         return .playback(message: "Stream failed to load.")
     }
 
-    private static func classifyKnownURLError(_ error: (any Error)?) -> PlaybackFailure? {
+    private static func classifyKnownURLError(_ error: any Error?) -> PlaybackFailure? {
         guard let error, let nsError = error as? NSError, nsError.domain == NSURLErrorDomain else {
             return nil
         }

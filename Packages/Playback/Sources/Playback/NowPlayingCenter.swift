@@ -1,10 +1,10 @@
 import Foundation
 import ImageIODownsample
+import os
+import RadioDirectory
 #if canImport(MediaPlayer)
     import MediaPlayer
 #endif
-import os
-import RadioDirectory
 
 /// Abstraction over the system now-playing surface (lock screen / Control Center /
 /// CarPlay) so ``PlaybackController`` can be tested with a spy instead of mutating
@@ -182,8 +182,7 @@ public protocol NowPlayingPresenting: AnyObject {
         }
 
         private func loadArtworkIfNeeded(from url: URL?) {
-            guard let url else { return }
-            guard url != artworkCacheURL else { return }
+            guard let url, url != artworkCacheURL else { return }
             artworkCacheURL = url
             // The old station's artwork must not survive a station switch.
             cachedArtwork = nil

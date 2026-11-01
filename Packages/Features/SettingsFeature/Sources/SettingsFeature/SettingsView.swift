@@ -12,7 +12,7 @@ public struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     private let featureFlags: any FeatureFlagProviding
 
-    public init(featureFlags: (any FeatureFlagProviding)? = nil) {
+    public init(featureFlags: any FeatureFlagProviding? = nil) {
         // Default to the Factory singleton so this view and every other
         // consumer observe the same instance (invalidation is per-instance).
         self.featureFlags = featureFlags ?? sharedFeatureFlags()

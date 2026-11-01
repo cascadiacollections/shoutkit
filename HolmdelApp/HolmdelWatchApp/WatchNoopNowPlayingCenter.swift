@@ -1,9 +1,9 @@
 import Foundation
+import Playback
+import RadioDirectory
 #if canImport(MediaPlayer)
     import MediaPlayer
 #endif
-import Playback
-import RadioDirectory
 
 @MainActor
 final class WatchNoopNowPlayingCenter: NowPlayingPresenting {

@@ -90,11 +90,7 @@ struct WatchRootView: View {
     }
 
     private func playLastStation() {
-        guard let station = latestRecent?.station else {
-            WatchAppDependencies.playLastStation()
-            return
-        }
-        guard let playback else {
+        guard let station = latestRecent?.station, let playback else {
             WatchAppDependencies.playLastStation()
             return
         }

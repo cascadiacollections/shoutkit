@@ -236,8 +236,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         // A stop the player took because of an error is reported through
         // `audioPlayerUnexpectedError` with a classified reason; let that one
         // through rather than pre-empting it with a generic message.
-        guard player.stopReason != .error else { return }
-        guard hasReportedEndOfStream == false else { return }
+        guard player.stopReason != .error, hasReportedEndOfStream == false else { return }
 
         stopClassificationTask?.cancel()
         stopClassificationTask = Task { @MainActor [weak self] in

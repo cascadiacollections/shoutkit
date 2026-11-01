@@ -89,7 +89,7 @@ public nonisolated enum AlbumArtLookup {
     public static func lookup(
         artist: String?,
         title: String?,
-        transport: (any HTTPTransporting)? = nil,
+        transport: any HTTPTransporting? = nil,
     ) async -> Match {
         await lookup(
             artist: artist,
@@ -103,7 +103,7 @@ public nonisolated enum AlbumArtLookup {
         artist: String?,
         title: String?,
         regionIdentifier: String?,
-        transport: (any HTTPTransporting)? = nil,
+        transport: any HTTPTransporting? = nil,
     ) async -> Match {
         // Resolved here, not as a default argument: `defaultTransport` is
         // private, and a public function's default argument can't reference a

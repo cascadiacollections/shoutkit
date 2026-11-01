@@ -26,7 +26,7 @@ extension AppDependencies {
         store: LibraryStore,
         settings: SettingsStore,
         featureFlags: any FeatureFlagProviding,
-        playReporter: (any StationPlayReporting)?,
+        playReporter: any StationPlayReporting?,
     ) {
         controller.onStationPlayed = { station in
             store.logRecent(station)

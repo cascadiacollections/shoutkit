@@ -1,5 +1,4 @@
 import Foundation
-import Testing
 
 // Deliberately not `@testable`: this exercises `PlaybackError.classifying` as the
 // public API it is. It became public so the engine could move to the iOS-only
@@ -7,6 +6,7 @@ import Testing
 // stayed here — which means the mapping is now a cross-package contract, and a
 // plain `import` is what proves it is reachable as one.
 import Playback
+import Testing
 
 struct PlaybackErrorClassificationTests {
     @Test func `no internet URL error maps to no internet`() {

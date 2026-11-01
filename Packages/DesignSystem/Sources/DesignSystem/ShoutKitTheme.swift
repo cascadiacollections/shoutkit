@@ -88,11 +88,11 @@ public extension Color {
     static let shoutKitCardBackground = Color(.secondarySystemGroupedBackground)
 }
 
+@MainActor
 public extension LinearGradient {
     /// A soft brand gradient for spotlight/hero surfaces. Explicitly isolated:
     /// a static's default value evaluates in a nonisolated context even under
     /// default MainActor isolation, and it reads the isolated Color tokens.
-    @MainActor
     static let shoutKitSpotlight = LinearGradient(
         colors: [Color.shoutKitAccent, Color.shoutKitAccent.opacity(0.65), Color.shoutKitHighlight.opacity(0.75)],
         startPoint: .topLeading,

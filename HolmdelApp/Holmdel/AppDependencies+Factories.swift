@@ -56,7 +56,7 @@ extension AppDependencies {
     struct DirectoryServices {
         let directory: any RadioDirectoryProviding
         let discoveryCache: any DirectoryDiscoveryCaching
-        let playReporter: (any StationPlayReporting)?
+        let playReporter: any StationPlayReporting?
         let geoStationLocationCoordinator: GeoStationLocationCoordinator
     }
 
