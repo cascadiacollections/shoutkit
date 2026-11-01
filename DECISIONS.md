@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-11-01 (v0.4.0 notes describe current main; the binary stays 0.5.1)
+
+The unpublished GitHub draft `v0.4.0` was opened on 2026-09-02 from the tag at `32693e35`
+(2026-08-30). `main` has moved, and `MARKETING_VERSION` is `0.5.1` on all twelve target
+configurations. TestFlight already has 0.5.1 (31).
+
+**The marketing version is not rewound to 0.4.0.** TestFlight already has 0.5.1 (31). A
+store version has to be higher than the last approved one, and an archive stamped 0.4.0
+would disagree with the build testers already have. The 0.5.0 bump on 2026-09-06 was a new
+build-number namespace for that upload, and the changelog was deliberately not cut to 0.5.0
+then. 0.5.1 exists so the watch and tvOS targets did not drift from the phone app.
+Info.plists already take both numbers from build settings, and the package manifests have
+no app version to set. `CURRENT_PROJECT_VERSION` stays `2` in git because the uploaded build
+is 31 and the next archive has to choose a number above that itself.
+
+**The `[0.4.0]` changelog section is the release notes for the product as of this date,**
+including everything merged after the draft, because nothing before it was ever published.
+Features that are `internalOnly` and off — geo stations, prewarming, Live Activity,
+diagnostics — are listed as not enabled. Recommendations were already deleted. CarPlay is
+listed with them: the entitlement was removed on 2026-09-06 and the feature does not launch.
+
+Publishing still means moving the tag onto the commit that contains these notes, or
+accepting that the existing tag is the August 30 tree. This change does not move the tag
+and does not publish the draft. `docs/RELEASING.md` has the checklist.
+
 ## 2026-11-01 (TestFlight uploads skip commits that do not change the app)
 
 Every push to `main` was starting the Xcode Cloud workflow, and the successful
