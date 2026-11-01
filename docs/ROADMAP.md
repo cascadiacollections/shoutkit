@@ -184,28 +184,27 @@ could install was the wrong next move. A public TestFlight beta has since gone o
 (`docs/TESTFLIGHT.md`, 0.5.1 (31), 2026-10-25). The unchecked items below are still open.
 `release.yml` still does not sign or upload.
 
-- [x] Release-process doc — `docs/RELEASING.md`, written 2026-08-13 (#169). A cut is a draft
-      GitHub Release from a CHANGELOG section. The workflow still does not sign, archive, or
-      upload; TestFlight uploads are done by hand.
+- [x] Release-process doc — `docs/RELEASING.md`, written 2026-08-13 (#169) and extended
+      since. A cut is a draft GitHub Release from a CHANGELOG section. GitHub Actions still
+      does not sign or upload. TestFlight uploads are the Xcode Cloud workflow on `main`
+      (#229); a push that does not change the app does not upload.
 - [x] Version numbering reconciled (#169). On 2026-08-13 the phone app read `0.2.0` while
       the watch and tvOS targets read `0.3.0`, which fails App Store validation for an
       embedded watch app. All twelve `MARKETING_VERSION` sites were set to `0.4.0` together.
-      They have since moved together to `0.5.1` (#198, #202).
-- [x] **Cut `v0.4.0`.** The changelog cut-over and the tag, in #187 (2026-08-30), per
-      `docs/RELEASING.md`. The GitHub Release is still a draft. `MARKETING_VERSION` is now
-      `0.5.1` and that version has not been tagged; this checkbox was only the `v0.4.0` cut.
+      They have since moved together to `0.5.1` (#198, #202). They still match each other.
+- [ ] **Publish `v0.4.0`.** The tag and the changelog cut-over landed in #187 (2026-08-30).
+      The GitHub Release is still a draft. The notes are current through the commits after
+      that tag, and the publish checklist is in `docs/RELEASING.md`. The tag points at the
+      2026-08-30 cut, not at `main`. Publishing is Kevin's step.
 - [ ] Build-number (`CURRENT_PROJECT_VERSION`) handling. It is shared at the project level
-      (both configurations read `2`) and is still incremented by hand. TestFlight rejects a
-      duplicate build number for a given version, so this bites on the *second* upload of a
-      version, not the first. #195, #198, and #206 were manual edits, not automation. No
-      issue is filed for this.
+      (both configurations read `2`) and is still incremented by hand. TestFlight already
+      has 0.5.1 (31), so the next upload of that version must be higher than 31. #195, #198,
+      and #206 were manual edits, not automation. No issue is filed for this.
 - [ ] A CI check that the pushed tag matches `MARKETING_VERSION`. Nothing currently catches
-      a tag that disagrees with the tree. The live skew is the other direction from the
-      example this item used to give: the project reads `0.5.1` and the only tag is
-      `v0.4.0`. No issue is filed for this.
-- [ ] Professional app icon. Still the programmatic radio-wave placeholder (regenerated for
-      the Holmdel rename in #190), flagged in `DECISIONS.md` as swap-before-public-release.
-      No issue is filed for this.
+      a tag that disagrees with the tree. The live skew is the project reading `0.5.1` while
+      the only tag is `v0.4.0`. No issue is filed for this.
+- [x] iPhone app icon — Icon Composer `Squan-AppIcon` replaced the programmatic placeholder
+      on 2026-09-07. Watch and tvOS icons were not part of that swap; see `docs/RELEASING.md`.
 - [ ] Community translations beyond English. String Catalog infra shipped in 0.2.0; the
       catalogs are still English only. No issue is filed for this.
 - [ ] The checked-in codesign script (`xattr -cr` + ad-hoc `codesign` + `swift test
