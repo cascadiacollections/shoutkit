@@ -172,6 +172,5 @@ GPL-3.0 package).
    `## [X.Y.Z] — <date>` section.
 2. Merge that to `main`, then push a `vX.Y.Z` tag pointing at the merge commit.
 3. `.github/workflows/release.yml` drafts a GitHub Release from that CHANGELOG section — review
-   and publish it manually. The workflow only drafts release notes; it does not sign or upload a
-   build (no Apple signing credentials are configured in this repo yet), so TestFlight/App Store
-   distribution is still a separate, manual Xcode Organizer step.
+   and publish it manually. The workflow only drafts release notes. TestFlight builds come from
+   Xcode Cloud on `main`, and only when the push changes the shipped app (`docs/RELEASING.md`).
