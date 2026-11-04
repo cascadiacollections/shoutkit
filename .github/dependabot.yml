@@ -12,6 +12,11 @@ updates:
       prefix: ci
     labels:
       - dependencies
+    groups:
+      github-actions:
+        patterns: ["*"]
+    cooldown:
+      default-days: 7
 
   # The `swift` ecosystem is DISABLED, not deleted — see DECISIONS.md 2026-09-22.
   #
