@@ -26,7 +26,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 concurrency:
   group: dependabot-swift-watch
@@ -35,6 +34,9 @@ concurrency:
 jobs:
   check:
     name: Check dependabot-core's Swift toolchain
+    permissions:
+      contents: read
+      issues: write # open the tracking issue
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

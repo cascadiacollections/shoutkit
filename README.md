@@ -1,5 +1,7 @@
 # Holmdel
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/cascadiacollections/shoutkit/badge)](https://scorecard.dev/viewer/?uri=github.com/cascadiacollections/shoutkit)
+
 Holmdel is a SwiftUI internet-radio client for iOS and iPadOS 26+, with a Mac Catalyst build and
 companion apps for watchOS and tvOS, built on **ShoutKit** — this repo's MIT-licensed radio SDK
 (`Packages/`).
