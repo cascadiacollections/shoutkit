@@ -20,9 +20,8 @@ on:
         type: boolean
         default: false
 
-# The only workflow here that writes to the repo, and only when explicitly asked.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -31,10 +30,13 @@ concurrency:
 jobs:
   reformat:
     name: Run SwiftFormat
+    permissions:
+      # The only job here that pushes to the repo, and only when explicitly asked.
+      contents: write
     runs-on: xcode-27
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # The default token's push is fine here; a PAT would be needed only to
           # retrigger CI on the pushed commit, which is not the point — CI runs

@@ -25,7 +25,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 concurrency:
   group: runner-image-watch
@@ -34,6 +33,9 @@ concurrency:
 jobs:
   check:
     name: Check macos-26 for Xcode 27
+    permissions:
+      contents: read
+      issues: write # open the tracking issue
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

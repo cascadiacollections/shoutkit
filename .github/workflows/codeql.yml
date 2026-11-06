@@ -15,12 +15,10 @@ on:
   # landing, or a dependency bump worth scanning before release.
   workflow_dispatch:
 
-# CodeQL needs to write analysis results back as code-scanning alerts; it reads
-# the checked-out code and (for the Swift build) resolves package dependencies.
+# Read-only by default. Each analysis job writes its results back as
+# code-scanning alerts, so it alone gets security-events: write.
 permissions:
-  actions: read
   contents: read
-  security-events: write
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -44,21 +42,26 @@ jobs:
   # pull requests, where workflow changes are actually reviewed.
   analyze-actions:
     name: Analyze (actions)
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 2
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4.39.1
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: actions
           build-mode: none
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4.39.1
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           category: "/language:actions"
 
@@ -81,12 +84,17 @@ jobs:
   # the runner does (see runner-image-watch.yml).
   analyze-swift:
     name: Analyze (swift)
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     runs-on: xcode-27
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 2
 
       # Select before initialization so tracing and package resolution use the
@@ -108,7 +116,7 @@ jobs:
       # Cache downloaded sources and artifacts, never compiled manifests.
       # Manifest executables are tied to the host architecture and toolchain.
       - name: Cache SwiftPM clones and binary artifacts
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/Library/Caches/org.swift.swiftpm/repositories
@@ -142,7 +150,7 @@ jobs:
             -IDEPackageSupportDisableManifestSandbox=1
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4.39.1
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: swift
           build-mode: manual
@@ -167,6 +175,6 @@ jobs:
             GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" build 2>&1 | tee "$RUNNER_TEMP/build-release.log"
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4.39.1
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           category: "/language:swift"

@@ -59,7 +59,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Check MIT packages take no GPL-3.0 dependencies
         run: .github/scripts/check-license-boundary.sh
 
@@ -71,7 +73,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Check the registered URL scheme matches StationLink
         run: .github/scripts/check-url-scheme.sh
 
@@ -83,7 +87,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Check which pushes should upload to TestFlight
         run: .github/scripts/testflight-changes.sh --self-test
 
@@ -94,7 +100,9 @@ jobs:
     runs-on: xcode-27
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # Download the pinned portable binary rather than `brew install` (faster,
       # version-pinned, and no Homebrew tap-trust noise in the log).
@@ -135,7 +143,9 @@ jobs:
     # and it is the only job covering the eight host-testable packages.
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Select latest Xcode
         id: toolchain
@@ -160,7 +170,7 @@ jobs:
       # the download, and its cache comment still carries the availability
       # rationale — see DECISIONS.md 2026-08-05.
       - name: Cache SwiftPM clones and binary artifacts
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/Library/Caches/org.swift.swiftpm
           # `**`, not `*`: four lockfiles live a level down under
@@ -294,7 +304,9 @@ jobs:
     # runner that stopped making progress.
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # Chosen together, not independently, and not "latest Xcode" like the
       # compile-only jobs: this job *runs* tests, and a test bundle built with
@@ -332,7 +344,7 @@ jobs:
       # caching build products across runs would undermine the Pulse symbol
       # checks below, which need to reflect this commit's actual link result.
       - name: Cache SwiftPM clones and binary artifacts
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/Library/Caches/org.swift.swiftpm
@@ -510,7 +522,9 @@ jobs:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Select latest Xcode
         id: toolchain
@@ -524,7 +538,7 @@ jobs:
       # runs first on a given commit warms the store for the other instead of
       # each paying its own cold resolve.
       - name: Cache SwiftPM clones and binary artifacts
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/Library/Caches/org.swift.swiftpm
