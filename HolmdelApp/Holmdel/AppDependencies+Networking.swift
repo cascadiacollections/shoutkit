@@ -1,4 +1,8 @@
-import DebugSupport
+#if DEBUG
+    // Debug-only: DebugSupport is a dynamic framework that Release strips from
+    // the bundle, so nothing in Release may reference it (DECISIONS.md, 2026-11-07).
+    import DebugSupport
+#endif
 import Foundation
 import PlaybackEngineAudioStreaming
 import RadioDirectory
@@ -18,10 +22,12 @@ extension AppDependencies {
     /// belongs here rather than as another line up there.
     static func installProcessWideServices() {
         installSharedNetworking()
-        // Debug-only memory-headroom and thermal logging into Pulse; a no-op
-        // in Release. Before the graph exists, so its launch sample is the
-        // baseline the graph's own allocations are measured against.
-        DebugResourceMonitor.start()
+        // Debug-only memory-headroom and thermal logging into Pulse. Before the
+        // graph exists, so its launch sample is the baseline the graph's own
+        // allocations are measured against.
+        #if DEBUG
+            DebugResourceMonitor.start()
+        #endif
         // `PlaybackController`'s production init resolves its engine through
         // Factory, and `Playback` ships only the stub — the concrete engine
         // lives in the iOS-only PlaybackEngineAudioStreaming package (#122).
@@ -49,12 +55,14 @@ extension AppDependencies {
             diskCapacity: 64 * 1024 * 1024,
         )
 
-        DebugNetworkInspection.install()
-
-        #if !DEBUG
-            // Fail-fast when offline, responsive-data service type. In Debug,
-            // DebugNetworkInspection.install() above already claimed the slot
-            // with the same tuned configuration plus Pulse's proxy delegate.
+        // Fail-fast when offline, responsive-data service type. Must run before
+        // the first network call resolves `shared`. Debug layers Pulse's proxy
+        // delegate on the same tuned configuration so its behaviour matches.
+        #if DEBUG
+            URLSessionHTTPTransport.installSharedSession(DebugNetworkInspection.makeInspectedSession(
+                configuration: URLSessionHTTPTransport.interactiveConfiguration(),
+            ))
+        #else
             URLSessionHTTPTransport.installSharedSession(
                 URLSession(configuration: URLSessionHTTPTransport.interactiveConfiguration()),
             )

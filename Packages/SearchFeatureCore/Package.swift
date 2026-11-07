@@ -2,6 +2,12 @@
 
 import PackageDescription
 
+/// Release builds of this package optimize for size, not speed (DECISIONS.md,
+/// 2026-11-07). A project-level `SWIFT_OPTIMIZATION_LEVEL` never reaches package
+/// targets, so this is the only place it can be set. `unsafeFlags` is allowed
+/// because the package is only ever consumed by path from this repository.
+let optimizeForSize: SwiftSetting = .unsafeFlags(["-Osize"], .when(configuration: .release))
+
 let package = Package(
     name: "SearchFeatureCore",
     platforms: [
@@ -15,7 +21,6 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../RadioDirectory"),
-        .package(url: "https://github.com/apple/swift-async-algorithms.git", from: "1.1.7"),
         .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.5.2"),
     ],
     targets: [
@@ -23,10 +28,9 @@ let package = Package(
             name: "SearchFeatureCore",
             dependencies: [
                 "RadioDirectory",
-                .product(name: "AsyncAlgorithms", package: "swift-async-algorithms"),
                 .product(name: "FactoryKit", package: "Factory"),
             ],
-            swiftSettings: [.defaultIsolation(MainActor.self)],
+            swiftSettings: [optimizeForSize, .defaultIsolation(MainActor.self)],
         ),
         .testTarget(
             name: "SearchFeatureCoreTests",

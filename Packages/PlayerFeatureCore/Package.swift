@@ -2,6 +2,12 @@
 
 import PackageDescription
 
+/// Release builds of this package optimize for size, not speed (DECISIONS.md,
+/// 2026-11-07). A project-level `SWIFT_OPTIMIZATION_LEVEL` never reaches package
+/// targets, so this is the only place it can be set. `unsafeFlags` is allowed
+/// because the package is only ever consumed by path from this repository.
+let optimizeForSize: SwiftSetting = .unsafeFlags(["-Osize"], .when(configuration: .release))
+
 /// The platform-free half of PlayerFeature, following the BrowseFeatureCore /
 /// SearchFeatureCore pattern: `PlayerFeature` depends on DesignSystem, whose
 /// UIKit-only sources don't build for the mac host at all, so nothing in that
@@ -26,7 +32,7 @@ let package = Package(
         // Core packages: those hold `@Observable` view models that belong on the
         // main actor, whereas this is pure value-in/value-out and has no reason
         // to be isolated to anything.
-        .target(name: "PlayerFeatureCore"),
+        .target(name: "PlayerFeatureCore", swiftSettings: [optimizeForSize]),
         .testTarget(
             name: "PlayerFeatureCoreTests",
             dependencies: ["PlayerFeatureCore"],

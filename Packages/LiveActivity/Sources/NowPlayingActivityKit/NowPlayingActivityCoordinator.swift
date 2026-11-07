@@ -21,7 +21,6 @@ public final class NowPlayingActivityCoordinator {
 #else
 
 import ActivityKit
-import AsyncAlgorithms
 import CoreGraphics
 import Foundation
 import ImageIODownsample
@@ -100,12 +99,13 @@ public final class NowPlayingActivityCoordinator {
 
     /// Follows the controller's playback state, live track metadata, and resolved
     /// album art for the life of this coordinator. Call once at bootstrap. Values
-    /// are deduplicated (`removeDuplicates()`): ICY pushes often repeat identical
+    /// are deduplicated (`ChangeFilter`): ICY pushes often repeat identical
     /// track info, and redundant ActivityKit updates are wasted IPC.
     public func observe(_ controller: PlaybackController) {
         let states = Observations { controller.state }
         observationTasks.append(Task { [weak self] in
-            for await state in states.removeDuplicates() {
+            var changes = ChangeFilter<PlaybackState>()
+            for await state in states where changes.isNew(state) {
                 guard let self else { return }
                 self.playbackStateChanged(state)
             }
@@ -113,7 +113,8 @@ public final class NowPlayingActivityCoordinator {
 
         let tracks = Observations { controller.nowPlaying }
         observationTasks.append(Task { [weak self] in
-            for await metadata in tracks.removeDuplicates() {
+            var changes = ChangeFilter<NowPlayingMetadata?>()
+            for await metadata in tracks where changes.isNew(metadata) {
                 guard let self else { return }
                 self.nowPlayingChanged(metadata)
             }
@@ -124,7 +125,8 @@ public final class NowPlayingActivityCoordinator {
         // and Now Playing screen do.
         let albumArt = Observations { controller.albumArtURL }
         observationTasks.append(Task { [weak self] in
-            for await url in albumArt.removeDuplicates() {
+            var changes = ChangeFilter<URL?>()
+            for await url in albumArt where changes.isNew(url) {
                 guard let self else { return }
                 self.albumArtChanged(url)
             }

@@ -95,6 +95,22 @@ struct SearchViewModelTests {
         #expect(viewModel.phase == .idle)
     }
 
+    @Test func `clearing inside the debounce window cancels the pending search`() async {
+        let directory = FakeRadioDirectory()
+        await directory.setSearchStationsResult(.success([.fixture(id: "a", name: "Station A")]))
+        let viewModel = SearchViewModel(directory: directory)
+
+        viewModel.query = "kexp"
+        viewModel.query = ""
+        // Past the 300 ms window: a keystroke that survived the clear would
+        // have reached the directory by now.
+        try? await Task.sleep(for: .milliseconds(400))
+
+        let callCount = await directory.searchCallCount
+        #expect(callCount == 0)
+        #expect(viewModel.phase == .idle)
+    }
+
     @Test func `empty results produce empty phase`() async {
         let directory = FakeRadioDirectory()
         await directory.setSearchStationsResult(.success([]))

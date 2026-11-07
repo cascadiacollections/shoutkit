@@ -10,3 +10,15 @@ SHOUTCAST_DEV_KEY =
 // screenshot-based bug repro. Defaults to "local"; CI and the deploy scripts pass
 // the real value with `GIT_COMMIT_SHA=$(git rev-parse --short HEAD)`.
 GIT_COMMIT_SHA = local
+
+// Keeps DebugSupport.framework — and Pulse inside it, ~715 KB — out of shipped
+// builds (DECISIONS.md, 2026-11-07). Release references nothing in it (its
+// import and use are `#if DEBUG`), so -dead_strip_dylibs drops the load
+// command, and the exclusion keeps the "Embed Frameworks" phase from copying
+// it into the bundle.
+OTHER_LDFLAGS = $(inherited) -Wl,-dead_strip_dylibs
+EXCLUDED_SOURCE_FILE_NAMES = $(inherited) DebugSupport.framework
+
+// Mac Catalyst ships Apple Silicon only. The Mac App Store doesn't thin, so a
+// universal Catalyst build carries every byte of code twice. DECISIONS.md, 2026-11-07.
+ARCHS[sdk=macosx*] = arm64

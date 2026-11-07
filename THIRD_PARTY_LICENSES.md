@@ -9,10 +9,7 @@ it ships in the binary, add its license text to the in-app Licenses screen
 
 | Name | Version | License | Used in | URL |
 | ---- | ------- | ------- | ------- | --- |
-| swift-algorithms | 1.2.1+ (`from: "1.2.1"`) | Apache-2.0 (with Runtime Library Exception) | RadioDirectory — order-preserving, case-insensitive de-duplication (`uniqued(on:)`) of merged station/genre lists | <https://github.com/apple/swift-algorithms> |
-| swift-async-algorithms | 1.1.7+ (`from: "1.1.7"`) | Apache-2.0 (with Runtime Library Exception) | SearchFeature — `debounce` on the query stream; LiveActivity — `removeDuplicates()` on the playback-state and track-metadata observation sequences | <https://github.com/apple/swift-async-algorithms> |
 | swift-collections | 1.7.5+ (`from: "1.7.5"`) | Apache-2.0 (with Runtime Library Exception) | DesignSystem — `OrderedDictionary` backs the Now Playing artwork store's bounded FIFO cache | <https://github.com/apple/swift-collections> |
-| swift-numerics | 1.1.1 (transitive via swift-algorithms) | Apache-2.0 (with Runtime Library Exception) | Transitive only — `RealModule` dependency of swift-algorithms; no direct Holmdel use | <https://github.com/apple/swift-numerics> |
 | Factory | 3.5.2 (`exact: "3.5.2"` in every manifest) | MIT | RadioDirectory, Playback, PlaybackEngineAudioStreaming, Persistence, FeatureFlags, BrowseFeature, BrowseFeatureCore, SearchFeature, SearchFeatureCore — `Container`-based dependency injection | <https://github.com/hmlongco/Factory> |
 | AudioStreaming | 1.4.5 (`exact: "1.4.5"`) | MIT | PlaybackEngineAudioStreaming — `AudioStreamingPlaybackEngine`, the `AVAudioEngine`-backed production playback engine (iOS only) | <https://github.com/dimitris-c/AudioStreaming> |
 | ogg-binary-xcframework | 0.1.2 (transitive via AudioStreaming) | BSD (Xiph.org) | PlaybackEngineAudioStreaming — libogg, linked by AudioStreaming's Ogg Vorbis codec support | <https://github.com/sbooth/ogg-binary-xcframework> |
@@ -26,4 +23,4 @@ Not linked into the shipped binary; listed for completeness.
 | ---- | ------- | -------- | --- |
 | SwiftLint (pinned in CI, see `ci.yml`) | MIT | Linting, `--strict` in CI | <https://github.com/realm/SwiftLint> |
 | SwiftFormat | MIT | Formatting (`.swiftformat`) | <https://github.com/nicklockwood/SwiftFormat> |
-| Pulse | MIT | DebugSupport (app-side package) — `#if DEBUG`-only network inspection (`DebugNetworkInspection.swift`); never declared by the reusable packages, compiled out of Release entirely (CI symbol-checks this), and attributed in the in-app Licenses screen of Debug builds since testers do receive it | <https://github.com/kean/Pulse> |
+| Pulse | MIT | DebugSupport (app-side package) — `#if DEBUG`-only network inspection (`DebugNetworkInspection.swift`); never declared by the reusable packages, a dynamic framework that Release neither loads nor embeds (CI checks this), and attributed in the in-app Licenses screen of Debug builds since testers do receive it | <https://github.com/kean/Pulse> |

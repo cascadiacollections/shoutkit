@@ -1,5 +1,78 @@
 # Decisions
 
+## 2026-11-07 (binary size: two Apple packages go, Pulse leaves Release, `-Osize` per package, Mac is arm64-only)
+
+TestFlight listed 13.2 MB. A local Release archive zipped to 12.21 MB with the same layout:
+`Assets.car` 4.78 MB, the embedded watch app 3.86 MB, the phone binary 3.23 MB (8.06 MB
+uncompressed), ogg/vorbis and widgets 0.3 MB. The link map put the binary's weight in GRDB
+(2.1 MB), swift-async-algorithms (1.0 MB), Pulse (715 KB), and swift-algorithms (540 KB).
+After this entry: **phone binary 5.51 MB, archive zip 10.76 MB**. That zip includes the
+watch app and both icon idioms; an iPhone downloads neither.
+
+- **swift-async-algorithms and swift-algorithms are gone.** Usage was one `debounce`
+  (SearchViewModel), three `removeDuplicates()` (NowPlayingActivityCoordinator) and five
+  `uniqued(on:)` (RadioDirectory). Each linked library cost more than 100 times the code
+  that replaces it: a restartable sleep task, a 15-line `ChangeFilter`, and a 10-line
+  `Sequence.uniqued(on:)`. swift-numerics leaves with swift-algorithms. swift-collections
+  stays, because DesignSystem uses `OrderedDictionary` directly. The watch app shrinks too,
+  since it linked swift-algorithms through RadioDirectory. The debounce keeps its
+  semantics: every distinct edit restarts the 300 ms window, and clearing the field
+  cancels a pending keystroke. That second case had no test until now.
+- **Pulse no longer ships in Release. DebugSupport is now a dynamic framework that Release
+  neither loads nor embeds.** Every Pulse reference was `#if DEBUG`, yet 715 KB of Pulse
+  sat in the Release link map. Xcode links static package code as prelinked object files
+  (`Pulse.o`), not archives, so nothing decides whether a member gets loaded. Pulse's ObjC
+  classes are dead-strip roots and keep the rest alive. Two things did **not** work, and
+  are recorded so nobody retries them:
+  - `type: .static` on the product: Xcode still passes `Pulse.o`.
+  - Taking DebugSupport out of Link Binary With Libraries: Xcode links every entry in a
+    target's `packageProductDependencies`, phase or not.
+
+  What works:
+  1. The product is `.dynamic`.
+  2. The app's import and both uses are `#if DEBUG`.
+  3. `Config/Release.xcconfig` sets `-Wl,-dead_strip_dylibs`, which drops the unused load
+     command, and `EXCLUDED_SOURCE_FILE_NAMES = DebugSupport.framework`, which keeps the
+     app's new explicit "Embed Frameworks" phase from copying it.
+
+  The explicit phase is required. Without it, Debug builds linked `@rpath/DebugSupport`
+  but embedded nothing, which happens to work in the Simulator through an absolute
+  `PackageFrameworks` rpath and would crash at launch on a device. A script phase that
+  deleted the embedded copy was tried first. Declaring the framework as its output, which
+  script sandboxing requires, collides with the embed step.
+
+  DebugSupport no longer depends on RadioDirectory. A dynamic framework statically links
+  its dependencies, so a second RadioDirectory would sit in the process, and installing a
+  session into the framework's copy of `URLSessionHTTPTransport` would do nothing for the
+  app's. `DebugNetworkInspection` therefore returns a session
+  (`makeInspectedSession(configuration:)`) and the app installs it. CI's Release step is
+  now a gate: no embedded framework, no load command, no Pulse symbols. The Debug step
+  checks the framework instead of the app binary. Local check: the Release *archive* is
+  fully stripped, so `nm` finds nothing there. Read a link map
+  (`LD_GENERATE_MAP_FILE=YES`) or the unstripped simulator build CI uses.
+- **`-Osize` is set per local package, not per project.** A project-level
+  `SWIFT_OPTIMIZATION_LEVEL` reaches the app target only, which was 8 KB (247 → 239 KB).
+  Each local manifest now declares
+  `optimizeForSize = .unsafeFlags(["-Osize"], .when(configuration: .release))`, about
+  150 KB across our modules (Persistence −74, Playback −32, RadioDirectory −25, …).
+  `unsafeFlags` is acceptable because these packages are only consumed by path. It would
+  block a remote consumer, and SwiftPM can't consume a package from a repo subdirectory
+  anyway. Remote dependencies (GRDB is the biggest module, 2.1 MB) can't be reached this
+  way. Debug and host `swift test` runs are unaffected.
+- **Mac Catalyst ships Apple Silicon only** (`ARCHS[sdk=macosx*] = arm64` in
+  Release.xcconfig). The Mac App Store doesn't thin, so a universal build carried all code
+  twice. Mac binary: 5.45 MB, app zipped 3.47 MB.
+- **The app icon stays as designed.** Xcode renders `Squan-AppIcon.icon` to 1024 px lzfse
+  bitmaps: default, dark and tinted, each once for phone and once for pad (~4.8 MB).
+  Per-device thinning drops one idiom. Measured with `actool` on variants: dropping the
+  empty groups 0%, translucency off −6%, solid fill instead of the automatic gradient −2%,
+  removing the shadow baked into the layer PNG −5%. Everything together, which loses the
+  Liquid Glass look, saved −13% (4.89 → 4.27 MB). The size comes from the glass render,
+  not from anything icon.json controls.
+
+What's left: GRDB is load-bearing. App Store Connect's per-device "App File Sizes" is the
+number users see; it needs a signed export, so it wasn't measured locally.
+
 ## 2026-11-01 (dependency refresh: Factory 3.5.2, Collections 1.7.5, SwiftFormat 0.64.5)
 
 Swift dependency updates stay disabled. `dependabot/dependabot-core`'s `swift/Dockerfile`

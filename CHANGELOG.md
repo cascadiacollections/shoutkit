@@ -13,6 +13,13 @@ below) are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- **A smaller download.** Two Apple utility libraries were replaced by a few lines of
+  Holmdel's own code, and the debug-only network inspector no longer ships in release
+  builds. The iPhone app binary is about a third smaller (8.1 → 5.5 MB).
+- **The Mac app now requires Apple silicon.** Intel Macs are no longer supported, which
+  roughly halves the Mac app's code size.
+
 ## [0.4.0] — 2026-11-01
 
 First public release of Holmdel, the app, and of ShoutKit, the MIT-licensed radio library

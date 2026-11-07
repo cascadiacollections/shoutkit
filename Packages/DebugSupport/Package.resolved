@@ -1,15 +1,6 @@
 {
-  "originHash" : "e7e61d5655da5badb51d01989612473bb5ec50bf64875f64f8e5e6c86c4dbff9",
+  "originHash" : "be501e09200b2ad2caaf8fbe9ba06bb69ed9436c19570f698ae32155fa818a9b",
   "pins" : [
-    {
-      "identity" : "factory",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/hmlongco/Factory.git",
-      "state" : {
-        "revision" : "ab10ce2786f18c66e551afe61fa0b650f0b6e55b",
-        "version" : "3.5.2"
-      }
-    },
     {
       "identity" : "pulse",
       "kind" : "remoteSourceControl",
@@ -17,24 +8,6 @@
       "state" : {
         "revision" : "94b92731d370c129bb771e9c18f69b0a44ccca5c",
         "version" : "5.2.3"
-      }
-    },
-    {
-      "identity" : "swift-algorithms",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-algorithms.git",
-      "state" : {
-        "revision" : "87e50f483c54e6efd60e885f7f5aa946cee68023",
-        "version" : "1.2.1"
-      }
-    },
-    {
-      "identity" : "swift-numerics",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-numerics.git",
-      "state" : {
-        "revision" : "0c0290ff6b24942dadb83a929ffaaa1481df04a2",
-        "version" : "1.1.1"
       }
     }
   ],

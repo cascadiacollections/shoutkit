@@ -401,13 +401,6 @@ jobs:
             grep -E "[^ /]+\.(swift|h|m|mm):[0-9]+:[0-9]+: (error|fatal error): |^error: " build.log || true
           } | sed '/^[[:space:]]*$/d' | sort -u | head -30 | sed 's/^/::error::/'
 
-      # Pulse (kean/Pulse) is declared only by the app-side DebugSupport package
-      # and gated behind #if DEBUG end to end (see
-      # DebugSupport/DebugNetworkInspection.swift), so it must link into Debug
-      # and never into Release. Static linking + dead-code stripping means an
-      # entirely #if DEBUG-gated dependency simply doesn't get pulled into a
-      # Release binary — verify both sides of that contract by symbol-checking
-      # each configuration's build product directly, rather than trusting it.
       # The counterpart to the host job's coverage baseline, and the only place
       # the iOS-only code can be measured at all: DesignSystem,
       # NowPlayingActivityCore and the app target never run on the mac host.
@@ -439,18 +432,27 @@ jobs:
           python3 .github/scripts/xccov_summary.py < coverage.json \
             | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - name: Verify Pulse symbols are present in the Debug build
+      # Pulse (kean/Pulse) is declared only by the app-side DebugSupport package,
+      # a dynamic framework the app imports and uses only under #if DEBUG. It
+      # must ship in Debug and never in Release (DECISIONS.md, 2026-11-07): the
+      # Release link drops its load command (-dead_strip_dylibs) and
+      # EXCLUDED_SOURCE_FILE_NAMES keeps "Embed Frameworks" from copying it, both
+      # in Config/Release.xcconfig. Static linking
+      # did NOT keep it out — Xcode links package code as prelinked objects and
+      # Pulse's ObjC classes are dead-strip roots — so both sides of the
+      # contract are checked against the build products rather than trusted.
+      - name: Verify Pulse ships in the Debug build
         run: |
-          APP_BINARY="DerivedData/Build/Products/Debug-iphonesimulator/Holmdel.app/Holmdel"
-          if [ ! -f "$APP_BINARY" ]; then
-            echo "::error::Debug app binary not found at $APP_BINARY"
+          FRAMEWORK="DerivedData/Build/Products/Debug-iphonesimulator/Holmdel.app/Frameworks/DebugSupport.framework/DebugSupport"
+          if [ ! -f "$FRAMEWORK" ]; then
+            echo "::error::DebugSupport.framework is not embedded in the Debug app (expected at $FRAMEWORK)"
             exit 1
           fi
-          if ! nm "$APP_BINARY" 2>/dev/null | grep -q "NetworkLogger"; then
-            echo "::error::Expected Pulse (NetworkLogger) symbols in the Debug binary but found none"
+          if ! nm "$FRAMEWORK" 2>/dev/null | grep -q "NetworkLogger"; then
+            echo "::error::Expected Pulse (NetworkLogger) symbols in DebugSupport.framework but found none"
             exit 1
           fi
-          echo "Confirmed: Pulse symbols are present in the Debug binary."
+          echo "Confirmed: Pulse ships in the Debug build, inside DebugSupport.framework."
 
       # Hard check, and it was a warning until 2026-08-12 because until then it
       # was failing: there was no Embed Watch Content copy phase, so the watchOS
@@ -676,15 +678,28 @@ jobs:
       # The Debug-bundle counterpart to this — "is the watch app embedded in the
       # phone app" — lives in the `build` job, which is the one that produces a
       # Debug-iphonesimulator bundle to inspect.
-      - name: Report Pulse symbol status in the Release build
+      # A gate since 2026-11-07, not a report: see "Verify Pulse ships in the
+      # Debug build" for the mechanism. Any of these failing puts ~715 KB of
+      # Pulse back into shipped builds.
+      - name: Verify Pulse is absent from the Release build
         run: |
-          APP_BINARY="DerivedData/Build/Products/Release-iphonesimulator/Holmdel.app/Holmdel"
-          if [ ! -f "$APP_BINARY" ]; then
-            echo "::error::Release app binary not found at $APP_BINARY"
+          APP="DerivedData/Build/Products/Release-iphonesimulator/Holmdel.app"
+          if [ ! -f "$APP/Holmdel" ]; then
+            echo "::error::Release app binary not found at $APP/Holmdel"
             exit 1
           fi
-          if nm "$APP_BINARY" 2>/dev/null | grep -q "NetworkLogger"; then
-            echo "Pulse's compiled module is present (unused) in the Release binary — expected, see the comment above."
-          else
-            echo "Pulse symbols are absent from the Release binary."
+          failed=0
+          if [ -e "$APP/Frameworks/DebugSupport.framework" ]; then
+            echo "::error::DebugSupport.framework is embedded in the Release app. Is EXCLUDED_SOURCE_FILE_NAMES gone from Config/Release.xcconfig?"
+            failed=1
           fi
+          if otool -L "$APP/Holmdel" | grep -q "DebugSupport.framework"; then
+            echo "::error::The Release binary loads DebugSupport.framework. Something outside #if DEBUG references it, or -dead_strip_dylibs is gone from Release.xcconfig."
+            failed=1
+          fi
+          if nm "$APP/Holmdel" 2>/dev/null | grep -q "NetworkLogger"; then
+            echo "::error::Pulse symbols are linked into the Release binary."
+            failed=1
+          fi
+          [ "$failed" = 0 ] && echo "Confirmed: Pulse is absent from the Release build."
+          exit $failed

@@ -2,6 +2,12 @@
 
 import PackageDescription
 
+/// Release builds of this package optimize for size, not speed (DECISIONS.md,
+/// 2026-11-07). A project-level `SWIFT_OPTIMIZATION_LEVEL` never reaches package
+/// targets, so this is the only place it can be set. `unsafeFlags` is allowed
+/// because the package is only ever consumed by path from this repository.
+let optimizeForSize: SwiftSetting = .unsafeFlags(["-Osize"], .when(configuration: .release))
+
 let package = Package(
     name: "Playback",
     defaultLocalization: "en",
@@ -46,6 +52,7 @@ let package = Package(
                 .product(name: "FactoryKit", package: "Factory"),
             ],
             resources: [.process("Resources/Localizable.xcstrings")],
+            swiftSettings: [optimizeForSize],
         ),
         .testTarget(
             name: "PlaybackTests",

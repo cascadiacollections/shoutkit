@@ -2,6 +2,12 @@
 
 import PackageDescription
 
+/// Release builds of this package optimize for size, not speed (DECISIONS.md,
+/// 2026-11-07). A project-level `SWIFT_OPTIMIZATION_LEVEL` never reaches package
+/// targets, so this is the only place it can be set. `unsafeFlags` is allowed
+/// because the package is only ever consumed by path from this repository.
+let optimizeForSize: SwiftSetting = .unsafeFlags(["-Osize"], .when(configuration: .release))
+
 let package = Package(
     name: "LiveActivity",
     platforms: [
@@ -18,10 +24,9 @@ let package = Package(
         .package(path: "../ImageIODownsample"),
         .package(path: "../Playback"),
         .package(path: "../RadioDirectory"),
-        .package(url: "https://github.com/apple/swift-async-algorithms.git", from: "1.1.7"),
     ],
     targets: [
-        .target(name: "NowPlayingActivityCore"),
+        .target(name: "NowPlayingActivityCore", swiftSettings: [optimizeForSize]),
         .target(
             name: "NowPlayingActivityKit",
             dependencies: [
@@ -29,8 +34,8 @@ let package = Package(
                 .product(name: "ImageIODownsample", package: "ImageIODownsample"),
                 .product(name: "Playback", package: "Playback"),
                 .product(name: "RadioDirectory", package: "RadioDirectory"),
-                .product(name: "AsyncAlgorithms", package: "swift-async-algorithms"),
             ],
+            swiftSettings: [optimizeForSize],
         ),
         .testTarget(
             name: "NowPlayingActivityCoreTests",

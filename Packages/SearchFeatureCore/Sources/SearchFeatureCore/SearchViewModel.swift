@@ -1,4 +1,3 @@
-import AsyncAlgorithms
 import FactoryKit
 import Foundation
 import Observation
@@ -20,6 +19,8 @@ public enum SearchPhase: Equatable, Sendable {
 public final class SearchViewModel {
     private enum Configuration {
         static let resultLimit = 40
+        /// Keyboard quiet required before a typed query hits the network.
+        static let debounce: Duration = .milliseconds(300)
     }
 
     public var query: String = "" {
@@ -44,14 +45,23 @@ public final class SearchViewModel {
             }
 
             searchTask?.cancel()
-            if trimmed.isEmpty {
-                // Clearing resets instantly; only real queries wait out the
-                // debounce. The empty value still flows through the stream so
-                // it supersedes any keystroke waiting in the debounce window.
-                phase = .idle
-            }
+            // Every distinct edit restarts the window, so only the latest value
+            // survives 300 ms of keyboard quiet and a superseded keystroke never
+            // hits the network. Cancelling here (before the empty check) is what
+            // lets clearing the field supersede a keystroke still waiting out
+            // the window.
+            debounceTask?.cancel()
             lastTrimmedQuery = trimmed
-            queries.yield(trimmed)
+            guard trimmed.isEmpty == false else {
+                // Clearing resets instantly; only real queries wait.
+                phase = .idle
+                return
+            }
+            debounceTask = Task { [weak self] in
+                try? await Task.sleep(for: Configuration.debounce)
+                guard Task.isCancelled == false, let self else { return }
+                self.runSearch(trimmed)
+            }
         }
     }
 
@@ -83,23 +93,10 @@ public final class SearchViewModel {
     @ObservationIgnored private let directory: any RadioDirectoryProviding
     @ObservationIgnored private var searchTask: Task<Void, Never>?
     @ObservationIgnored private var debounceTask: Task<Void, Never>?
-    @ObservationIgnored private let queries: AsyncStream<String>.Continuation
     @ObservationIgnored private var lastTrimmedQuery = ""
 
     public init(directory: any RadioDirectoryProviding = Container.shared.radioDirectory()) {
         self.directory = directory
-
-        let (stream, continuation) = AsyncStream.makeStream(of: String.self)
-        queries = continuation
-        debounceTask = Task { [weak self] in
-            // The debounce emits only the latest value after 300 ms of
-            // keyboard quiet, so a superseded keystroke never hits the network.
-            for await query in stream.debounce(for: .milliseconds(300)) {
-                guard let self else { return }
-                guard query.isEmpty == false else { continue }
-                self.runSearch(query)
-            }
-        }
     }
 
     isolated deinit {
