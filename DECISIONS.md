@@ -1,5 +1,31 @@
 # Decisions
 
+## 2026-11-07 (`v0.4.0` moves to `9c3363e`; the size work waits for the next release)
+
+The 2026-11-01 entry left two choices: move `v0.4.0` onto a commit the `[0.4.0]` notes
+describe, or keep the August 30 tree. **The tag moved, to `9c3363e`** (2026-11-06), the
+last commit before today's binary-size work. The `[0.4.0]` section was written for that
+tree, and nothing between the notes PR and `9c3363e` touched the app beyond the
+Factory/Collections/SwiftFormat bump (#232).
+
+**HEAD was not tagged.** The size work also makes the Mac app Apple-silicon-only, and none
+of it has been through a TestFlight build yet. Putting it in the first public release would
+mean revising the notes and shipping a platform cut nobody had tested. It stays under
+`[Unreleased]`.
+
+The old draft (still titled ShoutKit 0.4.0, built from `32693e35`) was deleted and the
+remote tag replaced. **The tag push did not run `release.yml`**, because `9c3363e`'s message
+ends in `[skip ci]` and GitHub honours that on tag pushes. The draft was created by hand,
+with the workflow's own extraction and `gh release create` command, and checked to end at
+"Not yet enabled". `release.yml` now accepts a `workflow_dispatch` tag so the next such
+tag does not need a hand-made draft.
+
+`release.yml` also runs `.github/scripts/check-marketing-version.sh`. It **fails** when
+the twelve `MARKETING_VERSION` entries disagree with each other (the embedded watch app
+would fail validation) and only **warns** when they differ from the tag. A hard failure on
+tag skew would have blocked this release, whose skew (0.4.0 against 0.5.1) is deliberate.
+Turn the warning into a failure once the two are back in step.
+
 ## 2026-11-07 (binary size: two Apple packages go, Pulse leaves Release, `-Osize` per package, Mac is arm64-only)
 
 TestFlight listed 13.2 MB. A local Release archive zipped to 12.21 MB with the same layout:

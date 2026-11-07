@@ -3,15 +3,15 @@
 How to cut a release, and what a release does and does not currently include.
 
 Written on 2026-08-13, when the repo had **zero git tags** and `release.yml` had never once
-run. `v0.4.0` has since been tagged (2026-08-30) and `release.yml` has drafted a GitHub
-Release from it (2026-09-02). That draft is still unpublished. The checklist below is the
-state of that first release as of 2026-11-01. Treat any step that still has not been
-executed as untested.
+run. `v0.4.0` was first tagged on 2026-08-30 and drafted on 2026-09-02. On 2026-11-07 the
+tag was moved to `9c3363e` and that draft was replaced with a new one, **Holmdel 0.4.0**,
+which is still unpublished. The checklist below is the state of that first release as of
+2026-11-07. Treat any step that still has not been executed as untested.
 
 ## v0.4.0 — what is left for Kevin
 
-Do not publish the draft, move the tag, or upload to App Store Connect until the items
-marked as blockers are decided. Nothing in this section was submitted anywhere.
+The tag question is settled (below). Publishing the draft and anything in App Store
+Connect are still yours to do. Nothing in this section was submitted anywhere.
 
 ### Version and tag
 
@@ -35,26 +35,16 @@ Checked 2026-11-01. No version numbers were rewritten.
   committed `2` would be rejected as a duplicate or lower build on that train. Bump it in
   the archive you upload; this tree was left at `2` so a guessed `32` does not collide with
   a build already sitting in Organizer.
-- **The tag `v0.4.0` is not current `main`.** It points at `32693e35`
-  (`chore(release): cut 0.4.0`, 2026-08-30). The draft release
-  ([untagged draft](https://github.com/cascadiacollections/shoutkit/releases/tag/untagged-4d62960440c8df67c7f6),
-  title still "ShoutKit 0.4.0") was created from that commit. Pasting new notes into the
-  draft does not move the tag. Publishing the draft as it is attached today publishes the
-  August 30 tree.
-- **To publish notes that describe current `main`, move the tag after this branch is merged,
-  then paste the body.** This repo does not do that move. Suggested order, once you want it:
-  1. Merge the notes PR.
-  2. Delete the draft, or `release.yml`'s `gh release create` will fail because a release
-     for `v0.4.0` already exists.
-  3. Delete the remote tag and push `v0.4.0` on the merge commit. `release.yml` will open a
-     new draft from `CHANGELOG.md`'s `[0.4.0]` section. Read it before publishing.
-  4. Retitle the draft to **Holmdel 0.4.0**. The workflow's title template is already
-     `Holmdel X.Y.Z`; the existing draft predates the rename.
-- **Leaving the tag where it is** is the other honest choice: publish the August 30 notes
-  (with the feature-flag corrections from this changelog) and do not describe Mac Catalyst,
-  the rename, or the later playback fixes as part of that tag. The `[0.4.0]` section in
-  `CHANGELOG.md` is written for the first choice. If you take the second, do not paste it
-  onto the August tag.
+- **The tag `v0.4.0` points at `9c3363e`** (`ci: harden workflows for OpenSSF Scorecard`,
+  2026-11-06), moved there on 2026-11-07 from `32693e35` (2026-08-30). That commit is the
+  last one before the 2026-11-07 binary-size work, so the tree matches the `[0.4.0]` section
+  of `CHANGELOG.md` exactly; the size work is under `[Unreleased]` and goes in the next
+  release. `DECISIONS.md` (2026-11-07) has the reasoning.
+- **The draft was created by hand, not by `release.yml`.** `9c3363e`'s message ends in
+  `[skip ci]`, and GitHub applies that to tag pushes, so the push did not run the workflow.
+  The draft was made with the workflow's own extraction and `gh release create` command, and
+  is titled **Holmdel 0.4.0**. `release.yml` now also takes a `workflow_dispatch` tag input
+  for exactly this case.
 
 ### QA issues
 
@@ -135,13 +125,12 @@ Still to do in App Store Connect, by hand:
 
 ### Publishing the draft
 
-1. Decide the tag question above.
-2. Paste the `[0.4.0]` section of `CHANGELOG.md` (everything after the heading, through
-   "Not yet enabled", and not the 0.2.0 milestone) as the draft body. That text is also in
-   the pull request that added this checklist.
+1. ~~Decide the tag question above.~~ Done 2026-11-07: `v0.4.0` is on `9c3363e`.
+2. ~~Put the `[0.4.0]` section of `CHANGELOG.md` in the draft body.~~ Done: the body is that
+   section as extracted from the tagged commit, ending with "Not yet enabled".
 3. Read the "Not yet enabled" section once more against `FeatureCatalog` before you publish.
-4. Publish the GitHub Release yourself. Do not expect `release.yml` to edit the existing
-   draft; it only runs when a tag is pushed, and it creates a draft rather than publishing.
+4. Publish the GitHub Release yourself. `release.yml` never edits an existing draft and never
+   publishes; it creates a new draft only when a tag is pushed or the workflow is run by hand.
 
 ## What a release is, today
 
@@ -206,7 +195,15 @@ merged**, because the workflow reads `CHANGELOG.md` at the tagged commit.
    Note `release.yml` matches `v*.*.*` — the tag carries the `v`, the CHANGELOG heading does
    not.
 
-5. **Check the workflow ran and review the draft.** It is a *draft*: nothing is public until
+   **A tag on a `[skip ci]` commit does not start the workflow.** GitHub reads the tagged
+   commit's message on tag pushes too, and Dependabot and CI-only commits here often carry
+   it. Check that a run appeared. If none did, run **Release** by hand from the Actions tab
+   (or `gh workflow run release.yml -f tag=vX.Y.Z`); it checks out that tag and does the
+   same thing.
+
+5. **Check the workflow ran and review the draft.** The run also compares the tag with
+   `MARKETING_VERSION`: it fails if the twelve entries disagree with each other, and warns
+   (without failing) if they differ from the tag. It is a *draft*: nothing is public until
    someone publishes it. Read the extracted notes before publishing — the extractor takes
    everything between your heading and the next `## [`, so a malformed heading silently
    changes what ships as the notes.
@@ -353,15 +350,17 @@ roadmap has a habit of drifting on things nobody re-checks:
   already has 0.5.1 (31), so the next upload of that version must be build 32 or higher.
   The committed `2` is behind the upload on purpose; see the checklist above.
 - **iPhone icon is in place; watch and tvOS icons were not part of that swap.**
-- **No verification that the tag matches `MARKETING_VERSION`.** The live skew is `v0.4.0`
-  tagged against a tree that reads `0.5.1`. Nothing in CI catches it. A check comparing
-  the two would be the same kind of assertion this repo already makes for the Pulse
-  symbols and the watch payload. Until it exists, the checklist above is the check.
+- **The tag-vs-`MARKETING_VERSION` check only warns.** `release.yml` runs
+  `.github/scripts/check-marketing-version.sh`, which fails when the twelve entries disagree
+  with each other but only warns when they differ from the tag, because `v0.4.0` against
+  `0.5.1` is deliberate. Make the mismatch a failure once the tag and marketing version are
+  back in step (the first release after 0.5.1).
 
 ## History note
 
 `0.1.0`, `0.2.0`, and `0.3.0` appear in `CHANGELOG.md` and `docs/releases/` but were never
 tagged and never released to anyone — they were internal milestones. `v0.4.0` is the first
-real release: tagged 2026-08-30, drafted 2026-09-02, unpublished. See `DECISIONS.md`
+real release: tagged 2026-08-30, drafted 2026-09-02, re-tagged onto `9c3363e` and re-drafted
+2026-11-07, unpublished. See `DECISIONS.md`
 (2026-08-13 and 2026-11-01) for why the numbering continues from those milestones, and why
 the binary's marketing version is 0.5.1 while this release is still called 0.4.0.

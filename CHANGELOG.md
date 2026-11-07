@@ -6,8 +6,9 @@ below) are documented here. The format follows
 [Semantic Versioning](https://semver.org).
 
 > **0.1.0 through 0.3.0 were internal milestones, not releases.** None was tagged, and
-> no build from them reached a user. `v0.4.0`, tagged 2026-08-30, is the first real release
-> and its GitHub Release is still an unpublished draft. Those milestone sections stay as the
+> no build from them reached a user. `v0.4.0` is the first real release. It was tagged
+> 2026-08-30 and moved to `9c3363e` on 2026-11-07, and its GitHub Release is still an
+> unpublished draft. Those milestone sections stay as the
 > development record. See `docs/RELEASING.md` for how a release is cut and `DECISIONS.md`
 > (2026-08-13) for why the numbering continues rather than restarting at 1.0.0.
 
