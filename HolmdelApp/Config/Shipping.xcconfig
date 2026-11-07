@@ -1,0 +1,21 @@
+// Applied to EVERY target in a build, Swift packages included, by pointing the
+// XCODE_XCCONFIG_FILE environment variable at this file. It is not included by
+// any target, and must not be: a target's xcconfig never reaches package
+// targets, which is the whole reason this file exists (DECISIONS.md, 2026-11-07).
+//
+// What it buys: -Osize on remote packages that no manifest here can configure.
+// GRDB alone drops 2,144 -> 1,570 KB; the phone binary 5.51 -> 4.73 MB, and the
+// watch app ~1.2 MB.
+//
+// Where it is set:
+//   - Xcode Cloud: an environment variable on the TestFlight workflow,
+//     XCODE_XCCONFIG_FILE = /Volumes/workspace/repository/HolmdelApp/Config/Shipping.xcconfig
+//     (ci_scripts/ci_post_xcodebuild.sh warns when an archive ran without it).
+//   - Hand archives: prefix the `xcodebuild archive` command (docs/TESTFLIGHT.md).
+//     Xcode's Product > Archive does not read it unless Xcode itself was
+//     launched with the variable set.
+//   - GitHub CI's Release build, so the Pulse gate inspects what ships.
+//
+// Release and Beta only. Debug, tests, and `swift test` stay at their defaults.
+SWIFT_OPTIMIZATION_LEVEL[config=Release] = -Osize
+SWIFT_OPTIMIZATION_LEVEL[config=Beta] = -Osize

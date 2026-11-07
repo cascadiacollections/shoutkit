@@ -16,7 +16,8 @@ below) are documented here. The format follows
 ### Changed
 - **A smaller download.** Two Apple utility libraries were replaced by a few lines of
   Holmdel's own code, and the debug-only network inspector no longer ships in release
-  builds. The iPhone app binary is about a third smaller (8.1 → 5.5 MB).
+  builds, and every library is now optimized for size. The iPhone app binary is up to
+  40% smaller (8.1 → 4.7 MB) and the Watch app about 1.2 MB smaller.
 - **The Mac app now requires Apple silicon.** Intel Macs are no longer supported, which
   roughly halves the Mac app's code size.
 

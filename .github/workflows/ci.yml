@@ -549,7 +549,12 @@ jobs:
           restore-keys: |
             spm-app-${{ steps.toolchain.outputs.id }}-
 
+      # Shipping.xcconfig is what Xcode Cloud and hand archives build with
+      # (it reaches package targets, which no project setting does), so the
+      # Release checks below inspect the same binary that ships.
       - name: Build app (Release)
+        env:
+          XCODE_XCCONFIG_FILE: ${{ github.workspace }}/HolmdelApp/Config/Shipping.xcconfig
         run: |
           set -o pipefail
           xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \

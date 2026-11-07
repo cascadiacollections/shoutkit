@@ -301,6 +301,21 @@ then exits 1 with a `BUILD SKIPPED` banner before the archive, so testers still
 do not get a build. The run is marked failed. That failure is the skip. After
 step 3, those pushes do not start a run.
 
+### Size-optimized package build
+
+Set one environment variable on the TestFlight workflow (**Environment** → **Environment
+Variables**):
+
+```
+XCODE_XCCONFIG_FILE = /Volumes/workspace/repository/HolmdelApp/Config/Shipping.xcconfig
+```
+
+`xcodebuild` applies that file to every target, Swift packages included, so GRDB and the
+other remote packages build at `-Osize`. No project or manifest setting can reach them.
+It makes the phone binary 0.8 MB smaller and the watch app 1.2 MB smaller
+(`DECISIONS.md`, 2026-11-07). Without it the build still succeeds, just larger, and
+`ci_scripts/ci_post_xcodebuild.sh` prints a warning in the archive log.
+
 ### How to verify
 
 On a machine with the repo:

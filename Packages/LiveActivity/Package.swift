@@ -41,5 +41,11 @@ let package = Package(
             name: "NowPlayingActivityCoreTests",
             dependencies: ["NowPlayingActivityCore"],
         ),
+        // iOS-only like the rest of the package, so it runs in the simulator
+        // through HolmdelApp/Holmdel.xctestplan, not under `swift test`.
+        .testTarget(
+            name: "NowPlayingActivityKitTests",
+            dependencies: ["NowPlayingActivityKit"],
+        ),
     ],
 )

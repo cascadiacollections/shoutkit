@@ -53,6 +53,13 @@
         "identifier" : "NowPlayingActivityCoreTests",
         "name" : "NowPlayingActivityCoreTests"
       }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:../Packages/LiveActivity",
+        "identifier" : "NowPlayingActivityKitTests",
+        "name" : "NowPlayingActivityKitTests"
+      }
     }
   ],
   "version" : 1

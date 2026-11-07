@@ -6,7 +6,7 @@ TestFlight listed 13.2 MB. A local Release archive zipped to 12.21 MB with the s
 `Assets.car` 4.78 MB, the embedded watch app 3.86 MB, the phone binary 3.23 MB (8.06 MB
 uncompressed), ogg/vorbis and widgets 0.3 MB. The link map put the binary's weight in GRDB
 (2.1 MB), swift-async-algorithms (1.0 MB), Pulse (715 KB), and swift-algorithms (540 KB).
-After this entry: **phone binary 5.51 MB, archive zip 10.76 MB**. That zip includes the
+After this entry: **phone binary 4.73 MB, archive zip 10.20 MB** with `Shipping.xcconfig` applied (5.51 / 10.76 without it). That zip includes the
 watch app and both icon idioms; an iPhone downloads neither.
 
 - **swift-async-algorithms and swift-algorithms are gone.** Usage was one `debounce`
@@ -50,15 +50,32 @@ watch app and both icon idioms; an iPhone downloads neither.
   checks the framework instead of the app binary. Local check: the Release *archive* is
   fully stripped, so `nm` finds nothing there. Read a link map
   (`LD_GENERATE_MAP_FILE=YES`) or the unstripped simulator build CI uses.
-- **`-Osize` is set per local package, not per project.** A project-level
-  `SWIFT_OPTIMIZATION_LEVEL` reaches the app target only, which was 8 KB (247 → 239 KB).
-  Each local manifest now declares
-  `optimizeForSize = .unsafeFlags(["-Osize"], .when(configuration: .release))`, about
-  150 KB across our modules (Persistence −74, Playback −32, RadioDirectory −25, …).
-  `unsafeFlags` is acceptable because these packages are only consumed by path. It would
-  block a remote consumer, and SwiftPM can't consume a package from a repo subdirectory
-  anyway. Remote dependencies (GRDB is the biggest module, 2.1 MB) can't be reached this
-  way. Debug and host `swift test` runs are unaffected.
+- **`-Osize` reaches every package two ways: local manifests, and `Shipping.xcconfig`
+  for the rest.** A project-level `SWIFT_OPTIMIZATION_LEVEL` reaches the app target only,
+  which was 8 KB (247 → 239 KB).
+  - *Local packages:* each manifest declares
+    `optimizeForSize = .unsafeFlags(["-Osize"], .when(configuration: .release))`, about
+    150 KB across our modules (Persistence −74, Playback −32, RadioDirectory −25, …).
+    `unsafeFlags` is acceptable because these packages are only consumed by path. SwiftPM
+    can't consume a package from a repo subdirectory anyway.
+  - *Remote packages, GRDB above all:* no manifest of ours can set their flags. The
+    `XCODE_XCCONFIG_FILE` environment variable can: `xcodebuild` applies that file to every
+    target in the build at command-line precedence, package targets included (confirmed
+    in the build log: GRDB, Persistence and FactoryKit all compile with `-Osize`).
+    `HolmdelApp/Config/Shipping.xcconfig` sets `-Osize` for Release and Beta. Measured
+    against the build without it: GRDB 2,144 → 1,570 KB, phone binary 5.51 → 4.73 MB,
+    watch app −1.2 MB, archive zip 10.76 → 10.20 MB. It's an environment variable, not a
+    project setting, so every build path has to opt in. Xcode Cloud sets it on the
+    workflow (`docs/RELEASING.md`), and `ci_scripts/ci_post_xcodebuild.sh` warns on an
+    archive built without it. Hand archives prefix `xcodebuild archive`
+    (`docs/TESTFLIGHT.md`). GitHub CI's Release build sets it so the Pulse gate inspects
+    what ships. Xcode's Product → Archive doesn't see it, and the manifest flags above
+    are why that path still gets `-Osize` on our own code. The local-manifest flags are
+    deliberately kept, even though the xcconfig covers them too.
+  - *The cost* is speed in code that rarely matters for a radio app. AudioStreaming's
+    parsing is now `-Osize` too, but decoding and DSP happen in AudioToolbox and
+    libvorbis, which this doesn't touch. Listen on the iPhone SE floor device before
+    reading anything into a playback complaint, and remember this entry if one comes.
 - **Mac Catalyst ships Apple Silicon only** (`ARCHS[sdk=macosx*] = arm64` in
   Release.xcconfig). The Mac App Store doesn't thin, so a universal build carried all code
   twice. Mac binary: 5.45 MB, app zipped 3.47 MB.

@@ -4,7 +4,7 @@ App Store Connect app: Squan (6809239472), bundle `com.cascadiacollections.holmd
 
 Public invitation: https://testflight.apple.com/join/ZBSBTbRU
 
-Use the existing **External beta** group. External testers need a build approved by Beta App Review; internal-only uploads cannot be used. Archive the Holmdel scheme with a new `CURRENT_PROJECT_VERSION` for all app and extension targets, then export using `app-store-connect` with `testFlightInternalTestingOnly` set to `false`. After processing, add the build to the group and submit it for review.
+Use the existing **External beta** group. External testers need a build approved by Beta App Review; internal-only uploads cannot be used. Archive the Holmdel scheme with a new `CURRENT_PROJECT_VERSION` for all app and extension targets, from the command line with `XCODE_XCCONFIG_FILE="$PWD/HolmdelApp/Config/Shipping.xcconfig" xcodebuild archive …` so packages are size-optimized (Xcode's Product → Archive skips that file; see its header), then export using `app-store-connect` with `testFlightInternalTestingOnly` set to `false`. After processing, add the build to the group and submit it for review.
 
 Routine builds reach TestFlight from the Xcode Cloud workflow on `main`. A push that only changes GitHub Actions, docs, or the marketing site does not upload. The path list, the App Store Connect file rule, and the manual-start override are in `docs/RELEASING.md`. The archive steps above are how a build is cut by hand when it has to be external-eligible, or when that workflow was skipped.
 
