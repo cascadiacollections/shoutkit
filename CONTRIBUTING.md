@@ -157,6 +157,10 @@ touch: GPL-3.0 for the app and feature packages, MIT for `RadioDirectory`, `Play
 package with its own `LICENSE` file is MIT, and CI enforces that those never depend on a
 GPL-3.0 package).
 
+GPL-3.0 contributions include the section 7 [app store permission](LICENSE-EXCEPTION.md). That's
+what lets the App Store build of Holmdel, and any fork's store build, ship your change, as long
+as the source stays available under GPL-3.0.
+
 ## Pull requests
 
 - Keep PRs focused; separate refactors from behavior changes.
