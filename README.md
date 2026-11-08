@@ -202,12 +202,17 @@ codesign workaround.
 
 | Component | License |
 |---|---|
-| App target (`HolmdelApp`, incl. the debug-only `DebugSupport` package), feature packages (`Packages/Features/*` and their `*FeatureCore` counterparts), `Packages/LiveActivity` | [GPL-3.0](LICENSE) |
+| App target (`HolmdelApp`, incl. the debug-only `DebugSupport` package), feature packages (`Packages/Features/*` and their `*FeatureCore` counterparts), `Packages/LiveActivity` | [GPL-3.0](LICENSE), with an [app store permission](LICENSE-EXCEPTION.md) |
 | `Packages/RadioDirectory`, `Packages/Playback`, `Packages/PlaybackEngineAudioStreaming`, `Packages/Persistence`, `Packages/DesignSystem`, `Packages/FeatureFlags`, `Packages/ImageIODownsample` | [MIT](Packages/RadioDirectory/LICENSE) (per-package `LICENSE` files) |
 
 The rule, if you're adding a package: a per-package `LICENSE` file makes it MIT and means it
 must stay adoptable — no app-specific or heavyweight dependencies. Everything else inherits
 GPL-3.0 from the root `LICENSE`.
+
+The GPL-3.0 parts carry an additional permission under section 7
+([`LICENSE-EXCEPTION.md`](LICENSE-EXCEPTION.md)) that allows distribution through the App Store
+and similar stores, provided the source stays available under GPL-3.0. Without it, GPL-3.0's
+"no further restrictions" clause conflicts with App Store usage rules for any contributor's code.
 
 That rule is enforced, not just documented: CI fails if an MIT package takes a dependency on a
 GPL-3.0 one (`.github/workflows/ci.yml`, the `license-boundary` job). `ImageIODownsample` is MIT
