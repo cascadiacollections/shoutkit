@@ -2,114 +2,37 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="robots" content="noindex, nofollow" />
-  <title>Shoutkit social card source</title>
-  <!--
-    Source for og-image.png. Not linked from the site; kept here so the card can
-    be regenerated without a design tool. Render at exactly 1200x630, e.g.:
-
-      chrome --headless --disable-gpu --hide-scrollbars \
-        --force-device-scale-factor=1 --window-size=1200,630 \
-        --screenshot=site/og-image.png file://$PWD/site/og-image.html
-
-    Note: some Chrome builds reserve part of the window for browser UI and
-    letterbox the shot. If the bottom of the card is cut off, render with
-    Chromium's `headless_shell`, which sizes the viewport exactly.
-  -->
+  <!-- Source for og-image.png, kept in the repo so the card can be
+       regenerated without a design tool. Render at exactly 1200x630 (for
+       example a headless browser screenshot of this page at that viewport). -->
+  <title>ShoutKit social card source</title>
   <style>
-    * { box-sizing: border-box; margin: 0; }
-    html, body { width: 1200px; height: 630px; overflow: hidden; background: #183F4C; }
-    body {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 62px 76px;
-      color: #F9F3E8;
-      font-family: "Liberation Sans", Arial, Helvetica, sans-serif;
-      background:
-        linear-gradient(180deg, #183F4C 0%, #377381 46%, #6FA9AD 58%, #176878 59%, #0C4857 78%, #D4B782 79%, #AE8E61 100%);
+    html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: #fbfbfd; }
+    .card {
+      box-sizing: border-box; width: 1200px; height: 630px; padding: 0 96px;
+      display: flex; align-items: center; gap: 64px;
+      font-family: -apple-system, "SF Pro Display", "Helvetica Neue", "Noto Sans", Arial, sans-serif;
+      color: #1d1d1f;
     }
-    body::before {
-      content: "";
-      position: absolute;
-      right: -30px;
-      bottom: 116px;
-      width: 660px;
-      height: 18px;
-      background: #253B3E;
-      box-shadow: 0 11px 0 rgba(7, 32, 39, 0.28);
-      transform: rotate(-2deg);
+    img { width: 260px; height: 260px; border-radius: 58px; box-shadow: 0 24px 60px rgba(7, 132, 195, 0.3); flex: none; }
+    .name { font-size: 34px; font-weight: 600; color: #6e6e73; margin: 0 0 10px; }
+    h1 { margin: 0; font-size: 76px; line-height: 1.02; letter-spacing: -0.03em; font-weight: 700; }
+    .sub {
+      margin: 14px 0 0; font-size: 42px; line-height: 1.1; font-weight: 600; letter-spacing: -0.02em;
+      background: linear-gradient(90deg, #0784c3, #e77274); -webkit-background-clip: text; background-clip: text; color: transparent;
     }
-    body::after {
-      content: "";
-      position: absolute;
-      right: 560px;
-      bottom: 127px;
-      width: 18px;
-      height: 70px;
-      border-radius: 3px 3px 0 0;
-      background: #B72E3B;
-      border-top: 10px solid #F9F3E8;
-      box-shadow: 0 0 0 5px rgba(249, 243, 232, 0.12);
-    }
-    body > * { position: relative; z-index: 1; }
-    .top { display: flex; align-items: center; gap: 18px; }
-    .top svg { width: 62px; height: 62px; border-radius: 16px; display: block; }
-    .top span { font-size: 40px; font-weight: 700; letter-spacing: -0.5px; }
-    h1 {
-      font-size: 84px;
-      font-weight: 700;
-      line-height: 1.02;
-      letter-spacing: -2.2px;
-      max-width: 15ch;
-      text-shadow: 0 3px 26px rgba(8, 26, 32, 0.45);
-    }
-    p {
-      margin-top: 20px;
-      font-size: 29px;
-      line-height: 1.4;
-      max-width: 30ch;
-      color: rgba(255, 246, 234, 0.95);
-    }
-    .chips { display: flex; gap: 12px; flex-wrap: wrap; }
-    .chips b {
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: 2.4px;
-      text-transform: uppercase;
-      padding: 11px 22px;
-      border-radius: 999px;
-      border: 2px solid rgba(255, 246, 234, 0.42);
-      background: rgba(30, 8, 20, 0.26);
-    }
+    .foot { margin: 26px 0 0; font-size: 24px; color: #6e6e73; }
   </style>
 </head>
 <body>
-  <div class="top">
-    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect width="100" height="100" rx="22" fill="#F0532B" />
-      <circle cx="50" cy="50" r="19" fill="#FFC24B" />
-      <g fill="none" stroke="#FFF3E4" stroke-width="6" stroke-linecap="round">
-        <path d="M50 10v8" /><path d="M50 82v8" /><path d="M10 50h8" /><path d="M82 50h8" />
-        <path d="M22 22l6 6" /><path d="M72 72l6 6" /><path d="M78 22l-6 6" /><path d="M28 72l-6 6" />
-      </g>
-    </svg>
-    <span>Shoutkit</span>
-  </div>
-
-  <div>
-    <h1>Free internet radio.</h1>
-    <p>One app for iPhone and Android.</p>
-  </div>
-
-  <div class="chips">
-    <b>Free</b>
-    <b>No ads</b>
-    <b>No account</b>
-    <b>No tracking</b>
-    <b>Open source</b>
+  <div class="card">
+    <img src="assets/app-icon-256.png" alt="" />
+    <div>
+      <p class="name">ShoutKit</p>
+      <h1>Free internet radio.</h1>
+      <p class="sub">No ads, no account, no tracking.</p>
+      <p class="foot">Open source · iPhone &amp; Android</p>
+    </div>
   </div>
 </body>
 </html>
