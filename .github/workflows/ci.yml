@@ -65,6 +65,20 @@ jobs:
       - name: Check MIT packages take no GPL-3.0 dependencies
         run: .github/scripts/check-license-boundary.sh
 
+  # Every file has a license per REUSE.toml, which mirrors the README's
+  # Licensing table. Linux, a few seconds, pinned version so a new reuse
+  # release can't change the verdict without a deliberate bump.
+  reuse:
+    name: REUSE lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: reuse lint
+        run: pipx run reuse==6.3.0 lint
+
   # Cheap, and catches a class of break that otherwise only surfaces by hand on
   # a device: the app's registered URL scheme drifting from the one the link
   # parser accepts. See DECISIONS.md (2026-09-03).
