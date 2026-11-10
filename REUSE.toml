@@ -1,0 +1,93 @@
+# REUSE (https://reuse.software) licensing metadata. Mirrors the "Licensing"
+# table in README.md; keep the two in sync. Checked in CI by `reuse lint`
+# (.github/workflows/ci.yml, the `reuse` job).
+#
+# Later annotations win over earlier ones for the same file.
+version = 1
+
+# Everything not listed below: the Holmdel app target (incl. DebugSupport),
+# the feature packages and their *FeatureCore counterparts, LiveActivity,
+# docs, site and tooling: GPL-3.0 (root LICENSE).
+#
+# These GPL-3.0 parts also carry the section 7 additional permission in
+# LICENSE-EXCEPTION.md (app store distribution). It is not in the SPDX
+# expression because SPDX 2.3 only allows listed exceptions after WITH, and
+# reuse rejects SPDX 3 `AdditionRef-` ids; a `WITH LicenseRef-...` would be
+# invalid for other SPDX tooling.
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Kevin T. Coughlin and ShoutKit contributors"
+SPDX-License-Identifier = "GPL-3.0-only"
+
+# The section 7 additional permission itself.
+[[annotations]]
+path = "LICENSE-EXCEPTION.md"
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Kevin T. Coughlin"
+SPDX-License-Identifier = "GPL-3.0-only"
+
+# The MIT ShoutKit packages (each has its own LICENSE file).
+[[annotations]]
+path = [
+  "Packages/RadioDirectory/**",
+  "Packages/Playback/**",
+  "Packages/PlaybackEngineAudioStreaming/**",
+  "Packages/Persistence/**",
+  "Packages/DesignSystem/**",
+  "Packages/FeatureFlags/**",
+  "Packages/ImageIODownsample/**",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Kevin T. Coughlin and ShoutKit contributors"
+SPDX-License-Identifier = "MIT"
+
+# Third-party license texts shown on the in-app Licenses screen. Each file is
+# reproduced verbatim from its upstream and keeps that upstream's notice.
+[[annotations]]
+path = "Packages/Features/SettingsFeature/Sources/SettingsFeature/Resources/mit.txt"
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Kevin T. Coughlin"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "Packages/Features/SettingsFeature/Sources/SettingsFeature/Resources/factory-mit.txt"
+precedence = "override"
+SPDX-FileCopyrightText = "2022 Michael Long"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "Packages/Features/SettingsFeature/Sources/SettingsFeature/Resources/audiostreaming-mit.txt"
+precedence = "override"
+SPDX-FileCopyrightText = ["2020 Dimitris C.", "2012-2014 Thong Nguyen"]
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "Packages/Features/SettingsFeature/Sources/SettingsFeature/Resources/pulse-mit.txt"
+precedence = "override"
+SPDX-FileCopyrightText = "2020-2026 Alexander Grebenyuk"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "Packages/Features/SettingsFeature/Sources/SettingsFeature/Resources/ogg-bsd.txt"
+precedence = "override"
+SPDX-FileCopyrightText = "2002 Xiph.org Foundation"
+SPDX-License-Identifier = "BSD-3-Clause"
+
+[[annotations]]
+path = "Packages/Features/SettingsFeature/Sources/SettingsFeature/Resources/vorbis-bsd.txt"
+precedence = "override"
+SPDX-FileCopyrightText = "2002-2020 Xiph.org Foundation"
+SPDX-License-Identifier = "BSD-3-Clause"
+
+[[annotations]]
+path = "Packages/Features/SettingsFeature/Sources/SettingsFeature/Resources/apache-2.0.txt"
+precedence = "override"
+SPDX-FileCopyrightText = "2004 The Apache Software Foundation"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "Packages/Features/SettingsFeature/Sources/SettingsFeature/Resources/gpl-3.0.txt"
+precedence = "override"
+SPDX-FileCopyrightText = "2007 Free Software Foundation, Inc."
+SPDX-License-Identifier = "GPL-3.0-only"
