@@ -70,7 +70,7 @@ public enum ArtworkLoader {
         var request = URLRequest(url: url)
         request.cachePolicy = requestCachePolicy
 
-        guard let data = try? await transport.data(for: request),
+        guard let data = try? await transport.imageData(for: request),
               let image = ImageDownsampler.decode(data, maxPixelSize: maxDecodePixelSize),
               let cgImage = image.cgImage
         else { return nil }

@@ -9,7 +9,7 @@ seconds. Each poll reached the lazy `Artwork` provider (failed URLs keep one so 
 system gets another chance), which downloaded the page and failed an ImageIO thumbnail
 decode, so nothing was ever shown. That loop also bypassed `NowPlayingArtworkRetryPolicy`.
 
-- **The fix is generic, not a KEXP special case.** `NowPlayingArtworkPayload.isWebPage`
+- **The fix is generic, not a KEXP special case.** `ImagePayload.isWebPage` (RadioDirectory, now shared by every artwork loader)
   rejects an explicit `text/html` / `application/xhtml+xml` type or a body that opens
   with `<!doctype html` / `<html`. It is deliberately narrow, because radio-browser
   favicons often arrive as `application/octet-stream`, `text/plain` or untyped. Non-2xx

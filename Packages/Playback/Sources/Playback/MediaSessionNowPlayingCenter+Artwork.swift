@@ -180,19 +180,10 @@
         ) async throws -> Data {
             var request = URLRequest(url: url)
             request.cachePolicy = artworkCachePolicy
-            let (data, response) = try await transport.send(request)
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw HTTPTransportError.invalidResponse
-            }
-            guard 200 ..< 300 ~= httpResponse.statusCode else {
-                throw HTTPTransportError.httpStatus(httpResponse.statusCode)
-            }
-            // A maintenance or parking page answering 200 on the image path is a
-            // failed fetch, recorded and retried with backoff like any other —
-            // not a payload to hand ImageIO (see ``NowPlayingArtworkPayload``).
-            guard NowPlayingArtworkPayload.isWebPage(mimeType: httpResponse.mimeType, data: data) == false else {
-                throw URLError(.cannotDecodeContentData)
-            }
+            // A maintenance or parking page answering 200 on the image path throws
+            // here, and is recorded and retried with backoff like any other failure
+            // rather than handed to ImageIO (see `ImagePayload`).
+            let data = try await transport.imageData(for: request)
             if data.count <= maxPassthroughArtworkBytes, (try? ArtworkRepresentation(data: data)) != nil {
                 return data
             }
