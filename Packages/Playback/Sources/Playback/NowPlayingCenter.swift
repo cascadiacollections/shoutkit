@@ -192,7 +192,7 @@ public protocol NowPlayingPresenting: AnyObject {
             artworkTask = Task { [weak self] in
                 var request = URLRequest(url: url)
                 request.cachePolicy = .reloadRevalidatingCacheData
-                guard let data = try? await transport.data(for: request) else {
+                guard let data = try? await transport.imageData(for: request) else {
                     // Forget the failed URL so the next update retries it — a
                     // transient network error at play start must not leave the
                     // lock screen artless for the whole session.

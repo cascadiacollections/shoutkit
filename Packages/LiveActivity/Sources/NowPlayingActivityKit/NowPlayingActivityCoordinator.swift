@@ -367,7 +367,7 @@ public final class NowPlayingActivityCoordinator {
     private func stageArtwork(from url: URL, token: String) async -> Bool {
         var request = URLRequest(url: url)
         request.cachePolicy = .returnCacheDataElseLoad
-        guard let data = try? await transport.data(for: request) else { return false }
+        guard let data = try? await transport.imageData(for: request) else { return false }
         let png = await Task.detached(priority: .utility) {
             Self.encodePNG(downsampling: data, maxPixelSize: Self.artworkMaxPixelSize)
         }.value
