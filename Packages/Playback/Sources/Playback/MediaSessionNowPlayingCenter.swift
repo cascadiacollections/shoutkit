@@ -110,6 +110,10 @@
         struct ArtworkFailure {
             var attempts: Int
             var lastAttempt: ContinuousClock.Instant
+            /// The server answered, with something that isn't usable artwork: an
+            /// error status, a web page, or bytes no decoder accepts. Unlike a
+            /// network failure, the system re-fetching it itself can't do better.
+            var serverRejected = false
         }
 
         var artworkFetches: [URL: Task<Void, Never>] = [:]

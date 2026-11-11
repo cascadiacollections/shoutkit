@@ -121,7 +121,7 @@ public nonisolated enum ArtworkThumbnailLoader {
         var request = URLRequest(url: url)
         request.cachePolicy = requestCachePolicy
 
-        guard let data = try? await transport.data(for: request),
+        guard let data = try? await transport.imageData(for: request),
               let image = ImageDownsampler.decode(data, maxPixelSize: maxPixelSize)
         else { return nil }
 

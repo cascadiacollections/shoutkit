@@ -1,5 +1,31 @@
 # Decisions
 
+## 2026-11-10 (artwork that answers 200 with a web page is a failed fetch)
+
+After a power outage in early November 2026, every path under kexp.org started serving
+the same "Listen Live" HTML page with status 200, including the curated KEXP station's
+`apple-touch-icon.png`. On macOS, a notch/media widget polls MediaRemote every five
+seconds. Each poll reached the lazy `Artwork` provider (failed URLs keep one so the
+system gets another chance), which downloaded the page and failed an ImageIO thumbnail
+decode, so nothing was ever shown. That loop also bypassed `NowPlayingArtworkRetryPolicy`.
+
+- **The fix is generic, not a KEXP special case.** `ImagePayload.isWebPage` (RadioDirectory, now shared by every artwork loader)
+  rejects an explicit `text/html` / `application/xhtml+xml` type or a body that opens
+  with `<!doctype html` / `<html`. It is deliberately narrow, because radio-browser
+  favicons often arrive as `application/octet-stream`, `text/plain` or untyped. Non-2xx
+  statuses are now failures here too, instead of relying on `data(for:)`.
+- **The KEXP URL stays.** The outage is temporary, and the URL should start working again
+  without a release.
+- **A failure where the server answered (status, web page, undecodable bytes) gets no
+  lazy provider.** The 2026-08 rule ("the lazy provider is still installed for a URL we
+  don't hold") still applies to network failures, where the system's own retry can
+  help. When the server itself returned something unusable, asking it again on every
+  system request can't succeed.
+- **Retries now run on a timer.** Before, they only happened when `apply` ran again, and
+  for a station with no ICY titles (KEXP's stream sends an empty `StreamTitle`) that
+  was effectively never. The same 5/15/45/120 s schedule and 5-attempt cap apply.
+  `clear()` (a stop) still resets them. A recovery moves the content id (`#r`) as before.
+
 ## 2026-11-07 (`v0.4.0` moves to `9c3363e`; the size work waits for the next release)
 
 The 2026-11-01 entry left two choices: move `v0.4.0` onto a commit the `[0.4.0]` notes
