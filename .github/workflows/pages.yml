@@ -12,6 +12,7 @@ on:
     # does not support YAML anchors.
     paths:
       - "site/**"
+      - "Packages/AudioLevels/**"
       - "Packages/DesignSystem/**"
       - "Packages/FeatureFlags/**"
       - "Packages/ImageIODownsample/**"
@@ -28,6 +29,7 @@ on:
   pull_request:
     paths:
       - "site/**"
+      - "Packages/AudioLevels/**"
       - "Packages/DesignSystem/**"
       - "Packages/FeatureFlags/**"
       - "Packages/ImageIODownsample/**"

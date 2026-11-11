@@ -37,6 +37,7 @@ path = [
   "Packages/DesignSystem/**",
   "Packages/FeatureFlags/**",
   "Packages/ImageIODownsample/**",
+  "Packages/AudioLevels/**",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Kevin T. Coughlin and ShoutKit contributors"

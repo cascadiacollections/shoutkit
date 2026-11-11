@@ -1,3 +1,4 @@
+import AudioLevels
 import Foundation
 import os
 
@@ -41,6 +42,21 @@ public protocol RadioPlaybackEngine: AudioOutput {
     /// Enables or disables spatial audio virtualization. A no-op when
     /// ``supportsSpatialAudio`` is `false`.
     func setSpatialAudioEnabled(_ isEnabled: Bool)
+
+    /// Whether ``addAudioTap(_:)`` delivers anything. Same reasoning again: taps
+    /// come from an `AVAudioEngine` mixer, and an `AVPlayer` exposes no supported
+    /// equivalent for a live HTTP stream.
+    var supportsAudioTaps: Bool { get }
+
+    /// Starts handing rendered PCM (post-EQ, post-volume) to `plugin` on the
+    /// engine's tap thread, across station switches, rejoins and media-services
+    /// resets, until ``removeAudioTap(_:)``. The engine taps its render chain
+    /// only while at least one plug-in is attached. A no-op when
+    /// ``supportsAudioTaps`` is `false`.
+    func addAudioTap(_ plugin: any AudioTapPlugin)
+
+    /// Stops handing PCM to `plugin`. Removing the last one removes the tap.
+    func removeAudioTap(_ plugin: any AudioTapPlugin)
 }
 
 public extension RadioPlaybackEngine {
@@ -55,6 +71,14 @@ public extension RadioPlaybackEngine {
     }
 
     func setSpatialAudioEnabled(_: Bool) {}
+
+    var supportsAudioTaps: Bool {
+        false
+    }
+
+    func addAudioTap(_: any AudioTapPlugin) {}
+
+    func removeAudioTap(_: any AudioTapPlugin) {}
 }
 
 /// Placeholder ``RadioPlaybackEngine`` registered until a concrete engine lands.

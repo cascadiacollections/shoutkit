@@ -23,6 +23,7 @@ set -euo pipefail
 # README.md. GPL packages (feature code, LiveActivity, the app itself) aren't
 # part of the SDK surface this site documents.
 packages=(
+    AudioLevels
     DesignSystem
     FeatureFlags
     ImageIODownsample
