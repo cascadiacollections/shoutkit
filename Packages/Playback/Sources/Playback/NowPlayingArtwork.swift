@@ -127,3 +127,45 @@ enum NowPlayingArtworkRetryPolicy {
         return elapsed >= retryDelay(afterAttempts: attempts)
     }
 }
+
+/// Whether a successful (2xx) artwork response is actually a web page rather than
+/// an image.
+///
+/// Station artwork URLs are third-party and long-lived, and when a broadcaster's
+/// site goes into maintenance — or a domain lapses into a parking page — the old
+/// image path keeps answering 200 with HTML. KEXP did exactly this in November 2026
+/// after a power outage: every path under kexp.org served the same "Listen Live"
+/// page. Left to ImageIO, that payload fails a thumbnail decode on every system
+/// artwork request, which a Mac media widget polling every few seconds turns into a
+/// steady stream of downloads and decode errors with nothing ever shown.
+///
+/// Deliberately narrow: radio-browser favicons routinely arrive as
+/// `application/octet-stream`, `text/plain`, or with no content type at all, so only
+/// an explicit HTML type or an HTML document body is rejected. Anything else is left
+/// for the decoder to judge. Pure so the host suite can pin it without the
+/// NowPlaying framework.
+enum NowPlayingArtworkPayload {
+    static func isWebPage(mimeType: String?, data: Data) -> Bool {
+        if let mimeType = mimeType?.lowercased(),
+           mimeType == "text/html" || mimeType == "application/xhtml+xml" {
+            return true
+        }
+        return bodyLooksLikeHTML(data)
+    }
+
+    private static let htmlPrefixes = ["<!doctype html", "<html"]
+
+    private static func bodyLooksLikeHTML(_ data: Data) -> Bool {
+        // Only the head of the payload matters; skip a UTF-8 BOM and leading
+        // whitespace, which servers commonly emit before the doctype.
+        var head = data.prefix(64)
+        if head.starts(with: [0xEF, 0xBB, 0xBF]) {
+            head = head.dropFirst(3)
+        }
+        guard let text = String(bytes: head, encoding: .utf8) ?? String(bytes: head, encoding: .isoLatin1) else {
+            return false
+        }
+        let trimmed = text.drop(while: \.isWhitespace).lowercased()
+        return htmlPrefixes.contains { trimmed.hasPrefix($0) }
+    }
+}

@@ -34,7 +34,18 @@
             // Not resident. Since 2026-09-02 the policy only advertises a URL whose
             // bytes are in hand *or* whose fetch already failed, so in practice this
             // is the failed-fetch case: keep the lazy provider so the system gets one
-            // more chance at an image rather than none.
+            // more chance at an image rather than none — but only after a *network*
+            // failure (2026-11-10). When the server itself answered with something
+            // unusable (a maintenance page, an error status, undecodable bytes), the
+            // system fetching it again can't succeed, and a lazy provider re-downloads
+            // on every system artwork request: a macOS media widget polling every five
+            // seconds turned one dead station favicon into a fetch-and-decode-failure
+            // loop that bypassed the retry backoff. Those retries go through
+            // `fetchArtworkIfNeeded` on a timer, and a recovery moves the content id
+            // ("#r") so the system pulls the resident bytes.
+            if artworkFailures[url]?.serverRejected == true {
+                return nil
+            }
             let transport = self.transport
             return Artwork(id: url.absoluteString) { @Sendable _ in
                 let data = try await Self.artworkData(for: url, transport: transport)
@@ -54,13 +65,19 @@
 
             let transport = self.transport
             artworkFetches[url] = Task { [weak self] in
-                let data = try? await Self.artworkData(for: url, transport: transport)
+                let result: Result<Data, any Error>
+                do {
+                    result = try await .success(Self.artworkData(for: url, transport: transport))
+                } catch {
+                    result = .failure(error)
+                }
                 guard Task.isCancelled == false, let self else { return }
                 self.artworkFetches[url] = nil
-                if let data {
+                switch result {
+                case let .success(data):
                     self.recordArtworkSuccess(data, for: url)
-                } else {
-                    self.recordArtworkFailure(for: url)
+                case let .failure(error):
+                    self.recordArtworkFailure(for: url, serverRejected: Self.isServerRejection(error))
                 }
                 // Re-run the decision: `url` is now advertisable either way, so a
                 // held identity can move on instead of waiting for the next update.
@@ -79,7 +96,24 @@
             storeResidentArtwork(data, for: url)
         }
 
-        private func recordArtworkFailure(for url: URL) {
+        /// The server responded, but not with artwork — as opposed to the request
+        /// never completing (offline, timeout, a tunnel).
+        nonisolated static func isServerRejection(_ error: any Error) -> Bool {
+            switch error {
+            case HTTPTransportError.httpStatus, HTTPTransportError.invalidResponse:
+                true
+            case HTTPTransportError.transport, is CancellationError:
+                false
+            case let error as URLError:
+                // Our own "not artwork" verdict; every other URLError is the network.
+                error.code == .cannotDecodeContentData
+            default:
+                // ArtworkRepresentation refusing bytes we already downloaded.
+                true
+            }
+        }
+
+        private func recordArtworkFailure(for url: URL, serverRejected: Bool) {
             // Evict the single least-recently-failed entry rather than clearing the
             // table. Wiping it would reset every attempt count, so a persistently
             // dead URL could exceed `maximumAttempts` in one session whenever enough
@@ -92,7 +126,30 @@
             var failure = artworkFailures[url] ?? ArtworkFailure(attempts: 0, lastAttempt: Self.clock.now)
             failure.attempts += 1
             failure.lastAttempt = Self.clock.now
+            failure.serverRejected = serverRejected
             artworkFailures[url] = failure
+            scheduleArtworkRetry(for: url, afterAttempts: failure.attempts)
+        }
+
+        /// Runs the next backoff attempt on a timer rather than waiting for the next
+        /// push. Retries used to happen only when `apply` ran again, which for a
+        /// station that sends no track titles (KEXP's stream, for one) is effectively
+        /// never — so artwork that came back mid-session stayed missing until a
+        /// restart. Bounded by `NowPlayingArtworkRetryPolicy.maximumAttempts`, and
+        /// skipped once the URL is no longer what this session is showing or waiting on.
+        private func scheduleArtworkRetry(for url: URL, afterAttempts attempts: Int) {
+            guard attempts < NowPlayingArtworkRetryPolicy.maximumAttempts else { return }
+            let delay = NowPlayingArtworkRetryPolicy.retryDelay(afterAttempts: attempts)
+            Task { [weak self] in
+                try? await Task.sleep(for: delay, clock: Self.clock)
+                guard Task.isCancelled == false, let self, let lastPush = self.lastPush else { return }
+                // `clear()` wipes the failure table; nothing to retry after a stop.
+                guard self.artworkFailures[url] != nil else { return }
+                let wanted = lastPush.station.artworkURL == url || self.presentedArtworkURL == url
+                    || lastPush.artwork == .resolved(url)
+                guard wanted else { return }
+                self.fetchArtworkIfNeeded(url)
+            }
         }
 
         func storeResidentArtwork(_ data: Data, for url: URL) {
@@ -123,7 +180,19 @@
         ) async throws -> Data {
             var request = URLRequest(url: url)
             request.cachePolicy = artworkCachePolicy
-            let data = try await transport.data(for: request)
+            let (data, response) = try await transport.send(request)
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw HTTPTransportError.invalidResponse
+            }
+            guard 200 ..< 300 ~= httpResponse.statusCode else {
+                throw HTTPTransportError.httpStatus(httpResponse.statusCode)
+            }
+            // A maintenance or parking page answering 200 on the image path is a
+            // failed fetch, recorded and retried with backoff like any other —
+            // not a payload to hand ImageIO (see ``NowPlayingArtworkPayload``).
+            guard NowPlayingArtworkPayload.isWebPage(mimeType: httpResponse.mimeType, data: data) == false else {
+                throw URLError(.cannotDecodeContentData)
+            }
             if data.count <= maxPassthroughArtworkBytes, (try? ArtworkRepresentation(data: data)) != nil {
                 return data
             }
