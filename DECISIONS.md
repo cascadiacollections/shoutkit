@@ -1,5 +1,40 @@
 # Decisions
 
+## 2026-11-10 (Quick Play widget shows now-playing artwork)
+
+Supersedes the 2026-07-18 "v1 renders a glyph + name/genre, no artwork". While a
+station is playing or paused, the Quick Play widget shows its artwork, the station
+and the live track. Otherwise it is the quick-play tile it was. When unconfigured
+it follows whatever is playing; when configured, only that station.
+
+- **Own App Group store, not the Live Activity's.** `NowPlayingWidgetStore`
+  (`NowPlayingActivityCore`) holds one JSON snapshot plus the artwork PNGs it
+  names. The Live Activity coordinator purges `LiveActivityArtworkStore` on its own
+  schedule, and the Live Activity is off by default; sharing its directory would
+  tie the widget to that flag and to those purges. Tokens still come from
+  `LiveActivityArtworkStore.token(for:)`, so the same art has the same name.
+- **`NowPlayingWidgetCoordinator` (`NowPlayingActivityKit`) is not flag-gated.**
+  It observes `PlaybackController` the way the Live Activity coordinator does,
+  makes the same artwork choice (album art, else station art, else the glyph),
+  and fetches through `imageData(for:)`, so a maintenance page falls back to the glyph.
+- **Reloads:** pause/stop reload immediately. Starting playback, switching stations
+  and track changes wait 12 s (`settleInterval`) so the title and its album art,
+  which lands a few seconds later, arrive in one reload. While playing there is no
+  further rationing. WWDC21 "Principles of great widgets" says reloads from an app
+  "participating in a user session like … Now Playing audio" are immediate and
+  budget-free. A first version coalesced track changes to one per 10 minutes, and
+  on-device testing showed station art sitting there for ten minutes with the
+  cover already in hand. While paused there is no audio session, so content
+  changes are coalesced to one per 10 minutes. The widget also re-checks every
+  15 minutes, as a backstop for a declined request.
+- **A stale snapshot expires.** The app rewrites `updatedAt` every 5 minutes while
+  a station is loaded. A snapshot older than 20 minutes means the app died without
+  writing `.stopped`, and the timeline carries a fallback entry at that time.
+- **Artwork renders `.widgetAccentedRenderingMode(.fullColor)`.** In tinted and
+  clear Home Screens and the macOS desktop's monochrome style, images default to
+  a silhouette, and a square cover's silhouette is a blank tile. That was the
+  "white box" in testing.
+
 ## 2026-11-10 (artwork that answers 200 with a web page is a failed fetch)
 
 After a power outage in early November 2026, every path under kexp.org started serving
