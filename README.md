@@ -123,6 +123,10 @@ SHOUTCAST_DEV_KEY = your_key_here
 - `Packages/ImageIODownsample`: a small leaf module wrapping ImageIO downsampling, shared by
   `DesignSystem`'s artwork pipeline and Live Activity artwork staging so decoded images never
   exceed the pixel size their surface actually needs.
+- `Packages/AudioLevels`: a leaf module for live per-band audio levels — a spectrum analyzer,
+  the `AudioTapPlugin` protocol playback engines hand rendered PCM through, and (as the separate
+  `AudioLevelsUI` product) a SwiftUI meter. The algorithm is specified with golden vectors in
+  [`docs/audio-levels-spec.md`](docs/audio-levels-spec.md), which the Android client implements too.
 - `Packages/Features/*`: one package per tab surface.
 - `Packages/BrowseFeatureCore`, `SearchFeatureCore`, `PlayerFeatureCore`,
   `LibraryFeatureCore`, `SettingsFeatureCore`: the platform-free half of those surfaces —
@@ -203,7 +207,7 @@ codesign workaround.
 | Component | License |
 |---|---|
 | App target (`HolmdelApp`, incl. the debug-only `DebugSupport` package), feature packages (`Packages/Features/*` and their `*FeatureCore` counterparts), `Packages/LiveActivity` | [GPL-3.0](LICENSE), with an [app store permission](LICENSE-EXCEPTION.md) |
-| `Packages/RadioDirectory`, `Packages/Playback`, `Packages/PlaybackEngineAudioStreaming`, `Packages/Persistence`, `Packages/DesignSystem`, `Packages/FeatureFlags`, `Packages/ImageIODownsample` | [MIT](Packages/RadioDirectory/LICENSE) (per-package `LICENSE` files) |
+| `Packages/RadioDirectory`, `Packages/Playback`, `Packages/PlaybackEngineAudioStreaming`, `Packages/Persistence`, `Packages/DesignSystem`, `Packages/FeatureFlags`, `Packages/ImageIODownsample`, `Packages/AudioLevels` | [MIT](Packages/RadioDirectory/LICENSE) (per-package `LICENSE` files) |
 
 The rule, if you're adding a package: a per-package `LICENSE` file makes it MIT and means it
 must stay adoptable — no app-specific or heavyweight dependencies. Everything else inherits
@@ -219,7 +223,7 @@ GPL-3.0 one (`.github/workflows/ci.yml`, the `license-boundary` job). `ImageIODo
 for exactly this reason — `Playback` and `DesignSystem` both link it, so a GPL-3.0
 `ImageIODownsample` would have made those two packages undistributable under MIT.
 
-DocC-generated API reference for the six MIT packages above is published at
+DocC-generated API reference for the MIT packages above is published at
 [cascadiacollections.github.io/shoutkit/api](https://cascadiacollections.github.io/shoutkit/api/).
 
 The reusable infrastructure packages are MIT so they can be adopted anywhere; the app itself is

@@ -24,7 +24,8 @@ public struct SettingsView: View {
                 playbackSection
                 privacySection
                 if let playbackController,
-                   playbackController.supportsEqualizer || playbackController.supportsSpatialAudio {
+                   playbackController.supportsEqualizer || playbackController.supportsSpatialAudio
+                   || playbackController.supportsAudioLevels {
                     soundSection
                 }
                 // Debug and TestFlight builds only: the catalog is all internal
@@ -161,6 +162,15 @@ public struct SettingsView: View {
                             Text(preset.displayName).tag(preset)
                         }
                     }
+                }
+                if playbackController.supportsAudioLevels {
+                    Toggle(
+                        "Show Visualizer",
+                        isOn: Binding(
+                            get: { settings.isVisualizerEnabled },
+                            set: { settings.isVisualizerEnabled = $0 },
+                        ),
+                    )
                 }
                 if playbackController.supportsSpatialAudio {
                     Toggle(

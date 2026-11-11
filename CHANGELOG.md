@@ -15,6 +15,10 @@ below) are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Bars that move with the music.** Now Playing, the mini player and the Apple TV app show
+  a live level meter, drawn from the audio you're hearing, with peak caps that hold and fall.
+  It eases to rest when you pause, can be turned off in Settings, and is hidden when Reduce
+  Motion is on.
 - **The Quick Play widget shows what's playing.** While a station plays, the widget
   shows its album art (or the station's own artwork), the station, and the current
   track, and goes back to a one-tap play button when you stop. It stays in color on

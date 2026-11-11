@@ -1,3 +1,4 @@
+import AudioLevels
 import AudioStreaming
 import AVFoundation
 import Foundation
@@ -94,6 +95,9 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     /// `handleMediaServicesReset()` can re-attach it to the rebuilt engine and
     /// so head-tracking updates can check it's still wanted.
     var isSpatialAudioEnabled = false
+
+    /// Plug-ins fed from the mixer tap — see AudioStreamingPlaybackEngine+AudioLevels.swift.
+    let audioTaps = AudioTapPluginSet()
 
     // Head tracking source for the spatial audio effect. Allocating this
     // unconditionally is cheap — it does nothing until

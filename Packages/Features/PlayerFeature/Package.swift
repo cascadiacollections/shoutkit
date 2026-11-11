@@ -18,6 +18,7 @@ let package = Package(
         .library(name: "PlayerFeature", targets: ["PlayerFeature"]),
     ],
     dependencies: [
+        .package(path: "../../AudioLevels"),
         .package(path: "../../DesignSystem"),
         .package(path: "../../Playback"),
         .package(path: "../../Persistence"),
@@ -28,6 +29,8 @@ let package = Package(
         .target(
             name: "PlayerFeature",
             dependencies: [
+                .product(name: "AudioLevels", package: "AudioLevels"),
+                .product(name: "AudioLevelsUI", package: "AudioLevels"),
                 "DesignSystem",
                 "Playback",
                 "Persistence",

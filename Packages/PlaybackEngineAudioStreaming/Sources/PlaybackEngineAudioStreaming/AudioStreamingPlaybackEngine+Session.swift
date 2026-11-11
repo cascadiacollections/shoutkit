@@ -294,5 +294,6 @@ extension AudioStreamingPlaybackEngine {
         // in DECISIONS.md 2026-09-07 and 2026-09-21.)
         player = AudioPlayer()
         player.delegate = self
+        reattachAudioTapsIfNeeded()
     }
 }

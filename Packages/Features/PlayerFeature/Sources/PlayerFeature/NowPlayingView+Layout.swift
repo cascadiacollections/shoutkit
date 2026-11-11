@@ -1,3 +1,4 @@
+import AudioLevelsUI
 import DesignSystem
 import Playback
 import RadioDirectory
@@ -16,6 +17,7 @@ extension NowPlayingView {
             Spacer(minLength: ShoutKitSpacing.small)
             artwork(playback, size: verticalArtworkSize(in: size))
             titleBlock(playback: playback, station: station)
+            levelMeter(playback)
             statusBadge(playback)
             Spacer(minLength: ShoutKitSpacing.small)
             transportControls(playback: playback, station: station)
@@ -34,6 +36,7 @@ extension NowPlayingView {
             artwork(playback, size: min(220, max(120, size.height - 64)))
             VStack(spacing: ShoutKitSpacing.medium) {
                 titleBlock(playback: playback, station: station)
+                levelMeter(playback)
                 statusBadge(playback)
                 transportControls(playback: playback, station: station)
                 routePicker
@@ -42,6 +45,23 @@ extension NowPlayingView {
         }
         .padding(ShoutKitSpacing.large)
         .frame(minHeight: size.height)
+    }
+
+    /// The live level meter (MIT `AudioLevelsUI`), fed by the engine's tap
+    /// through ``PlaybackController/audioLevels(bandCount:)``. It meters only
+    /// while playing with the scene active, and eases to rest on pause,
+    /// buffering, reconnect and stop. Absent when the engine can't meter or the
+    /// listener turned it off; Reduce Motion hides it inside the view.
+    @ViewBuilder
+    private func levelMeter(_ playback: PlaybackController) -> some View {
+        if playback.supportsAudioLevels, settings?.isVisualizerEnabled ?? true {
+            LiveAudioLevelsView(isActive: isPlaying(playback)) {
+                playback.audioLevels()
+            }
+            .frame(maxWidth: 260)
+            .frame(height: 28)
+            .foregroundStyle(.tint)
+        }
     }
 
     private func artwork(_ playback: PlaybackController, size: CGFloat) -> some View {

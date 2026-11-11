@@ -39,6 +39,7 @@ let package = Package(
     // (~5.6 MB zipped) to run a suite that links neither; the cold CI run on
     // PR #127 logged exactly that. See DECISIONS.md 2026-08-05 and issue #126.
     dependencies: [
+        .package(path: "../AudioLevels"),
         .package(path: "../ImageIODownsample"),
         .package(path: "../RadioDirectory"),
         .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.5.2"),
@@ -47,6 +48,7 @@ let package = Package(
         .target(
             name: "Playback",
             dependencies: [
+                "AudioLevels",
                 "ImageIODownsample",
                 "RadioDirectory",
                 .product(name: "FactoryKit", package: "Factory"),
@@ -56,7 +58,7 @@ let package = Package(
         ),
         .testTarget(
             name: "PlaybackTests",
-            dependencies: ["Playback"],
+            dependencies: ["Playback", "AudioLevels"],
         ),
     ],
 )

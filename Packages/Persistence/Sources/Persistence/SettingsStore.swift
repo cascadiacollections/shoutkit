@@ -18,6 +18,7 @@ public final class SettingsStore {
         static let equalizerPreset = DefaultsKey<Int>.plist("settings.equalizerPresetRawValue", default: 0)
         static let streamLooping = DefaultsKey<Bool>.plist("settings.streamLoopingEnabled", default: false)
         static let spatialAudio = DefaultsKey<Bool>.plist("settings.spatialAudioEnabled", default: false)
+        static let visualizer = DefaultsKey<Bool>.plist("settings.visualizerEnabled", default: true)
     }
 
     /// Whether plays are reported to Radio-Browser (station UUID only, per that
@@ -76,6 +77,14 @@ public final class SettingsStore {
         didSet { defaults.set(isSpatialAudioEnabled, for: Keys.spatialAudio) }
     }
 
+    /// Whether Now Playing and the mini player show the live level meter, when
+    /// the active engine can meter (the watch's `AVPlayer` engine cannot).
+    /// Defaults to on: it is the screen's sign of life. Reduce Motion hides it
+    /// regardless.
+    public var isVisualizerEnabled: Bool {
+        didSet { defaults.set(isVisualizerEnabled, for: Keys.visualizer) }
+    }
+
     @ObservationIgnored private let defaults: UserDefaults
 
     public init(defaults: UserDefaults = .standard) {
@@ -87,5 +96,6 @@ public final class SettingsStore {
         equalizerPresetRawValue = defaults.value(for: Keys.equalizerPreset)
         isStreamLoopingEnabled = defaults.value(for: Keys.streamLooping)
         isSpatialAudioEnabled = defaults.value(for: Keys.spatialAudio)
+        isVisualizerEnabled = defaults.value(for: Keys.visualizer)
     }
 }

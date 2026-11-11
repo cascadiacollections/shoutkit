@@ -1,3 +1,4 @@
+import AudioLevelsUI
 import DesignSystem
 import Persistence
 import Playback
@@ -93,6 +94,8 @@ public struct MiniPlayerView: View {
 
             Spacer(minLength: ShoutKitSpacing.small)
 
+            levelMeter(playback)
+
             Button {
                 playback.togglePlayPause()
             } label: {
@@ -110,6 +113,25 @@ public struct MiniPlayerView: View {
         .onTapGesture(perform: onExpand)
         .accessibilityElement(children: .contain)
         .accessibilityAction(named: "Open Now Playing", onExpand)
+    }
+
+    /// Five bars folded from the same 24-band stream Now Playing uses, so both
+    /// move together (docs/audio-levels-spec.md, "Compact meters").
+    @ViewBuilder
+    private func levelMeter(_ playback: PlaybackController) -> some View {
+        if playback.supportsAudioLevels, settings?.isVisualizerEnabled ?? true {
+            LiveAudioLevelsView(
+                isActive: isPlaying(playback),
+                displayBandCount: 5,
+                showsPeaks: false,
+                barSpacing: 2,
+                minimumBarHeight: 2,
+            ) {
+                playback.audioLevels()
+            }
+            .frame(width: 22, height: 16)
+            .foregroundStyle(.tint)
+        }
     }
 
     @ViewBuilder

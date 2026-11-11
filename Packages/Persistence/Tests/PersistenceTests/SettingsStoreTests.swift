@@ -30,6 +30,15 @@ struct SettingsStoreTests {
         #expect(reloadedAgain.isPlayReportingEnabled == true)
     }
 
+    @Test func `visualizer defaults to enabled and persists`() throws {
+        let defaults = try makeDefaults()
+        let store = SettingsStore(defaults: defaults)
+        #expect(store.isVisualizerEnabled == true)
+
+        store.isVisualizerEnabled = false
+        #expect(SettingsStore(defaults: defaults).isVisualizerEnabled == false)
+    }
+
     @Test func `album art defaults to enabled`() throws {
         let store = try SettingsStore(defaults: makeDefaults())
         #expect(store.isAlbumArtEnabled == true)

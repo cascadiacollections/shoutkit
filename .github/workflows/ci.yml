@@ -248,6 +248,12 @@ jobs:
         working-directory: Packages/ImageIODownsample
         run: swift test --disable-xctest --enable-code-coverage
 
+      # Includes the cross-platform golden vectors (docs/audio-levels-spec.md)
+      # the Android client checks too.
+      - name: AudioLevels tests
+        working-directory: Packages/AudioLevels
+        run: swift test --disable-xctest --enable-code-coverage
+
       - name: FeatureFlags tests
         working-directory: Packages/FeatureFlags
         run: swift test --disable-xctest --enable-code-coverage
@@ -297,7 +303,7 @@ jobs:
           set -uo pipefail
           python3 .github/scripts/coverage_summary.py \
             Packages/RadioDirectory Packages/Playback Packages/Persistence \
-            Packages/ImageIODownsample Packages/FeatureFlags \
+            Packages/ImageIODownsample Packages/FeatureFlags Packages/AudioLevels \
             Packages/BrowseFeatureCore Packages/SearchFeatureCore \
             Packages/PlayerFeatureCore Packages/LibraryFeatureCore \
             Packages/SettingsFeatureCore \

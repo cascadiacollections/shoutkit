@@ -1,3 +1,4 @@
+import AudioLevelsUI
 import Persistence
 import Playback
 import RadioDirectory
@@ -57,10 +58,24 @@ struct TVRootView: View {
                     .lineLimit(2)
 
                 if let playback, playback.currentStation != nil {
+                    levelMeter(playback)
                     transportControls(playback)
                 }
             }
             Spacer(minLength: 0)
+        }
+    }
+
+    /// The live level meter, the same MIT `AudioLevelsUI` view and 24-band
+    /// stream as the iPhone's Now Playing, scaled for the ten-foot screen.
+    @ViewBuilder
+    private func levelMeter(_ playback: PlaybackController) -> some View {
+        if playback.supportsAudioLevels {
+            LiveAudioLevelsView(isActive: isPlaying(playback), barSpacing: 6, minimumBarHeight: 6) {
+                playback.audioLevels()
+            }
+            .frame(width: 520, height: 64)
+            .foregroundStyle(.tint)
         }
     }
 

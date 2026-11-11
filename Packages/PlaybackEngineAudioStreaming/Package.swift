@@ -48,6 +48,7 @@ let package = Package(
         .library(name: "PlaybackEngineAudioStreaming", targets: ["PlaybackEngineAudioStreaming"]),
     ],
     dependencies: [
+        .package(path: "../AudioLevels"),
         .package(path: "../Playback"),
         // Declared, not inherited through Playback: `registerProductionPlaybackEngine()`
         // imports FactoryKit directly to register over the container's stub
@@ -62,6 +63,7 @@ let package = Package(
         .target(
             name: "PlaybackEngineAudioStreaming",
             dependencies: [
+                "AudioLevels",
                 "Playback",
                 .product(name: "FactoryKit", package: "Factory"),
                 .product(name: "AudioStreaming", package: "AudioStreaming"),

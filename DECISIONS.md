@@ -1,5 +1,55 @@
 # Decisions
 
+## 2026-11-10 (live level meter: the MIT `AudioLevels` package and engine tap plug-ins)
+
+Now Playing, the mini player and the tvOS banner show bars that move with the audio. A waveform
+library (FDWaveformView was the one considered) does not fit live radio: it loads a whole local
+`AVAsset`, draws its full duration, and is built around scrubbing and zoom. A stream has no
+duration, no end and no position, and such a library would fetch the stream a second time
+instead of reading the audio already playing.
+
+- **A new leaf MIT package, `Packages/AudioLevels`, with two products.** `AudioLevels` holds the
+  analyzer, the meter, `PeakHold`, and the `AudioTapPlugin` protocol with its `AudioTapPluginSet`.
+  `AudioLevelsUI` holds the SwiftUI views. It depends only on Accelerate, AVFoundation and
+  SwiftUI, and nothing in it is radio-specific, so any `AVAudioEngine` app can adopt it. The UI
+  is a separate product so an app that draws its own meter doesn't link it. `Playback` depends on
+  `AudioLevels` (MIT to MIT).
+- **Engines take generic tap plug-ins, not a meter-specific stream.** `RadioPlaybackEngine` has
+  `supportsAudioTaps` and `addAudioTap(_:)`/`removeAudioTap(_:)`, defaulting to "no taps" like
+  the equalizer and spatial audio capabilities. A first version had
+  `audioLevels() -> AsyncStream`, which would have meant one more protocol method for every
+  future analyzer (loudness, silence detection). Now one engine tap fans out to any number of
+  plug-ins, and Now Playing and the mini player each attach their own meter.
+  `PlaybackController.audioLevels(bandCount:)` is the convenience that attaches a meter and
+  detaches it when the stream ends.
+- **The meter's stream is handed out once and isn't retained by the meter.** While the meter
+  kept its own `levels` stream, a consumer that left the loop without being cancelled never
+  ended it, so the engine kept the tap. A test now covers exactly that case.
+- **The algorithm is a written spec with golden vectors**, in `docs/audio-levels-spec.md` and
+  `Packages/AudioLevels/Tests/AudioLevelsTests/Resources/golden-vectors.json`. Inputs are
+  defined by formula (sines plus a seeded LCG), so the Android client
+  (`shoutkit-android`, `:libs:audio-levels`) rebuilds them exactly and checks the same expected
+  bands. The pipeline: mono mixdown, the newest 1024 frames, a periodic Hann window (checked
+  numerically against vDSP), a DFT, the peak in each of 24 log bands from 40 Hz to 16 kHz,
+  +3 dB per octave around 1 kHz, a −60 dB floor mapped to `0...1`, and attack 0.7 / release 0.18.
+  The tilt exists because without it the top third of the bands sat near zero on KEXP.
+- **AudioStreaming's `frameFiltering` is the tap.** It taps the main mixer after the EQ and the
+  volume ramp, and it works under AudioStreaming's manual-rendering engine. Measured on macOS
+  with KEXP, buffers are 4410 frames (2-channel, deinterleaved, Float32, 44.1 kHz), about ten a
+  second, although AudioStreaming asks for 1024. The views ease each change over about 120 ms so
+  the steps read as motion. `replacePlayer()` reinstalls the filter because every switch, rejoin
+  and reset builds a new player. The filter closure is made in a `nonisolated static` function:
+  one formed in main-actor code traps in libdispatch's queue assertion on the tap thread, which a
+  probe hit.
+- **`AudioLevelMeter` is `@unchecked Sendable` over `OSAllocatedUnfairLock`, not a `Mutex`.**
+  Region isolation rejects handing a non-`Sendable` `AVAudioPCMBuffer` to state inside a
+  `Mutex`. The analyzer copies the samples out and keeps no reference.
+- **When it runs:** while playing with the scene active. It eases to rest on pause, buffering,
+  reconnect and stop. Reduce Motion hides it, and Settings has a "Show Visualizer" toggle,
+  default on. **Low Power Mode does not stop it.** The first version did, copying the
+  prewarmer, and on a Mac left in Low Power Mode the bars sat flat with no hint why, which looked
+  broken. The cost is about ten 1024-point DFTs a second, and only while a meter is on screen.
+
 ## 2026-11-10 (Quick Play widget shows now-playing artwork)
 
 Supersedes the 2026-07-18 "v1 renders a glyph + name/genre, no artwork". While a

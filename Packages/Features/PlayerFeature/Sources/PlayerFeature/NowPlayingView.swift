@@ -13,7 +13,8 @@ public struct NowPlayingView: View {
     // Not `private`: read by the sleep-timer controls, which live in
     // `NowPlayingView+SleepTimer.swift`.
     @Environment(\.sleepTimer) var sleepTimer
-    @Environment(\.settingsStore) private var settings
+    // Not `private`: the level meter in `NowPlayingView+Layout.swift` reads it.
+    @Environment(\.settingsStore) var settings
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 

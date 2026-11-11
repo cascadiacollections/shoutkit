@@ -69,6 +69,7 @@
 		7C0FE00000000000000000A8 /* Playback in Frameworks */ = {isa = PBXBuildFile; productRef = 7C0FE00000000000000000D2 /* Playback */; };
 		7C0FE00000000000000000A9 /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = 7C0FE00000000000000000D3 /* Persistence */; };
 		7C0FE00000000000000000AA /* PlaybackEngineAudioStreaming in Frameworks */ = {isa = PBXBuildFile; productRef = 7C0FE00000000000000000D4 /* PlaybackEngineAudioStreaming */; };
+		7C0FE0000000000000000102 /* AudioLevelsUI in Frameworks */ = {isa = PBXBuildFile; productRef = 7C0FE0000000000000000101 /* AudioLevelsUI */; };
 		7C0FE00000000000000000FD /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7C0FE00000000000000000FB /* PrivacyInfo.xcprivacy */; };
 		80A56DAB6BC23378D22C1A6E /* WatchLaunchRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1963A2095C47924C91C127EB /* WatchLaunchRoute.swift */; };
 		9D52CF8A7CDD14BCBB9A413E /* RadioDirectory in Frameworks */ = {isa = PBXBuildFile; productRef = 4189EFE6C4EF862614B0FA3C /* RadioDirectory */; };
@@ -257,6 +258,7 @@
 				7C0FE00000000000000000A7 /* RadioDirectory in Frameworks */,
 				7C0FE00000000000000000A8 /* Playback in Frameworks */,
 				7C0FE00000000000000000AA /* PlaybackEngineAudioStreaming in Frameworks */,
+				7C0FE0000000000000000102 /* AudioLevelsUI in Frameworks */,
 				7C0FE00000000000000000A9 /* Persistence in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -544,6 +546,7 @@
 				7C0FE00000000000000000D2 /* Playback */,
 				7C0FE00000000000000000D4 /* PlaybackEngineAudioStreaming */,
 				7C0FE00000000000000000D3 /* Persistence */,
+				7C0FE0000000000000000101 /* AudioLevelsUI */,
 			);
 			productName = HolmdelTVApp;
 			productReference = 7C0FE00000000000000000B8 /* HolmdelTVApp.app */;
@@ -617,6 +620,7 @@
 				00000000000000000000004A /* XCLocalSwiftPackageReference "../Packages/DebugSupport" */,
 				00000000000000000000004B /* XCLocalSwiftPackageReference "../Packages/PlaybackEngineAudioStreaming" */,
 				000000000000000000000048 /* XCLocalSwiftPackageReference "../Packages/LiveActivity" */,
+				7C0FE0000000000000000100 /* XCLocalSwiftPackageReference "../Packages/AudioLevels" */,
 			);
 			productRefGroup = 000000000000000000000004 /* Products */;
 			projectDirPath = "";
@@ -1267,6 +1271,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/PlaybackEngineAudioStreaming;
 		};
+		7C0FE0000000000000000100 /* XCLocalSwiftPackageReference "../Packages/AudioLevels" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/AudioLevels;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1364,6 +1372,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 000000000000000000000043 /* XCLocalSwiftPackageReference "../Packages/Persistence" */;
 			productName = Persistence;
+		};
+		7C0FE0000000000000000101 /* AudioLevelsUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7C0FE0000000000000000100 /* XCLocalSwiftPackageReference "../Packages/AudioLevels" */;
+			productName = AudioLevelsUI;
 		};
 		7C0FE00000000000000000D4 /* PlaybackEngineAudioStreaming */ = {
 			isa = XCSwiftPackageProductDependency;
