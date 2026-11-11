@@ -14,6 +14,12 @@ below) are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **The Quick Play widget shows what's playing.** While a station plays, the widget
+  shows its album art (or the station's own artwork), the station, and the current
+  track, and goes back to a one-tap play button when you stop. It stays in color on
+  tinted and clear Home Screens and on the Mac desktop.
+
 ### Changed
 - **A smaller download.** Two Apple utility libraries were replaced by a few lines of
   Holmdel's own code, and the debug-only network inspector no longer ships in release
