@@ -1,5 +1,31 @@
 # Decisions
 
+## 2026-11-12 (the marketing site's holiday promo, and the claims it stopped making)
+
+`site/index.html` gets a holiday promotion for the 2026 season: a promo bar that hides itself
+after `data-until="2027-01-07"`, a short "For the holidays" section, a holiday-flavoured
+`<title>`, description and `og:`/`twitter:` titles, and two FAQ entries (holiday music, mobile
+data). The copy is worldwide ("Christmas, New Year, winter or summer holidays") and names only
+what the app really does: name search against Radio-Browser (a "christmas" name search returned
+~200 working stations on 2026-11-12), the search filters' tag and country fields, background
+playback, the sleep timer, and the AirPlay route picker in Now Playing. The social image stays
+evergreen, so January only reverts text.
+
+The same pass removed claims the shipping beta does not back:
+
+- **CarPlay** was a feature tile, part of the meta description and the device FAQ. The
+  entitlement was removed on 2026-09-06 and CarPlay does not launch. It is now mentioned only
+  as built and waiting on Apple's grant.
+- **Dynamic Island Live Activity** was listed with the Lock Screen controls. `liveActivity` is
+  internal-only and off in Release.
+- **Apple TV** was presented as part of the beta. The tvOS app is a separate submission, not in
+  the iOS archive, so it is labelled "Build from source", like the Mac preview, and `tvOS` left
+  the structured data's `operatingSystem`.
+
+The JSON-LD is now `MobileApplication` with a zero-price `Offer`, and its `FAQPage` is generated
+from the visible FAQ, so each question and answer matches the page word for word. Before, two
+questions were worded differently from the page and two visible questions were missing.
+
 ## 2026-11-10 (live level meter: the MIT `AudioLevels` package and engine tap plug-ins)
 
 Now Playing, the mini player and the tvOS banner show bars that move with the audio. A waveform
