@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShoutKit for iPhone: free internet radio, no ads, no tracking</title>
-  <meta name="description" content="ShoutKit is free, open-source internet radio for iPhone, with no ads, no account and no tracking. Public beta on TestFlight, with CarPlay, Apple Watch and Apple TV. Also on Android." />
+  <title>ShoutKit for iPhone: free Christmas &amp; holiday radio, no ads</title>
+  <meta name="description" content="Free, open-source internet radio for iPhone and iPad. Search Christmas and holiday music stations from around the world, with no ads, no account and no tracking. Free public beta on TestFlight. Also on Android." />
   <link rel="canonical" href="https://cascadiacollections.github.io/shoutkit/" />
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
   <meta name="color-scheme" content="light dark" />
@@ -14,8 +14,8 @@
   <!-- Open Graph / social -->
   <meta property="og:site_name" content="ShoutKit" />
   <meta property="og:locale" content="en_US" />
-  <meta property="og:title" content="ShoutKit: free internet radio, no ads, no tracking" />
-  <meta property="og:description" content="Free, open-source internet radio for iPhone and Android. No ads, no account, no tracking. iPhone public beta on TestFlight." />
+  <meta property="og:title" content="ShoutKit: free holiday radio, no ads, no tracking" />
+  <meta property="og:description" content="Free, open-source internet radio for iPhone and Android. Find Christmas and holiday stations for the trip or the family gathering. No ads, no account, no tracking. iPhone public beta on TestFlight." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://cascadiacollections.github.io/shoutkit/" />
   <meta property="og:image" content="https://cascadiacollections.github.io/shoutkit/og-image.png" />
@@ -23,9 +23,10 @@
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content="ShoutKit: free internet radio. No ads, no account, no tracking." />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="ShoutKit: free internet radio, no ads, no tracking" />
-  <meta name="twitter:description" content="Free, open-source internet radio for iPhone and Android. No ads, no account, no tracking." />
+  <meta name="twitter:title" content="ShoutKit: free holiday radio, no ads, no tracking" />
+  <meta name="twitter:description" content="Free, open-source internet radio for iPhone and Android. Christmas and holiday stations, with no ads, no account and no tracking." />
   <meta name="twitter:image" content="https://cascadiacollections.github.io/shoutkit/og-image.png" />
+  <meta name="twitter:image:alt" content="ShoutKit: free internet radio. No ads, no account, no tracking." />
 
   <link rel="icon" href="assets/app-icon-64.png" type="image/png" />
   <link rel="apple-touch-icon" href="assets/app-icon-256.png" />
@@ -256,6 +257,17 @@
     .closer h2 { max-width: 18ch; margin: 0 auto; }
     .closer .lead { margin-top: 14px; }
 
+    /* ------------------------------------------- holiday promo (seasonal) */
+    /* Remove with the promo bar and #holidays after the season (see data-until). */
+    .promo-bar {
+      background: linear-gradient(90deg, color-mix(in srgb, var(--sky) 14%, var(--bg)), color-mix(in srgb, var(--coral) 16%, var(--bg)));
+      border-bottom: 1px solid var(--line);
+      padding: 10px 22px; text-align: center; font-size: 14px; line-height: 1.4; color: var(--text);
+    }
+    .promo-bar a { font-weight: 600; }
+    .promo-bar[hidden] { display: none; }
+    .holiday-note { max-width: 40em; margin: 28px auto 0; text-align: center; font-size: 14px; color: var(--muted); }
+
     /* ------------------------------------------------------------ footer */
     footer { border-top: 1px solid var(--line); padding: 26px 0 40px; font-size: 12px; color: var(--muted); }
     .footer-inner { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; align-items: center; }
@@ -285,19 +297,35 @@
         "inLanguage": "en-US"
       },
       {
-        "@type": "SoftwareApplication",
+        "@type": "MobileApplication",
         "@id": "https://cascadiacollections.github.io/shoutkit/#app",
         "name": "ShoutKit",
+        "alternateName": [
+          "Holmdel",
+          "Squan"
+        ],
         "applicationCategory": "MultimediaApplication",
         "applicationSubCategory": "Internet radio player",
-        "operatingSystem": "iOS 26.0 or later, iPadOS 26.0 or later, watchOS 26.0 or later, tvOS 26.0 or later",
+        "operatingSystem": "iOS 26.0 or later, iPadOS 26.0 or later, watchOS 26.0 or later",
         "url": "https://cascadiacollections.github.io/shoutkit/",
         "downloadUrl": "https://testflight.apple.com/join/ZBSBTbRU",
         "image": "https://cascadiacollections.github.io/shoutkit/og-image.png",
-        "description": "Free, open-source internet radio for iPhone, in public beta on TestFlight, with CarPlay, Apple Watch and Apple TV. No ads, no account, no tracking.",
+        "description": "Free, open-source internet radio for iPhone and iPad, in public beta on TestFlight, with an Apple Watch app. Search stations from the Radio-Browser community directory, including Christmas and holiday music. No ads, no account, no tracking.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
         "isAccessibleForFree": true,
         "license": "https://github.com/cascadiacollections/shoutkit/blob/main/LICENSE",
-        "author": { "@type": "Organization", "name": "Cascadia Collections", "url": "https://github.com/cascadiacollections" }
+        "sameAs": [
+          "https://github.com/cascadiacollections/shoutkit"
+        ],
+        "author": {
+          "@type": "Organization",
+          "name": "Cascadia Collections",
+          "url": "https://github.com/cascadiacollections"
+        }
       },
       {
         "@type": "FAQPage",
@@ -305,28 +333,75 @@
         "mainEntity": [
           {
             "@type": "Question",
-            "name": "Is ShoutKit really free?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Yes. No ads, no subscription and no in-app purchases. The app is open source, and every feature works for everyone." }
+            "name": "Is it really free?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. No ads, no subscription and no in-app purchases. The app is open source, and every feature works for everyone."
+            }
           },
           {
             "@type": "Question",
             "name": "Why would I pay for a store version?",
-            "acceptedAnswer": { "@type": "Answer", "text": "You don't have to. App Store pricing hasn't been decided. If a store version ever costs something, you would be paying for the convenience of installing and updating through the store, and helping fund development, not unlocking features." }
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "You don’t have to. App Store pricing hasn’t been decided. If a store version ever costs something, you’d be paying for the convenience of installing and updating through the store, and helping fund development, not unlocking features. The source stays open, so you can always build it yourself."
+            }
           },
           {
             "@type": "Question",
-            "name": "Does ShoutKit track me?",
-            "acceptedAnswer": { "@type": "Answer", "text": "No. There are no ads, no analytics and no account, and the privacy manifest declares no collected data and no tracking. Network traffic is limited to public directory queries, the stations you play, album artwork lookups, and the anonymous play reports the community directory uses to rank stations." }
+            "name": "Does it track me?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. No ads, no analytics, no account, and the privacy manifest declares no collected data and no tracking. The app talks only to what radio needs: the station directory, the streams you play, Apple’s iTunes Search for album art (it sends the current artist and track title), and anonymous play counts that help the directory rank stations."
+            }
           },
           {
             "@type": "Question",
             "name": "Which stations can I listen to?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Thousands. Station discovery uses Radio-Browser, a free community directory that anyone can add to or correct, so no API key or account is needed." }
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Thousands. Stations come from Radio-Browser, a free, community-run directory that anyone can add to or correct, so no API key or account is needed."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I find Christmas and holiday music?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Search for “Christmas”, “holiday” or “carols”, or use the search filters to narrow by tag and country. Stations come from Radio-Browser, so what you find depends on what broadcasters and volunteers have listed."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does radio use mobile data?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Live streams need a connection and can use mobile data. Use Wi-Fi when you want to save your data allowance."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Which devices does it run on?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The beta runs on iPhone and iPad with iOS or iPadOS 26 and later, and includes the Apple Watch app. The Apple TV app and the Mac Catalyst preview build from source. CarPlay is built but not available yet, because it needs an entitlement Apple hasn’t granted. On Android, see ShoutKit for Android."
+            }
           },
           {
             "@type": "Question",
             "name": "Why does the beta say Holmdel or Squan?",
-            "acceptedAnswer": { "@type": "Answer", "text": "The app is ShoutKit. While it is in beta, TestFlight lists it as Squan and it installs on your Home Screen as Holmdel. It is the same app." }
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The app is ShoutKit. While it’s in beta, TestFlight lists it as Squan and it installs on your Home Screen as Holmdel. It’s the same app, and it’s being renamed ShoutKit."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I build it myself?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Clone it, open Holmdel.xcworkspace in Xcode 27, and run it. No secrets needed."
+            }
           }
         ]
       }
@@ -336,6 +411,11 @@
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
+
+  <!-- Holiday promo: hides itself after data-until (script at the end of the page). -->
+  <div class="promo-bar" id="promo-bar" data-until="2027-01-07">
+    Holiday radio, free: Christmas music, New Year countdowns or a long drive over the break. <a href="#holidays">Tune in for the holidays ›</a>
+  </div>
 
   <header class="site-header">
     <div class="wrap nav">
@@ -381,6 +461,34 @@
       </div>
     </div>
 
+    <section id="holidays" class="alt" aria-labelledby="holidays-h">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="kicker">For the holidays</p>
+          <h2 id="holidays-h">Holiday music, wherever the break takes you.</h2>
+          <p>Christmas, New Year, winter or summer holidays: find the stations that sound like the season, wherever you are.</p>
+        </div>
+        <div class="tiles">
+          <article class="tile">
+            <p class="tag">Search</p>
+            <h4>Find the holiday stations</h4>
+            <p>Search “Christmas”, “holiday” or “carols” across the Radio-Browser directory, or narrow by tag and country with search filters.</p>
+          </article>
+          <article class="tile">
+            <p class="tag">On the road</p>
+            <h4>Radio for the long drive</h4>
+            <p>Keeps playing in the background with controls on the Lock Screen, and the sleep timer pauses it when everyone dozes off.</p>
+          </article>
+          <article class="tile">
+            <p class="tag">Family gatherings</p>
+            <h4>Put it on the big speaker</h4>
+            <p>Send the station to an AirPlay speaker or TV from Now Playing, and save the family’s favorites with a tap.</p>
+          </article>
+        </div>
+        <p class="holiday-note">Stations come from a community directory, so what you find depends on what broadcasters list. Live streams need a connection and can use mobile data.</p>
+      </div>
+    </section>
+
     <section id="screens" class="alt" aria-labelledby="screens-h" hidden>
       <div class="wrap">
         <div class="section-head">
@@ -413,7 +521,7 @@
           </article>
           <article class="tile">
             <h3>A native player</h3>
-            <p>SwiftUI throughout, with Siri, CarPlay, Apple Watch and Apple TV.</p>
+            <p>SwiftUI throughout, with Siri, widgets, AirPlay and an Apple Watch app.</p>
           </article>
         </div>
       </div>
@@ -441,7 +549,7 @@
           <div class="tiles">
             <article class="tile"><p class="tag">Discovery</p><h4>Thousands of stations, no key</h4><p>Real stations via the Radio-Browser community directory, from first launch.</p></article>
             <article class="tile"><p class="tag">Offline</p><h4>Stations without the wait</h4><p>Cached on device, so stations appear instantly, even when the network drops.</p></article>
-            <article class="tile"><p class="tag">Library</p><h4>Favorites &amp; recents</h4><p>Stored locally with SwiftData. Reorder favorites; recents remember where you left off.</p></article>
+            <article class="tile"><p class="tag">Library</p><h4>Favorites &amp; recents</h4><p>Stored locally with SwiftData. Reorder your favorites, and find the stations you played last in Recents.</p></article>
           </div>
         </div>
 
@@ -449,10 +557,9 @@
           <h3 class="group-title">Everywhere you listen</h3>
           <div class="tiles">
             <article class="tile"><p class="tag">Siri · Shortcuts · Spotlight</p><h4>Ask for a station</h4><p>App Intents start playback in the background; favorites are indexed in Spotlight.</p></article>
-            <article class="tile"><p class="tag">Lock Screen</p><h4>Controls where you expect them</h4><p>Full controls on the Lock Screen, Control Center, and a Dynamic Island Live Activity.</p></article>
-            <article class="tile"><p class="tag">CarPlay</p><h4>Favorites on the dashboard</h4><p>Favorites and recents on the car’s screen, in sync with the same playback engine.</p></article>
+            <article class="tile"><p class="tag">Lock Screen</p><h4>Controls where you expect them</h4><p>Full controls with live track details on the Lock Screen and in Control Center.</p></article>
             <article class="tile"><p class="tag">Apple Watch</p><h4>A real watch app</h4><p>Native now-playing on the wrist, with a one-tap “Play Last” complication.</p></article>
-            <article class="tile"><p class="tag">Apple TV</p><h4>Radio on the big screen</h4><p>Station shelves for the Siri Remote, with the current track’s title and artist.</p></article>
+            <article class="tile"><p class="tag">Apple TV · Build from source</p><h4>Radio on the big screen</h4><p>Station shelves for the Siri Remote, with the current track’s title and artist. Not in the TestFlight beta.</p></article>
             <article class="tile"><p class="tag">iPad</p><h4>Not a stretched iPhone</h4><p>An adaptive sidebar and multi-column grids for full screen, Split View and Stage Manager.</p></article>
             <article class="tile"><p class="tag">Home Screen</p><h4>Widgets &amp; deep links</h4><p>A widget plays a favorite in one tap, and deep links open any station.</p></article>
             <article class="tile"><p class="tag">Mac Catalyst · Preview</p><h4>The same stations at your desk</h4><p>Build the Mac preview from source for the full library, search and playback experience.</p></article>
@@ -548,7 +655,7 @@
 <pre><code>git clone https://github.com/cascadiacollections/shoutkit.git
 cd shoutkit
 open Holmdel.xcworkspace <span class="c"># then ⌘R</span></code></pre>
-            <p style="margin-top:14px;">Prefer the terminal? <code>swift test --disable-xctest</code> runs it without a simulator.</p>
+            <p style="margin-top:14px;">Prefer the terminal? Run <code>swift test --disable-xctest</code> in a package under <code>Packages/</code> to test it without a simulator.</p>
           </div>
 
           <div class="panel">
@@ -556,7 +663,7 @@ open Holmdel.xcworkspace <span class="c"># then ⌘R</span></code></pre>
             <ul class="linklist">
               <li><a href="https://github.com/cascadiacollections/shoutkit">iPhone source</a><br /><span>The app, its packages and CI, on GitHub.</span></li>
               <li><a href="https://github.com/cascadiacollections/shoutkit-android">Android source</a><br /><span>The Android app, with no Google services in its FOSS build.</span></li>
-              <li><a href="https://github.com/cascadiacollections/shoutkit-android/pull/306">Toward reproducible builds</a><br /><span>Making the Android F-Droid build byte-for-byte identical to the official APK.</span></li>
+              <li><a href="https://github.com/cascadiacollections/shoutkit-android/pull/306">Reproducible Android builds</a><br /><span>How the Android FOSS APK was made reproducible for F-Droid.</span></li>
               <li><a href="https://github.com/cascadiacollections/shoutkit/security/advisories/new">Report a security issue</a><br /><span>Privately, not in a public issue. See the <a href="https://github.com/cascadiacollections/shoutkit/blob/main/SECURITY.md">security policy</a>.</span></li>
             </ul>
           </div>
@@ -601,7 +708,9 @@ open Holmdel.xcworkspace <span class="c"># then ⌘R</span></code></pre>
           <details><summary>Why would I pay for a store version?</summary><p>You don’t have to. App Store pricing hasn’t been decided. If a store version ever costs something, you’d be paying for the convenience of installing and updating through the store, and helping fund development, not unlocking features. The source stays open, so you can always build it yourself.</p></details>
           <details><summary>Does it track me?</summary><p>No. No ads, no analytics, no account, and the privacy manifest declares no collected data and no tracking. The app talks only to what radio needs: the station directory, the streams you play, Apple’s iTunes Search for album art (it sends the current artist and track title), and anonymous play counts that help the directory rank stations.</p></details>
           <details><summary>Which stations can I listen to?</summary><p>Thousands. Stations come from <a href="https://www.radio-browser.info">Radio-Browser</a>, a free, community-run directory that anyone can add to or correct, so no API key or account is needed.</p></details>
-          <details><summary>Which devices does it run on?</summary><p>The beta runs on iPhone and iPad with iOS or iPadOS 26 and later, with Apple Watch, Apple TV and CarPlay support. The Mac Catalyst preview builds from source. On Android, see <a href="https://cascadiacollections.github.io/shoutkit-android/">ShoutKit for Android</a>.</p></details>
+          <details><summary>Can I find Christmas and holiday music?</summary><p>Yes. Search for “Christmas”, “holiday” or “carols”, or use the search filters to narrow by tag and country. Stations come from <a href="https://www.radio-browser.info">Radio-Browser</a>, so what you find depends on what broadcasters and volunteers have listed.</p></details>
+          <details><summary>Does radio use mobile data?</summary><p>Yes. Live streams need a connection and can use mobile data. Use Wi-Fi when you want to save your data allowance.</p></details>
+          <details><summary>Which devices does it run on?</summary><p>The beta runs on iPhone and iPad with iOS or iPadOS 26 and later, and includes the Apple Watch app. The Apple TV app and the Mac Catalyst preview build from source. CarPlay is built but not available yet, because it needs an entitlement Apple hasn’t granted. On Android, see <a href="https://cascadiacollections.github.io/shoutkit-android/">ShoutKit for Android</a>.</p></details>
           <details><summary>Why does the beta say Holmdel or Squan?</summary><p>The app is ShoutKit. While it’s in beta, TestFlight lists it as Squan and it installs on your Home Screen as Holmdel. It’s the same app, and it’s being renamed ShoutKit.</p></details>
           <details><summary>Can I build it myself?</summary><p>Yes. Clone it, open <code>Holmdel.xcworkspace</code> in Xcode 27, and run it. No secrets needed.</p></details>
         </div>
@@ -644,6 +753,12 @@ open Holmdel.xcworkspace <span class="c"># then ⌘R</span></code></pre>
   </footer>
 
   <script>
+    // Hide the holiday promo bar once its data-until date has passed.
+    (() => {
+      const bar = document.getElementById('promo-bar');
+      if (bar && new Date() >= new Date(bar.dataset.until + 'T00:00:00')) bar.hidden = true;
+    })();
+
     // Keep the copyright year current without a build step.
     document.getElementById('year').textContent = new Date().getFullYear();
 
