@@ -54,7 +54,7 @@ shipping path. They do limit what the App Store listing and the release notes ma
 | Issue | What it is | Blocks 0.4.0? |
 |---|---|---|
 | [#147](https://github.com/cascadiacollections/shoutkit/issues/147) | Bluetooth / AVRCP artwork has not been watched on a car. The code change is in the tree; the original Tesla report is unverified. | No for the tag and for TestFlight. Yes for any sentence that says car stereos now show the right cover. The changelog says the image is offered only once it is in hand, and points at this issue. |
-| [#148](https://github.com/cascadiacollections/shoutkit/issues/148) | No cold-launch or memory baseline is collected per build. Same shape as coverage: measure later, no threshold yet. | No. |
+| [#148](https://github.com/cascadiacollections/shoutkit/issues/148) | Launch and memory baselines are collected per CI build and reported in the step summary, with no threshold yet. Simulator figures, not device figures. | No. |
 | [#149](https://github.com/cascadiacollections/shoutkit/issues/149) | Mini-player, tab bar, and Now Playing are unchecked at arbitrary window sizes (iPhone Mirroring, iPhone-on-iPad). Needs a device or a Mac. Related open layout item: #145, `StationCard` width vs Dynamic Type. | No for the tag. Worth a pass before the first App Store submission if you want a layout sign-off. |
 
 [#146](https://github.com/cascadiacollections/shoutkit/issues/146) is still open for

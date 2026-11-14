@@ -212,9 +212,10 @@ could install was the wrong next move. A public TestFlight beta has since gone o
       --skip-build`) so the headless-test workaround is one command instead of the commands
       in `CONTRIBUTING.md`. Still open — `.github/scripts/` has other helpers, and none of
       them is this one. No issue is filed for this.
-- [ ] Cold-launch and memory baselines captured per build (#148), as an ongoing regression
-      check. Still open. #200 recorded a one-time simulator memgraph in `DECISIONS.md`
-      (2026-09-07); that is not the per-build CI baseline this issue asks for.
+- [x] Cold-launch and memory baselines captured per build (#148), as an ongoing regression
+      check. **Done 2026-11-14:** `Baselines.xctestplan` measures launch-until-responsive and
+      peak memory after launch and during playback; CI publishes them in the step summary,
+      report-only. No threshold yet: that waits for a trend across runs. See `DECISIONS.md`.
 - [ ] `GIT_COMMIT_SHA` stamping verified against a real tagged build (the mechanism shipped
       in 0.2.0). `release.yml` still only extracts changelog notes, so the `v0.4.0` tag did
       not exercise it. No issue is filed for this.

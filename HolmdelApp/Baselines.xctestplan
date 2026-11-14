@@ -1,0 +1,27 @@
+{
+  "configurations" : [
+    {
+      "id" : "B4A5E1A0-148B-4C0D-9E1F-0000000000A8",
+      "name" : "Default",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false
+  },
+  "testTargets" : [
+    {
+      "selectedTests" : [
+        "BaselineUITests"
+      ],
+      "target" : {
+        "containerPath" : "container:Holmdel.xcodeproj",
+        "identifier" : "000000000000000000000300",
+        "name" : "HolmdelUITests"
+      }
+    }
+  ],
+  "version" : 1
+}
