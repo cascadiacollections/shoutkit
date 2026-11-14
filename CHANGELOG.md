@@ -95,6 +95,10 @@ are not part of what this release turns on.
   touches GitHub Actions, docs, or the marketing site does not upload. (#229)
 
 ### Fixed
+- **No motion permission prompt on first launch.** Holmdel asked for Motion & Fitness
+  access the first time it opened, before onboarding, even though Spatial Audio is off by
+  default and the prompt itself says motion data is used only when you turn it on. It now
+  asks only when you switch on Spatial Audio.
 - **The Apple Watch app keeps playing after the wrist drops.** Background audio had been
   declared on `WKBackgroundModes`, a key watchOS only accepts for session types such as
   workouts, so App Store upload validation rejected the archive. Background audio now uses

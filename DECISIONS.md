@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-11-14 (the headphone motion manager is created lazily, so first launch asks for nothing)
+
+A fresh install showed the Motion & Fitness prompt on first launch, over the onboarding
+screen, with Spatial Audio off — its default. The usage string the prompt displays says
+head-tracking data is used "only when you opt in to Spatial Audio," so the prompt
+contradicted itself in front of every new user. Found on the iOS 27.3 simulator: tccd logged
+`AUTHREQ_PROMPTING service=kTCCServiceMotion` for the app's pid at launch.
+
+**Cause.** `AudioStreamingPlaybackEngine` allocated `CMHeadphoneMotionManager` as a stored
+`let`, on the stated reasoning that allocation "does nothing until
+`startDeviceMotionUpdates` is called." The startup path still reaches it:
+`AppDependencies` calls `restoreSpatialAudioPreference(isEnabled: false)`, which runs
+`detachSpatialAudioNode()`, which calls `stopDeviceMotionUpdates()` on that manager. Whether
+the allocation or that call is what triggers the prompt was not isolated; the fix avoids both.
+
+**Fix.** The manager is now an optional, created in `startHeadTracking(for:)` — the only path
+that needs it, reached only from `setSpatialAudioEnabled(true)` or a media-services reset with
+Spatial Audio already on. Stop and `deinit` use optional chaining, so with Spatial Audio off
+the app never instantiates CoreMotion's manager. Verified on the simulator: after a privacy
+reset and clean reinstall, tccd logged no Motion request and onboarding showed with no
+prompt.
+
+**Not covered by an automated check.** The prompt is a system TCC behaviour, and the package
+tests run against fakes or on the Mac host, where it does not occur. A UI test asserting "no
+system alert on first launch" would catch this class of regression. It is worth adding with
+the UI-test target #148 needs anyway, not on its own.
+
 ## 2026-11-13 (first exit test and first attachment; what the WWDC26 sweep left out)
 
 The rest of the WWDC26 / Swift 6.4 sweep whose first half is #242 (strict interop, `anyAppleOS`).
