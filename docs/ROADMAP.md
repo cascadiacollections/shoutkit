@@ -161,11 +161,12 @@ entry below states what is actually dark.
       `prewarmStreamURLs(limit:)`, and the `tapToAudioPrewarmEnabledProvider` wiring (which
       only labels a log line in `TapToAudioLatencyTrace`). Scope it that way, and note that
       deleting the flag leaves the prewarmer itself in place and still used.
-- [ ] `geoStations` (173 dark lines) — region-filtered discovery. **Not cleanly deletable**,
-      contrary to the framing above: region identity is threaded into the *shipping* caching
-      layer (`CachingRadioDirectory.swift:195`, `DirectoryDiscoverySnapshot.swift:40`) and
-      runs for every user today. Only `GeoStationLocationCoordinator` and the flag are dark,
-      so scope this as "delete the opt-in precise-location path," not "delete geo".
+- [x] `geoStations` — **shipped and partly deleted 2026-11-14.** The note that stood here
+      said region filtering "runs for every user today". It did not: with the flag off the
+      filter was `nil`, and even with it on, `topclick` ignores `countrycode`, so Listen Now
+      was never regional. Listen Now now puts the device region's most-played stations first
+      for everyone. The precise-location path, the flag and the location usage string are
+      gone. See `DECISIONS.md`.
 - [ ] `liveActivity` — off with a stated reason (artwork can lag the track); the reason is
       fixable or it is a decision to delete. Smaller blast radius than it looks:
       `NowPlayingActivityCore` is linked by the **shipped** quick-play widget
