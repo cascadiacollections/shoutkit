@@ -26,6 +26,16 @@
       }
     },
     {
+      "skippedTests" : [
+        "BaselineUITests"
+      ],
+      "target" : {
+        "containerPath" : "container:Holmdel.xcodeproj",
+        "identifier" : "000000000000000000000300",
+        "name" : "HolmdelUITests"
+      }
+    },
+    {
       "target" : {
         "containerPath" : "container:../Packages/RadioDirectory",
         "identifier" : "RadioDirectoryTests",

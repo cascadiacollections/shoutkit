@@ -1,5 +1,57 @@
 # Decisions
 
+## 2026-11-14 (a UI test target: a first-launch check in the main plan, baselines in their own)
+
+#148 asked for per-build launch and memory figures, reported like coverage and never gated.
+The issue offered two ways: `XCTApplicationLaunchMetric`, or parsing the app's own signposts.
+The metric API won because it measures what a user waits for, the first responsive frame,
+rather than the slice of launch the app chooses to instrument, and because Xcode already
+stores its output in the result bundle, where `xcresulttool get test-results metrics` reads
+it. That needs a UI test target, which the repo did not have.
+
+**`HolmdelUITests` is the first `import XCTest`.** UI automation is XCTest-only. Swift
+Testing's strict interop mode (2026-11-13) is unaffected: it forbids XCTest calls *inside
+Swift Testing tests*, and these are ordinary `XCTestCase`s. The main plan, interop
+variable included, ran the new target green.
+
+**Two classes, two plans.**
+
+- **`FirstLaunchUITests` runs in the main plan and can fail the build.** It launches a
+  fresh install and fails if SpringBoard shows an alert over onboarding. It was checked
+  both ways: with the pre-#244 engine files restored and the app's permissions reset, it
+  failed with "Allow 'Holmdel' to access your motion and fitness activity?"; with the fix,
+  it passed. It only proves anything on a fresh install, because there is no
+  `XCUIProtectedResource` for motion to reset from inside a test. CI's simulator always
+  installs fresh.
+- **`BaselineUITests` runs only from `Baselines.xctestplan`, in a `continue-on-error` CI
+  step.** It measures launch until responsive (5 runs), peak memory to a populated Listen
+  Now (3), and peak memory over 10 seconds of KEXP playback (3). That last test plays a
+  live stream, so it skips rather than fails when the stream won't start. A baseline must
+  never be why a run is red, and a separate plan keeps it out of local Cmd+U runs too.
+  `test-without-building` reuses the main step's build: `build-for-testing` writes an
+  `.xctestrun` for every plan in the scheme, which was verified locally.
+
+**First numbers**, iPhone 18 Pro simulator (iOS 27.3) on an Apple M5 Mac, two runs:
+
+| Measure | Run 1 | Run 2 |
+|---|---|---|
+| Launch until responsive, median | 3.49 s | 3.35 s |
+| Peak memory after launch, median | 48.0 MB | 47.4 MB |
+| Peak memory while playing, median | 69.2 MB | 69.4 MB |
+
+Memory is stable to within a few percent. Launch varies more: its first run was 4.3 s
+against 3.3 to 3.5 s for the rest. The summary therefore reports the median and the range,
+not an average. The 2026-09-07 memgraph is a one-off on different hardware, so these
+numbers are not comparable with it.
+
+**`check-simulator-test-targets.py` had to learn about UI tests.** It counted only
+`Unit test bundle` nodes, and `xcresulttool` reports this target as `UI test bundle`, so
+it would have reported a target that ran as missing.
+
+**What this enables.** `prewarmStations` (#146) is waiting on exactly this: whether launch
+warming shortens time-to-audio. That needs a tap-to-audio measure, which this target can
+now host, rather than launch time, which prewarming only affects indirectly.
+
 ## 2026-11-14 (`liveActivity` is deleted; the package that held it stays for the widget)
 
 The third of #146's five. The flag's own summary gave the reason it was off: the artwork

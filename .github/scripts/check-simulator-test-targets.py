@@ -22,7 +22,7 @@ def check(plan_path: str, result_path: str) -> int:
     found = set()
 
     def visit(node: dict) -> None:
-        if node.get("nodeType") == "Unit test bundle":
+        if node.get("nodeType") in ("Unit test bundle", "UI test bundle"):
             found.add(node["name"])
         for child in node.get("children", []):
             visit(child)

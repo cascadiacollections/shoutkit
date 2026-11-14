@@ -473,6 +473,38 @@ jobs:
           python3 .github/scripts/xccov_summary.py < coverage.json \
             | tee -a "$GITHUB_STEP_SUMMARY"
 
+      # Launch and memory baselines (#148): Baselines.xctestplan, reusing the
+      # build from "Test app (Debug)" (the main plan builds HolmdelUITests too).
+      # Report-only like coverage: simulator timings are noisy, and one test
+      # plays a live stream, so a slow runner or an unreachable station must not
+      # turn the build red — hence continue-on-error, and a stream that won't
+      # start makes its test skip rather than fail. About 2-3 minutes.
+      - name: Launch and memory baselines
+        if: success()
+        continue-on-error: true
+        timeout-minutes: 8
+        run: |
+          set -o pipefail
+          xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel -testPlan Baselines \
+            -destination "platform=iOS Simulator,id=${{ steps.toolchain.outputs.udid }}" \
+            -derivedDataPath DerivedData \
+            -resultBundlePath Baselines.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            test-without-building 2>&1 | tail -40
+
+      # tee for the same reason as coverage: the step summary isn't readable
+      # from the Checks API.
+      - name: Report launch and memory baselines
+        if: always()
+        run: |
+          if [ ! -d Baselines.xcresult ]; then
+            echo "No baselines result bundle — the baselines step did not run."
+            exit 0
+          fi
+          xcrun xcresulttool get test-results metrics --path Baselines.xcresult > baselines.json 2> baselines.err \
+            || { echo "Could not read baseline metrics:"; cat baselines.err; exit 0; }
+          python3 .github/scripts/baseline_summary.py < baselines.json | tee -a "$GITHUB_STEP_SUMMARY"
+
       # Pulse (kean/Pulse) is declared only by the app-side DebugSupport package,
       # a dynamic framework the app imports and uses only under #if DEBUG. It
       # must ship in Debug and never in Release (DECISIONS.md, 2026-11-07): the

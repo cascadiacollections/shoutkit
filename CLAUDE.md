@@ -29,10 +29,18 @@ xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
   -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
-- **`--disable-xctest` is load-bearing**, not a style choice. Every suite is Swift Testing
-  (there is no `import XCTest` anywhere), but `swift test` still runs a legacy XCTest pass,
+- **`--disable-xctest` is load-bearing**, not a style choice. Every package suite is Swift
+  Testing (the only `import XCTest` is the app's UI test target, because UI automation is
+  XCTest-only), but `swift test` still runs a legacy XCTest pass,
   and Xcode 27 beta's agent segfaults doing it. Drop the flag only when a stable Xcode 27
   is on the runner image.
+- **`HolmdelUITests` has two jobs, in two test plans.** `FirstLaunchUITests` runs in the
+  main plan and fails if a system alert appears over onboarding; it only proves anything
+  on a fresh install, so uninstall the app or `xcrun simctl privacy booted reset all
+  com.cascadiacollections.holmdel` before trusting a local pass. `BaselineUITests` (launch
+  time, peak memory) runs only from `Baselines.xctestplan`:
+  `xcodebuild … -testPlan Baselines test`, about 2-3 minutes. CI reports its numbers and
+  never fails on them.
 - **Only some packages build on the mac host.** Anything depending on `DesignSystem` does
   not. The reason is its manifest: `Packages/DesignSystem/Package.swift` declares
   `.iOS(.v26)` and nothing else, so SwiftPM won't build it for macOS at all. (The sources
