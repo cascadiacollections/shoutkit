@@ -9,7 +9,13 @@
     }
   ],
   "defaultOptions" : {
-    "codeCoverage" : true
+    "codeCoverage" : true,
+    "environmentVariableEntries" : [
+      {
+        "key" : "SWIFT_TESTING_XCTEST_INTEROP_MODE",
+        "value" : "strict"
+      }
+    ]
   },
   "testTargets" : [
     {

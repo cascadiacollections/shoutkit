@@ -11,7 +11,7 @@
     /// decision on one side, the bytes behind it on the other — rather than growing
     /// past `file_length` and reaching for a `swiftlint:disable`, per the house
     /// remedy in `CLAUDE.md`.
-    @available(iOS 27, macOS 27, tvOS 27, watchOS 27, *)
+    @available(anyAppleOS 27, *)
     extension MediaSessionNowPlayingCenter {
         /// URLs the policy may advertise without a fetch first: bytes in hand, or a
         /// fetch already tried and failed. A failed URL stays advertisable on purpose

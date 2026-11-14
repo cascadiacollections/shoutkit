@@ -26,17 +26,14 @@
     /// Selected at runtime by ``PlaybackController``'s production initializer;
     /// iOS 26 devices keep the legacy `MediaPlayer` path.
     ///
-    /// Every platform is named explicitly rather than left to the `*` wildcard. While
-    /// the watchOS floor was 27 the wildcard was equivalent — it means "available
-    /// from this platform's deployment target", and that target was 27. Dropping the
-    /// floor to 26 (DECISIONS.md 2026-08-12) made the two differ: the wildcard then
-    /// claimed availability from watchOS 26, while every `NowPlaying` symbol this
-    /// type touches is watchOS 27+, and the watch build failed with six errors.
-    ///
-    /// `tvOS 27` is named for the same reason, pre-emptively: this file is gated only on
-    /// `canImport(NowPlaying)`, so it compiles on any platform that has the framework,
-    /// and a tvOS floor of 26 would reproduce the watchOS failure exactly.
-    @available(iOS 27, macOS 27, tvOS 27, watchOS 27, *)
+    /// `anyAppleOS 27` (Swift 6.4) covers every Apple platform at once, so none of
+    /// them is left to the `*` wildcard. The wildcard means "available from this
+    /// platform's deployment target", and it broke the watch build when the watchOS
+    /// floor dropped to 26 (DECISIONS.md 2026-08-12): every `NowPlaying` symbol this
+    /// type touches is watchOS 27+. The explicit four-platform list this replaces
+    /// existed only to close that gap. `anyAppleOS` closes it for visionOS and any
+    /// future platform as well (DECISIONS.md 2026-11-13).
+    @available(anyAppleOS 27, *)
     @MainActor
     public final class MediaSessionNowPlayingCenter: NowPlayingPresenting {
         public var onPlay: (() -> Void)?
