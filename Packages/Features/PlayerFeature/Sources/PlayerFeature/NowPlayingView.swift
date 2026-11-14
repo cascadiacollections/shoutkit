@@ -102,9 +102,15 @@ public struct NowPlayingView: View {
     private func content(playback: PlaybackController, station: Station) -> some View {
         GeometryReader { proxy in
             ScrollView {
-                if proxy.size.width > proxy.size.height, !dynamicTypeSize.isAccessibilitySize {
+                switch NowPlayingLayout.choose(
+                    width: proxy.size.width,
+                    height: proxy.size.height,
+                    isAccessibilitySize: dynamicTypeSize.isAccessibilitySize,
+                    spacing: ShoutKitSpacing.large,
+                ) {
+                case .sideBySide:
                     compactContent(playback: playback, station: station, size: proxy.size)
-                } else {
+                case .vertical:
                     verticalContent(playback: playback, station: station, size: proxy.size)
                 }
             }

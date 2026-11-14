@@ -99,6 +99,10 @@ are not part of what this release turns on.
   access the first time it opened, before onboarding, even though Spatial Audio is off by
   default and the prompt itself says motion data is used only when you turn it on. It now
   asks only when you switch on Spatial Audio.
+- **Now Playing fits small windows on iPad.** In a window only slightly wider than it is
+  tall, the artwork took most of the width and the menu, sleep timer and level meter were
+  cut off at the edge. Now Playing switches to the side-by-side layout only when the
+  controls have room beside the artwork, and stacks them otherwise. (#149)
 - **The Apple Watch app keeps playing after the wrist drops.** Background audio had been
   declared on `WKBackgroundModes`, a key watchOS only accepts for session types such as
   workouts, so App Store upload validation rejected the archive. Background audio now uses
