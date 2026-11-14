@@ -1,5 +1,44 @@
 # Decisions
 
+## 2026-11-13 (strict Swift Testing/XCTest interop, and `anyAppleOS` for the NowPlaying gates)
+
+Two Swift 6.4 / Xcode 27 adoptions from a WWDC26 sweep. Most of the headline items were
+already in the tree: Swift Testing everywhere, MediaSession, `AppSchema.audio`,
+AppIntentsTesting, `isolated deinit`.
+
+- **Both test paths run interop mode `strict`.** Xcode 27 adds a per-test-plan interop mode
+  (`none` / `limited` / `complete` / `strict`, ST-0021). Test plans created before Xcode 27
+  inherit `limited`, which only *warns* when an XCTest API is used inside a Swift Testing
+  test. `swift-tools-version: 6.4` packages default to `complete`, which also only warns
+  about that. `strict` turns it into a `fatalError`. The cost is zero, since there is no
+  `import XCTest` anywhere. The benefit is that "every suite is Swift Testing" stops being
+  a convention and becomes a check that can fail.
+  - **Set through `SWIFT_TESTING_XCTEST_INTEROP_MODE`, not a test-plan key.** The key name
+    Xcode 27's test-plan editor writes for this setting could not be verified. A guessed
+    key that Xcode ignores would build green and enforce nothing, which is the failure
+    mode this repo keeps writing checks against. The environment variable is the
+    documented mechanism. `environmentVariableEntries` is a long-standing test-plan key.
+    The `host-tests` job sets the same variable at job level. If Xcode's editor later
+    writes its own key, prefer it and drop the variable from the plan.
+  - **Not demonstrated failing locally.** The machine that made this change has only the
+    Command Line Tools, which ship without XCTest, so a canary test could not be built.
+    The behaviour rests on ST-0021, which is marked implemented in Swift 6.4. A permanent
+    canary would be an exit test, `#expect(processExitsWith: .failure) { XCTFail() }`, in
+    a host package. But it would be the first `import XCTest` in the repo. Left as a
+    follow-up rather than done silently.
+- **`@available(anyAppleOS 27, *)` / `#available(anyAppleOS 27, *)` replace the explicit
+  platform lists** on `MediaSessionNowPlayingCenter`, its `+Artwork` extension, and the
+  runtime selection in `PlaybackControllerPlatform`. The explicit lists existed only to
+  stop any platform falling through to `*`, the deployment-target wildcard that broke the
+  watch build at the watchOS 26 floor (2026-08-12). `anyAppleOS` names every Apple
+  platform, so it closes that gap more completely. The old `#available` list left macOS
+  to `*`, and both lists left visionOS to it. That was harmless only because neither is a
+  shipping target for that code. Checked with `swiftc -typecheck` against the macOS 27.2
+  SDK. An `anyAppleOS 27` guard satisfies NowPlaying's `macOS 27` symbols at a macOS 15
+  deployment target, and the same reference with no guard is still rejected. The iOS,
+  tvOS and watchOS slices could not be type-checked without Xcode's SDKs. The simulator,
+  Release and watchOS CI builds are what verify those.
+
 ## 2026-11-12 (the marketing site's holiday promo, and the claims it stopped making)
 
 `site/index.html` gets a holiday promotion for the 2026 season: a promo bar that hides itself

@@ -156,6 +156,12 @@ jobs:
     # Runs on drafts, unlike `build`: at ~4 minutes this is the cheap signal,
     # and it is the only job covering the eight host-testable packages.
     timeout-minutes: 20
+    # Same mode the simulator test plan sets (HolmdelApp/Holmdel.xctestplan):
+    # an XCTest API used inside a Swift Testing test is a fatalError here, not
+    # a warning. Packages at swift-tools-version 6.4 default to `complete`,
+    # which only warns. See DECISIONS.md 2026-11-13.
+    env:
+      SWIFT_TESTING_XCTEST_INTEROP_MODE: strict
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
