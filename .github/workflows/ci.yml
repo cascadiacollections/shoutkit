@@ -256,9 +256,15 @@ jobs:
 
       # Includes the cross-platform golden vectors (docs/audio-levels-spec.md)
       # the Android client checks too.
+      # `--attachments-path`: without it `swift test` discards Swift Testing
+      # attachments. On golden-vector drift, GoldenVectorTests attaches the
+      # recomputed golden-vectors.json, and the upload step below keeps it.
       - name: AudioLevels tests
         working-directory: Packages/AudioLevels
-        run: swift test --disable-xctest --enable-code-coverage
+        run: |
+          mkdir -p "$RUNNER_TEMP/test-attachments/AudioLevels"
+          swift test --disable-xctest --enable-code-coverage \
+            --attachments-path "$RUNNER_TEMP/test-attachments/AudioLevels"
 
       - name: FeatureFlags tests
         working-directory: Packages/FeatureFlags
@@ -287,6 +293,15 @@ jobs:
       - name: SettingsFeatureCore tests
         working-directory: Packages/SettingsFeatureCore
         run: swift test --disable-xctest --enable-code-coverage
+
+      - name: Upload test attachments
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: host-test-attachments
+          path: ${{ runner.temp }}/test-attachments
+          if-no-files-found: ignore
+          retention-days: 7
 
       # Baseline only — deliberately no threshold, no gate, and no third-party
       # uploader. The tree has never measured coverage, and a gate imposed on

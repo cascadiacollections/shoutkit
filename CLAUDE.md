@@ -45,6 +45,17 @@ xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
   ad-hoc `codesign` workaround in `CONTRIBUTING.md`.
 - If `DEVELOPER_DIR` points at Command Line Tools, prefix commands with
   `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer`.
+- **On a machine with only the Command Line Tools (no Xcode at all)**, three things fail,
+  each with a misleading message. Swift Testing reports `plugin for module 'TestingMacros'
+  not found` even though the plugin ships: pass
+  `-Xswiftc -plugin-path -Xswiftc /Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing`.
+  SwiftUI's macros (`@State`, `@Entry`) do not ship at all, which rules out `AudioLevelsUI`
+  and anything depending on Factory, since FactoryKit uses `@Entry`. And any
+  package with an `.xcstrings` catalog, or depending on one (`RadioDirectory`, `Playback`
+  and everything above them), fails on a missing `xcstringstool`. What still runs:
+  `ImageIODownsample` and the `AudioLevels` target, both verified 2026-11-13. To run the `AudioLevels` tests without `AudioLevelsUI`, use a scratch
+  copy with that target removed. A stale `.build` from an earlier Xcode build can make a
+  package look like it works when it doesn't. Delete `.build` before trusting a pass.
 
 ## Things that will bite you
 
