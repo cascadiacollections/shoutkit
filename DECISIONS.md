@@ -1,5 +1,45 @@
 # Decisions
 
+## 2026-11-13 (first exit test and first attachment; what the WWDC26 sweep left out)
+
+The rest of the WWDC26 / Swift 6.4 sweep whose first half is #242 (strict interop, `anyAppleOS`).
+
+- **Exit tests start with `RecentlyPlayedTeaserState(capacity: 0)`.** Its `precondition` is a
+  real contract that nothing could test until `#expect(processExitsWith:)` could. The other
+  traps in the packages are poor candidates. `StationLink.url()` and the geo-filter
+  `preconditionFailure` are unreachable by construction. FeatureFlags' ephemeral-suite
+  failure is environmental. The new suite is `#if os(macOS) || os(Linux) || os(Windows)`,
+  because exit tests need a child process and `PersistenceTests` also runs in the iOS
+  simulator from the test plan. It runs on the host job only. Checked both ways in a
+  scratch copy holding the real source: it passes on `capacity: 0` and fails on
+  `capacity: 1` with `.exitCode(EXIT_SUCCESS)`. Exit tests could also guard the
+  AudioStreaming timer-`deinit` abort (2026-09-07). That engine is iOS-only, though, so it
+  can't host one.
+- **Golden-vector drift attaches the recomputed file.** On any mismatch, `GoldenVectorTests`
+  attaches `golden-vectors.computed.json`, exactly what `AUDIOLEVELS_WRITE_GOLDEN` would
+  write. A CI failure then carries the vectors to diff, or to commit after an intentional
+  spec change, and the Android client can be checked against the same file. `swift test`
+  discards attachments unless given `--attachments-path`, so the AudioLevels step passes
+  one, and a `failure()`-only step uploads it, kept for 7 days. While there, the band
+  comparison now flags a stored-versus-computed band-count change, which `zip` used to
+  truncate past silently. Checked in a scratch copy: all 21 tests pass on the real file,
+  and nudging one stored band by 0.5 fails the test and writes the attachment.
+- **Not done:**
+  - **Moving the AudioLevels DSP to `Span` / `InlineArray`.** The analyzer runs about ten
+    1024-point DFTs a second, with vDSP doing the work over preallocated arrays. No profile
+    points at those loops, and churn without a measured problem is not this repo's habit.
+  - **Replacing the `Task.sleep` waits in tests.** Of the roughly 30 in test code, most are
+    fakes simulating latency, which is fine. The ones that matter wait out real debounce or
+    timer windows (`SearchViewModelTests` 400 ms, `SleepTimerTests`,
+    `PlaybackResumeRecoveryTests`). Fixing them means injecting a `Clock` into production
+    view models and the playback controller. That is a design change, not a test cleanup,
+    and these suites can't build without Xcode (string catalogs), so it waits for a
+    machine that can run them.
+  - **View Annotations (App Intents), lazy-stack prefetching, Music Understanding.** UI and
+    on-device work that needs Xcode and a device to verify. Music Understanding was skipped
+    on 2026-07-06. The live level meter is a reason to look again, not a decision to
+    adopt it.
+
 ## 2026-11-13 (strict Swift Testing/XCTest interop, and `anyAppleOS` for the NowPlaying gates)
 
 Two Swift 6.4 / Xcode 27 adoptions from a WWDC26 sweep. Most of the headline items were

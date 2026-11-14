@@ -103,22 +103,39 @@ private func computeGoldenFile() throws -> GoldenFile {
 struct GoldenVectorTests {
     @Test func `the analyzer reproduces every golden vector`() throws {
         let computed = try computeGoldenFile()
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let computedJSON = try encoder.encode(computed)
         if let path = ProcessInfo.processInfo.environment["AUDIOLEVELS_WRITE_GOLDEN"] {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            try encoder.encode(computed).write(to: URL(fileURLWithPath: path))
+            try computedJSON.write(to: URL(fileURLWithPath: path))
         }
         let url = try #require(Bundle.module.url(forResource: "golden-vectors", withExtension: "json"))
         let golden = try JSONDecoder().decode(GoldenFile.self, from: Data(contentsOf: url))
-        #expect(golden.vectors.map(\.name) == computed.vectors.map(\.name))
+        var drifted = golden.vectors.map(\.name) != computed.vectors.map(\.name)
+        #expect(!drifted, "vector names or order differ")
         for (stored, fresh) in zip(golden.vectors, computed.vectors) {
             #expect(stored.expected.count == AudioLevels.defaultBandCount, "\(stored.name)")
-            for (band, (lhs, rhs)) in zip(stored.expected, fresh.expected).enumerated() {
-                #expect(abs(lhs - rhs) <= golden.tolerance, "\(stored.name) band \(band)")
+            // `zip` below stops at the shorter side, so a band-count change would
+            // otherwise pass silently.
+            if stored.expected.count != fresh.expected.count {
+                drifted = true
+                Issue.record("\(stored.name): stored \(stored.expected.count) bands, computed \(fresh.expected.count)")
+            }
+            for (band, (lhs, rhs)) in zip(stored.expected, fresh.expected).enumerated()
+                where abs(lhs - rhs) > golden.tolerance {
+                drifted = true
+                Issue.record("\(stored.name) band \(band): stored \(lhs), computed \(rhs)")
             }
         }
-        for (lhs, rhs) in zip(golden.smoothing.expected, computed.smoothing.expected) {
-            #expect(abs(lhs - rhs) <= 0.0001)
+        for (lhs, rhs) in zip(golden.smoothing.expected, computed.smoothing.expected) where abs(lhs - rhs) > 0.0001 {
+            drifted = true
+            Issue.record("smoothing: stored \(lhs), computed \(rhs)")
+        }
+        // On drift, hand back the file this run would have written, so a CI failure
+        // carries the regenerated vectors (to diff, or to commit after an
+        // intentional spec change) without re-running locally.
+        if drifted {
+            Attachment.record(computedJSON, named: "golden-vectors.computed.json")
         }
     }
 }
