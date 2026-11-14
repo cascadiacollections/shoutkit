@@ -57,11 +57,11 @@ shipping path. They do limit what the App Store listing and the release notes ma
 | [#148](https://github.com/cascadiacollections/shoutkit/issues/148) | No cold-launch or memory baseline is collected per build. Same shape as coverage: measure later, no threshold yet. | No. |
 | [#149](https://github.com/cascadiacollections/shoutkit/issues/149) | Mini-player, tab bar, and Now Playing are unchecked at arbitrary window sizes (iPhone Mirroring, iPhone-on-iPad). Needs a device or a Mac. Related open layout item: #145, `StationCard` width vs Dynamic Type. | No for the tag. Worth a pass before the first App Store submission if you want a layout sign-off. |
 
-[#146](https://github.com/cascadiacollections/shoutkit/issues/146) is still open for the
-three flags that were neither promoted nor deleted: `geoStations`, `prewarmStations`,
-`liveActivity`. `recommendations` was deleted. `diagnostics` stays internal-only on purpose.
-That is not a release blocker as long as the notes keep them under "Not yet enabled", which
-they now do.
+[#146](https://github.com/cascadiacollections/shoutkit/issues/146) is still open for
+`prewarmStations`, which waits on #148's measurements. `geoStations` shipped as region-first
+Listen Now with its precise-location path deleted, `recommendations` and `liveActivity` were
+deleted, and `diagnostics` stays internal-only on purpose. That is not a release blocker as long
+as the notes keep `prewarmStations` under "Not yet enabled".
 
 ### App Store and TestFlight metadata
 

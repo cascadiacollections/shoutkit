@@ -1,5 +1,52 @@
 # Decisions
 
+## 2026-11-14 (Listen Now is region-first for everyone; precise location and the `geoStations` flag are gone)
+
+The fourth of #146's five. The decision was to delete the opt-in precise-location path and
+ship the rest. "The rest" turned out to need building, because two things believed about it
+were false.
+
+**What was believed, and what was true.**
+
+- The 2026-08-13 audit and the roadmap said region identity "runs for every user today."
+  Only the *cache key* did. With the flag off — everyone — `GeoStationLocationCoordinator` set
+  the filter to `nil`, so no request ever carried a region.
+- Even with the flag on, Listen Now was not regional. It loads from
+  `/json/stations/topclick`, and **`topclick` ignores `countrycode`**: asking for FR, JP or
+  nothing returned the identical list (checked against `de1.api.radio-browser.info`). The
+  filter only ever narrowed search and genre results, where it made things worse. A US user
+  searching "BBC" got US stations only, and the fallback query used Radio-Browser's
+  `language` parameter, which matches language *names* by substring, so `en` matched
+  "english", "french" and "slovene" alike. When that came back empty, the client returned
+  nothing rather than the global results.
+
+**What ships.** `topStations` asks the search endpoint for the region's stations ordered by
+click count, the same ranking as `topclick`, which does honour `countrycode`. It puts those
+first and fills the rest of the list from the global `topclick` list without repeats. Both
+requests run concurrently. A failed regional request falls back to global; only a failed
+global request is an error, as before. Filling from global is what keeps a small region from
+leaving Listen Now thin (Antarctica returns nine stations).
+
+- **Search and genres are global again.** A name search is a request for that name, wherever
+  it broadcasts.
+- **The region is the device's region setting, read through `Locale.autoupdatingCurrent`**
+  by the new `LocaleGeoFilterProvider`. No permission, no prompt, and a region change applies
+  on the next refresh. A locale with no region gets the global list.
+- **`RadioBrowserGeoFilter` is country-only.** `languageCode`, `queryItemSets` and
+  `countryCodeOverride` are removed from this MIT package's public API. Nothing outside the
+  repository is known to use them, and keeping a substring language match as API invites the
+  bug above. `snapshotIdentity` changed shape (`country=US`), so each install refetches once.
+
+**Removed:** `GeoStationLocationCoordinator`, the `geoStations` flag and its debug status
+line, `SettingsStore.isPreciseGeoStationLocationEnabled` (an old stored value is ignored),
+the Settings toggle, and `NSLocationWhenInUseUsageDescription`. The app no longer links any
+Core Location or MapKit API.
+
+**The Privacy section was trimmed with it.** Its footer described the precise-location toggle
+and the diagnostics store, neither of which a user could act on. The "Share diagnostics"
+toggle itself is now shown only when the `diagnostics` flag is on. Collection was already
+double-gated on that flag (2026-08-13), so for real users the switch did nothing.
+
 ## 2026-11-14 (the headphone motion manager is created lazily, so first launch asks for nothing)
 
 A fresh install showed the Motion & Fitness prompt on first launch, over the onboarding

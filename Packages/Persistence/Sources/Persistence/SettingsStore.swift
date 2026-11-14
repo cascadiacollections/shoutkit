@@ -11,10 +11,6 @@ public final class SettingsStore {
         static let playReporting = DefaultsKey<Bool>.plist("settings.playReportingEnabled", default: true)
         static let albumArt = DefaultsKey<Bool>.plist("settings.albumArtEnabled", default: true)
         static let diagnosticsSharing = DefaultsKey<Bool>.plist("settings.diagnosticsSharingEnabled", default: false)
-        static let preciseGeoStationLocation = DefaultsKey<Bool>.plist(
-            "settings.preciseGeoStationLocationEnabled",
-            default: false,
-        )
         static let equalizerPreset = DefaultsKey<Int>.plist("settings.equalizerPresetRawValue", default: 0)
         static let streamLooping = DefaultsKey<Bool>.plist("settings.streamLoopingEnabled", default: false)
         static let spatialAudio = DefaultsKey<Bool>.plist("settings.spatialAudioEnabled", default: false)
@@ -41,14 +37,6 @@ public final class SettingsStore {
     /// collected locally on-device for later export/debugging. Defaults to off.
     public var isDiagnosticsSharingEnabled: Bool {
         didSet { defaults.set(isDiagnosticsSharingEnabled, for: Keys.diagnosticsSharing) }
-    }
-
-    /// Whether ShoutKit may request Core Location permission to reverse-geocode
-    /// the current country for geo-station filtering. Defaults to off so the
-    /// locale-based country filter stays permissionless unless the user opts in.
-    /// This only has an effect while the geo-stations feature flag is enabled.
-    public var isPreciseGeoStationLocationEnabled: Bool {
-        didSet { defaults.set(isPreciseGeoStationLocationEnabled, for: Keys.preciseGeoStationLocation) }
     }
 
     /// The last equalizer preset applied, stored as `EqualizerPreset.rawValue`
@@ -92,7 +80,6 @@ public final class SettingsStore {
         isPlayReportingEnabled = defaults.value(for: Keys.playReporting)
         isAlbumArtEnabled = defaults.value(for: Keys.albumArt)
         isDiagnosticsSharingEnabled = defaults.value(for: Keys.diagnosticsSharing)
-        isPreciseGeoStationLocationEnabled = defaults.value(for: Keys.preciseGeoStationLocation)
         equalizerPresetRawValue = defaults.value(for: Keys.equalizerPreset)
         isStreamLoopingEnabled = defaults.value(for: Keys.streamLooping)
         isSpatialAudioEnabled = defaults.value(for: Keys.spatialAudio)

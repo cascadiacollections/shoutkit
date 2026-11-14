@@ -51,13 +51,12 @@ extension AppDependencies {
 // MARK: - Directory
 
 extension AppDependencies {
-    /// The directory stack plus the geo coordinator that keeps its filter in
-    /// sync — grouped in a struct (not a tuple) so each member stays named.
+    /// The directory stack — grouped in a struct (not a tuple) so each member
+    /// stays named.
     struct DirectoryServices {
         let directory: any RadioDirectoryProviding
         let discoveryCache: any DirectoryDiscoveryCaching
         let playReporter: any StationPlayReporting?
-        let geoStationLocationCoordinator: GeoStationLocationCoordinator
     }
 
     /// Routes the directory and its snapshot facet through Factory so the view
@@ -75,16 +74,10 @@ extension AppDependencies {
     /// then in CachingRadioDirectory so Listen Now and Browse refreshing at launch
     /// share one fetch — and so that fetch is written to disk, letting the next
     /// launch paint stations before (or without) reaching the network.
-    static func makeDirectory(
-        settings: SettingsStore,
-        featureFlags: any FeatureFlagProviding,
-    ) -> DirectoryServices {
-        let geoFilterProvider = MutableRadioBrowserGeoFilterProvider()
-        let geoStationLocationCoordinator = GeoStationLocationCoordinator(
-            settings: settings,
-            featureFlags: featureFlags,
-            geoFilterProvider: geoFilterProvider,
-        )
+    static func makeDirectory() -> DirectoryServices {
+        // Listen Now puts the device's region first; search and genres stay
+        // global (DECISIONS.md, 2026-11-14).
+        let geoFilterProvider = LocaleGeoFilterProvider()
         // One file serves either branch: snapshots are scoped by source identity.
         let snapshotStore = FileDirectorySnapshotStore.applicationSupport()
 
@@ -102,7 +95,6 @@ extension AppDependencies {
                 directory: caching,
                 discoveryCache: caching,
                 playReporter: nil,
-                geoStationLocationCoordinator: geoStationLocationCoordinator,
             )
         }
 
@@ -111,7 +103,7 @@ extension AppDependencies {
         let caching = CachingRadioDirectory(
             base: directory,
             snapshotStore: snapshotStore,
-            // Geo-filtered results are only reusable while that filter still applies.
+            // Region-first results are only reusable while the region is the same.
             snapshotIdentity: {
                 "radio-browser;" + ((await geoFilterProvider.currentGeoFilter())?.snapshotIdentity ?? "unfiltered")
             },
@@ -120,7 +112,6 @@ extension AppDependencies {
             directory: caching,
             discoveryCache: caching,
             playReporter: radioBrowser,
-            geoStationLocationCoordinator: geoStationLocationCoordinator,
         )
     }
 

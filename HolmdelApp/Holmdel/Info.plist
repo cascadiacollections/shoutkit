@@ -63,8 +63,6 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Holmdel uses your location only after you opt in to refine geo-relevant station filtering.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>Holmdel uses head-tracking motion data only when you opt in to Spatial Audio for headphones.</string>
 	<key>NSSupportsLiveActivities</key>

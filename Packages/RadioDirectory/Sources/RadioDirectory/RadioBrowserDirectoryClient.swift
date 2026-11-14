@@ -41,8 +41,9 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     ///     ``defaultHosts``.
     ///   - transport: The HTTP transport to issue requests through.
     ///   - retryPolicy: Timeout and backoff for mirror failover.
-    ///   - geoFilterProvider: Supplies the country/language filter applied to
-    ///     discovery queries, or `nil` for unfiltered results.
+    ///   - geoFilterProvider: Supplies the region ``topStations(limit:)`` puts
+    ///     first, or `nil` for the global list only. Search and genre results
+    ///     are never region-filtered.
     ///   - userAgent: Value sent as `User-Agent`. Radio-Browser is volunteer-run
     ///     and rate-limits by agent; pass your own app's identifier.
     public init(
@@ -80,17 +81,52 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         }
     }
 
+    /// The most-played stations, with the geo filter's region first.
+    ///
+    /// The global list comes from `topclick`, which ignores `countrycode`
+    /// (verified 2026-11-14: FR, JP and no filter return the same list). The
+    /// regional list is the same ranking — click count, descending — from the
+    /// search endpoint, which does honour it. Regional stations come first and
+    /// the global list fills whatever is left, so a region with few stations
+    /// never leaves Listen Now thin. A failed regional request degrades to the
+    /// global list; only a failed global request is an error.
     public func topStations(limit: Int) async throws(RadioDirectoryError) -> [Station] {
-        let baseQueryItems = [
-            URLQueryItem(name: "limit", value: String(max(limit, 1))),
-            URLQueryItem(name: "hidebroken", value: "true"),
-        ]
+        let limit = max(limit, 1)
+        let countryCode = await geoFilterProvider?.currentGeoFilter()?.countryCode
+        async let regional = regionalTopStations(countryCode: countryCode, limit: limit)
 
-        let stations = try await requestStations(
+        let global = try await requestStations(
             path: "/json/stations/topclick",
-            queryItems: baseQueryItems,
+            queryItems: [
+                URLQueryItem(name: "limit", value: String(limit)),
+                URLQueryItem(name: "hidebroken", value: "true"),
+            ],
         )
-        return Array(stations.prefix(limit))
+        return await Self.regionalFirst(regional, then: global, limit: limit)
+    }
+
+    private func regionalTopStations(countryCode: String?, limit: Int) async -> [Station] {
+        guard let countryCode else { return [] }
+        return (try? await requestStations(
+            path: "/json/stations/search",
+            queryItems: [
+                URLQueryItem(name: "countrycode", value: countryCode),
+                URLQueryItem(name: "limit", value: String(limit)),
+                URLQueryItem(name: "hidebroken", value: "true"),
+                URLQueryItem(name: "order", value: "clickcount"),
+                URLQueryItem(name: "reverse", value: "true"),
+            ],
+        )) ?? []
+    }
+
+    /// `regional` in order, then `global` without repeats, capped at `limit`.
+    static func regionalFirst(_ regional: [Station], then global: [Station], limit: Int) -> [Station] {
+        var seen = Set<Station.ID>()
+        var merged: [Station] = []
+        for station in regional + global where merged.count < limit && seen.insert(station.id).inserted {
+            merged.append(station)
+        }
+        return merged
     }
 
     public func searchStations(matching query: String, limit: Int) async throws(RadioDirectoryError) -> [Station] {
@@ -117,7 +153,6 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
                 URLQueryItem(name: "order", value: "clickcount"),
                 URLQueryItem(name: "reverse", value: "true"),
             ] + normalizedFilters.radioBrowserQueryItems(),
-            allowGeoFallback: normalizedFilters.countryCode == nil,
         )
         return Array(normalizedFilters.apply(to: stations).prefix(limit))
     }
@@ -152,7 +187,6 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
                 URLQueryItem(name: "order", value: "clickcount"),
                 URLQueryItem(name: "reverse", value: "true"),
             ] + normalizedFilters.radioBrowserQueryItems(excludingTag: true),
-            allowGeoFallback: normalizedFilters.countryCode == nil,
         )
         return Array(normalizedFilters.apply(to: stations).prefix(limit))
     }
@@ -223,36 +257,15 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     private func requestStations(
         path: String,
         queryItems: [URLQueryItem],
-        allowGeoFallback: Bool = true,
     ) async throws(RadioDirectoryError) -> [Station] {
-        let geoFilter = allowGeoFallback ? await geoFilterProvider?.currentGeoFilter() : nil
-        let geoFilterQueryItemSets = geoFilter.map(\.queryItemSets) ?? [[]]
-        let lastGeoFilterIndex = geoFilterQueryItemSets.count - 1
-
-        for (index, geoFilterQueryItems) in geoFilterQueryItemSets.enumerated() {
-            do {
-                let data = try await request(path: path, queryItems: queryItems + geoFilterQueryItems)
-                let filteredStations = try decode([RadioBrowserStation].self, from: data)
-                    .compactMap(Self.station(from:))
-                // Geo filtering is a fallback chain, not a merge: prefer the
-                // first non-empty result set.
-                if filteredStations.isEmpty == false || index == lastGeoFilterIndex {
-                    return filteredStations
-                }
-            } catch {
-                if index == lastGeoFilterIndex {
-                    throw error
-                }
-            }
-        }
-
-        preconditionFailure("Unreachable: geo filter loop must return or throw before completion.")
+        let data = try await request(path: path, queryItems: queryItems)
+        return try decode([RadioBrowserStation].self, from: data).compactMap(Self.station(from:))
     }
 
     /// Walks the mirror list in order with backoff, bounded by the retry policy:
     /// with `maximumRetries == 0` it makes a single attempt so a transport error
-    /// surfaces to the geo-filter fallback chain instead of being masked by
-    /// silently walking to the next mirror.
+    /// surfaces to the caller instead of being masked by silently walking to the
+    /// next mirror.
     private func request(path: String, queryItems: [URLQueryItem]) async throws(RadioDirectoryError) -> Data {
         let transport = self.transport
         let retryPolicy = self.retryPolicy
