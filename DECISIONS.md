@@ -28,8 +28,19 @@ variable included, ran the new target green.
   Now (3), and peak memory over 10 seconds of KEXP playback (3). That last test plays a
   live stream, so it skips rather than fails when the stream won't start. A baseline must
   never be why a run is red, and a separate plan keeps it out of local Cmd+U runs too.
-  `test-without-building` reuses the main step's build: `build-for-testing` writes an
-  `.xctestrun` for every plan in the scheme, which was verified locally.
+  - **It runs in its own CI job (`baselines`), not after the main tests.** As first
+    merged (#248), it reused the "Test app" job's build, with an 8-minute step limit
+    sized from a 2-minute local run. On the runner it hit that limit with nothing
+    written, and the job reached 27 of its 30 minutes, leaving no room to raise it.
+    The separate job builds for the Baselines plan alone, allows the run 15 minutes,
+    streams each test's start, finish and measurement through a filter so a slow one
+    is visible as it happens, and uploads the full log when the run doesn't finish
+    cleanly.
+  - **On pushes to `main` and manual runs only, never on PRs.** A second simulator build
+    is real money on the billed `xcode-27` runner, and a baseline is a trend across
+    builds of `main`, which a per-PR figure adds nothing to. That's the CI header's
+    rule 3, the same trade-off `release-checks` makes. A PR expected to move launch or
+    memory can run the job with `workflow_dispatch`.
 
 **First numbers**, iPhone 18 Pro simulator (iOS 27.3) on an Apple M5 Mac, two runs:
 
