@@ -1,5 +1,33 @@
 # Decisions
 
+## 2026-11-14 (`liveActivity` is deleted; the package that held it stays for the widget)
+
+The third of #146's five. The flag's own summary gave the reason it was off: the artwork
+could lag the current track, and the feature "adds little over the system Now Playing
+surface." The second half is the decisive one. Fixing the lag would leave a surface that
+duplicates the lock screen, Control Center and Dynamic Island controls iOS already draws
+from `MPNowPlayingInfoCenter`, maintained on a separate code path. The README advertised it
+as shipped while no user outside a Debug or TestFlight build had ever seen it.
+
+**Removed:** `NowPlayingLiveActivity.swift` (the ActivityKit widget), `NowPlayingActivityAttributes`,
+`NowPlayingActivityCoordinator`, `LiveActivityArtworkStore` and its tests, the `liveActivity`
+flag, the app's coordinator wiring, and `NSSupportsLiveActivities`. `ChangeFilter` stays: the
+widget coordinator deduplicates its observations with it too.
+
+**Kept, and why the package keeps its name.** `Packages/LiveActivity` also holds the shipped
+Quick Play widget's code: `NowPlayingWidgetStore`, `QuickPlayFavoritesStore` and
+`NowPlayingWidgetCoordinator`. Renaming the package and its two products would touch the
+project file, every import and the license table for no behaviour change, so the manifest
+says why the name no longer fits instead. The one helper the widget borrowed,
+`LiveActivityArtworkStore.token(for:)`, moved to `NowPlayingWidgetStore.token(for:)`
+unchanged, so staged files keep their names across the upgrade.
+
+**Not handled, deliberately.** A Debug or TestFlight install that had the flag on may
+still have a few PNGs in the App Group's `LiveActivityArtwork` directory, and possibly a
+Live Activity on the lock screen. The system ends a Live Activity within hours whether or
+not the app can still render it. The files are a few hundred kilobytes on internal builds
+only, so a cleanup migration would outlive the problem.
+
 ## 2026-11-14 (the headphone motion manager is created lazily, so first launch asks for nothing)
 
 A fresh install showed the Motion & Fitness prompt on first launch, over the onboarding

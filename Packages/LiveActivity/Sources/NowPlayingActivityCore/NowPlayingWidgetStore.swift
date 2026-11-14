@@ -136,15 +136,23 @@ public enum NowPlayingWidgetReloadPolicy {
 
 /// App Group drop box for the Quick Play widget's now-playing state: one
 /// snapshot file plus the artwork it points at.
-///
-/// Separate from ``LiveActivityArtworkStore`` on purpose. The Live Activity
-/// coordinator purges its directory on its own schedule, and the widget must
-/// keep rendering whether or not Live Activities are enabled. Tokens reuse
-/// ``LiveActivityArtworkStore/token(for:)`` so both stores name the same art
-/// the same way.
 public enum NowPlayingWidgetStore {
     private static let directoryName = "NowPlayingWidget"
     private static let snapshotFileName = "now-playing.json"
+
+    /// A filesystem-safe token identifying `url`'s artwork.
+    ///
+    /// FNV-1a over the URL string: deterministic across processes and launches
+    /// (the point of not using `Hasher`, which is seeded per launch), so the app
+    /// and the widget extension name the same art the same way.
+    public static func token(for url: URL) -> String {
+        var hash: UInt64 = 0xCBF2_9CE4_8422_2325
+        for byte in url.absoluteString.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x0000_0100_0000_01B3
+        }
+        return String(hash, radix: 16)
+    }
 
     /// Test-only override for the container directory, as in
     /// ``QuickPlayFavoritesStore``. Mutated only from test setup/teardown.

@@ -108,9 +108,16 @@ struct NowPlayingWidgetReloadPolicyTests {
     }
 }
 
-/// Isolated temp directory per test, as in `LiveActivityArtworkStoreTests`.
+/// Isolated temp directory per test.
 @Suite(.serialized)
 struct NowPlayingWidgetStoreTests {
+    @Test func `artwork token is deterministic and distinguishes URLs`() throws {
+        let url = try #require(URL(string: "https://example.com/artwork.png"))
+        let other = try #require(URL(string: "https://example.com/other.png"))
+        #expect(NowPlayingWidgetStore.token(for: url) == NowPlayingWidgetStore.token(for: url))
+        #expect(NowPlayingWidgetStore.token(for: url) != NowPlayingWidgetStore.token(for: other))
+    }
+
     private func withTemporaryStore(_ body: () throws -> Void) rethrows {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
