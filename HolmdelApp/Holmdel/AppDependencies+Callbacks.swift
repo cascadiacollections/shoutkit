@@ -1,7 +1,6 @@
 import DesignSystem
 import FeatureFlags
 import Foundation
-import NowPlayingActivityKit
 import Persistence
 import Playback
 import RadioDirectory
@@ -73,27 +72,6 @@ extension AppDependencies {
             let match = await AlbumArtLookup.lookup(artist: track.artist, title: track.title)
             return TrackResources(artworkURL: match.artworkURL, appleMusicURL: match.appleMusicURL)
         }
-    }
-
-    /// The lock screen / Dynamic Island Live Activity, which follows playback by
-    /// observing the controller's `@Observable` state directly.
-    ///
-    /// Off by default (see `FeatureCatalog.liveActivity`): its artwork can lag
-    /// the current track, and it adds little over the system Now Playing
-    /// surface. When the flag is off the coordinator still gets built and asked
-    /// to dismiss — a launch with the flag previously on can leave a live
-    /// activity on the lock screen that nothing else would ever end.
-    static func makeActivityCoordinator(
-        for controller: PlaybackController,
-        featureFlags: any FeatureFlagProviding,
-    ) -> NowPlayingActivityCoordinator {
-        let coordinator = NowPlayingActivityCoordinator()
-        if featureFlags.isEnabled(FeatureCatalog.liveActivity) {
-            coordinator.observe(controller)
-        } else {
-            coordinator.endAnyExistingActivities()
-        }
-        return coordinator
     }
 
     /// The sleep timer, which *pauses* rather than stops: the mini-player

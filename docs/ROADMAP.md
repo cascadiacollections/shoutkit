@@ -166,10 +166,10 @@ entry below states what is actually dark.
       layer (`CachingRadioDirectory.swift:195`, `DirectoryDiscoverySnapshot.swift:40`) and
       runs for every user today. Only `GeoStationLocationCoordinator` and the flag are dark,
       so scope this as "delete the opt-in precise-location path," not "delete geo".
-- [ ] `liveActivity` — off with a stated reason (artwork can lag the track); the reason is
-      fixable or it is a decision to delete. Smaller blast radius than it looks:
-      `NowPlayingActivityCore` is linked by the **shipped** quick-play widget
-      (`QuickPlayWidget.swift:34`), so the package stays either way.
+- [x] `liveActivity` — **deleted 2026-11-14.** It added little over the system Now Playing
+      surface and had never reached a user. The ActivityKit view, attributes, coordinator
+      and artwork store went; the `LiveActivity` package stays, because the
+      **shipped** Quick Play widget lives in it. See `DECISIONS.md`.
 - [x] `diagnostics` (1,087 lines — 54% of the inventory) — **decided 2026-08-13: stays
       internal-only, permanently.** It is a developer instrument with no user-facing surface,
       double-gated and with no network egress at all. See `DECISIONS.md` (recorded in #167).

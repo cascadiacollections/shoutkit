@@ -29,11 +29,9 @@ struct AppServices {
     /// the app's lifetime; it keeps the geo-station filter synchronized with the
     /// feature flag, locale fallback, and optional precise-location override.
     let geoStationLocationCoordinator: GeoStationLocationCoordinator
-    /// Retained here: its observation tasks hold it weakly, so this reference
-    /// is what keeps the Live Activity following playback for the app's lifetime.
-    let activityCoordinator: NowPlayingActivityCoordinator
-    /// Retained for the same reason: it keeps the Quick Play widget's
-    /// now-playing snapshot and artwork following playback. Not flag-gated.
+    /// Retained here: its observation tasks hold it weakly, so this reference is
+    /// what keeps the Quick Play widget's now-playing snapshot and artwork
+    /// following playback for the app's lifetime.
     let nowPlayingWidgetCoordinator: NowPlayingWidgetCoordinator
     let stationLaunchRouter: StationLaunchRouter
 }
@@ -88,7 +86,6 @@ enum AppDependencies {
             playReporter: directoryServices.playReporter,
         )
 
-        let activityCoordinator = makeActivityCoordinator(for: controller, featureFlags: featureFlags)
         let nowPlayingWidgetCoordinator = NowPlayingWidgetCoordinator()
         nowPlayingWidgetCoordinator.observe(controller)
         let sleepTimer = makeSleepTimer(for: controller)
@@ -105,7 +102,6 @@ enum AppDependencies {
             directory: directory,
             directoryDiscoveryCache: directoryServices.discoveryCache,
             geoStationLocationCoordinator: directoryServices.geoStationLocationCoordinator,
-            activityCoordinator: activityCoordinator,
             nowPlayingWidgetCoordinator: nowPlayingWidgetCoordinator,
             stationLaunchRouter: StationLaunchRouter(),
         )

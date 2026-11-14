@@ -25,8 +25,8 @@ public struct QuickPlayStationSnapshot: Codable, Sendable, Identifiable, Hashabl
 /// writes it whenever favorites change; the widget extension reads it from its
 /// own process.
 ///
-/// Mirrors ``LiveActivityArtworkStore``'s container-and-override pattern so unit
-/// tests can stage a list in a temp directory without an App Group entitlement.
+/// Uses a container-and-override pattern, as ``NowPlayingWidgetStore`` does, so
+/// unit tests can stage a list in a temp directory without an App Group entitlement.
 public enum QuickPlayFavoritesStore {
     /// The quick-play widget's kind identifier. Shared so the app's
     /// `WidgetCenter` reloads target the same widget the extension registers.
@@ -49,7 +49,7 @@ public enum QuickPlayFavoritesStore {
     /// `.noFileProtection`: Home Screen widgets render before the first unlock
     /// after boot, when the default protection class would make the file
     /// unreadable. Station names/genres aren't sensitive, so this is safe and
-    /// matches ``LiveActivityArtworkStore``.
+    /// matches ``NowPlayingWidgetStore``.
     /// - Returns: `true` on success, `false` if the container is unavailable or
     ///   the write fails.
     @discardableResult

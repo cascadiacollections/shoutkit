@@ -14,10 +14,13 @@ let package = Package(
         .iOS(.v26),
     ],
     products: [
-        // Attributes only — linked by BOTH the app and the widget extension.
-        // Kept dependency-free so the extension stays lean.
+        // The App Group stores — linked by BOTH the app and the widget
+        // extension. Kept dependency-free so the extension stays lean.
+        //
+        // The package and product names predate the Live Activity's removal
+        // (DECISIONS.md, 2026-11-14); what remains serves the Home Screen widget.
         .library(name: "NowPlayingActivityCore", targets: ["NowPlayingActivityCore"]),
-        // App-side coordinator that drives the activity from playback state.
+        // App-side coordinator that keeps the widget's snapshot in step with playback.
         .library(name: "NowPlayingActivityKit", targets: ["NowPlayingActivityKit"]),
     ],
     dependencies: [
