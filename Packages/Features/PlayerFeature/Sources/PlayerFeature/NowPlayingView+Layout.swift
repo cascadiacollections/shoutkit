@@ -1,6 +1,7 @@
 import AudioLevelsUI
 import DesignSystem
 import Playback
+import PlayerFeatureCore
 import RadioDirectory
 import SwiftUI
 
@@ -33,7 +34,7 @@ extension NowPlayingView {
         size: CGSize,
     ) -> some View {
         HStack(spacing: ShoutKitSpacing.large) {
-            artwork(playback, size: min(220, max(120, size.height - 64)))
+            artwork(playback, size: NowPlayingLayout.sideBySideArtworkSize(height: size.height))
             VStack(spacing: ShoutKitSpacing.medium) {
                 titleBlock(playback: playback, station: station)
                 levelMeter(playback)
