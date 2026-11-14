@@ -91,7 +91,7 @@ import Playback
         /// transparent — it always downmixes to a binaural signal — so turning
         /// the effect off has to mean removing the node, not just parking it.
         private func detachSpatialAudioNode() {
-            headphoneMotionManager.stopDeviceMotionUpdates()
+            headphoneMotionManager?.stopDeviceMotionUpdates()
             guard let environment = spatialAudioNode else { return }
             player.detach(node: environment)
             spatialAudioNode = nil
@@ -105,8 +105,10 @@ import Playback
         /// from ``attachSpatialAudioNode()`` still applies, just without
         /// head-tracked movement.
         private func startHeadTracking(for environment: AVAudioEnvironmentNode) {
-            guard headphoneMotionManager.isDeviceMotionAvailable else { return }
-            headphoneMotionManager.startDeviceMotionUpdates(to: .main) { [weak environment] motion, _ in
+            let manager = headphoneMotionManager ?? CMHeadphoneMotionManager()
+            headphoneMotionManager = manager
+            guard manager.isDeviceMotionAvailable else { return }
+            manager.startDeviceMotionUpdates(to: .main) { [weak environment] motion, _ in
                 // `to: .main` delivers this on the main queue already, but the
                 // handler's own type carries no actor isolation the compiler can
                 // see; converting to plain values here (rather than touching

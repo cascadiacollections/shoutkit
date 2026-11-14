@@ -99,16 +99,16 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     /// Plug-ins fed from the mixer tap — see AudioStreamingPlaybackEngine+AudioLevels.swift.
     let audioTaps = AudioTapPluginSet()
 
-    // Head tracking source for the spatial audio effect. Allocating this
-    // unconditionally is cheap — it does nothing until
-    // `startDeviceMotionUpdates(to:withHandler:)` is called, which only
-    // happens once spatial audio is switched on.
+    // Head tracking source for the spatial audio effect. Created lazily when
+    // spatial audio is first switched on: an eager one raised the Motion
+    // permission prompt on first launch with spatial audio off, contradicting
+    // the usage string's "only when you opt in" (DECISIONS.md, 2026-11-14).
     //
     // Absent where CoreMotion is — tvOS, given this package's platform list —
     // along with the whole effect it drives. See
     // AudioStreamingPlaybackEngine+SpatialAudio.swift.
     #if canImport(CoreMotion)
-        let headphoneMotionManager = CMHeadphoneMotionManager()
+        var headphoneMotionManager: CMHeadphoneMotionManager?
     #endif
 
     public init() {
@@ -123,7 +123,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         stopClassificationTask?.cancel()
         volumeRampTask?.cancel()
         #if canImport(CoreMotion)
-            headphoneMotionManager.stopDeviceMotionUpdates()
+            headphoneMotionManager?.stopDeviceMotionUpdates()
         #endif
         for token in notificationTokens {
             NotificationCenter.default.removeObserver(token)
