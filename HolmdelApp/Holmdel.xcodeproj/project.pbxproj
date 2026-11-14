@@ -36,7 +36,6 @@
 		0000000000000000000000A0 /* DebugSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005B /* DebugSupport */; };
 		0000000000000000000000FB /* DebugSupport in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005B /* DebugSupport */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		0000000000000000000000A1 /* BackgroundRefreshController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A2 /* BackgroundRefreshController.swift */; };
-		0000000000000000000000B1 /* GeoStationLocationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000B0 /* GeoStationLocationCoordinator.swift */; };
 		0000000000000000000000B3 /* HolmdelAudioIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000B2 /* HolmdelAudioIntents.swift */; };
 		0000000000000000000000C0 /* NowPlayingActivityCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0000000000000000000000CA /* NowPlayingActivityCore */; };
 		0000000000000000000000C1 /* QuickPlayWidgetPublisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000D0 /* QuickPlayWidgetPublisher.swift */; };
@@ -179,7 +178,6 @@
 		000000000000000000000093 /* Holmdel.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Holmdel.entitlements; sourceTree = "<group>"; };
 		000000000000000000000094 /* HolmdelCarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolmdelCarPlaySceneDelegate.swift; sourceTree = "<group>"; };
 		0000000000000000000000A2 /* BackgroundRefreshController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefreshController.swift; sourceTree = "<group>"; };
-		0000000000000000000000B0 /* GeoStationLocationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoStationLocationCoordinator.swift; sourceTree = "<group>"; };
 		0000000000000000000000B2 /* HolmdelAudioIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolmdelAudioIntents.swift; sourceTree = "<group>"; };
 		0000000000000000000000D0 /* QuickPlayWidgetPublisher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPlayWidgetPublisher.swift; sourceTree = "<group>"; };
 		0000000000000000000000D1 /* QuickPlayWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPlayWidget.swift; sourceTree = "<group>"; };
@@ -323,7 +321,6 @@
 				000000000000000000000102 /* AppDependencies+Callbacks.swift */,
 				000000000000000000000103 /* AppDependencies+Warmups.swift */,
 				0000000000000000000000A2 /* BackgroundRefreshController.swift */,
-				0000000000000000000000B0 /* GeoStationLocationCoordinator.swift */,
 				0000000000000000000000B2 /* HolmdelAudioIntents.swift */,
 				000000000000000000000018 /* HolmdelShortcuts.swift */,
 				000000000000000000000090 /* StationLaunchRouter.swift */,
@@ -697,7 +694,6 @@
 				000000000000000000000112 /* AppDependencies+Callbacks.swift in Sources */,
 				000000000000000000000113 /* AppDependencies+Warmups.swift in Sources */,
 				0000000000000000000000A1 /* BackgroundRefreshController.swift in Sources */,
-				0000000000000000000000B1 /* GeoStationLocationCoordinator.swift in Sources */,
 				0000000000000000000000B3 /* HolmdelAudioIntents.swift in Sources */,
 				000000000000000000000024 /* HolmdelShortcuts.swift in Sources */,
 				000000000000000000000091 /* StationLaunchRouter.swift in Sources */,

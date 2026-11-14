@@ -80,8 +80,6 @@ public struct SettingsView: View {
     @ViewBuilder
     private var privacySection: some View {
         if let settings {
-            let isGeoStationsEnabled = featureFlags.isEnabled(FeatureCatalog.geoStations)
-
             Section {
                 Toggle(
                     "Report Plays to Radio-Browser",
@@ -97,19 +95,15 @@ public struct SettingsView: View {
                         set: { settings.isAlbumArtEnabled = $0 },
                     ),
                 )
-                Toggle(
-                    "Share diagnostics",
-                    isOn: Binding(
-                        get: { settings.isDiagnosticsSharingEnabled },
-                        set: { settings.isDiagnosticsSharingEnabled = $0 },
-                    ),
-                )
-                if isGeoStationsEnabled {
+                // Diagnostics is internal-only for good (DECISIONS.md, 2026-08-13):
+                // collection also needs the flag, so without it this toggle would
+                // do nothing. Shown only where the flag can be, and is, turned on.
+                if featureFlags.isEnabled(FeatureCatalog.diagnostics) {
                     Toggle(
-                        "Use Precise Location for Geo Stations",
+                        "Share diagnostics",
                         isOn: Binding(
-                            get: { settings.isPreciseGeoStationLocationEnabled },
-                            set: { settings.isPreciseGeoStationLocationEnabled = $0 },
+                            get: { settings.isDiagnosticsSharingEnabled },
+                            set: { settings.isDiagnosticsSharingEnabled = $0 },
                         ),
                     )
                 }
@@ -121,13 +115,8 @@ public struct SettingsView: View {
                 about you or your device) so the community directory can rank popularity. \
                 Album artwork lookups send the current track's artist and title to Apple's \
                 iTunes Search API; turn this off to always show station artwork instead. \
-                Share diagnostics keeps Apple MetricKit crash/hang/energy/disk payloads local \
-                on-device for troubleshooting. They are never sent automatically; export/share \
-                would only happen if you explicitly choose to do that for debugging later. The \
-                geo-stations feature defaults to your device locale region with no permission \
-                prompt; the optional precise-location toggle asks Apple for location permission \
-                only after you turn it on, and falls back to that locale region if permission \
-                is denied. \
+                Listen Now puts popular stations from your region first, using your device's \
+                region setting, never your location. \
                 Holmdel has no analytics, no ads, and no accounts.
                 """)
             }

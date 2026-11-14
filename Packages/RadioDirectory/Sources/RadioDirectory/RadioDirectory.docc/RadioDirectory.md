@@ -82,10 +82,11 @@ Decorators over ``RadioDirectoryProviding``. Each wraps another provider, so the
 - ``URLSessionHTTPTransport``
 - ``HTTPTransportError``
 
-### Geographic Filtering
+### Regional Top Stations
 
 - ``RadioBrowserGeoFilter``
 - ``RadioBrowserGeoFilterProviding``
+- ``LocaleGeoFilterProvider``
 - ``MutableRadioBrowserGeoFilterProvider``
 
 ### Deep Links and Reporting

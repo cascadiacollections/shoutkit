@@ -25,6 +25,13 @@ below) are documented here. The format follows
   tinted and clear Home Screens and on the Mac desktop.
 
 ### Changed
+- **Listen Now starts with stations near you.** The most-played stations in your region
+  come first, followed by the most-played stations worldwide. Your region comes from your
+  device's region setting, not your location, so Holmdel never asks for location access.
+  Search and genres still cover the whole world. (#146)
+- **Simpler privacy settings.** The Privacy section now explains only the settings you can
+  change. The "Share diagnostics" switch, which had no effect outside internal builds, is
+  no longer shown.
 - **A smaller download.** Two Apple utility libraries were replaced by a few lines of
   Holmdel's own code, and the debug-only network inspector no longer ships in release
   builds, and every library is now optimized for size. The iPhone app binary is up to

@@ -1,51 +1,31 @@
 import Foundation
 
+/// The region ``RadioBrowserDirectoryClient`` favours when it lists top stations.
+///
+/// Country only. An earlier version also carried a language code and fell back to
+/// Radio-Browser's `language` parameter, but that parameter matches language
+/// *names* by substring, so `en` matched "english", "french" and "slovene" alike.
 public struct RadioBrowserGeoFilter: Equatable, Sendable {
+    /// ISO 3166-1 alpha-2, uppercased; `nil` when there is no usable region.
     public let countryCode: String?
-    public let languageCode: String?
 
-    public init(countryCode: String?, languageCode: String?) {
-        let normalizedCountryCode = countryCode?
+    public init(countryCode: String?) {
+        let normalized = countryCode?
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .uppercased()
-        let normalizedLanguageCode = languageCode?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-
-        self.countryCode = normalizedCountryCode?.isEmpty == false ? normalizedCountryCode : nil
-        self.languageCode = normalizedLanguageCode?.isEmpty == false ? normalizedLanguageCode : nil
+        self.countryCode = normalized?.isEmpty == false ? normalized : nil
     }
 
-    public init(locale: Locale, countryCodeOverride: String? = nil) {
-        self.init(
-            countryCode: countryCodeOverride ?? locale.region?.identifier,
-            languageCode: locale.language.languageCode?.identifier,
-        )
+    /// The region from `locale`, which is the device's region setting, not its
+    /// location. Reading it needs no permission.
+    public init(locale: Locale) {
+        self.init(countryCode: locale.region?.identifier)
     }
 
     /// Stable key for this filter, used to scope persisted directory snapshots
-    /// so content captured for one country/language isn't served after the filter
-    /// changes — travel, or the geo-stations flag being toggled.
+    /// so stations saved for one region aren't shown after the region changes.
     public var snapshotIdentity: String {
-        "country=\(countryCode ?? "any");language=\(languageCode ?? "any")"
-    }
-
-    var queryItemSets: [[URLQueryItem]] {
-        var queryItemSets: [[URLQueryItem]] = []
-
-        if let countryCode {
-            queryItemSets.append([URLQueryItem(name: "countrycode", value: countryCode)])
-        }
-
-        if let languageCode {
-            queryItemSets.append([URLQueryItem(name: "language", value: languageCode)])
-        }
-
-        if queryItemSets.isEmpty {
-            queryItemSets.append([])
-        }
-
-        return queryItemSets
+        "country=\(countryCode ?? "any")"
     }
 }
 
@@ -53,6 +33,18 @@ public protocol RadioBrowserGeoFilterProviding: Sendable {
     func currentGeoFilter() async -> RadioBrowserGeoFilter?
 }
 
+/// Follows the device's region setting as it is now, so changing the region in
+/// Settings takes effect on the next refresh without relaunching.
+public struct LocaleGeoFilterProvider: RadioBrowserGeoFilterProviding {
+    public init() {}
+
+    public func currentGeoFilter() async -> RadioBrowserGeoFilter? {
+        RadioBrowserGeoFilter(locale: .autoupdatingCurrent)
+    }
+}
+
+/// A provider whose filter is set explicitly — for tests and for apps that
+/// choose the region themselves.
 public actor MutableRadioBrowserGeoFilterProvider: RadioBrowserGeoFilterProviding {
     private var geoFilter: RadioBrowserGeoFilter?
 

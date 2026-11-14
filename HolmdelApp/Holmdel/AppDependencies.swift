@@ -25,10 +25,6 @@ struct AppServices {
     /// The persisted-snapshot facet of `directory`. Present even when Application
     /// Support can't be resolved — it just has no saved stations to hand back.
     let directoryDiscoveryCache: any DirectoryDiscoveryCaching
-    /// Retained here so the Observation and Core Location tasks stay alive for
-    /// the app's lifetime; it keeps the geo-station filter synchronized with the
-    /// feature flag, locale fallback, and optional precise-location override.
-    let geoStationLocationCoordinator: GeoStationLocationCoordinator
     /// Retained here: its observation tasks hold it weakly, so this reference
     /// is what keeps the Live Activity following playback for the app's lifetime.
     let activityCoordinator: NowPlayingActivityCoordinator
@@ -68,7 +64,7 @@ enum AppDependencies {
         let settings = SettingsStore()
         let featureFlags = sharedFeatureFlags()
         let diagnosticsService = makeDiagnosticsService(settings: settings, featureFlags: featureFlags)
-        let directoryServices = makeDirectory(settings: settings, featureFlags: featureFlags)
+        let directoryServices = makeDirectory()
         let directory = registerProductionDirectory(directoryServices)
         let controller = PlaybackController(directory: directory)
         let stationConnectionPrewarmer = StationConnectionPrewarmer()
@@ -104,7 +100,6 @@ enum AppDependencies {
             diagnosticsService: diagnosticsService,
             directory: directory,
             directoryDiscoveryCache: directoryServices.discoveryCache,
-            geoStationLocationCoordinator: directoryServices.geoStationLocationCoordinator,
             activityCoordinator: activityCoordinator,
             nowPlayingWidgetCoordinator: nowPlayingWidgetCoordinator,
             stationLaunchRouter: StationLaunchRouter(),

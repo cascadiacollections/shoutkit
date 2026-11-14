@@ -1,11 +1,9 @@
 #if DEBUG || TESTFLIGHT
     import FeatureFlags
-    import Persistence
     import SwiftUI
 
     struct FeatureFlagsView: View {
         private let featureFlags: any FeatureFlagProviding
-        @Environment(\.settingsStore) private var settings
 
         init(featureFlags: any FeatureFlagProviding) {
             self.featureFlags = featureFlags
@@ -32,7 +30,7 @@
             if !features.isEmpty {
                 Section {
                     ForEach(features, id: \.key) { feature in
-                        FeatureFlagRow(feature: feature, featureFlags: featureFlags, settings: settings)
+                        FeatureFlagRow(feature: feature, featureFlags: featureFlags)
                     }
                 } header: {
                     Text(stage.displayTitle)
@@ -44,7 +42,6 @@
     private struct FeatureFlagRow: View {
         let feature: Feature
         let featureFlags: any FeatureFlagProviding
-        let settings: SettingsStore?
 
         var body: some View {
             let isEnabled = featureFlags.isEnabled(feature)
@@ -65,11 +62,6 @@
                 Text(feature.summary)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                if isEnabled, let statusText {
-                    Label(statusText, systemImage: "checkmark.circle")
-                        .font(.footnote)
-                        .foregroundStyle(.tint)
-                }
                 Picker("Override", selection: overrideBinding(for: feature)) {
                     Text("Default").tag(FeatureOverride.useDefault)
                     Text("Enabled").tag(FeatureOverride.enabled)
@@ -78,25 +70,6 @@
                 .pickerStyle(.segmented)
             }
             .padding(.vertical, 4)
-        }
-
-        /// A live "this flag is actually doing something" line, answering the
-        /// question "did enabling this do anything?" without having to leave
-        /// Settings to check. Only defined for flags with an observable runtime
-        /// effect here; other flags just show the toggle state above.
-        private var statusText: String? {
-            switch feature {
-            case FeatureCatalog.geoStations:
-                if settings?.isPreciseGeoStationLocationEnabled == true {
-                    return "Filtering by your precise location"
-                }
-                let regionName = Locale.current.region
-                    .flatMap { Locale.current.localizedString(forRegionCode: $0.identifier) }
-                return regionName.map { "Showing stations from \($0)" }
-                    ?? "Filtering stations by your region"
-            default:
-                return nil
-            }
         }
 
         private func overrideBinding(for feature: Feature) -> Binding<FeatureOverride> {
