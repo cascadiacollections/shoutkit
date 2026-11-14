@@ -117,11 +117,11 @@ SHOUTCAST_DEV_KEY = your_key_here
   which have no watchOS slice, and SwiftPM fetches binary artifacts regardless of platform
   conditions. The watch app supplies its own `AVPlayer`-backed engine.
 - `Packages/Persistence`: SwiftData models and `LibraryStore` for favorites and recents.
-- `Packages/LiveActivity`: Live Activity attributes and the `NowPlayingActivityCoordinator`
-  driving the lock screen / Dynamic Island now-playing surface, including staging downsampled
-  artwork into a shared App Group container for the widget extension to render.
+- `Packages/LiveActivity`: the App Group stores and the `NowPlayingWidgetCoordinator` behind the
+  Quick Play Home Screen widget, including staging downsampled artwork into the shared container
+  for the widget extension to render. (The name predates the Live Activity's removal.)
 - `Packages/ImageIODownsample`: a small leaf module wrapping ImageIO downsampling, shared by
-  `DesignSystem`'s artwork pipeline and Live Activity artwork staging so decoded images never
+  `DesignSystem`'s artwork pipeline and widget artwork staging so decoded images never
   exceed the pixel size their surface actually needs.
 - `Packages/AudioLevels`: a leaf module for live per-band audio levels — a spectrum analyzer,
   the `AudioTapPlugin` protocol playback engines hand rendered PCM through, and (as the separate
@@ -147,10 +147,10 @@ implementation details stay behind protocol or actor boundaries.
 
 ## Capabilities
 
-The phone app `Info.plist` declares `UIBackgroundModes = audio` for streaming playback and
-`NSSupportsLiveActivities` for the lock screen / Dynamic Island now-playing Live Activity (the
-`HolmdelWidgets` extension target, driven by `NowPlayingActivityCoordinator` from playback
-state, with synced album/station artwork). The watch app adds a native watchOS now-playing +
+The phone app `Info.plist` declares `UIBackgroundModes = audio` for streaming playback. The lock
+screen, Control Center and Dynamic Island show the system Now Playing controls, and the
+`HolmdelWidgets` extension provides the Quick Play Home Screen widget, kept in step with
+playback by `NowPlayingWidgetCoordinator`. The watch app adds a native watchOS now-playing +
 recents surface plus a one-tap "Play Last" complication that deep-links into watch playback, and
 ships embedded in the phone app's bundle. **Apple TV** (`HolmdelTVApp`, tvOS 26+) is a separate
 submission with its own bundle id: Recent and Popular station shelves built for the Siri Remote,

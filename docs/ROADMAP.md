@@ -167,10 +167,10 @@ entry below states what is actually dark.
       was never regional. Listen Now now puts the device region's most-played stations first
       for everyone. The precise-location path, the flag and the location usage string are
       gone. See `DECISIONS.md`.
-- [ ] `liveActivity` — off with a stated reason (artwork can lag the track); the reason is
-      fixable or it is a decision to delete. Smaller blast radius than it looks:
-      `NowPlayingActivityCore` is linked by the **shipped** quick-play widget
-      (`QuickPlayWidget.swift:34`), so the package stays either way.
+- [x] `liveActivity` — **deleted 2026-11-14.** It added little over the system Now Playing
+      surface and had never reached a user. The ActivityKit view, attributes, coordinator
+      and artwork store went; the `LiveActivity` package stays, because the
+      **shipped** Quick Play widget lives in it. See `DECISIONS.md`.
 - [x] `diagnostics` (1,087 lines — 54% of the inventory) — **decided 2026-08-13: stays
       internal-only, permanently.** It is a developer instrument with no user-facing surface,
       double-gated and with no network egress at all. See `DECISIONS.md` (recorded in #167).
