@@ -25,11 +25,9 @@ struct AppServices {
     /// The persisted-snapshot facet of `directory`. Present even when Application
     /// Support can't be resolved — it just has no saved stations to hand back.
     let directoryDiscoveryCache: any DirectoryDiscoveryCaching
-    /// Retained here: its observation tasks hold it weakly, so this reference
-    /// is what keeps the Live Activity following playback for the app's lifetime.
-    let activityCoordinator: NowPlayingActivityCoordinator
-    /// Retained for the same reason: it keeps the Quick Play widget's
-    /// now-playing snapshot and artwork following playback. Not flag-gated.
+    /// Retained here: its observation tasks hold it weakly, so this reference is
+    /// what keeps the Quick Play widget's now-playing snapshot and artwork
+    /// following playback for the app's lifetime.
     let nowPlayingWidgetCoordinator: NowPlayingWidgetCoordinator
     let stationLaunchRouter: StationLaunchRouter
 }
@@ -84,7 +82,6 @@ enum AppDependencies {
             playReporter: directoryServices.playReporter,
         )
 
-        let activityCoordinator = makeActivityCoordinator(for: controller, featureFlags: featureFlags)
         let nowPlayingWidgetCoordinator = NowPlayingWidgetCoordinator()
         nowPlayingWidgetCoordinator.observe(controller)
         let sleepTimer = makeSleepTimer(for: controller)
@@ -100,7 +97,6 @@ enum AppDependencies {
             diagnosticsService: diagnosticsService,
             directory: directory,
             directoryDiscoveryCache: directoryServices.discoveryCache,
-            activityCoordinator: activityCoordinator,
             nowPlayingWidgetCoordinator: nowPlayingWidgetCoordinator,
             stationLaunchRouter: StationLaunchRouter(),
         )

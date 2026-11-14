@@ -65,8 +65,6 @@
 	</dict>
 	<key>NSMotionUsageDescription</key>
 	<string>Holmdel uses head-tracking motion data only when you opt in to Spatial Audio for headphones.</string>
-	<key>NSSupportsLiveActivities</key>
-	<true/>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>com.cascadiacollections.holmdel.station</string>

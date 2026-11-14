@@ -8,11 +8,8 @@ import WidgetKit
 
 /// Keeps the Quick Play widget's now-playing snapshot in step with playback.
 ///
-/// Like ``NowPlayingActivityCoordinator`` it observes `PlaybackController`
-/// directly, and the controller knows nothing about widgets. Unlike it, this runs
-/// whether or not the Live Activity feature is on, and it stages artwork in its
-/// own ``NowPlayingWidgetStore`` so neither coordinator's purges can delete the
-/// other's files.
+/// It observes `PlaybackController` directly, and the controller knows nothing
+/// about widgets. Artwork is staged in ``NowPlayingWidgetStore``.
 ///
 /// The artwork is the same choice every other now-playing surface makes: the
 /// resolved album art when there is one (the album-art privacy toggle is applied
@@ -238,7 +235,7 @@ public final class NowPlayingWidgetCoordinator {
             return
         }
 
-        let token = LiveActivityArtworkStore.token(for: target)
+        let token = NowPlayingWidgetStore.token(for: target)
         if NowPlayingWidgetStore.artworkFileURL(forToken: token) != nil {
             artworkToken = token
             return
@@ -250,7 +247,7 @@ public final class NowPlayingWidgetCoordinator {
         // the glyph, rather than leave the previous track's cover beside the
         // new title.
         artworkToken = station?.artworkURL
-            .map(LiveActivityArtworkStore.token(for:))
+            .map(NowPlayingWidgetStore.token(for:))
             .flatMap { NowPlayingWidgetStore.artworkFileURL(forToken: $0) != nil ? $0 : nil }
 
         let transport = self.transport
