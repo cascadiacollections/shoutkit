@@ -374,6 +374,15 @@ jobs:
           echo "id=$(xcodebuild -version | shasum -a 256 | cut -c1-12)" >> "$GITHUB_OUTPUT"
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
 
+      # Start booting now so it overlaps the cache restore and the build;
+      # "Wait for the simulator" below blocks until it has finished. Left to
+      # xcodebuild, the boot happened at test time and the first app launch hit a
+      # simulator still settling: FirstLaunchUITests, which runs first, took 80 s
+      # to launch the app in run 43649336302 and exceeded XCTest's launch timeout
+      # in run 43655413237. `|| true`: booting an already-booted device errors.
+      - name: Start booting the simulator
+        run: xcrun simctl boot "${{ steps.toolchain.outputs.udid }}" || true
+
       # Same rationale as the host-tests cache above. Two paths, because Xcode
       # splits the work: the shared store under ~/Library/Caches holds the
       # downloaded artifacts, while `-derivedDataPath DerivedData` puts the
@@ -403,6 +412,9 @@ jobs:
       # stamped into the app's Info.plist (surfaced in Settings → About) so a
       # distributed build maps back to an exact source revision; archive/release
       # builds must pass it the same way.
+      - name: Wait for the simulator
+        run: xcrun simctl bootstatus "${{ steps.toolchain.outputs.udid }}" -b
+
       - name: Test app (Debug)
         run: |
           set -o pipefail
@@ -589,6 +601,15 @@ jobs:
           echo "id=$(xcodebuild -version | shasum -a 256 | cut -c1-12)" >> "$GITHUB_OUTPUT"
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
 
+      # Start booting now so it overlaps the cache restore and the build;
+      # "Wait for the simulator" below blocks until it has finished. Left to
+      # xcodebuild, the boot happened at test time and the first app launch hit a
+      # simulator still settling: FirstLaunchUITests, which runs first, took 80 s
+      # to launch the app in run 43649336302 and exceeded XCTest's launch timeout
+      # in run 43655413237. `|| true`: booting an already-booted device errors.
+      - name: Start booting the simulator
+        run: xcrun simctl boot "${{ steps.toolchain.outputs.udid }}" || true
+
       - name: Cache SwiftPM clones and binary artifacts
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -609,6 +630,9 @@ jobs:
             -derivedDataPath DerivedData \
             CODE_SIGNING_ALLOWED=NO \
             build-for-testing 2>&1 | tail -20
+
+      - name: Wait for the simulator
+        run: xcrun simctl bootstatus "${{ steps.toolchain.outputs.udid }}" -b
 
       # The filter keeps the app's OS-log noise out while showing each test as
       # it starts and finishes, and each measurement as it lands.

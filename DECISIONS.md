@@ -55,6 +55,15 @@ against 3.3 to 3.5 s for the rest. The summary therefore reports the median and 
 not an average. The 2026-09-07 memgraph is a one-off on different hardware, so these
 numbers are not comparable with it.
 
+**CI boots the simulator early and waits for it before testing.** Nothing used to boot it;
+`xcodebuild` did, lazily, when testing started. `FirstLaunchUITests` runs first, so it made
+the first app launch on a simulator still settling. That took 80 s in run 43649336302 and
+exceeded XCTest's launch timeout in run 43655413237, a red build the app didn't cause. Both
+simulator jobs now start the boot right after picking the device and run `simctl bootstatus
+-b` just before testing, so the boot overlaps work the job does anyway. This is the likely
+cause, not a proven one: if launches stay slow on a booted simulator, the next suspect is
+the first launch after install, and the fallback is retrying UI tests once.
+
 **`check-simulator-test-targets.py` had to learn about UI tests.** It counted only
 `Unit test bundle` nodes, and `xcresulttool` reports this target as `UI test bundle`, so
 it would have reported a target that ran as missing.
