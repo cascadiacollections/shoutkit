@@ -39,8 +39,9 @@ xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
   on a fresh install, so uninstall the app or `xcrun simctl privacy booted reset all
   com.cascadiacollections.holmdel` before trusting a local pass. `BaselineUITests` (launch
   time, peak memory) runs only from `Baselines.xctestplan`:
-  `xcodebuild … -testPlan Baselines test`, about 2-3 minutes. CI reports its numbers and
-  never fails on them.
+  `xcodebuild … -testPlan Baselines test`, about 2-3 minutes. CI runs it in its own job on
+  pushes to `main` and manual runs only (it's a billed second build), reports the numbers,
+  and never fails on them.
 - **Only some packages build on the mac host.** Anything depending on `DesignSystem` does
   not. The reason is its manifest: `Packages/DesignSystem/Package.swift` declares
   `.iOS(.v26)` and nothing else, so SwiftPM won't build it for macOS at all. (The sources

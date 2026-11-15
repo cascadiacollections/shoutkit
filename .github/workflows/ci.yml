@@ -374,6 +374,15 @@ jobs:
           echo "id=$(xcodebuild -version | shasum -a 256 | cut -c1-12)" >> "$GITHUB_OUTPUT"
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
 
+      # Start booting now so it overlaps the cache restore and the build;
+      # "Wait for the simulator" below blocks until it has finished. Left to
+      # xcodebuild, the boot happened at test time and the first app launch hit a
+      # simulator still settling: FirstLaunchUITests, which runs first, took 80 s
+      # to launch the app in run 43649336302 and exceeded XCTest's launch timeout
+      # in run 43655413237. `|| true`: booting an already-booted device errors.
+      - name: Start booting the simulator
+        run: xcrun simctl boot "${{ steps.toolchain.outputs.udid }}" || true
+
       # Same rationale as the host-tests cache above. Two paths, because Xcode
       # splits the work: the shared store under ~/Library/Caches holds the
       # downloaded artifacts, while `-derivedDataPath DerivedData` puts the
@@ -403,6 +412,9 @@ jobs:
       # stamped into the app's Info.plist (surfaced in Settings → About) so a
       # distributed build maps back to an exact source revision; archive/release
       # builds must pass it the same way.
+      - name: Wait for the simulator
+        run: xcrun simctl bootstatus "${{ steps.toolchain.outputs.udid }}" -b
+
       - name: Test app (Debug)
         run: |
           set -o pipefail
@@ -472,38 +484,6 @@ jobs:
           # human or an agent can actually read them.
           python3 .github/scripts/xccov_summary.py < coverage.json \
             | tee -a "$GITHUB_STEP_SUMMARY"
-
-      # Launch and memory baselines (#148): Baselines.xctestplan, reusing the
-      # build from "Test app (Debug)" (the main plan builds HolmdelUITests too).
-      # Report-only like coverage: simulator timings are noisy, and one test
-      # plays a live stream, so a slow runner or an unreachable station must not
-      # turn the build red — hence continue-on-error, and a stream that won't
-      # start makes its test skip rather than fail. About 2-3 minutes.
-      - name: Launch and memory baselines
-        if: success()
-        continue-on-error: true
-        timeout-minutes: 8
-        run: |
-          set -o pipefail
-          xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel -testPlan Baselines \
-            -destination "platform=iOS Simulator,id=${{ steps.toolchain.outputs.udid }}" \
-            -derivedDataPath DerivedData \
-            -resultBundlePath Baselines.xcresult \
-            CODE_SIGNING_ALLOWED=NO \
-            test-without-building 2>&1 | tail -40
-
-      # tee for the same reason as coverage: the step summary isn't readable
-      # from the Checks API.
-      - name: Report launch and memory baselines
-        if: always()
-        run: |
-          if [ ! -d Baselines.xcresult ]; then
-            echo "No baselines result bundle — the baselines step did not run."
-            exit 0
-          fi
-          xcrun xcresulttool get test-results metrics --path Baselines.xcresult > baselines.json 2> baselines.err \
-            || { echo "Could not read baseline metrics:"; cat baselines.err; exit 0; }
-          python3 .github/scripts/baseline_summary.py < baselines.json | tee -a "$GITHUB_STEP_SUMMARY"
 
       # Pulse (kean/Pulse) is declared only by the app-side DebugSupport package,
       # a dynamic framework the app imports and uses only under #if DEBUG. It
@@ -576,6 +556,122 @@ jobs:
             exit 1
           fi
           echo "Confirmed: watch background audio declared via UIBackgroundModes."
+
+  # Launch and memory baselines (#148), in a job of their own. They first ran as
+  # steps at the end of "Test app (iOS Simulator)", reusing its build. On the
+  # runner the plan took more than 8 minutes, against about 2 locally, and the
+  # host job was already at 27 of its 30 minutes, so there was no headroom to
+  # give it (DECISIONS.md, 2026-11-14).
+  #
+  # Main and manual runs only, never PRs: rule 3 in the header. A baseline is a
+  # trend across builds of `main`; per-PR figures would double the billed
+  # simulator time on every push for numbers nobody gates on. A PR that expects
+  # to move launch or memory can run it with `workflow_dispatch`.
+  #
+  # Report-only, like coverage. The xcodebuild step is continue-on-error: a
+  # noisy runner or an unreachable stream must never turn a build red, and the
+  # report step always runs. The output streams through a filter, so a slow
+  # test shows up in the log as it happens, and the full log is uploaded when
+  # the step does not finish cleanly.
+  baselines:
+    name: Launch and memory baselines
+    runs-on: xcode-27
+    needs: lint
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    # A hung simulator bills the whole timeout, so both caps are tight: the
+    # build is ~8-10 minutes, and the run gets 15 (2m42s locally; the first
+    # runner attempt exceeded 8). Raise them only from a measured run.
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Same selection as the "Test app (iOS Simulator)" job; see the comment
+      # there for why Xcode and the runtime are chosen together.
+      - name: Select Xcode and an iOS Simulator
+        id: toolchain
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/select_xcode_and_simulator.py > selection.env
+          DEVELOPER_DIR="$(sed -n 's/^developer_dir=//p' selection.env)"
+          UDID="$(sed -n 's/^udid=//p' selection.env)"
+          sudo xcode-select -s "$DEVELOPER_DIR"
+          xcodebuild -version
+          echo "id=$(xcodebuild -version | shasum -a 256 | cut -c1-12)" >> "$GITHUB_OUTPUT"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      # Start booting now so it overlaps the cache restore and the build;
+      # "Wait for the simulator" below blocks until it has finished. Left to
+      # xcodebuild, the boot happened at test time and the first app launch hit a
+      # simulator still settling: FirstLaunchUITests, which runs first, took 80 s
+      # to launch the app in run 43649336302 and exceeded XCTest's launch timeout
+      # in run 43655413237. `|| true`: booting an already-booted device errors.
+      - name: Start booting the simulator
+        run: xcrun simctl boot "${{ steps.toolchain.outputs.udid }}" || true
+
+      - name: Cache SwiftPM clones and binary artifacts
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/Library/Caches/org.swift.swiftpm
+            DerivedData/SourcePackages
+          key: spm-app-${{ steps.toolchain.outputs.id }}-${{ hashFiles('Holmdel.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: |
+            spm-app-${{ steps.toolchain.outputs.id }}-
+
+      # Debug, like the developer's Cmd+U: these are regression baselines across
+      # builds, not release performance figures.
+      - name: Build for testing
+        run: |
+          set -o pipefail
+          xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel -testPlan Baselines \
+            -destination "platform=iOS Simulator,id=${{ steps.toolchain.outputs.udid }}" \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build-for-testing 2>&1 | tail -20
+
+      - name: Wait for the simulator
+        run: xcrun simctl bootstatus "${{ steps.toolchain.outputs.udid }}" -b
+
+      # The filter keeps the app's OS-log noise out while showing each test as
+      # it starts and finishes, and each measurement as it lands.
+      - name: Run baselines
+        id: run_baselines
+        continue-on-error: true
+        timeout-minutes: 15
+        run: |
+          set -o pipefail
+          xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel -testPlan Baselines \
+            -destination "platform=iOS Simulator,id=${{ steps.toolchain.outputs.udid }}" \
+            -derivedDataPath DerivedData \
+            -resultBundlePath Baselines.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            test-without-building 2>&1 \
+            | tee baselines.log \
+            | grep --line-buffered -E "Test Case|measured \[|error: |Skipping|TEST EXECUTE|Testing started"
+
+      - name: Upload baselines log
+        if: steps.run_baselines.outcome != 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: baselines-log
+          path: baselines.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # tee rather than plain redirect: a step summary is not readable from the
+      # Checks API, and the log is.
+      - name: Report launch and memory baselines
+        if: always()
+        run: |
+          if [ ! -d Baselines.xcresult ] || [ ! -f Baselines.xcresult/Info.plist ]; then
+            echo "No baselines result bundle — the run did not finish. See the baselines-log artifact."
+            exit 0
+          fi
+          xcrun xcresulttool get test-results metrics --path Baselines.xcresult > baselines.json 2> baselines.err \
+            || { echo "Could not read baseline metrics:"; cat baselines.err; exit 0; }
+          python3 .github/scripts/baseline_summary.py < baselines.json | tee -a "$GITHUB_STEP_SUMMARY"
 
   # Release-configuration and watchOS compiles, split out of `build` and off the
   # per-push path. Both are compile-only — neither runs a test — and together

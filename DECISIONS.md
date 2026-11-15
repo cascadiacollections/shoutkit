@@ -28,8 +28,19 @@ variable included, ran the new target green.
   Now (3), and peak memory over 10 seconds of KEXP playback (3). That last test plays a
   live stream, so it skips rather than fails when the stream won't start. A baseline must
   never be why a run is red, and a separate plan keeps it out of local Cmd+U runs too.
-  `test-without-building` reuses the main step's build: `build-for-testing` writes an
-  `.xctestrun` for every plan in the scheme, which was verified locally.
+  - **It runs in its own CI job (`baselines`), not after the main tests.** As first
+    merged (#248), it reused the "Test app" job's build, with an 8-minute step limit
+    sized from a 2-minute local run. On the runner it hit that limit with nothing
+    written, and the job reached 27 of its 30 minutes, leaving no room to raise it.
+    The separate job builds for the Baselines plan alone, allows the run 15 minutes,
+    streams each test's start, finish and measurement through a filter so a slow one
+    is visible as it happens, and uploads the full log when the run doesn't finish
+    cleanly.
+  - **On pushes to `main` and manual runs only, never on PRs.** A second simulator build
+    is real money on the billed `xcode-27` runner, and a baseline is a trend across
+    builds of `main`, which a per-PR figure adds nothing to. That's the CI header's
+    rule 3, the same trade-off `release-checks` makes. A PR expected to move launch or
+    memory can run the job with `workflow_dispatch`.
 
 **First numbers**, iPhone 18 Pro simulator (iOS 27.3) on an Apple M5 Mac, two runs:
 
@@ -43,6 +54,15 @@ Memory is stable to within a few percent. Launch varies more: its first run was 
 against 3.3 to 3.5 s for the rest. The summary therefore reports the median and the range,
 not an average. The 2026-09-07 memgraph is a one-off on different hardware, so these
 numbers are not comparable with it.
+
+**CI boots the simulator early and waits for it before testing.** Nothing used to boot it;
+`xcodebuild` did, lazily, when testing started. `FirstLaunchUITests` runs first, so it made
+the first app launch on a simulator still settling. That took 80 s in run 43649336302 and
+exceeded XCTest's launch timeout in run 43655413237, a red build the app didn't cause. Both
+simulator jobs now start the boot right after picking the device and run `simctl bootstatus
+-b` just before testing, so the boot overlaps work the job does anyway. This is the likely
+cause, not a proven one: if launches stay slow on a booted simulator, the next suspect is
+the first launch after install, and the fallback is retrying UI tests once.
 
 **`check-simulator-test-targets.py` had to learn about UI tests.** It counted only
 `Unit test bundle` nodes, and `xcresulttool` reports this target as `UI test bundle`, so
