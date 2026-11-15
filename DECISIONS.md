@@ -1,5 +1,69 @@
 # Decisions
 
+## 2026-11-14 (live streams open with one request: a source of our own through AudioStreaming's public API)
+
+**The cause, found by profiling.** AudioStreaming 1.4.5's `RemoteAudioSource.performOpen`
+always starts from offset 0, as live radio does, with `initialRequest`. That is a probe with
+`Range: bytes=0-1`, sent only to learn whether the file is MP4. The source then cancels it
+and requests the stream again. A live server ignores the range and starts streaming, so
+cancelling throws that connection away. The second request pays again for TCP, TLS and
+KEXP's ~0.8 s first-byte delay. Temporary timestamps inside a local copy of the library,
+removed after, showed the probe's headers at ~1.8 s and the real stream's audio ~1.6 s
+later. Everything after the bytes arrive (parsing, decoding, the buffer threshold, the first
+rendered frame) took ~20 ms. So it was never decoding, and never the buffer: the entry
+below this one first said "buffering" and was corrected.
+
+**The fix: no fork, no upstream wait.** `AudioPlayer.play(source:entryId:format:)` and
+`AudioPlayer.sourceQueue` are public, and so is the `CoreAudioStreamSource` protocol.
+`SingleRequestStreamSource` (`PlaybackEngineAudioStreaming`) opens one request, with the
+same headers `RemoteAudioSource.buildUrlRequest` sends, and feeds the unchanged
+decode/render/EQ/spatial/tap pipeline. It answers the probe's question from the real
+response. `Content-Type` gives the parser's file-type hint, which AudioStreaming reads
+lazily at the first `dataAvailable`, so it is known in time. An MP4-family response hands
+the stream back.
+
+**Fallback.** The engine (`beginStreaming`) uses the source for http(s) URLs whose
+extension isn't MP4-family, and `play(url:)` for everything else. The source hands the
+stream back once, through a closure rather than an error, because AudioStreaming
+wraps source errors in a generic `.networkError`. It does this on an MP4-family
+`Content-Type`, an HTTP status ≥ 300, or any failure before the first audio byte. The
+engine then replays that URL with `play(url:)`, but only if the player, URL and stream
+generation are all unchanged, so a stale fallback can't restart a stream the listener has
+left. Failures after audio has started go to the player as before; the controller's
+reconnect owns them.
+
+**The ICY code is copied, not referenced.** AudioStreaming's `MetadataStreamProcessor`,
+`MetadataParser`, `IcycastHeadersProcessor`, `IcycastHeaderParser` and its MIME table are
+`internal`. They can't be imported:
+- `@testable import` needs `-enable-testing`, which Debug has and Release and archive
+  builds don't.
+- Internal symbols aren't exported, and `-Osize` whole-module optimization may inline or
+  strip them.
+
+So about 260 lines are copied into `Vendored/`, adapted to value types, with the upstream
+MIT notice kept in each header and in `REUSE.toml`. Ogg needs one extra detail: AudioStreaming's
+`kAudioFileOggType` is its own `internal` constant (`'ogg '`), not an AudioToolbox one, and
+its Vorbis decoder switches on that exact value, so `AudioStreamFileType.ogg` copies it.
+
+**Measured** on the iPhone 18 Pro simulator with `TapToAudioBaselineUITests`, using the app's own trace:
+
+| | Before | After |
+|---|---|---|
+| KEXP 160k, tap to first audio (median) | 3.42–3.52 s | **1.77 s** (1.66–1.88, 6 taps) |
+
+Spot checks, each with no fallback and with track titles shown:
+- KEXP 64k AAC: 1.77 s.
+- Classic Vinyl HD (Icecast MP3, HTTP/1.1): 1.74 s.
+- SWR3 (two 302 redirects, HTTP/3 and HTTP/2): 1.66 s and 1.75 s.
+
+One SWR3 run stopped about 22 s in, with nothing in the logs. A second 40 s run didn't
+reproduce it, and KEXP played 30 s without a stop, so it's recorded as unexplained. A
+plain-HTTP station wasn't checked: deep links accept only https stream URLs.
+
+**What we now own.** The request, the ICY metadata parsing and the old `ICY 200 OK` body
+headers. In exchange, every live tap is about 1.6 s faster. If AudioStreaming ever makes
+the probe skippable, this source can go and `play(url:)` comes back.
+
 ## 2026-11-14 (tap-to-audio measured with and without `prewarmStations`: no measurable difference)
 
 The last undecided flag in #146 was waiting on one number: does warming the network path to

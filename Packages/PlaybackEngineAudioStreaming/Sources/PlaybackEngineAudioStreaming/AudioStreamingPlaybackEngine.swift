@@ -147,7 +147,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
             // activation is cancelled for those, and this is the belt to that
             // brace — never begin streaming a URL that is no longer current.
             guard let self, self.player === player, self.currentURL == url else { return }
-            player.play(url: url)
+            self.beginStreaming(url, on: player)
         }
     }
 
@@ -212,7 +212,7 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
         // transition out of paused has to be reported here or the controller
         // would keep waiting for a callback that never comes.
         reportStatus(.buffering)
-        player.play(url: currentURL)
+        beginStreaming(currentURL, on: player)
     }
 
     /// AudioStreaming's end-of-stream path stops the player without raising an

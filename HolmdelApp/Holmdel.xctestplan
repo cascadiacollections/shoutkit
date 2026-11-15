@@ -73,6 +73,13 @@
     },
     {
       "target" : {
+        "containerPath" : "container:../Packages/PlaybackEngineAudioStreaming",
+        "identifier" : "PlaybackEngineAudioStreamingTests",
+        "name" : "PlaybackEngineAudioStreamingTests"
+      }
+    },
+    {
+      "target" : {
         "containerPath" : "container:../Packages/LiveActivity",
         "identifier" : "NowPlayingActivityKitTests",
         "name" : "NowPlayingActivityKitTests"

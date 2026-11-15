@@ -43,6 +43,15 @@ precedence = "override"
 SPDX-FileCopyrightText = "2026 Kevin T. Coughlin and ShoutKit contributors"
 SPDX-License-Identifier = "MIT"
 
+# Code adapted from AudioStreaming 1.4.5 (MIT), whose originals are `internal`
+# there and so can't be referenced (DECISIONS.md, 2026-11-14). Each file keeps
+# the upstream notice in its header alongside this project's.
+[[annotations]]
+path = "Packages/PlaybackEngineAudioStreaming/Sources/PlaybackEngineAudioStreaming/Vendored/**"
+precedence = "override"
+SPDX-FileCopyrightText = ["2020 Dimitris C.", "2012-2014 Thong Nguyen", "2026 Kevin T. Coughlin and ShoutKit contributors"]
+SPDX-License-Identifier = "MIT"
+
 # Third-party license texts shown on the in-app Licenses screen. Each file is
 # reproduced verbatim from its upstream and keeps that upstream's notice.
 [[annotations]]
