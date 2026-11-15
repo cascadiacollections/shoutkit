@@ -149,7 +149,7 @@ entry below states what is actually dark.
       could be removed without touching a shipping feature. `BrowseFeature` lost its
       `FeatureFlags` dependency with it, and `RecommendationHashing` went too. See
       `DECISIONS.md`. Deleted in #168.
-- [ ] `prewarmStations` — **measured 2026-11-14: no measurable effect on tap-to-audio** (3.52 s off, 3.49 s on, median; ~3.4 s of it is buffering). Decision pending. Launch-time DNS/TLS warming of top stations. **Not cleanly
+- [ ] `prewarmStations` — **measured 2026-11-14: no measurable effect on tap-to-audio** (3.52 s off, 3.49 s on, median). It warms an `NWConnection` that AudioStreaming's `URLSession` can't reuse, so it can't save the TLS setup as built. Decision pending. Launch-time DNS/TLS warming of top stations. **Not cleanly
       deletable either**, and the 304-line figure first written here was wrong: the flag
       gates far less than the machinery. `StationConnectionPrewarmer` (133 lines) is called
       by `WarmupRadioAudioQueueIntent` (`HolmdelAudioIntents.swift:82`), a **shipping App
