@@ -59,10 +59,15 @@ numbers are not comparable with it.
 `xcodebuild` did, lazily, when testing started. `FirstLaunchUITests` runs first, so it made
 the first app launch on a simulator still settling. That took 80 s in run 43649336302 and
 exceeded XCTest's launch timeout in run 43655413237, a red build the app didn't cause. Both
-simulator jobs now start the boot right after picking the device and run `simctl bootstatus
--b` just before testing, so the boot overlaps work the job does anyway. This is the likely
-cause, not a proven one: if launches stay slow on a booted simulator, the next suspect is
-the first launch after install, and the fallback is retrying UI tests once.
+simulator jobs now boot and wait (`simctl bootstatus -b`) in one step just before testing,
+and with that the first launch took 21.7 s (run 43658028911).
+
+The boot is deliberately *not* overlapped with other steps. That was the first version
+(#249): start the boot right after choosing the device, wait just before testing. On the
+runner the boot starved everything beside it. Cache restores went from 9-25 s to
+136-367 s, while the Release job, which doesn't boot, restored in 16 s. In run 43658796463
+`hashFiles` on a single small file timed out after 120 s and failed the baselines job.
+Waiting in place costs well under a minute.
 
 **`check-simulator-test-targets.py` had to learn about UI tests.** It counted only
 `Unit test bundle` nodes, and `xcresulttool` reports this target as `UI test bundle`, so
