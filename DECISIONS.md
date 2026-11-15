@@ -1,5 +1,47 @@
 # Decisions
 
+## 2026-11-14 (tap-to-audio measured with and without `prewarmStations`: no measurable difference)
+
+The last undecided flag in #146 was waiting on one number: does warming the network path to
+the listener's top stations at launch make the first tap start faster?
+`TapToAudioBaselineUITests` (Baselines plan) measures it. Each test plays KEXP once, so
+it's in Recently Played with a saved stream URL, because prewarming only warms stations
+from history and does nothing on a fresh install. Then, five times plus XCTest's warm-up:
+relaunch with the flag forced off or on via `-featureFlags.prewarmStations.override`, wait
+3 s so the launch warmup gets the same head start either way, tap, and wait for "Pause".
+
+**The app's own trace is the number to read, not the UI clock.** The UI metric (tap until
+the Pause button is found) sits about a second above the app's figure, because it includes
+XCTest's polling for the button. `TapToAudioLatencyTrace` logs `resolveMs`,
+`outputStartMs` and `firstPlayingMs` with `prewarmEnabled`, measured inside the app. iPhone
+18 Pro simulator, Apple M5, second run, 6 taps each:
+
+| | resolve (median) | first playing (median) | first playing (range) |
+|---|---|---|---|
+| prewarm off | 92 ms | 3.52 s | 3.42–3.63 s |
+| prewarm on | 91 ms | 3.49 s | 3.33–4.32 s |
+
+A first run gave 3.6 s against 3.4 s; the second didn't reproduce the gap.
+
+**Why it can't matter much:** almost all of the wait is buffering. The stream URL resolves
+and output starts within about 110 ms of the tap. The other ~3.4 s is the player filling its
+buffer before it reports playing. Prewarming removes a DNS lookup and a TLS handshake: part
+of the first ~110 ms, at best.
+
+**Caveat, stated so it isn't rediscovered as a hole:** the simulator uses the Mac's network
+and DNS cache. On a phone on cellular, DNS and TLS cost more, perhaps a few hundred
+milliseconds, so prewarming could save more there. But it would still be a fraction of a
+~3.4 s wait that is mostly buffering. The lever for time-to-audio is the buffer the player
+requires before it starts, not the connection.
+
+**Only the without-prewarm half runs per build.** It's the ongoing time-to-audio baseline.
+The with-prewarm test answered this one question and would add about 1.7 minutes of billed
+runner time to every push to `main`, so it stays in the class, out of the Baselines plan, and
+runs locally with `-only-testing:HolmdelUITests/TapToAudioBaselineUITests`.
+
+This records the measurement. Whether `prewarmStations` is promoted or deleted is the
+#146 decision, and is made separately.
+
 ## 2026-11-14 (a UI test target: a first-launch check in the main plan, baselines in their own)
 
 #148 asked for per-build launch and memory figures, reported like coverage and never gated.

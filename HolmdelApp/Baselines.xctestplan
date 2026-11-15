@@ -14,7 +14,8 @@
   "testTargets" : [
     {
       "selectedTests" : [
-        "BaselineUITests"
+        "BaselineUITests",
+        "TapToAudioBaselineUITests\/testTapToAudioWithoutPrewarm()"
       ],
       "target" : {
         "containerPath" : "container:Holmdel.xcodeproj",
