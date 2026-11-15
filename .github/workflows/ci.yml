@@ -374,15 +374,6 @@ jobs:
           echo "id=$(xcodebuild -version | shasum -a 256 | cut -c1-12)" >> "$GITHUB_OUTPUT"
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
 
-      # Start booting now so it overlaps the cache restore and the build;
-      # "Wait for the simulator" below blocks until it has finished. Left to
-      # xcodebuild, the boot happened at test time and the first app launch hit a
-      # simulator still settling: FirstLaunchUITests, which runs first, took 80 s
-      # to launch the app in run 43649336302 and exceeded XCTest's launch timeout
-      # in run 43655413237. `|| true`: booting an already-booted device errors.
-      - name: Start booting the simulator
-        run: xcrun simctl boot "${{ steps.toolchain.outputs.udid }}" || true
-
       # Same rationale as the host-tests cache above. Two paths, because Xcode
       # splits the work: the shared store under ~/Library/Caches holds the
       # downloaded artifacts, while `-derivedDataPath DerivedData` puts the
@@ -412,8 +403,33 @@ jobs:
       # stamped into the app's Info.plist (surfaced in Settings → About) so a
       # distributed build maps back to an exact source revision; archive/release
       # builds must pass it the same way.
-      - name: Wait for the simulator
-        run: xcrun simctl bootstatus "${{ steps.toolchain.outputs.udid }}" -b
+      # Build first, with no simulator running. `build.log` collects both halves
+      # for the annotation step below.
+      - name: Build app and tests (Debug)
+        run: |
+          set -o pipefail
+          xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
+            -destination "platform=iOS Simulator,id=${{ steps.toolchain.outputs.udid }}" \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" build-for-testing 2>&1 | tee build.log
+
+      # Then boot and wait, with nothing else running, before any test launches
+      # the app. Left to xcodebuild, FirstLaunchUITests (which runs first) made
+      # the first app launch on a simulator still settling: 80 s in run
+      # 43649336302, XCTest's launch timeout in run 43655413237.
+      #
+      # After the build, not before or beside it. A freshly booted simulator on
+      # this runner keeps working for minutes, and whatever runs next to it
+      # starves. Booting during the cache restore (#249) took cache restores from
+      # 9-25 s to 136-367 s and timed out `hashFiles` on one small file (run
+      # 43658796463). Booting before the build (run 43661147959) left the build
+      # still compiling at the 30-minute job limit, against 6-8 minutes normally.
+      # `|| true`: booting an already-booted device errors.
+      - name: Boot the simulator
+        run: |
+          xcrun simctl boot "${{ steps.toolchain.outputs.udid }}" || true
+          xcrun simctl bootstatus "${{ steps.toolchain.outputs.udid }}" -b
 
       - name: Test app (Debug)
         run: |
@@ -423,7 +439,7 @@ jobs:
             -derivedDataPath DerivedData \
             -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO \
-            GIT_COMMIT_SHA="$(git rev-parse --short HEAD)" test 2>&1 | tee build.log
+            test-without-building 2>&1 | tee -a build.log
 
       # Xcode can succeed while silently omitting unresolved package targets.
       - name: Verify every test plan target ran
@@ -447,7 +463,7 @@ jobs:
         if: failure()
         run: |
           {
-            grep -E "Fatal error: |recorded an issue|Expectation failed|Test Case .* failed|XCTAssert|Test run .* failed|\*\* (TEST|BUILD) FAILED \*\*" build.log || true
+            grep -E "Fatal error: |recorded an issue|Expectation failed|Test Case .* failed|XCTAssert|Test run .* failed|\*\* (TEST BUILD|TEST|BUILD) FAILED \*\*" build.log || true
             # xcodebuild's end-of-run roster, which names the failing tests and
             # matches none of the patterns above.
             sed -n "/^Failing tests:/,/^$/p" build.log || true
@@ -601,15 +617,6 @@ jobs:
           echo "id=$(xcodebuild -version | shasum -a 256 | cut -c1-12)" >> "$GITHUB_OUTPUT"
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
 
-      # Start booting now so it overlaps the cache restore and the build;
-      # "Wait for the simulator" below blocks until it has finished. Left to
-      # xcodebuild, the boot happened at test time and the first app launch hit a
-      # simulator still settling: FirstLaunchUITests, which runs first, took 80 s
-      # to launch the app in run 43649336302 and exceeded XCTest's launch timeout
-      # in run 43655413237. `|| true`: booting an already-booted device errors.
-      - name: Start booting the simulator
-        run: xcrun simctl boot "${{ steps.toolchain.outputs.udid }}" || true
-
       - name: Cache SwiftPM clones and binary artifacts
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -631,8 +638,20 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build-for-testing 2>&1 | tail -20
 
-      - name: Wait for the simulator
-        run: xcrun simctl bootstatus "${{ steps.toolchain.outputs.udid }}" -b
+      # Boot and wait here, with nothing else running, rather than leaving it to
+      # xcodebuild. Left to xcodebuild, FirstLaunchUITests (which runs first) made
+      # the first app launch on a simulator still settling: 80 s in run
+      # 43649336302, XCTest's launch timeout in run 43655413237.
+      #
+      # Not started early to overlap other steps: that was tried (#249) and the
+      # boot starved everything beside it. Cache restores went from 9-25 s to
+      # 136-367 s, and in run 43658796463 `hashFiles` on one small file timed
+      # out after 120 s, failing the baselines job. Waiting costs well under a
+      # minute. `|| true`: booting an already-booted device errors.
+      - name: Boot the simulator
+        run: |
+          xcrun simctl boot "${{ steps.toolchain.outputs.udid }}" || true
+          xcrun simctl bootstatus "${{ steps.toolchain.outputs.udid }}" -b
 
       # The filter keeps the app's OS-log noise out while showing each test as
       # it starts and finishes, and each measurement as it lands.
