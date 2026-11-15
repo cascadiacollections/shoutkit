@@ -75,6 +75,7 @@
 		D43AAC581B5812399D25D827 /* WatchRadioPlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C61FAF4CF10B67D240EFD1F /* WatchRadioPlaybackEngine.swift */; };
 		00000000000000000000030D /* FirstLaunchUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000030B /* FirstLaunchUITests.swift */; };
 		00000000000000000000030E /* BaselineUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000030C /* BaselineUITests.swift */; };
+		000000000000000000000310 /* TapToAudioBaselineUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000030F /* TapToAudioBaselineUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -221,6 +222,7 @@
 		000000000000000000000301 /* HolmdelUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HolmdelUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		00000000000000000000030B /* FirstLaunchUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstLaunchUITests.swift; sourceTree = "<group>"; };
 		00000000000000000000030C /* BaselineUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaselineUITests.swift; sourceTree = "<group>"; };
+		00000000000000000000030F /* TapToAudioBaselineUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TapToAudioBaselineUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -447,6 +449,7 @@
 			children = (
 				00000000000000000000030B /* FirstLaunchUITests.swift */,
 				00000000000000000000030C /* BaselineUITests.swift */,
+				00000000000000000000030F /* TapToAudioBaselineUITests.swift */,
 			);
 			path = HolmdelUITests;
 			sourceTree = "<group>";
@@ -809,6 +812,7 @@
 			files = (
 				00000000000000000000030D /* FirstLaunchUITests.swift in Sources */,
 				00000000000000000000030E /* BaselineUITests.swift in Sources */,
+				000000000000000000000310 /* TapToAudioBaselineUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

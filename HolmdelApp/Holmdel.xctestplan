@@ -27,7 +27,8 @@
     },
     {
       "skippedTests" : [
-        "BaselineUITests"
+        "BaselineUITests",
+        "TapToAudioBaselineUITests"
       ],
       "target" : {
         "containerPath" : "container:Holmdel.xcodeproj",

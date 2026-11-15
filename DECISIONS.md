@@ -1,5 +1,69 @@
 # Decisions
 
+## 2026-11-14 (tap-to-audio measured with and without `prewarmStations`: no measurable difference)
+
+The last undecided flag in #146 was waiting on one number: does warming the network path to
+the listener's top stations at launch make the first tap start faster?
+`TapToAudioBaselineUITests` (Baselines plan) measures it. Each test plays KEXP once, so
+it's in Recently Played with a saved stream URL, because prewarming only warms stations
+from history and does nothing on a fresh install. Then, five times plus XCTest's warm-up:
+relaunch with the flag forced off or on via `-featureFlags.prewarmStations.override`, wait
+3 s so the launch warmup gets the same head start either way, tap, and wait for "Pause".
+
+**The app's own trace is the number to read, not the UI clock.** The UI metric (tap until
+the Pause button is found) sits about a second above the app's figure, because it includes
+XCTest's polling for the button. `TapToAudioLatencyTrace` logs `resolveMs`,
+`outputStartMs` and `firstPlayingMs` with `prewarmEnabled`, measured inside the app. iPhone
+18 Pro simulator, Apple M5, second run, 6 taps each:
+
+| | resolve (median) | first playing (median) | first playing (range) |
+|---|---|---|---|
+| prewarm off | 92 ms | 3.52 s | 3.42–3.63 s |
+| prewarm on | 91 ms | 3.49 s | 3.33–4.32 s |
+
+A first run gave 3.6 s against 3.4 s; the second didn't reproduce the gap.
+
+**Why prewarming can't help, as built:** it warms a different connection. The prewarmer
+opens a raw `NWConnection` (Network.framework); AudioStreaming streams through its own
+`URLSession`, which can't reuse it. At most the system DNS cache is warmed, about 0.08 s on
+this network. So the ~0.4 s of TCP and TLS setup is paid on every tap either way.
+
+**Where the ~3.5 s goes**, from the app's trace, AudioStreaming's debug log, temporary
+timestamps on the player's delegate callbacks (removed after), and `curl` against KEXP's
+server (`kexp.streamguys1.com/kexp160.aac`), three runs each:
+
+| Stage | Time from tap |
+|---|---|
+| Station resolved, engine asked to start | ~0.05–0.1 s |
+| DNS + TCP + TLS to the stream server | ~0.3–0.4 s |
+| Server's first byte | ~1.1–1.2 s (the server waits ~0.8 s after TLS) |
+| 1 s of audio received (20 KB at 160 kbps) | ~1.6–1.8 s; the server bursts, 80 KB by ~2 s |
+| Player reports playing (first frame rendered) | ~3.5 s |
+
+AudioStreaming switches to `.playing` the first time its render callback copies real frames,
+so "playing" is when sound starts, and the app forwards it to the main thread within a
+millisecond. That leaves **~1.7 s inside AudioStreaming between audio arriving and the first
+frame rendered**, which these tools couldn't split further.
+
+**The start threshold is not the lever.** An earlier draft of this entry said the wait was
+mostly the player filling its buffer. Measured with `secondsRequiredToStartPlaying` at 1 s
+(AudioStreaming's default, which the app uses), 0.5 s and 0.25 s: medians 3.68, 3.52 and
+3.47 s, within run-to-run noise. The server's burst fills a 1 s requirement almost at once.
+The two levers that are real: the server's ~0.8 s first-byte delay, which is the station's,
+not ours, and the unexplained ~1.7 s, which needs an Instruments trace or a look inside
+AudioStreaming's decode path.
+
+**Caveat:** this is the simulator on the Mac's network. On cellular, DNS and TLS cost more.
+That would matter to a prewarmer that warmed the right connection, and this one doesn't.
+
+**Only the without-prewarm half runs per build.** It's the ongoing time-to-audio baseline.
+The with-prewarm test answered this one question and would add about 1.7 minutes of billed
+runner time to every push to `main`, so it stays in the class, out of the Baselines plan, and
+runs locally with `-only-testing:HolmdelUITests/TapToAudioBaselineUITests`.
+
+This records the measurement. Whether `prewarmStations` is promoted or deleted is the
+#146 decision, and is made separately.
+
 ## 2026-11-14 (a UI test target: a first-launch check in the main plan, baselines in their own)
 
 #148 asked for per-build launch and memory figures, reported like coverage and never gated.
