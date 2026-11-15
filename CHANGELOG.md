@@ -25,6 +25,9 @@ below) are documented here. The format follows
   tinted and clear Home Screens and on the Mac desktop.
 
 ### Changed
+- **Stations start playing faster.** On KEXP, the time from tapping a station to hearing it
+  dropped from about 3.4 seconds to about 1.8. Holmdel used to connect to every station twice
+  before playing; it now connects once.
 - **Listen Now starts with stations near you.** The most-played stations in your region
   come first, followed by the most-played stations worldwide. Your region comes from your
   device's region setting, not your location, so Holmdel never asks for location access.

@@ -19,4 +19,7 @@
    <FileRef
       location = "group:Packages/LiveActivity">
    </FileRef>
+   <FileRef
+      location = "group:Packages/PlaybackEngineAudioStreaming">
+   </FileRef>
 </Workspace>

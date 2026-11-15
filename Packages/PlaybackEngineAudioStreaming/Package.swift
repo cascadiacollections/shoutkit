@@ -70,5 +70,14 @@ let package = Package(
             ],
             swiftSettings: [optimizeForSize],
         ),
+        // iOS/tvOS-only like the package, so it runs in the simulator through
+        // HolmdelApp/Holmdel.xctestplan, not under `swift test`.
+        .testTarget(
+            name: "PlaybackEngineAudioStreamingTests",
+            dependencies: [
+                "PlaybackEngineAudioStreaming",
+                .product(name: "AudioStreaming", package: "AudioStreaming"),
+            ],
+        ),
     ],
 )
