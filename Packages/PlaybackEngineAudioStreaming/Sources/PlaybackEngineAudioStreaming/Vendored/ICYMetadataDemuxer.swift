@@ -92,7 +92,7 @@ struct ICYMetadataDemuxer {
     /// `StreamTitle='Artist - Title';StreamUrl='…';` → `["StreamTitle": "Artist - Title", …]`.
     /// `nil` for undecodable or empty blocks, as the original's `.failure` cases.
     static func parse(_ block: Data) -> [String: String]? {
-        guard let string = String(data: block, encoding: .utf8) else { return nil }
+        let string = ICYText.decode(block)
         let pairs = string.trimmingCharacters(in: CharacterSet(charactersIn: "\0")).components(separatedBy: ";")
         let fields = pairs.reduce(into: [String: String]()) { result, pair in
             let split = pair.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: true).map(String.init)
