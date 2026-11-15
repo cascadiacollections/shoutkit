@@ -67,7 +67,11 @@ The boot is deliberately *not* overlapped with other steps. That was the first v
 runner the boot starved everything beside it. Cache restores went from 9-25 s to
 136-367 s, while the Release job, which doesn't boot, restored in 16 s. In run 43658796463
 `hashFiles` on a single small file timed out after 120 s and failed the baselines job.
-Waiting in place costs well under a minute.
+Booting before the build was no better: in run 43661147959 the build was still compiling
+at the 30-minute job limit, against 6-8 minutes normally, with the boot itself taking 173 s.
+So the test job now runs `build-for-testing`, then boots and waits, then
+`test-without-building`, the order the baselines job already used. Nothing else runs during
+the boot, and the simulator is up before the first launch.
 
 **`check-simulator-test-targets.py` had to learn about UI tests.** It counted only
 `Unit test bundle` nodes, and `xcresulttool` reports this target as `UI test bundle`, so
