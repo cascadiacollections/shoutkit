@@ -66,6 +66,17 @@ struct ICYMetadataDemuxerTests {
         #expect(fields?["StreamTitle"] == "A=B - C")
     }
 
+    /// KEXP sends Latin-1: "Kælan Mikla - Sólstöður" showed as "K�lan Mikla - S�lst��ur".
+    @Test func `latin-1 titles decode instead of becoming replacement characters`() throws {
+        let block = try #require("StreamTitle='Kælan Mikla - Sólstöður';\0\0".data(using: .isoLatin1))
+        #expect(ICYMetadataDemuxer.parse(block)?["StreamTitle"] == "Kælan Mikla - Sólstöður")
+    }
+
+    @Test func `UTF-8 titles still decode as UTF-8`() {
+        let block = Data("StreamTitle='Kælan Mikla - Sólstöður';\0\0".utf8)
+        #expect(ICYMetadataDemuxer.parse(block)?["StreamTitle"] == "Kælan Mikla - Sólstöður")
+    }
+
     @Test func `an empty block parses to nothing`() {
         #expect(ICYMetadataDemuxer.parse(Data(count: 16)) == nil)
     }

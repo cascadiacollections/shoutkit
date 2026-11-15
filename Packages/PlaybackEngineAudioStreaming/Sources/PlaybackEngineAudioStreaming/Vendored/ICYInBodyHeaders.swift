@@ -63,7 +63,7 @@ struct ICYInBodyHeaders {
     }
 
     static func parse(_ block: Data) -> Fields? {
-        guard let text = String(data: block, encoding: .utf8) else { return nil }
+        let text = ICYText.decode(block)
         var fields: [String: String] = [:]
         for line in text.components(separatedBy: CharacterSet(charactersIn: "\r\n")) where line.isEmpty == false {
             let parts = line.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: true)
