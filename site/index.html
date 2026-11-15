@@ -42,28 +42,25 @@
       android: "https://cascadiacollections.github.io/shoutkit-android/",
       sponsors: ""   // https://github.com/sponsors/KevinTCoughlin once the profile is live
     };
-    // App screenshots for the gallery, shown in generic phone frames. Add
-    // portrait PNG/WebP captures to site/assets/screens/ and list them here;
-    // the gallery stays hidden while this is empty.
-    window.SHOUTKIT_SCREENS = [
-      // { src: "assets/screens/now-playing.webp", alt: "Now Playing with album art and the live track" },
-    ];
   </script>
 
   <style>
     :root {
-      --bg: #fbfbfd;
-      --bg-alt: #f5f5f7;
+      --bg: #f7f9fc;
+      --bg-alt: #eef3f8;
       --tile: #ffffff;
-      --text: #1d1d1f;
-      --muted: #6e6e73;
-      --line: rgba(0, 0, 0, 0.08);
+      --text: #14181f;
+      --muted: #5c6470;
+      --line: rgba(10, 30, 60, 0.09);
       --accent: #0670a8;          /* the icon's blue, deepened for text contrast */
       --accent-hover: #055d8c;
       --accent-ink: #ffffff;
       --coral: #e77274;           /* the icon's other end */
       --sky: #0784c3;
-      --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+      --grad: linear-gradient(120deg, var(--sky), var(--coral));
+      --glow-a: rgba(7, 132, 195, 0.16);
+      --glow-b: rgba(231, 114, 116, 0.16);
+      --shadow: 0 1px 2px rgba(10, 30, 60, 0.04), 0 10px 30px rgba(10, 30, 60, 0.07);
       --radius: 22px;
       --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
       --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
@@ -71,12 +68,14 @@
     }
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #000000;
-        --bg-alt: #101012;
-        --tile: #1c1c1e;
-        --text: #f5f5f7;
-        --muted: #a1a1a6;
-        --line: rgba(255, 255, 255, 0.12);
+        --bg: #070b12;
+        --bg-alt: #0d131d;
+        --tile: #131b27;
+        --text: #f3f5f8;
+        --muted: #a3acb9;
+        --line: rgba(255, 255, 255, 0.10);
+        --glow-a: rgba(76, 178, 234, 0.20);
+        --glow-b: rgba(231, 114, 116, 0.18);
         --accent: #4cb2ea;
         --accent-hover: #74c4f0;
         --accent-ink: #00141f;
@@ -127,34 +126,84 @@
     @media (max-width: 640px) { .nav-links .opt { display: none; } }
 
     /* -------------------------------------------------------------- hero */
-    .hero { text-align: center; padding: 72px 0 40px; }
+    .hero-shell {
+      position: relative; overflow: hidden;
+      background:
+        radial-gradient(60% 70% at 85% 30%, var(--glow-b), transparent 70%),
+        radial-gradient(55% 60% at 10% 10%, var(--glow-a), transparent 70%);
+    }
+    .hero {
+      display: grid; grid-template-columns: 1.15fr 1fr; gap: 48px; align-items: center;
+      padding: 64px 0 56px;
+    }
     .app-icon {
       width: 128px; height: 128px; margin: 0 auto 26px;
       border-radius: 28px; /* close to the iOS icon mask at this size */
       box-shadow: 0 10px 30px rgba(7, 132, 195, 0.28), 0 2px 6px rgba(0, 0, 0, 0.08);
     }
-    .eyebrow { margin: 0 0 8px; font-size: 19px; font-weight: 600; color: var(--muted); }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 10px; margin: 0 0 18px;
+      padding: 6px 14px 6px 8px; border-radius: 980px;
+      background: var(--tile); border: 1px solid var(--line); box-shadow: var(--shadow);
+      font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);
+    }
+    .eyebrow img { width: 24px; height: 24px; border-radius: 6px; }
+    /* A tiny "on air" level meter: five bars that bounce like a live signal. */
+    .onair { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
+    .onair i { width: 3px; height: 100%; border-radius: 2px; background: var(--grad); transform-origin: bottom; animation: level 1.1s ease-in-out infinite; }
+    .onair i:nth-child(2) { animation-delay: -0.4s; }
+    .onair i:nth-child(3) { animation-delay: -0.8s; }
+    .onair i:nth-child(4) { animation-delay: -0.2s; }
+    .onair i:nth-child(5) { animation-delay: -0.6s; }
+    @keyframes level { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
     h1 {
-      margin: 0 auto; max-width: 15ch;
-      font-size: clamp(44px, 8vw, 80px); line-height: 1.04; letter-spacing: -0.03em; font-weight: 700;
+      margin: 0; max-width: 13ch;
+      font-size: clamp(44px, 7vw, 78px); line-height: 1.02; letter-spacing: -0.04em; font-weight: 800;
     }
     .h1-sub {
-      display: block; margin-top: 6px;
-      font-size: clamp(26px, 4.4vw, 44px); line-height: 1.1; letter-spacing: -0.02em; font-weight: 600;
-      background: linear-gradient(90deg, var(--sky), var(--coral));
+      display: block; margin-top: 10px;
+      font-size: clamp(26px, 3.8vw, 40px); line-height: 1.12; letter-spacing: -0.02em; font-weight: 700;
+      background: var(--grad);
       -webkit-background-clip: text; background-clip: text; color: transparent;
     }
-    .lead { max-width: 34em; margin: 22px auto 0; font-size: 21px; line-height: 1.4; color: var(--muted); }
+    .lead { max-width: 30em; margin: 22px 0 0; font-size: 20px; line-height: 1.45; color: var(--muted); }
     .lead strong { color: var(--text); font-weight: 600; }
-    .cta-row { display: flex; flex-wrap: wrap; gap: 14px 22px; justify-content: center; align-items: center; margin-top: 30px; }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 12px 14px; align-items: center; margin-top: 30px; }
+    .hero .beta-note { margin: 18px 0 0; }
     .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-      min-height: 44px; padding: 11px 22px; border-radius: 980px;
-      font-size: 17px; font-weight: 500; line-height: 1.2;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      min-height: 48px; padding: 12px 24px; border-radius: 980px;
+      font-size: 17px; font-weight: 600; line-height: 1.2;
+      transition: transform 0.18s, background 0.18s, box-shadow 0.18s;
     }
-    .btn:hover { text-decoration: none; }
-    .btn-solid { background: var(--accent); color: var(--accent-ink); }
+    .btn:hover { text-decoration: none; transform: translateY(-2px); }
+    .btn-solid { background: var(--accent); color: var(--accent-ink); box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 30%, transparent); }
     .btn-solid:hover { background: var(--accent-hover); }
+    .btn-ghost { background: var(--tile); color: var(--text); border: 1px solid var(--line); box-shadow: var(--shadow); }
+    .btn-ghost:hover { border-color: var(--accent); }
+
+    .heroart { position: relative; display: grid; place-items: center; min-height: 560px; }
+    /* Broadcast rings radiating behind the phone, echoing the icon's waves. */
+    .heroart .ring {
+      position: absolute; width: 380px; aspect-ratio: 1; border-radius: 50%;
+      border: 1.5px solid color-mix(in srgb, var(--sky) 35%, transparent);
+      animation: broadcast 4.5s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+    }
+    .heroart .ring:nth-child(2) { animation-delay: -1.5s; border-color: color-mix(in srgb, var(--coral) 35%, transparent); }
+    .heroart .ring:nth-child(3) { animation-delay: -3s; }
+    @keyframes broadcast { 0% { transform: scale(0.55); opacity: 0; } 25% { opacity: 1; } 100% { transform: scale(1.45); opacity: 0; } }
+    .heroart .phone { width: 270px; transform: rotate(4deg); z-index: 1; }
+    .heroart .badge {
+      position: absolute; z-index: 2; display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px; border-radius: 14px; background: var(--tile); border: 1px solid var(--line);
+      box-shadow: 0 12px 30px rgba(10, 30, 60, 0.14); font-size: 14px; font-weight: 600; white-space: nowrap;
+      animation: float 6s ease-in-out infinite;
+    }
+    .heroart .badge svg { width: 18px; height: 18px; color: var(--accent); flex: none; }
+    .heroart .badge-a { top: 16%; left: 0; }
+    .heroart .badge-b { bottom: 18%; right: 0; animation-delay: -3s; }
+    .heroart .badge-b svg { color: var(--coral); }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
     .btn-link { color: var(--accent); padding-inline: 4px; }
     .btn-link:hover { text-decoration: underline; }
     .btn-line { border: 1px solid var(--accent); color: var(--accent); }
@@ -163,11 +212,12 @@
     .beta-note { max-width: 36em; margin: 18px auto 0; font-size: 14px; color: var(--muted); }
 
     .facts {
-      display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 28px;
-      margin: 48px auto 0; padding: 18px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
-      font-size: 14px; font-weight: 600; color: var(--muted);
+      display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 28px;
+      margin: 0; padding: 22px 0; border-top: 1px solid var(--line);
+      font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
     }
-    .facts span::before { content: "✓"; color: var(--accent); margin-right: 7px; }
+    .facts span { display: inline-flex; align-items: center; gap: 10px; }
+    .facts span::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--grad); }
 
     /* ---------------------------------------------------------- sections */
     section { padding: 88px 0; }
@@ -184,24 +234,38 @@
     .tile {
       background: var(--tile); border-radius: var(--radius); padding: 26px 26px 28px;
       box-shadow: var(--shadow); border: 1px solid var(--line);
+      transition: transform 0.2s, box-shadow 0.2s;
     }
+    .tile:hover { transform: translateY(-3px); box-shadow: 0 2px 4px rgba(10, 30, 60, 0.05), 0 18px 40px rgba(10, 30, 60, 0.10); }
+    .ico {
+      display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 16px;
+      border-radius: 14px; background: var(--grad); color: #fff;
+      box-shadow: 0 8px 18px color-mix(in srgb, var(--coral) 28%, transparent);
+    }
+    .ico svg { width: 24px; height: 24px; }
+    #holidays .tile { position: relative; overflow: hidden; }
+    #holidays .tile::before { content: ""; position: absolute; inset: 0 0 auto; height: 4px; background: var(--grad); }
     .tile p { color: var(--muted); font-size: 15px; line-height: 1.5; }
     .tile .tag { margin-bottom: 10px; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--accent); }
     .group + .group { margin-top: 48px; }
     .group h3.group-title { text-align: center; margin-bottom: 20px; font-size: 24px; }
 
     /* --------------------------------------------------------- screens */
-    .screens { display: flex; gap: 26px; justify-content: center; flex-wrap: wrap; }
+    .screens { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
+    .screens figure { margin: 0; text-align: center; }
+    .screens figure:nth-child(2) { transform: translateY(28px); }
+    .screens figcaption { margin: 24px auto 0; max-width: 290px; font-size: 15px; color: var(--muted); }
+    .screens figcaption strong { display: block; margin-bottom: 4px; font-size: 17px; color: var(--text); }
     .phone {
-      /* A generic phone, drawn in CSS: rounded body, thin bezel, a small camera island. */
-      position: relative; width: min(250px, 70vw); aspect-ratio: 9 / 19.5;
-      padding: 10px; border-radius: 44px; background: #111; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+      /* A generic phone drawn in CSS: rounded body and thin bezel around the
+         real screenshot (which carries its own camera island). Not a replica
+         of a real handset, and no mockup images, so nothing to license. */
+      position: relative; width: min(250px, 70vw); margin: 0 auto;
+      padding: 9px; border-radius: 46px;
+      background: linear-gradient(160deg, #2c3036, #111317 60%);
+      box-shadow: inset 0 0 0 1.5px #4a4f57, inset 0 0 0 4px #0e1013, 0 30px 60px rgba(10, 30, 60, 0.25);
     }
-    .phone::before {
-      content: ""; position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
-      width: 28%; height: 22px; border-radius: 12px; background: #000; z-index: 1;
-    }
-    .phone img { width: 100%; height: 100%; object-fit: cover; border-radius: 34px; }
+    .phone img { width: 100%; height: auto; border-radius: 38px; background: #f2f4f7; }
 
     /* ----------------------------------------------------------- privacy */
     .checks { list-style: none; margin: 0 auto; padding: 0; max-width: 720px; display: grid; gap: 14px; }
@@ -252,10 +316,27 @@
     .faq details p { padding: 0 0 22px; color: var(--muted); max-width: 44em; }
 
     /* ------------------------------------------------------------ closer */
-    .closer { text-align: center; padding: 100px 0; }
-    .closer .app-icon { width: 88px; height: 88px; border-radius: 20px; margin-bottom: 22px; }
+    .closer { padding: 40px 0 96px; }
+    .closer-card {
+      position: relative; overflow: hidden; text-align: center;
+      padding: 72px 32px; border-radius: 32px; color: #fff;
+      background: linear-gradient(125deg, #0670a8, #2f86c0 40%, #d9666b);
+      box-shadow: 0 30px 60px color-mix(in srgb, var(--sky) 25%, transparent);
+    }
+    .closer-card::before, .closer-card::after {
+      content: ""; position: absolute; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, 0.18);
+      width: 520px; aspect-ratio: 1; left: -160px; top: -260px;
+    }
+    .closer-card::after { width: 420px; left: auto; right: -140px; top: auto; bottom: -240px; }
+    .closer-card > * { position: relative; }
+    .closer .app-icon { width: 88px; height: 88px; border-radius: 20px; margin-bottom: 22px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25); }
     .closer h2 { max-width: 18ch; margin: 0 auto; }
-    .closer .lead { margin-top: 14px; }
+    .closer .lead { margin: 14px auto 0; color: rgba(255, 255, 255, 0.85); }
+    .closer .cta-row { justify-content: center; }
+    .closer .btn-solid { background: #fff; color: #0b4f78; box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2); }
+    .closer .btn-solid:hover { background: #f1f6fa; }
+    .closer .btn-link { color: #fff; }
+    .closer a:focus-visible { outline-color: #fff; }
 
     /* ------------------------------------------- holiday promo (seasonal) */
     /* Remove with the promo bar and #holidays after the season (see data-until). */
@@ -276,11 +357,33 @@
     .footnote { margin-top: 14px; max-width: 70em; line-height: 1.5; }
     .footnote a { color: var(--muted); text-decoration: underline; }
 
+    @media (max-width: 860px) {
+      .hero { grid-template-columns: 1fr; gap: 12px; padding: 44px 0 24px; }
+      .heroart { min-height: 0; padding: 50px 0 30px; }
+      .heroart .ring { width: 300px; }
+      .heroart .phone { width: 230px; }
+      .screens { gap: 22px; }
+      .screens figure:nth-child(2) { transform: none; }
+    }
     @media (max-width: 640px) {
-      .hero { padding-top: 52px; }
-      .app-icon { width: 104px; height: 104px; border-radius: 23px; }
+      .wrap { padding: 0 16px; }
       section { padding: 64px 0; }
-      .lead { font-size: 19px; }
+      .lead { font-size: 18px; }
+      .heroart .badge { font-size: 13px; padding: 8px 11px; }
+      .heroart .badge-a { top: 10%; }
+      .heroart .badge-b { bottom: 4%; }
+      .screens { grid-template-columns: 1fr; gap: 48px; }
+      .screens .phone { width: 235px; }
+      .facts { justify-content: flex-start; }
+      .closer-card { padding: 52px 20px; border-radius: 24px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .onair i, .heroart .ring, .heroart .badge { animation: none; }
+      .heroart .ring { transform: scale(1); opacity: 0.6; }
+      .heroart .ring:nth-child(2) { transform: scale(1.25); opacity: 0.4; }
+      .heroart .ring:nth-child(3) { display: none; }
+      .btn, .tile { transition: none; }
+      .btn:hover, .tile:hover { transform: none; }
     }
   </style>
 
@@ -310,6 +413,11 @@
         "url": "https://cascadiacollections.github.io/shoutkit/",
         "downloadUrl": "https://testflight.apple.com/join/ZBSBTbRU",
         "image": "https://cascadiacollections.github.io/shoutkit/og-image.png",
+        "screenshot": [
+          "https://cascadiacollections.github.io/shoutkit/assets/screens/now-playing.webp",
+          "https://cascadiacollections.github.io/shoutkit/assets/screens/listen.webp",
+          "https://cascadiacollections.github.io/shoutkit/assets/screens/search.webp"
+        ],
         "description": "Free, open-source internet radio for iPhone and iPad, in public beta on TestFlight, with an Apple Watch app. Search stations from the Radio-Browser community directory, including Christmas and holiday music. No ads, no account, no tracking.",
         "offers": {
           "@type": "Offer",
@@ -434,23 +542,46 @@
   </header>
 
   <main id="main">
-    <div id="top" class="hero">
+    <div id="top" class="hero-shell">
       <div class="wrap">
-        <img class="app-icon" src="assets/app-icon-256.png" alt="The ShoutKit app icon: broadcast waves on a blue-to-coral gradient" width="128" height="128" />
-        <p class="eyebrow">ShoutKit for iPhone</p>
-        <h1>Free internet radio. <span class="h1-sub">No ads, no account, no&nbsp;tracking.</span></h1>
-        <p class="lead">
-          <strong>ShoutKit is an open-source radio app for iPhone and Android.</strong>
-          Find a station, tap play, and that’s it.
-        </p>
-        <div class="cta-row">
-          <a class="btn btn-solid" data-link="testflight" href="https://testflight.apple.com/join/ZBSBTbRU">Join the beta on TestFlight</a>
-          <a class="btn btn-link" data-link="android" href="https://cascadiacollections.github.io/shoutkit-android/">Get ShoutKit on Android ›</a>
+        <div class="hero">
+          <div>
+            <p class="eyebrow">
+              <img src="assets/app-icon-64.png" alt="" width="24" height="24" />
+              ShoutKit for iPhone
+              <span class="onair" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+            </p>
+            <h1>Free internet radio. <span class="h1-sub">No ads, no account, no&nbsp;tracking.</span></h1>
+            <p class="lead">
+              <strong>ShoutKit is an open-source radio app for iPhone and Android.</strong>
+              Find a station, tap play, and that’s it.
+            </p>
+            <div class="cta-row">
+              <a class="btn btn-solid" data-link="testflight" href="https://testflight.apple.com/join/ZBSBTbRU">Join the beta on TestFlight <span aria-hidden="true">→</span></a>
+              <a class="btn btn-ghost" data-link="android" href="https://cascadiacollections.github.io/shoutkit-android/">Get it on Android</a>
+            </div>
+            <p class="beta-note">
+              Free public beta for iOS and iPadOS 26. For now the beta installs as Holmdel
+              (TestFlight lists it as Squan); it’s the same app. App Store: coming soon.
+            </p>
+          </div>
+          <div class="heroart">
+            <span class="ring" aria-hidden="true"></span>
+            <span class="ring" aria-hidden="true"></span>
+            <span class="ring" aria-hidden="true"></span>
+            <div class="phone">
+              <img src="assets/screens/now-playing.webp" alt="ShoutKit’s Now Playing screen on iPhone, playing a Christmas station live, with a level meter, favorite, play and sleep timer controls" width="720" height="1565" fetchpriority="high" />
+            </div>
+            <p class="badge badge-a" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+              No ads, ever
+            </p>
+            <p class="badge badge-b" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+              Nothing tracked
+            </p>
+          </div>
         </div>
-        <p class="beta-note">
-          Free public beta for iOS and iPadOS 26. For now the beta installs as Holmdel
-          (TestFlight lists it as Squan); it’s the same app. App Store: coming soon.
-        </p>
         <p class="facts">
           <span>Free</span>
           <span>Open source</span>
@@ -461,7 +592,7 @@
       </div>
     </div>
 
-    <section id="holidays" class="alt" aria-labelledby="holidays-h">
+    <section id="holidays" aria-labelledby="holidays-h">
       <div class="wrap">
         <div class="section-head">
           <p class="kicker">For the holidays</p>
@@ -489,13 +620,27 @@
       </div>
     </section>
 
-    <section id="screens" class="alt" aria-labelledby="screens-h" hidden>
+    <section id="screens" class="alt" aria-labelledby="screens-h">
       <div class="wrap">
         <div class="section-head">
           <p class="kicker">A look inside</p>
           <h2 id="screens-h">Radio that feels at home on iPhone.</h2>
+          <p>Three taps from opening the app to hearing a station.</p>
         </div>
-        <div class="screens" id="screens-list"></div>
+        <div class="screens">
+          <figure>
+            <div class="phone"><img src="assets/screens/listen.webp" alt="The Listen Now tab, with recently played stations and popular stations" width="720" height="1565" loading="lazy" /></div>
+            <figcaption><strong>Pick up where you left off</strong>Recently played and popular stations, ready on launch.</figcaption>
+          </figure>
+          <figure>
+            <div class="phone"><img src="assets/screens/now-playing.webp" alt="Now Playing, with station artwork, a live level meter and playback controls" width="720" height="1565" loading="lazy" /></div>
+            <figcaption><strong>A player that moves with the music</strong>Colors drawn from the artwork, and a level meter that follows the stream.</figcaption>
+          </figure>
+          <figure>
+            <div class="phone"><img src="assets/screens/search.webp" alt="Search results for “christmas”, listing holiday stations with their bitrates" width="720" height="1565" loading="lazy" /></div>
+            <figcaption><strong>Find the station for the moment</strong>Search thousands of stations by name, genre or season.</figcaption>
+          </figure>
+        </div>
       </div>
     </section>
 
@@ -508,18 +653,22 @@
         </div>
         <div class="tiles">
           <article class="tile">
+            <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v9H4v-9"/><path d="M2 7h20v5H2z"/><path d="M12 21V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></span>
             <h3>Free, for real</h3>
             <p>No ads, no paywall, no subscription, no in-app purchases. Every feature works for everyone.</p>
           </article>
           <article class="tile">
+            <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
             <h3>Private by design</h3>
             <p>No sign-up and no analytics. Favorites and recents stay on your device.</p>
           </article>
           <article class="tile">
+            <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg></span>
             <h3>Open source</h3>
             <p>Every line is public. The app is GPL-3.0; its building blocks are MIT.</p>
           </article>
           <article class="tile">
+            <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1a10 10 0 0 1 0-14.2"/><path d="M7.8 16.2a6 6 0 0 1 0-8.4"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4"/><path d="M19.1 4.9a10 10 0 0 1 0 14.2"/></svg></span>
             <h3>A native player</h3>
             <p>SwiftUI throughout, with Siri, widgets, AirPlay and an Apple Watch app.</p>
           </article>
@@ -590,7 +739,7 @@
           </li>
           <li>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
-            <div><strong>This page, too.</strong><p>No web fonts, no analytics, no cookies. System fonts and one HTML file.</p></div>
+            <div><strong>This page, too.</strong><p>No web fonts, no analytics, no cookies. System fonts, one HTML file and a few screenshots.</p></div>
           </li>
         </ul>
       </div>
@@ -717,14 +866,16 @@ open Holmdel.xcworkspace <span class="c"># then ⌘R</span></code></pre>
       </div>
     </section>
 
-    <section class="closer alt">
+    <section class="closer">
       <div class="wrap">
+        <div class="closer-card">
         <img class="app-icon" src="assets/app-icon-256.png" alt="" width="88" height="88" />
         <h2>Find a station you’d never have found.</h2>
         <p class="lead">Free, open source, and nothing watching you listen.</p>
         <div class="cta-row">
           <a class="btn btn-solid" data-link="testflight" href="https://testflight.apple.com/join/ZBSBTbRU">Join the beta on TestFlight</a>
           <a class="btn btn-link" data-link="android" href="https://cascadiacollections.github.io/shoutkit-android/">Get it on Android ›</a>
+        </div>
         </div>
       </div>
     </section>
@@ -783,23 +934,6 @@ open Holmdel.xcworkspace <span class="c"># then ⌘R</span></code></pre>
       });
     })();
 
-    // Fill the screenshot gallery from SHOUTKIT_SCREENS; it stays hidden while empty.
-    (() => {
-      const shots = window.SHOUTKIT_SCREENS || [];
-      if (!shots.length) return;
-      const list = document.getElementById('screens-list');
-      shots.forEach(({ src, alt }) => {
-        const frame = document.createElement('div');
-        frame.className = 'phone';
-        const img = document.createElement('img');
-        img.src = src;
-        img.alt = alt || '';
-        img.loading = 'lazy';
-        frame.appendChild(img);
-        list.appendChild(frame);
-      });
-      document.getElementById('screens').hidden = false;
-    })();
   </script>
 </body>
 </html>
