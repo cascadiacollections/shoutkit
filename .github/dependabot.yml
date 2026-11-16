@@ -18,59 +18,39 @@ updates:
     cooldown:
       default-days: 7
 
-  # The `swift` ecosystem is DISABLED, not deleted — see DECISIONS.md 2026-09-22.
+  # Swift packages. Re-enabled 2026-11-16 (DECISIONS.md): dependabot-core's
+  # swift/Dockerfile moved to Swift 6.4.1 on 2026-11-05 (#16817), which can
+  # parse this tree's `swift-tools-version: 6.4` manifests. It was disabled
+  # 2026-09-22 to 2026-11-16 while the updater image was on 6.3.1.
   #
-  # Dependabot's Swift updater runs `swift package` inside its own container,
-  # and that image pins `ARG SWIFT_VERSION=6.3.1`
-  # (dependabot/dependabot-core, swift/Dockerfile). Every manifest in
-  # `Packages/` declares `swift-tools-version: 6.4` and uses PackageDescription
-  # API that does not exist before it — `.iOS(.v26)` and
-  # `.defaultIsolation(MainActor.self)` — so resolution aborts before it reads
-  # a single dependency:
-  #
-  #   error: 'browsefeaturecore': package 'browsefeaturecore' is using Swift
-  #   tools version 6.4.0 but the installed version is 6.3.1
-  #
-  # This failed silently every week from 2026-08-10 to 2026-09-21 — seven runs,
-  # no PRs, no notification, because a failed Dependabot run is not a failed
-  # check on anything. Lowering the tools version is not available: the
-  # manifests would no longer parse. So the entry comes out until the updater
-  # image catches up, and `dependabot-swift-watch.yml` opens an issue the week
-  # it does. Restore the block below verbatim at that point.
-  #
-  # What this costs in the meantime: Factory is `exact: "3.5.2"`-pinned in
-  # nine manifests, and AudioStreaming is `exact: "1.4.5"` in
-  # PlaybackEngineAudioStreaming (one of those nine). Nothing now watches
-  # either pin. Those are hand-bumps until this is back.
-  #
-  # - package-ecosystem: swift
-  #   directories:
-  #     - "/Packages/RadioDirectory"
-  #     - "/Packages/DesignSystem"
-  #     - "/Packages/LiveActivity"
-  #     - "/Packages/Playback"
-  #     # The only manifest that declares AudioStreaming, since #122 moved the
-  #     # engine out of Playback. Missing from this list, its `exact: "1.4.5"`
-  #     # pin would simply never be offered a bump.
-  #     - "/Packages/PlaybackEngineAudioStreaming"
-  #     - "/Packages/Persistence"
-  #     - "/Packages/DebugSupport"
-  #     - "/Packages/FeatureFlags"
-  #     - "/Packages/BrowseFeatureCore"
-  #     - "/Packages/SearchFeatureCore"
-  #     - "/Packages/Features/BrowseFeature"
-  #     - "/Packages/Features/SearchFeature"
-  #   schedule:
-  #     interval: weekly
-  #   commit-message:
-  #     prefix: deps
-  #   labels:
-  #     - dependencies
-  #   groups:
-  #     factory:
-  #       patterns:
-  #         - "*actory*"
-  #   # Same 7-day cooldown as github-actions, so the block comes back
-  #   # compliant when it is restored. Security updates are not delayed.
-  #   cooldown:
-  #     default-days: 7
+  # Factory is `exact`-pinned in every manifest that uses it, so the `factory`
+  # group keeps those bumps in one PR.
+  - package-ecosystem: swift
+    directories:
+      - "/Packages/RadioDirectory"
+      - "/Packages/DesignSystem"
+      - "/Packages/Playback"
+      # The only manifest that declares AudioStreaming, since #122 moved the
+      # engine out of Playback. Missing from this list, its `exact: "1.4.5"`
+      # pin would simply never be offered a bump.
+      - "/Packages/PlaybackEngineAudioStreaming"
+      - "/Packages/Persistence"
+      - "/Packages/DebugSupport"
+      - "/Packages/FeatureFlags"
+      - "/Packages/BrowseFeatureCore"
+      - "/Packages/SearchFeatureCore"
+      - "/Packages/Features/BrowseFeature"
+      - "/Packages/Features/SearchFeature"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: deps
+    labels:
+      - dependencies
+    groups:
+      factory:
+        patterns:
+          - "*actory*"
+    # Same 7-day cooldown as github-actions. Security updates are not delayed.
+    cooldown:
+      default-days: 7

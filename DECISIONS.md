@@ -1,5 +1,28 @@
 # Decisions
 
+## 2026-11-16 (Dependabot's `swift` ecosystem is back; the watch workflow is deleted)
+
+Closes out the 2026-09-22 entry. dependabot-core moved `swift/Dockerfile` to
+`ARG SWIFT_VERSION=6.4.1` on 2026-11-05 (dependabot/dependabot-core#16817). A 6.4 toolchain
+parses the `swift-tools-version: 6.4` manifests, so the reason for disabling the ecosystem is
+gone and the commented block in `.github/dependabot.yml` is restored.
+
+**The watch did see it, then failed to say so.** `dependabot-swift-watch.yml` detected 6.4.1
+on 2026-11-09 and 2026-11-16. Both times it failed while filing the issue: its job never checks
+out the repo, so `gh issue create` ran with no repository context ("not a git repository").
+The red run got noticed, not the issue. The entry said to delete the workflow once the
+ecosystem was back, so it is deleted instead of fixed.
+
+**One change from the verbatim block.** `/Packages/LiveActivity` is dropped from
+`directories`: since the 2026-11-14 deletion of `liveActivity` it declares no remote
+packages. Every manifest that does (Factory `exact: "3.5.2"` in nine, AudioStreaming
+`exact: "1.4.5"`, Pulse `exact: "5.2.3"`) is listed.
+
+**How to confirm.** Editing `dependabot.yml` makes Dependabot re-scan straight away, so the
+first Swift run follows this merge. Check it with
+`gh run list --workflow 'Dependabot Updates' --limit 5` rather than assuming the hosted
+updater has deployed the new image.
+
 ## 2026-11-14 (live streams open with one request: a source of our own through AudioStreaming's public API)
 
 **The cause, found by profiling.** AudioStreaming 1.4.5's `RemoteAudioSource.performOpen`
