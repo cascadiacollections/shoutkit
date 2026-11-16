@@ -7,7 +7,8 @@ Factory 3.5.3, then failed. It ran `swift package update factory` repeatedly, wh
 an `exact:` requirement. While saving that failed attempt, its workspace ran
 `git add --all --force .` and picked up SwiftPM's `.build/checkouts` (ignored by `.gitignore`,
 but `--force` overrides that), then died on a `.build/repositories/…/maintenance.lock` race.
-The run reported `unknown_error`, which hides the real reason. That crash is upstream's to fix.
+The run reported `unknown_error`, which hides the real reason. That crash is upstream's to fix:
+filed as dependabot/dependabot-core#16950.
 
 So this bump is by hand, the same way as the 2026-10-06 refresh:
 - **Factory 3.5.3** (2026-11-07, `5f4ea2bf`), `exact`, in all nine manifests. Its changes are
