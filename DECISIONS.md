@@ -1,5 +1,28 @@
 # Decisions
 
+## 2026-11-16 (Factory 3.5.2 → 3.5.3 by hand; the first Swift Dependabot run could not do it)
+
+The first run after re-enabling the `swift` ecosystem (above) parsed every manifest and found
+Factory 3.5.3, then failed. It ran `swift package update factory` repeatedly, which cannot move
+an `exact:` requirement. While saving that failed attempt, its workspace ran
+`git add --all --force .` and picked up SwiftPM's `.build/checkouts` (ignored by `.gitignore`,
+but `--force` overrides that), then died on a `.build/repositories/…/maintenance.lock` race.
+The run reported `unknown_error`, which hides the real reason. That crash is upstream's to fix.
+
+So this bump is by hand, the same way as the 2026-10-06 refresh:
+- **Factory 3.5.3** (2026-11-07, `5f4ea2bf`), `exact`, in all nine manifests. Its changes are
+  `FoundationEssentials` on Linux and Android, and locking for those platforms. Darwin builds
+  are unaffected.
+- **Package-level lockfiles** were regenerated with SwiftPM 6.4.2 (`swift:6.4` container),
+  not edited. That also dropped stale swift-algorithms and swift-numerics pins from
+  PlayerFeature and SettingsFeature: both packages left the graph in `cce2976`.
+- **The two Xcode lockfiles** (workspace and nested project) had only the Factory pin edited,
+  because Linux SwiftPM can't regenerate them. Their `originHash` updates the next time Xcode
+  resolves.
+
+The `exact` pins stay for now: the 2026-08-15 entry's reason (Factory `Container` extensions
+are public API in four packages) still holds.
+
 ## 2026-11-16 (Dependabot's `swift` ecosystem is back; the watch workflow is deleted)
 
 Closes out the 2026-09-22 entry. dependabot-core moved `swift/Dockerfile` to

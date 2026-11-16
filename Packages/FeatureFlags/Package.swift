@@ -22,7 +22,7 @@ let package = Package(
         .library(name: "FeatureFlags", targets: ["FeatureFlags"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.5.2"),
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.5.3"),
     ],
     targets: [
         .target(
