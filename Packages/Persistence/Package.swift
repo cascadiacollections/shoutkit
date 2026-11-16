@@ -31,7 +31,7 @@ let package = Package(
         // `extension Container` is public API surface, so a version drift here
         // is a resolution failure for an adopter on a different Factory version,
         // not a routine bump. The dependabot `factory` group spans all of them.
-        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.5.2"),
+        .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.5.3"),
     ],
     targets: [
         .target(
