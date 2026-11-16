@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-11-16 (Dependabot's `swift` ecosystem off again until dependabot-core#16950)
+
+The two entries below describe re-enabling it and the first run's crash. The updater can't move
+`exact:` requirements in `Package.swift`: dependabot/dependabot-core#14495 fixed that only for
+`.xcodeproj` manifests. The `exact` pins stay, for the 2026-08-15 reason. So every weekly run
+would fail as `unknown_error`, which is the silent failure the 2026-09-22 entry exists to avoid.
+The block is commented out again with a pointer to #16950, and Factory, AudioStreaming and
+Pulse stay hand-bumps until that issue is fixed.
+
+There's no watch workflow this time. #16950 notifies its author when it changes. The
+re-enable condition is "#16950 is closed by a fix that handles exact pins", not a toolchain
+version that can be polled.
+
 ## 2026-11-16 (Factory 3.5.2 → 3.5.3 by hand; the first Swift Dependabot run could not do it)
 
 The first run after re-enabling the `swift` ecosystem (above) parsed every manifest and found
