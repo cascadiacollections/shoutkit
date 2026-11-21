@@ -39,7 +39,7 @@ private extension AudioItem {
 
 /// AudioPlaybackIntent keeps this headless: Siri/Shortcuts start audio without
 /// foregrounding the app (or demanding unlock), which is the whole point of
-/// "Hey Siri, play KEXP on Holmdel" while driving. Deep links use
+/// "Hey Siri, play KEXP on ShoutKit" while driving. Deep links use
 /// StationLaunchRouter instead because opening the app is inherent to a URL
 /// launch. This is the *explicit* path — the phrase always says "on
 /// Holmdel" — because `AppShortcutPhrase` can only bind plain
@@ -48,7 +48,7 @@ private extension AudioItem {
 /// app-name-free path).
 struct PlayStationIntent: AudioPlaybackIntent {
     static let title: LocalizedStringResource = "Play Station"
-    static let description = IntentDescription("Plays a radio station in Holmdel.")
+    static let description = IntentDescription("Plays a radio station in ShoutKit.")
 
     @Parameter(title: "Station")
     var station: StationEntity
@@ -110,7 +110,7 @@ struct WarmupRadioAudioQueueIntent {
 @AppIntent(schema: .audio.playAudio)
 struct PlayRadioAudioIntent {
     static let title: LocalizedStringResource = "Play Radio"
-    static let description = IntentDescription("Plays a radio station in Holmdel.")
+    static let description = IntentDescription("Plays a radio station in ShoutKit.")
 
     var audioEntity: AudioItem
     var queueLocation: QueueInsertionLocation?

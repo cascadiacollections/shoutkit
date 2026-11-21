@@ -7,7 +7,6 @@ final class TapToAudioLatencyTrace {
     private nonisolated static let signposter = OSSignposter(subsystem: "ShoutKit.Playback", category: "TapToAudio")
 
     private let stationID: String
-    private let prewarmEnabled: Bool
     private let startedAt = Date()
     private let signpostID: OSSignpostID
     private let interval: OSSignpostIntervalState
@@ -16,9 +15,8 @@ final class TapToAudioLatencyTrace {
     private var outputStartedAt: Date?
     private var completed = false
 
-    init(stationID: String, prewarmEnabled: Bool) {
+    init(stationID: String) {
         self.stationID = stationID
-        self.prewarmEnabled = prewarmEnabled
         signpostID = Self.signposter.makeSignpostID()
         interval = Self.signposter.beginInterval("Tap to audio", id: signpostID)
     }
@@ -36,7 +34,7 @@ final class TapToAudioLatencyTrace {
         Self.logger.notice(
             """
             TapToAudio resolved station=\(self.stationID, privacy: .public) \
-            host=\(url.host ?? "unknown", privacy: .public) prewarmEnabled=\(self.prewarmEnabled)
+            host=\(url.host ?? "unknown", privacy: .public)
             """,
         )
     }
@@ -58,7 +56,7 @@ final class TapToAudioLatencyTrace {
 
         Self.logger.notice(
             """
-            TapToAudio complete station=\(self.stationID, privacy: .public) prewarmEnabled=\(self.prewarmEnabled) \
+            TapToAudio complete station=\(self.stationID, privacy: .public) \
             resolveMs=\(Self.describe(resolveMilliseconds), privacy: .public) \
             outputStartMs=\(Self.describe(outputStartMilliseconds), privacy: .public) \
             firstPlayingMs=\(Self.describe(firstPlayingMilliseconds), privacy: .public)

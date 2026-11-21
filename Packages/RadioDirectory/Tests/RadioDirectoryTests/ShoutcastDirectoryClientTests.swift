@@ -228,6 +228,31 @@ struct ShoutcastDirectoryClientTests {
         #expect(await transport.requests.count == instantRetries.maximumRetries + 1)
     }
 
+    @Test(arguments: [400, 401, 403, 404])
+    func `client error is not retried`(statusCode: Int) async throws {
+        let transport = ScriptedTransport([.status(statusCode, "")])
+        let client = makeClient(transport: transport)
+
+        await #expect(throws: RadioDirectoryError.httpStatus(statusCode)) {
+            try await client.genres()
+        }
+        #expect(await transport.requests.count == 1)
+    }
+
+    @Test(arguments: [408, 429])
+    func `timeout and rate limit statuses are retried`(statusCode: Int) async throws {
+        let transport = ScriptedTransport([
+            .status(statusCode, ""),
+            .status(200, stationListXML),
+        ])
+        let client = makeClient(transport: transport)
+
+        let stations = try await client.topStations(limit: 10)
+
+        #expect(stations.count == 3)
+        #expect(await transport.requests.count == 2)
+    }
+
     @Test
     func `non HTTP response maps to invalid response`() async throws {
         let transport = ScriptedTransport([.notHTTP])

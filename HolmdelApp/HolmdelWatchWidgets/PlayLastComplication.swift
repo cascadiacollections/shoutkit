@@ -27,7 +27,7 @@ struct PlayLastComplication: Widget {
             PlayLastComplicationView()
         }
         .configurationDisplayName("Play Last Station")
-        .description("Open Holmdel on Apple Watch and start your most recent station.")
+        .description("Open ShoutKit on Apple Watch and start your most recent station.")
         .supportedFamilies([.accessoryCircular, .accessoryRectangular])
     }
 }
@@ -48,7 +48,7 @@ private struct PlayLastComplicationView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "play.circle.fill")
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Holmdel")
+                        Text("ShoutKit")
                             .font(.headline)
                         Text("Play Last")
                             .font(.caption2)

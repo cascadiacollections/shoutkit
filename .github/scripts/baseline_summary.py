@@ -23,8 +23,8 @@ WANTED = {
     "ApplicationFirstFramePresentationResponsive.duration": ("Launch until responsive", 1.0, "s"),
     ".physical_peak": ("Peak memory", 1 / 1024, "MB"),
     # TapToAudioBaselineUITests: tap until "Pause" shows. Includes XCTest's
-    # polling for the button, so it reads about a second high; compare the
-    # with- and without-prewarm rows of the same run, not across machines.
+    # polling for the button, so it reads about a second high; compare runs
+    # on the same runner, not across machines.
     "XCTMetric_Clock.time.monotonic": ("Tap to playing (UI)", 1.0, "s"),
 }
 

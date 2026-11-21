@@ -21,7 +21,7 @@ struct WelcomeOverlayView: View {
                     .accessibilityHidden(true)
 
                 VStack(spacing: ShoutKitSpacing.small) {
-                    Text("Welcome to Holmdel")
+                    Text("Welcome to ShoutKit")
                         .font(.largeTitle.bold())
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)

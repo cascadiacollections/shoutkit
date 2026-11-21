@@ -29,7 +29,7 @@
 
             let services = AppDependencies.bootstrap()
             let template = CPListTemplate(
-                title: "Holmdel",
+                title: "ShoutKit",
                 sections: sections(topStations: .loading, services: services),
             )
             topStationsState = .loading
@@ -139,7 +139,7 @@
                         items: [
                             CPListItem(
                                 text: "No Stations Yet",
-                                detailText: "Open Holmdel on iPhone to start listening or add favorites.",
+                                detailText: "Open ShoutKit on iPhone to start listening or add favorites.",
                             ),
                         ],
                         header: nil,

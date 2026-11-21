@@ -78,7 +78,7 @@ struct WatchRootView: View {
                 }
             }
         }
-        .navigationTitle("Holmdel")
+        .navigationTitle("ShoutKit")
     }
 
     private var latestRecent: RecentStation? {

@@ -1,20 +1,20 @@
-# Holmdel
+# ShoutKit
 
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/cascadiacollections/shoutkit/badge)](https://scorecard.dev/viewer/?uri=github.com/cascadiacollections/shoutkit)
 
-Holmdel is a SwiftUI internet-radio client for iOS and iPadOS 26+, with a Mac Catalyst build and
-companion apps for watchOS and tvOS, built on **ShoutKit** — this repo's MIT-licensed radio SDK
-(`Packages/`).
-See [TRADEMARK.md](TRADEMARK.md) for how the two names split: ShoutKit is the reusable library
-layer, Holmdel is this app's name. Holmdel ships with real,
-keyless station discovery out of the box via [Radio-Browser](https://www.radio-browser.info) — a
+ShoutKit is a SwiftUI internet-radio client for iOS and iPadOS 26+, with a Mac Catalyst build and
+companion apps for watchOS and tvOS, built on this repo's MIT-licensed radio packages
+(`Packages/`). The app and the packages share the ShoutKit name; **Holmdel** is the app's
+internal code name, which is why the workspace, targets, bundle id and `holmdel://` scheme are
+spelled that way (see [TRADEMARK.md](TRADEMARK.md) and `DECISIONS.md`, 2026-11-20). ShoutKit
+ships with real, keyless station discovery out of the box via [Radio-Browser](https://www.radio-browser.info) — a
 free, open-source community radio directory — plus an Apple Music-style persistent player: a Liquid
 Glass mini-player docked above the tab bar, a full-screen Now Playing surface with live ICY track
 metadata, lock-screen/Control Center controls, favorites and recents backed by SwiftData, and
-Siri/Shortcuts support ("Play KEXP on Holmdel"). On iPad the tab bar becomes a sidebar and
+Siri/Shortcuts support ("Play KEXP on ShoutKit"). On iPad the tab bar becomes a sidebar and
 browsing surfaces flow into adaptive multi-column layouts, including Split View and Stage Manager.
 
-The name is a nod to the Bell Labs site in Holmdel, New Jersey, where in 1964 Arno Penzias and
+The code name is a nod to the Bell Labs site in Holmdel, New Jersey, where in 1964 Arno Penzias and
 Robert Wilson used the Holmdel Horn Antenna to detect the cosmic microwave background — proof of
 the Big Bang, and one of the most consequential radio signals ever received. Felt fitting for an
 app whose entire job is picking up signals and letting you listen.
@@ -66,8 +66,8 @@ The live calls (`topStations`, `genres`) never serve the snapshot; the saved cop
 through the `DirectoryDiscoveryCaching` seam, so a surface always knows whether it's showing live
 or saved content. When the directory can't be reached, saved stations stay on screen with a note
 rather than being replaced by an error — the error state is reserved for having nothing to show.
-Snapshots are scoped by directory source and geo filter, so travelling (or toggling the
-geo-stations flag) refetches instead of serving another region's stations. Favorites and recents
+Snapshots are scoped by directory source and region, so travelling (or changing the device
+region) refetches instead of serving another region's stations. Favorites and recents
 are separately offline-capable via SwiftData; search results and per-genre lists are user-driven
 and deliberately not persisted.
 
@@ -173,7 +173,7 @@ outright (see `DECISIONS.md`, 2026-09-06). What's still ahead is in
 
 ## Privacy
 
-Holmdel collects nothing and tracks nothing. There are no analytics, no ads, and no accounts.
+ShoutKit collects nothing and tracks nothing. There are no analytics, no ads, and no accounts.
 The app's privacy manifest (`PrivacyInfo.xcprivacy`) declares zero collected data types and no
 tracking. The complete list of network traffic the app produces:
 
@@ -185,6 +185,12 @@ tracking. The complete list of network traffic the app produces:
   rank station popularity. Only the station's public UUID is sent — nothing about you or your
   device beyond a generic `Holmdel/x.y` User-Agent.
 - **Stream and artwork fetches** directly from the stations you choose to play.
+- **Album-art lookups** to Apple's iTunes Search API while a track is playing: the current
+  track's artist and title, used to find cover art and the "View in Apple Music" link. On by
+  default; Settings → Privacy → Fetch Album Artwork turns it off, and the app then shows
+  station artwork only.
+
+Play reports can be turned off in Settings → Privacy as well.
 
 Favorites and recents live in a local SwiftData store on your device, alongside a small snapshot of
 the public station list the landing surfaces last fetched (so they can render without a network
@@ -197,10 +203,13 @@ is in [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Testing
 
-All package test suites (`RadioDirectory`, `Playback`, `Persistence`) run on the mac host with
-`swift test` — the iOS-only playback types are `canImport(UIKit)`-gated so the controller tests
-execute against fakes anywhere. See [CONTRIBUTING.md](CONTRIBUTING.md) for details and a local
-codesign workaround.
+Eleven package suites run on the mac host with `swift test --disable-xctest`, one package at a
+time: `RadioDirectory`, `Playback`, `Persistence`, `FeatureFlags`, `ImageIODownsample`,
+`AudioLevels`, and the five `*FeatureCore` packages. The iOS-only playback types are
+`canImport(UIKit)`-gated so the controller tests execute against fakes anywhere. The remaining
+suites (`DesignSystem`, `PlaybackEngineAudioStreaming`, `LiveActivity`, the app and UI tests)
+run on the simulator through `HolmdelApp/Holmdel.xctestplan`. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for details and a local codesign workaround.
 
 ## Licensing
 
@@ -227,12 +236,12 @@ DocC-generated API reference for the MIT packages above is published at
 [cascadiacollections.github.io/shoutkit/api](https://cascadiacollections.github.io/shoutkit/api/).
 
 The reusable infrastructure packages are MIT so they can be adopted anywhere; the app itself is
-GPL-3.0 so distributed forks must remain open source. The **Holmdel name/branding and the ShoutKit
-name/branding are not covered by the code licenses** — see [TRADEMARK.md](TRADEMARK.md).
+GPL-3.0 so distributed forks must remain open source. The **ShoutKit name and branding are not
+covered by the code licenses** — see [TRADEMARK.md](TRADEMARK.md).
 Contributions require a DCO sign-off; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Supporting the project
 
-Holmdel is free software built in the open. If it's useful to you, support development via the
+ShoutKit is free software built in the open. If it's useful to you, support development via the
 funding links in [`.github/FUNDING.yml`](.github/FUNDING.yml) (GitHub's Sponsor button). The app
 itself contains no paywalls — everything works whether or not you donate.

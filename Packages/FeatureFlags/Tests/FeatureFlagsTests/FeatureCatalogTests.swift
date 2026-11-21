@@ -13,10 +13,9 @@ struct FeatureCatalogTests {
     @Test
     func `named features are in the catalog`() {
         #expect(FeatureCatalog.all.contains(FeatureCatalog.diagnostics))
-        #expect(FeatureCatalog.all.contains(FeatureCatalog.prewarmStations))
     }
 
-    /// Both are opt-in, internal-only experiments; flipping either default is a
+    /// Internal-only features are opt-in; flipping a default is a
     /// product decision that should show up as a failing test, not slip through.
     @Test
     func `internal features ship disabled`() {
@@ -49,9 +48,9 @@ struct FeatureFlagStorageTests {
         let defaults = try makeDefaults()
         let service = DefaultsFeatureFlagService(defaults: defaults)
 
-        service.setOverride(.disabled, for: FeatureCatalog.prewarmStations)
+        service.setOverride(.disabled, for: FeatureCatalog.diagnostics)
 
-        #expect(defaults.string(forKey: "featureFlags.prewarmStations.override") == "disabled")
+        #expect(defaults.string(forKey: "featureFlags.diagnostics.override") == "disabled")
     }
 
     @Test
@@ -67,11 +66,18 @@ struct FeatureFlagStorageTests {
     @Test
     func `stored value for a feature outside the service is ignored`() throws {
         let defaults = try makeDefaults()
-        defaults.set("enabled", forKey: "featureFlags.prewarmStations.override")
+        let outsider = Feature(
+            key: "outsider",
+            title: "Outsider",
+            summary: "Not registered with the service.",
+            stage: .internalOnly,
+            defaultEnabled: false,
+        )
+        defaults.set("enabled", forKey: "featureFlags.outsider.override")
         let service = DefaultsFeatureFlagService(defaults: defaults, features: [FeatureCatalog.diagnostics])
 
-        #expect(service.override(for: FeatureCatalog.prewarmStations) == .useDefault)
-        #expect(service.isEnabled(FeatureCatalog.prewarmStations) == false)
+        #expect(service.override(for: outsider) == .useDefault)
+        #expect(service.isEnabled(outsider) == false)
     }
 
     @Test
