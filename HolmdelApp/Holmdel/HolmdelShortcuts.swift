@@ -199,7 +199,7 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
             // Separate call rather than one combined index: `indexAppEntities`
             // is generic over a single entity type, and the schema type only
             // exists on iOS 27. A failure here costs the app-name-free route
-            // only — the explicit "on Holmdel" phrases still resolve from the
+            // only — the explicit "on ShoutKit" phrases still resolve from the
             // index above — so it is logged and swallowed like its sibling.
             if #available(iOS 27, *) {
                 do {
@@ -264,8 +264,8 @@ enum IntentStationCache {
 }
 
 struct OpenHolmdelIntent: AppIntent {
-    static let title: LocalizedStringResource = "Open Holmdel"
-    static let description = IntentDescription("Opens Holmdel.")
+    static let title: LocalizedStringResource = "Open ShoutKit"
+    static let description = IntentDescription("Opens ShoutKit.")
     static let openAppWhenRun = true
 
     @MainActor
@@ -279,7 +279,7 @@ struct OpenHolmdelIntent: AppIntent {
 /// headless like they do.
 struct GetCurrentPlaybackIntent: AppIntent {
     static let title: LocalizedStringResource = "What's Playing"
-    static let description = IntentDescription("Reports which station is currently playing in Holmdel.")
+    static let description = IntentDescription("Reports which station is currently playing in ShoutKit.")
     static let openAppWhenRun = false
 
     @MainActor
@@ -303,7 +303,7 @@ struct GetCurrentPlaybackIntent: AppIntent {
 struct ToggleFavoriteIntent: AppIntent {
     static let title: LocalizedStringResource = "Toggle Favorite"
     static let description = IntentDescription(
-        "Adds or removes the currently playing station from your Holmdel favorites.",
+        "Adds or removes the currently playing station from your ShoutKit favorites.",
     )
     static let openAppWhenRun = false
 

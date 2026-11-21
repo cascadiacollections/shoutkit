@@ -78,7 +78,6 @@ enum AppDependencies {
             for: controller,
             store: store,
             settings: settings,
-            featureFlags: featureFlags,
             playReporter: directoryServices.playReporter,
         )
 
@@ -100,7 +99,7 @@ enum AppDependencies {
             nowPlayingWidgetCoordinator: nowPlayingWidgetCoordinator,
             stationLaunchRouter: StationLaunchRouter(),
         )
-        scheduleLaunchWarmups(store: store, featureFlags: featureFlags, prewarmer: stationConnectionPrewarmer)
+        scheduleLaunchWarmups()
 
         Self.services = services
         return services

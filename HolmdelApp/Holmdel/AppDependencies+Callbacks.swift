@@ -1,5 +1,4 @@
 import DesignSystem
-import FeatureFlags
 import Foundation
 import Persistence
 import Playback
@@ -24,7 +23,6 @@ extension AppDependencies {
         for controller: PlaybackController,
         store: LibraryStore,
         settings: SettingsStore,
-        featureFlags: any FeatureFlagProviding,
         playReporter: any StationPlayReporting?,
     ) {
         controller.onStationPlayed = { station in
@@ -49,10 +47,6 @@ extension AppDependencies {
                 artworkURL: heard.artworkURL,
                 appleMusicURL: heard.appleMusicURL,
             )
-        }
-
-        controller.tapToAudioPrewarmEnabledProvider = {
-            featureFlags.isEnabled(FeatureCatalog.prewarmStations)
         }
 
         // Read at each end-of-stream rather than captured, so flipping the

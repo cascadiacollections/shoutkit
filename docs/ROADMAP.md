@@ -1,12 +1,23 @@
-# Holmdel roadmap
+# ShoutKit roadmap
 
-A sprint-aligned view of where Holmdel is headed, spanning both **feature** work and
+A sprint-aligned view of where ShoutKit (code name Holmdel) is headed, spanning both **feature** work and
 **general engineering** (test infra, CI, tech debt). Sprints are 2 weeks. This complements,
 rather than replaces, the per-release plans in `docs/releases/*.md` — those stay the
 detailed, checkbox-level source of truth for a release in flight; this document is the
 zoomed-out sequencing across releases, revisited every sprint as scope shifts.
 
-**Status snapshot (2026-11-01).** Everything below is a proposal, not a commitment.
+**Status snapshot (2026-11-01, reconciled with GitHub 2026-11-20).** Everything below is a
+proposal, not a commitment.
+
+**2026-11-20: ship before building.** The code is ahead of everything else. Nobody outside
+TestFlight can install the app, so there is no signal to choose the next feature by. Until the
+App Store listing is live, the only work scheduled is "Now — release readiness" below. Feature
+work resumes once there are installs and issues to steer by. On the same day the public name
+became ShoutKit again (`DECISIONS.md`, 2026-11-20), and the first public release became 0.5.1,
+not 0.4.0 (`docs/RELEASING.md`).
+
+Issues #4, #146, #147 and #149 were all closed on GitHub on 2026-11-15 while this file still
+listed them as open. Each is restated below with what is actually true of it.
 
 The 2026-08-13 snapshot said nothing had ever been released and the repo had zero git tags.
 That is no longer true. `v0.4.0` was tagged in #187 (2026-08-30); `release.yml` ran, and the
@@ -108,10 +119,14 @@ note stays on the embed item above.
 **"None of it has started" was wrong when written and is corrected here** — search filters
 shipped in #157 and issue #151 is closed. Favorites export/import, still open at the
 2026-08-13 snapshot, shipped in #156 and #150 is closed. Ambient playback (#4) is the one
-item in this section that is still open. Listing completed work as pending is why the last
+item in this section that was never built. Listing completed work as pending is why the last
 bullet of "How to use this doc" exists.
 
-- [ ] **Ambient playback on ad detection** (#4). Reuse the existing ICY ad-break markers
+- [ ] **Ambient playback on ad detection** (#4). **Not built, and not scheduled.** The
+      issue was closed on 2026-11-15 as completed, but no ambient code exists: the ad-break
+      markers are parsed and hidden from titles, and that is all. It waits on listener
+      feedback like every other feature; reopen #4 if it is picked up. The original
+      plan: reuse the existing ICY ad-break markers
       (`Spot Block Start/End`, already suppressed from displayed titles) as the trigger.
       Ship a bundled loop first — on-device ML nature-sound generation is a stretch goal,
       not a v1 requirement. Off by default behind a Settings toggle until it is proven not
@@ -130,8 +145,9 @@ stations by listener count; crash-free ≥ 99.5%; no open P0/P1 for a week.
 
 Five features were built, wired, and tested, and sat at `internalOnly` /
 `defaultEnabled: false` in `FeatureCatalog` — no user outside a Debug build ever saw them.
-**Two are now resolved** (`recommendations` deleted, `diagnostics` decided; both 2026-08-13),
-leaving three.
+**All five are now resolved**: `recommendations` deleted and `diagnostics` decided
+(2026-08-13), `geoStations` and `liveActivity` settled (2026-11-14), `prewarmStations` deleted
+(2026-11-20).
 
 That is not a backlog, it is unshipped inventory, and it costs something to carry: every one
 of them is code that has to keep compiling, keep passing tests, and keep being reasoned
@@ -149,7 +165,15 @@ entry below states what is actually dark.
       could be removed without touching a shipping feature. `BrowseFeature` lost its
       `FeatureFlags` dependency with it, and `RecommendationHashing` went too. See
       `DECISIONS.md`. Deleted in #168.
-- [ ] `prewarmStations` — **measured 2026-11-14: no measurable effect on tap-to-audio** (3.52 s off, 3.49 s on, median). It warms an `NWConnection` that AudioStreaming's `URLSession` can't reuse, so it can't save the TLS setup as built. Decision pending. Launch-time DNS/TLS warming of top stations. **Not cleanly
+- [x] `prewarmStations` — **deleted 2026-11-20** (#146, closed). Measured 2026-11-14: no
+      measurable effect on tap-to-audio (3.52 s off, 3.49 s on, median). It warmed an
+      `NWConnection` that AudioStreaming's `URLSession` can't reuse, so it couldn't save the
+      TLS setup as built. The flag, the launch-warmup block and the
+      `tapToAudioPrewarmEnabledProvider` wiring are gone. `StationConnectionPrewarmer` stays
+      (the `WarmupRadioAudioQueueIntent` App Intent uses it), and so does
+      `LibraryStore.prewarmStreamURLs(limit:)`, which now has no production caller and is a
+      deletion candidate. The scoping note that led here: launch-time DNS/TLS warming of top
+      stations was **not cleanly
       deletable either**, and the 304-line figure first written here was wrong: the flag
       gates far less than the machinery. `StationConnectionPrewarmer` (133 lines) is called
       by `WarmupRadioAudioQueueIntent` (`HolmdelAudioIntents.swift:82`), a **shipping App
@@ -193,10 +217,13 @@ could install was the wrong next move. A public TestFlight beta has since gone o
       the watch and tvOS targets read `0.3.0`, which fails App Store validation for an
       embedded watch app. All twelve `MARKETING_VERSION` sites were set to `0.4.0` together.
       They have since moved together to `0.5.1` (#198, #202). They still match each other.
-- [ ] **Publish `v0.4.0`.** The tag and the changelog cut-over landed in #187 (2026-08-30).
-      The GitHub Release is still a draft. The notes are current through the commits after
-      that tag, and the publish checklist is in `docs/RELEASING.md`. The tag points at the
-      2026-08-30 cut, not at `main`. Publishing is Kevin's step.
+- [ ] **Publish the first public release as `v0.5.1`, and submit it to the App Store.**
+      Changed 2026-11-20: the `v0.4.0` draft is not published, because the build testers
+      have, and the one the store will get, is 0.5.1. The steps are in `docs/RELEASING.md`
+      ("First public release") and the listing copy is in `docs/APP_STORE_LISTING.md`.
+      Tagging, publishing and submitting are Kevin's steps. No issue is filed for this.
+- [ ] **Rename the App Store Connect record from "Squan" to "ShoutKit".** Kevin's step. The
+      home-screen name changed in the tree on 2026-11-20. No issue is filed for this.
 - [ ] Build-number (`CURRENT_PROJECT_VERSION`) handling. It is shared at the project level
       (both configurations read `2`) and is still incremented by hand. TestFlight already
       has 0.5.1 (31), so the next upload of that version must be higher than 31. #195, #198,
@@ -223,7 +250,7 @@ could install was the wrong next move. A public TestFlight beta has since gone o
 ## Next — get off the billed macOS runner
 
 CI spend is currently the largest line item in running this project, and all of it comes
-from one label. Holmdel is public, so GitHub's *standard* hosted runners are free;
+from one label. The repo is public, so GitHub's *standard* hosted runners are free;
 `xcode-27` is a **larger runner**, and larger runners are billed on public repos like any
 other. The 2026-08-11 pass rationed minutes on that label (see `DECISIONS.md`) and bought
 roughly a 70% cut, but rationing is not the fix — getting off the label is. Two routes, and
@@ -267,7 +294,8 @@ they are not exclusive:
 
 ## Backlog (unscheduled, revisit each sprint)
 
-- **File the CarPlay entitlement request with Apple.** Not a commit — a form
+- **File the CarPlay entitlement request with Apple. Do this now**: it is the one backlog
+  item with a lead time, and nothing else has to be finished first. Not a commit — a form
   (developer.apple.com/contact/carplay), reviewed by Apple, measured in weeks. The
   scene configuration and `HolmdelCarPlaySceneDelegate` are already in the tree. A grant
   does not turn CarPlay back on by re-adding one key: the 2026-09-06 removal also dropped
@@ -286,8 +314,10 @@ they are not exclusive:
 - Genre auto-tagging for unlabeled stations.
 - On-device AVRCP verification of the 2026-08-06 Bluetooth artwork fix (#147). Diagnosed from
   the code and the AVRCP contract, never tested in a car. Needs hardware, not a commit.
+  **Still unverified**: the issue was closed on 2026-11-15 without the check being done.
 - Resizable-iPhone-app contexts — iPhone Mirroring and iPhone-app-on-iPad (#149), the other
-  item that moved out of 0.3.0. Needs hardware too.
+  item that moved out of 0.3.0. Needs hardware too. **Still unverified**, closed the same
+  way on the same day.
 
 ## How to use this doc
 

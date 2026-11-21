@@ -23,14 +23,26 @@ public protocol RadioDirectoryProviding: Sendable {
     func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint
 }
 
+/// How many stations the filtering defaults below ask the directory for.
+///
+/// They filter client-side, so asking for exactly `limit` returns a short or
+/// empty list whenever the first `limit` matches fail the filters, even though
+/// the directory has more that pass. Asking for four times as many, capped,
+/// covers that without turning one search into an unbounded fetch.
+private func filteredFetchLimit(_ limit: Int, filters: StationSearchFilters) -> Int {
+    guard filters.isActive, limit > 0 else { return limit }
+    return max(limit, min(limit.multipliedReportingOverflow(by: 4).partialValue, 500))
+}
+
 public extension RadioDirectoryProviding {
     func searchStations(
         matching query: String,
         limit: Int,
         filters: StationSearchFilters,
     ) async throws(RadioDirectoryError) -> [Station] {
-        let stations = try await searchStations(matching: query, limit: limit)
-        return Array(filters.normalized.apply(to: stations).prefix(limit))
+        let filters = filters.normalized
+        let stations = try await searchStations(matching: query, limit: filteredFetchLimit(limit, filters: filters))
+        return Array(filters.apply(to: stations).prefix(limit))
     }
 
     /// Fallback for directories without a dedicated genre query: a plain search,
@@ -44,8 +56,9 @@ public extension RadioDirectoryProviding {
         limit: Int,
         filters: StationSearchFilters,
     ) async throws(RadioDirectoryError) -> [Station] {
-        let stations = try await stations(inGenre: genre, limit: limit)
-        return Array(filters.normalized.apply(to: stations).prefix(limit))
+        let filters = filters.normalized
+        let stations = try await stations(inGenre: genre, limit: filteredFetchLimit(limit, filters: filters))
+        return Array(filters.apply(to: stations).prefix(limit))
     }
 
     /// - Warning: This default always returns `nil`. It exists so a directory

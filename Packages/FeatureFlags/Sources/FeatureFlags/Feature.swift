@@ -43,17 +43,8 @@ public enum FeatureCatalog {
         defaultEnabled: false,
     )
 
-    public static let prewarmStations = Feature(
-        key: "prewarmStations",
-        title: "Prewarm Stations",
-        summary: "At launch, warm the network path (DNS/TLS) to your top stations so playback starts faster.",
-        stage: .internalOnly,
-        defaultEnabled: false,
-    )
-
     public static let all: [Feature] = [
         diagnosticsFeature,
-        prewarmStations,
     ]
 
     public static let diagnostics = diagnosticsFeature

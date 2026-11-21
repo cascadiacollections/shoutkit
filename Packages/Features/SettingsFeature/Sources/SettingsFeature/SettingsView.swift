@@ -117,7 +117,7 @@ public struct SettingsView: View {
                 iTunes Search API; turn this off to always show station artwork instead. \
                 Listen Now puts popular stations from your region first, using your device's \
                 region setting, never your location. \
-                Holmdel has no analytics, no ads, and no accounts.
+                ShoutKit has no analytics, no ads, and no accounts.
                 """)
             }
         }
@@ -179,7 +179,7 @@ public struct SettingsView: View {
                 if playbackController.supportsSpatialAudio {
                     Text("""
                     Spatial Audio renders the stream through a head-tracked virtual sound stage on \
-                    AirPods and other supported headphones. It's a stereo effect Holmdel applies to \
+                    AirPods and other supported headphones. It's a stereo effect ShoutKit applies to \
                     every station, not Dolby Atmos content from the broadcaster — radio streams carry \
                     no object-based audio to spatialize.
                     """)
@@ -194,13 +194,13 @@ public struct SettingsView: View {
                 Label("Report an Issue", systemImage: "ladybug")
             }
             Link(destination: ProjectLinks.sponsors) {
-                Label("Support Holmdel", systemImage: "heart")
+                Label("Support ShoutKit", systemImage: "heart")
             }
         } header: {
             Text("Feedback & Support")
         } footer: {
             Text("""
-            Holmdel is free software — everything works whether or not you donate. \
+            ShoutKit is free software — everything works whether or not you donate. \
             On beta builds you can also send feedback by taking a screenshot in TestFlight.
             """)
         }
@@ -241,11 +241,11 @@ public struct SettingsView: View {
             Text("About")
         } footer: {
             Text("""
-            Holmdel is named for the Bell Labs site in Holmdel, New Jersey, where in 1964 Arno \
-            Penzias and Robert Wilson used the Holmdel Horn Antenna to detect the cosmic \
-            microwave background — proof of the Big Bang, and one of the most consequential \
-            radio signals ever received. Station discovery here is powered by Radio-Browser, a \
-            free, community-run directory.
+            ShoutKit's code name is Holmdel, for the Bell Labs site in Holmdel, New Jersey, \
+            where in 1964 Arno Penzias and Robert Wilson used the Holmdel Horn Antenna to detect \
+            the cosmic microwave background — proof of the Big Bang, and one of the most \
+            consequential radio signals ever received. Station discovery here is powered by \
+            Radio-Browser, a free, community-run directory.
             """)
         }
     }

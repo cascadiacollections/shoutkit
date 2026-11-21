@@ -190,7 +190,7 @@ struct QuickPlayWidgetEntryView: View {
             Image(systemName: "heart")
                 .font(.title2)
                 .foregroundStyle(.secondary)
-            Text("Add a favorite in Holmdel to play it from here.")
+            Text("Add a favorite in ShoutKit to play it from here.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

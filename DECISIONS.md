@@ -1,5 +1,80 @@
 # Decisions
 
+## 2026-11-20 (the public name is ShoutKit again; Holmdel stays as the code name)
+
+The 2026-08-24 entry split the names: Holmdel for the app, ShoutKit for the packages. Since
+then the public surfaces drifted apart. The marketing site has called the app ShoutKit since
+2026-11-08 (#236) and told beta testers it was "being renamed ShoutKit", the Android app is
+ShoutKit, the repo is `shoutkit`, the README and `TRADEMARK.md` still said Holmdel, and App
+Store Connect says Squan. Three names for one app, before a single store listing exists.
+
+**Decision: one public name, ShoutKit, on every platform.** It is the name people already
+see on the site, on Android and in the repo URL, and it is the name the launch will use.
+
+**What changed:** the display name of the iOS app, widgets, watch app, watch widgets and tvOS
+app (`CFBundleDisplayName`); every user-visible "Holmdel" string (onboarding, Settings, App
+Intent titles and descriptions, the widget empty state, the watch title and complication, the
+CarPlay tab, the motion usage string); `README.md`, `TRADEMARK.md`, `CHANGELOG.md`,
+`docs/ROADMAP.md`, `docs/RELEASING.md` and the site's beta note. Siri phrases use
+`\(.applicationName)`, so they follow the display name without an edit. The About footer
+keeps the Bell Labs story as the origin of the code name.
+
+**What deliberately did not change:** the bundle ids, the app group, the `holmdel://` scheme,
+the Handoff activity type, target, scheme and workspace names, log subsystems, and the
+`Holmdel/0.1` User-Agent. None is visible to a listener. Changing the bundle id would mean a
+new App Store Connect record and losing the TestFlight group, and the 2026-08-24 entry's
+warning about hand-editing `project.pbxproj` applies to renaming targets a second time. The
+DocC landing page is still titled Holmdel for the same reason: its name may be part of
+published URLs, and nobody checked.
+
+**Still by hand:** the App Store Connect record is named Squan and has to be renamed there.
+Builds up to 0.5.1 (31) keep installing as Holmdel until a newer build is uploaded.
+
+## 2026-11-20 (the first public release is 0.5.1; the 0.4.0 draft is not published)
+
+The 2026-11-07 entry moved `v0.4.0` to `9c3363e` so the tag matched the `[0.4.0]` changelog
+section, and left publishing the draft as the remaining step. It was never published. In the
+meantime TestFlight has had 0.5.1 since 2026-10-25, and `[Unreleased]` holds the changes that
+matter most to a first listener: one-request stream start (about 3.4 s to 1.8 s), the level
+meter, the smaller binary, and now the name.
+
+Publishing 0.4.0 first would make the first public release older than the beta, with a
+different version number from the only build anyone has. So the first public release is
+0.5.1, cut from `[Unreleased]` once this change is merged. The steps are in
+`docs/RELEASING.md`. The `v0.4.0` tag stays as history; its draft release is deleted.
+
+The reason behind both entries today: the code is ahead of the distribution. There are about
+515 tests, green CI and three open issues, and no way for a stranger to install the app.
+Until there is, there is nothing to choose the next feature by, so `docs/ROADMAP.md` now
+schedules release work only.
+
+## 2026-11-20 (`prewarmStations` is deleted; two directory bugs fixed)
+
+**`prewarmStations`.** The 2026-11-14 measurement found no difference (3.52 s off, 3.49 s on)
+and left the decision pending. It is deleted: the flag, the launch-warmup block in
+`AppDependencies+Warmups.swift`, and `PlaybackController.tapToAudioPrewarmEnabledProvider`,
+which only labelled a log line. `TapToAudioBaselineUITests` keeps one test,
+`testTapToAudio`, with the same three-second head start so its numbers stay comparable.
+`FeatureCatalog` is down to `diagnostics`.
+
+Left in place on purpose: `StationConnectionPrewarmer`, because `WarmupRadioAudioQueueIntent`
+calls it with no flag, and `LibraryStore.prewarmStreamURLs(limit:)`, which now has no
+production caller. Removing it means reworking the `requireStreamURL` half of
+`collectRankedStations` and five ranking tests, which is a separate change.
+
+**#258, SHOUTcast 4xx retries.** `RadioDirectoryError.isRetryable` is true for every HTTP
+status because it answers "should the UI offer Try Again", and that meaning is kept: changing
+it would change `PlaybackError` handling and the retry button for 4xx. The automatic retry
+loop in `ShoutcastDirectoryClient` now makes its own cut
+(`isWorthRetrying`): a 4xx is retried only for 408 and 429. `RadioBrowserDirectoryClient`
+still retries everything, because each attempt goes to a different mirror.
+
+**#259, filtered defaults.** The `RadioDirectoryProviding` defaults for filtered search and
+filtered genre queries fetched `limit` stations and filtered afterwards, so active filters
+could return a short or empty list. They now ask for four times the limit, capped at 500,
+when a filter is active, then filter and take `limit`. An unfiltered call asks for exactly
+`limit`, as before. Radio-Browser filters server-side and never used these defaults.
+
 ## 2026-11-16 (Dependabot's `swift` ecosystem off again until dependabot-core#16950)
 
 The two entries below describe re-enabling it and the first run's crash. The updater can't move

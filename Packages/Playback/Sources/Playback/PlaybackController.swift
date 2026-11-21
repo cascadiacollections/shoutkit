@@ -87,7 +87,6 @@ public final class PlaybackController {
     /// on failure or when the feature is disabled. Called once per unique track
     /// change.
     @ObservationIgnored public var trackResourcesProvider: (@MainActor (AudioTrackInfo) async -> TrackResources)?
-    @ObservationIgnored public var tapToAudioPrewarmEnabledProvider: (@MainActor () -> Bool) = { false }
 
     /// Whether a stream that plays through to the end of its content should
     /// start over instead of stopping. Read at the moment the stream ends, so
@@ -240,10 +239,7 @@ public final class PlaybackController {
     public func play(_ station: Station) {
         reconnectAttempts = 0
         tapToAudioTrace?.cancel()
-        tapToAudioTrace = TapToAudioLatencyTrace(
-            stationID: station.id,
-            prewarmEnabled: tapToAudioPrewarmEnabledProvider(),
-        )
+        tapToAudioTrace = TapToAudioLatencyTrace(stationID: station.id)
         // A fresh choice always re-resolves; the cache exists only to spare
         // reconnect attempts from repeating resolution for the same station.
         resolvedEndpoint = nil

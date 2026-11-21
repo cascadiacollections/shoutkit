@@ -156,6 +156,43 @@ struct RadioDirectoryProvidingDefaultsTests {
         #expect(stations.map(\.id) == ["mid", "high"])
     }
 
+    /// The first match (64 kbps) fails the filter. Fetching only `limit` results
+    /// before filtering returned nothing here (#259).
+    @Test
+    func `filtered search fills the limit past stations that fail the filter`() async throws {
+        let directory = SearchOnlyDirectory(stations: jazzStations)
+
+        let stations = try await directory.searchStations(
+            matching: "Jazz",
+            limit: 1,
+            filters: StationSearchFilters(bitrateMin: 100),
+        )
+
+        #expect(stations.map(\.id) == ["mid"])
+    }
+
+    @Test
+    func `filtered genre query fills the limit past stations that fail the filter`() async throws {
+        let directory = SearchOnlyDirectory(stations: jazzStations)
+
+        let stations = try await directory.stations(
+            inGenre: "Jazz",
+            limit: 1,
+            filters: StationSearchFilters(bitrateMin: 100),
+        )
+
+        #expect(stations.map(\.id) == ["mid"])
+    }
+
+    @Test
+    func `unfiltered search asks for no more than the limit`() async throws {
+        let directory = SearchOnlyDirectory(stations: jazzStations)
+
+        let stations = try await directory.searchStations(matching: "Jazz", limit: 1, filters: .none)
+
+        #expect(stations.map(\.id) == ["low"])
+    }
+
     @Test
     func `filtered genre query normalizes an inverted bitrate range`() async throws {
         let directory = SearchOnlyDirectory(stations: jazzStations)

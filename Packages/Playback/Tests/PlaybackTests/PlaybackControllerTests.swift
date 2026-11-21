@@ -25,7 +25,6 @@ struct PlaybackControllerTests {
         let output = FakeAudioOutput()
         let controller = makeController(stations: [station()], output: output)
 
-        controller.tapToAudioPrewarmEnabledProvider = { true }
         controller.play(station())
         #expect(controller.tapToAudioTrace != nil)
 

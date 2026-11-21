@@ -109,10 +109,7 @@ public actor ShoutcastDirectoryClient: RadioDirectoryProviding {
                 retryPolicy: retryPolicy,
                 totalAttempts: retryPolicy.maximumRetries + 1,
                 shouldRetry: { error in
-                    // Retrying a permanent failure (a 4xx from a bad API key,
-                    // say) just delays the error surfacing by the whole
-                    // backoff window.
-                    Self.directoryError(from: error).isRetryable
+                    Self.isWorthRetrying(Self.directoryError(from: error))
                 },
                 onRetry: { _, delay in
                     logger.debug("Directory request failed; retrying in \(delay, privacy: .public) seconds")
@@ -126,6 +123,18 @@ public actor ShoutcastDirectoryClient: RadioDirectoryProviding {
         } catch {
             throw Self.directoryError(from: error)
         }
+    }
+
+    /// Retrying a permanent failure (a 401 or 403 from a bad API key, say) just
+    /// delays the error by the whole backoff window. `isRetryable` is true for
+    /// every HTTP status, because it answers whether the UI should offer "try
+    /// again", so the 4xx cut is made here: only 408 and 429 are worth another
+    /// automatic attempt.
+    static func isWorthRetrying(_ error: RadioDirectoryError) -> Bool {
+        if case let .httpStatus(statusCode) = error, (400 ..< 500).contains(statusCode) {
+            return statusCode == 408 || statusCode == 429
+        }
+        return error.isRetryable
     }
 
     private static func directoryError(from error: Error) -> RadioDirectoryError {

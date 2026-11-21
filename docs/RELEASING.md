@@ -1,6 +1,39 @@
-# Releasing Holmdel
+# Releasing ShoutKit
 
 How to cut a release, and what a release does and does not currently include.
+
+## First public release: 0.5.1 (decided 2026-11-20)
+
+This supersedes "v0.4.0 — what is left for Kevin" below wherever the two disagree. That
+section stays as the record of the `v0.4.0` cut, which was never published.
+
+The first public release is **0.5.1**, not 0.4.0. TestFlight has had 0.5.1 since 2026-10-25,
+the store build will be 0.5.1, and `v0.4.0` (`9c3363e`) is missing everything under
+`[Unreleased]` in `CHANGELOG.md`: the faster start, the level meter, the smaller download and
+the ShoutKit name. A first release that is older than the beta would confuse the only people
+who have the app.
+
+In order, once the branch that carries this section is merged:
+
+1. **Cut the changelog.** Rename `[Unreleased]` to `[0.5.1] — <date>` and add an empty
+   `[Unreleased]` above it. Fold in the `[0.4.0]` section's "Not yet enabled" notes if they
+   still apply (CarPlay is the only one left).
+2. **Tag `v0.5.1` on that commit and push the tag.** `release.yml` drafts the GitHub Release
+   from the changelog section. If the commit message ends in `[skip ci]`, run the workflow by
+   hand with the tag as input.
+3. **Delete the "Holmdel 0.4.0" draft release.** Leave the `v0.4.0` tag where it is.
+4. **Archive 0.5.1 with a build number above 31** (see "Version and tag" below), with
+   `GIT_COMMIT_SHA` set, and upload it. The Xcode Cloud workflow on `main` does this for a
+   push that changes the app, which merging the ShoutKit rename is.
+5. **In App Store Connect:** rename the record from "Squan" to "ShoutKit", fill in the
+   listing from `docs/APP_STORE_LISTING.md`, add screenshots taken from that build, and
+   submit for review.
+6. **Publish the GitHub Release** when the store version is approved, then fill in
+   `appstore` in `site/index.html` (`SHOUTKIT_LINKS`) and drop "App Store: coming soon".
+
+Separate from the release and worth doing the same day: file the CarPlay entitlement request
+(`docs/ROADMAP.md`, backlog) and switch on the GitHub Sponsors profile, then fill in
+`sponsors` in `SHOUTKIT_LINKS`.
 
 Written on 2026-08-13, when the repo had **zero git tags** and `release.yml` had never once
 run. `v0.4.0` was first tagged on 2026-08-30 and drafted on 2026-09-02. On 2026-11-07 the
@@ -57,11 +90,12 @@ shipping path. They do limit what the App Store listing and the release notes ma
 | [#148](https://github.com/cascadiacollections/shoutkit/issues/148) | Launch and memory baselines are collected per CI build and reported in the step summary, with no threshold yet. Simulator figures, not device figures. | No. |
 | [#149](https://github.com/cascadiacollections/shoutkit/issues/149) | Mini-player, tab bar, and Now Playing are unchecked at arbitrary window sizes (iPhone Mirroring, iPhone-on-iPad). Needs a device or a Mac. Related open layout item: #145, `StationCard` width vs Dynamic Type. | No for the tag. Worth a pass before the first App Store submission if you want a layout sign-off. |
 
-[#146](https://github.com/cascadiacollections/shoutkit/issues/146) is still open for
-`prewarmStations`, which waits on #148's measurements. `geoStations` shipped as region-first
-Listen Now with its precise-location path deleted, `recommendations` and `liveActivity` were
-deleted, and `diagnostics` stays internal-only on purpose. That is not a release blocker as long
-as the notes keep `prewarmStations` under "Not yet enabled".
+[#146](https://github.com/cascadiacollections/shoutkit/issues/146) is closed and every dark
+flag is settled: `prewarmStations` was deleted on 2026-11-20, `geoStations` shipped as
+region-first Listen Now with its precise-location path deleted, `recommendations` and
+`liveActivity` were deleted, and `diagnostics` stays internal-only on purpose. #147 and #149
+were closed on 2026-11-15 without the hardware checks being done; the limits in the table above
+still apply.
 
 ### App Store and TestFlight metadata
 
@@ -74,8 +108,9 @@ external-eligible (`docs/TESTFLIGHT.md`).
 Already in the tree:
 
 - Bundle id `com.cascadiacollections.holmdel`. App Store Connect record **Squan** (6809239472)
-  is the one `docs/TESTFLIGHT.md` points at. The home-screen name is **Holmdel**. Pick one
-  public name before the store listing; the GitHub release title should be Holmdel.
+  is the one `docs/TESTFLIGHT.md` points at. The public name is **ShoutKit** (decided
+  2026-11-20): the home-screen name in the tree is ShoutKit, and the App Store Connect record
+  still has to be renamed by hand. Builds up to 0.5.1 (31) install as Holmdel.
 - `LSApplicationCategoryType` = `public.app-category.music`.
 - `ITSAppUsesNonExemptEncryption` = false on the iOS, watch, widget, watch-widget, and tvOS
   plists.
@@ -94,17 +129,17 @@ Already in the tree:
 Still to do in App Store Connect, by hand:
 
 - **Screenshots.** None are in the repo. The store requires them for the iPhone sizes you
-  ship and for iPad. Capture them from a Release build that shows Holmdel, not the old
-  ShoutKit name, and not Live Activity or CarPlay.
-- **Privacy policy URL.** `site/index.html#privacy` exists. The FAQ answer says network
-  traffic is directory queries, streams, and play reports. It does not mention album-art
+  ship and for iPad. Capture them from a Release build that shows ShoutKit (a build made
+  after 2026-11-20), and not Live Activity or CarPlay.
+- **Privacy policy URL.** `site/index.html#privacy` exists, and both it and the README now
+  list all four kinds of traffic: directory queries, streams, play reports, and album-art
   lookups, which send artist and title to the iTunes Search API when Settings → Privacy →
-  Fetch Album Artwork is on (the default). The nutrition labels should match the manifests
-  (no tracking, no collected data types) and the questionnaire should be ready to explain
-  those requests. Point the listing at a URL you will keep up.
+  Fetch Album Artwork is on (the default). Draft answers for the privacy questionnaire are
+  in `docs/APP_STORE_LISTING.md`. Point the listing at a URL you will keep up.
 - **Support URL.** GitHub issues will do. Set it on the version.
-- **Age rating, subtitle, description, keywords, and the Mac availability checkbox.** Mac
-  Catalyst is a destination of the Holmdel scheme. The site still calls Mac a source
+- **Age rating, subtitle, description, keywords, and the Mac availability checkbox.** Drafts
+  for all but the last are in `docs/APP_STORE_LISTING.md`. Mac Catalyst is a destination of
+  the Holmdel scheme. The site still calls Mac a source
   preview. Decide whether this submission offers the Mac build.
 - **tvOS is a separate submission** (`com.cascadiacollections.holmdel.tv`) with its own
   privacy manifest and its own screenshots. It is not part of the iOS archive.

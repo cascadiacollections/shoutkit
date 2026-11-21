@@ -9,7 +9,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Holmdel</string>
+	<string>ShoutKit</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -64,7 +64,7 @@
 		<true/>
 	</dict>
 	<key>NSMotionUsageDescription</key>
-	<string>Holmdel uses head-tracking motion data only when you opt in to Spatial Audio for headphones.</string>
+	<string>ShoutKit uses head-tracking motion data only when you opt in to Spatial Audio for headphones.</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>com.cascadiacollections.holmdel.station</string>

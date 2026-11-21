@@ -1,20 +1,23 @@
 # Changelog
 
-All notable changes to Holmdel (this app; previously named ShoutKit — see the 2026-08-24 entry
-below) are documented here. The format follows
+All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-24 and
+2026-11-20, and Holmdel is still its internal code name) are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org).
 
 > **0.1.0 through 0.3.0 were internal milestones, not releases.** None was tagged, and
-> no build from them reached a user. `v0.4.0` is the first real release. It was tagged
-> 2026-08-30 and moved to `9c3363e` on 2026-11-07, and its GitHub Release is still an
-> unpublished draft. Those milestone sections stay as the
+> no build from them reached a user. `v0.4.0` was tagged 2026-08-30 and moved to `9c3363e`
+> on 2026-11-07, but its GitHub Release was never published. The first public release is
+> 0.5.1, cut from `[Unreleased]` below (`docs/RELEASING.md`, 2026-11-20). Those milestone sections stay as the
 > development record. See `docs/RELEASING.md` for how a release is cut and `DECISIONS.md`
 > (2026-08-13) for why the numbering continues rather than restarting at 1.0.0.
 
 ## [Unreleased]
 
 ### Added
+- **The app is called ShoutKit.** The Home Screen, Siri and Shortcuts, the widgets, the watch
+  and Apple TV apps and Settings all say ShoutKit. Beta builds up to 0.5.1 (31) said Holmdel.
+  Nothing else changed: favorites, recents and settings carry over.
 - **Bars that move with the music.** Now Playing, the mini player and the Apple TV app show
   a live level meter, drawn from the audio you're hearing, with peak caps that hold and fall.
   It eases to rest when you pause, can be turned off in Settings, and is hidden when Reduce
@@ -26,21 +29,34 @@ below) are documented here. The format follows
 
 ### Changed
 - **Stations start playing faster.** On KEXP, the time from tapping a station to hearing it
-  dropped from about 3.4 seconds to about 1.8. Holmdel used to connect to every station twice
+  dropped from about 3.4 seconds to about 1.8. ShoutKit used to connect to every station twice
   before playing; it now connects once.
 - **Listen Now starts with stations near you.** The most-played stations in your region
   come first, followed by the most-played stations worldwide. Your region comes from your
-  device's region setting, not your location, so Holmdel never asks for location access.
+  device's region setting, not your location, so ShoutKit never asks for location access.
   Search and genres still cover the whole world. (#146)
 - **Simpler privacy settings.** The Privacy section now explains only the settings you can
   change. The "Share diagnostics" switch, which had no effect outside internal builds, is
   no longer shown.
 - **A smaller download.** Two Apple utility libraries were replaced by a few lines of
-  Holmdel's own code, and the debug-only network inspector no longer ships in release
+  ShoutKit's own code, and the debug-only network inspector no longer ships in release
   builds, and every library is now optimized for size. The iPhone app binary is up to
   40% smaller (8.1 → 4.7 MB) and the Watch app about 1.2 MB smaller.
 - **The Mac app now requires Apple silicon.** Intel Macs are no longer supported, which
   roughly halves the Mac app's code size.
+
+### Fixed
+- **Filtered searches fill the list.** With a bitrate, tag or country filter on, a directory
+  that filters on the device could return a short or empty list when the first matches failed
+  the filter. It now looks further before giving up. Radio-Browser, the default directory,
+  filters on the server and was not affected. (#259)
+- **A rejected SHOUTcast key fails at once.** A 4xx answer from the optional SHOUTcast
+  directory was retried twice before the error showed. Only timeouts (408), rate limits (429)
+  and server errors are retried now. (#258)
+
+### Removed
+- **Station prewarming** (`prewarmStations`, internal-only, never enabled). Measured on
+  2026-11-14, it made no difference to how fast a station starts.
 
 ## [0.4.0] — 2026-11-01
 

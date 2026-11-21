@@ -1,0 +1,47 @@
+name: Bug report
+description: Something in ShoutKit for iPhone, iPad, Apple Watch, Apple TV or Mac isn't working
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect instead?
+    validations:
+      required: true
+  - type: input
+    id: station
+    attributes:
+      label: Station
+      description: If it happens on a particular station, its name as shown in the app
+    validations:
+      required: false
+  - type: input
+    id: device
+    attributes:
+      label: Device and OS version
+      description: e.g. iPhone 17, iOS 26.1
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      description: Settings → About, e.g. 0.5.1 (31)
+    validations:
+      required: false

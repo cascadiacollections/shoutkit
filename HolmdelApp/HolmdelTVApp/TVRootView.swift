@@ -48,7 +48,7 @@ struct TVRootView: View {
             artwork(for: playback?.currentStation, size: 220)
 
             VStack(alignment: .leading, spacing: 16) {
-                Text(playback?.currentStation?.name ?? "Holmdel")
+                Text(playback?.currentStation?.name ?? "ShoutKit")
                     .font(.largeTitle.weight(.semibold))
                     .lineLimit(2)
 

@@ -1,0 +1,31 @@
+name: Feature request
+description: Suggest something ShoutKit should do
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The situation you're in, more than the feature you have in mind
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help?
+    validations:
+      required: false
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Where do you listen?
+      multiple: true
+      options:
+        - iPhone
+        - iPad
+        - Apple Watch
+        - Apple TV
+        - Mac
+        - CarPlay or car Bluetooth
+    validations:
+      required: false
