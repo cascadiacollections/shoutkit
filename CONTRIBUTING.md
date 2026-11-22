@@ -106,6 +106,25 @@ swift test --skip-build
 - Directory errors are typed (`throws(RadioDirectoryError)`); user-facing failures should carry
   the error, not a bare `String`.
 
+## Changing a SwiftData model
+
+The library store (`FavoriteStation`, `RecentStation`, `RecentlyHeardTrack`) is opened with a
+versioned schema and a migration plan, both in
+`Packages/Persistence/Sources/Persistence/ShoutKitSchema.swift`. Adding, removing, renaming or
+retyping a stored property changes the shape of the store, so it needs a new version first:
+
+1. Freeze the old shape. Copy the model classes as they are today into the newest
+   `ShoutKitSchemaV<n>` enum as nested `@Model` classes, and point its `models` at those copies.
+2. Add `ShoutKitSchemaV<n+1>` listing the live classes, and append it to
+   `ShoutKitMigrationPlan.schemas`.
+3. Add a `MigrationStage` from the old version to the new one: `.lightweight` for an added
+   property with a default, `.custom` when rows have to be rewritten.
+4. Point `ShoutKitModelContainer.schema` at the new version.
+5. Make the change to the live classes, and pin the new shape in `ShoutKitSchemaTests`.
+
+`ShoutKitSchemaTests` fails when a model changes without these steps. The diagnostics store is
+separate and unversioned; its rows are disposable.
+
 ## Localization / String Catalogs
 
 Every package/target with user-facing strings has its own `Localizable.xcstrings` (app, widget,

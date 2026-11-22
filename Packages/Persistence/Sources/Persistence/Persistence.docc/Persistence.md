@@ -36,6 +36,9 @@ that shares the suite.
 ### Model Container
 
 - ``ShoutKitModelContainer``
+- ``ShoutKitSchemaV1``
+- ``ShoutKitSchemaV2``
+- ``ShoutKitMigrationPlan``
 
 ### SwiftData Models
 
