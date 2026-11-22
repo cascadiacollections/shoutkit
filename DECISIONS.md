@@ -1,5 +1,34 @@
 # Decisions
 
+## 2026-11-22 (the library store gets a versioned schema and a migration plan)
+
+`ShoutKitModelContainer` opened the store with a bare `Schema([...])`. Every model change so
+far was an added property with a default, which SwiftData migrates on its own, so nothing
+recorded what shape any released build wrote. The first change that is not additive (dropping
+`@Attribute(.unique)` for CloudKit, say) would have had no "from" version to migrate from, and
+a store that fails to open falls back to in-memory: an empty library that forgets what is
+added to it.
+
+**Decision: pin today's shape as `ShoutKitSchemaV1` and open through
+`ShoutKitMigrationPlan`.** One version, no stages. Nothing migrates today; the point is that
+the next change has a named starting point.
+
+- **V1 lists the live classes.** Frozen copies are only needed once a V2 exists, and
+  `CONTRIBUTING.md` ("Changing a SwiftData model") says how to make them then.
+- **A second open without the plan is the fallback.** A staged migration refuses a store whose
+  shape matches no listed version. A tester whose store was last written before `playCount`
+  or `sortIndex` existed has exactly that. Opening without the plan migrates it the way every
+  earlier build did, and the next launch finds a V1 store. This replaces the old second
+  attempt, which repeated the same open.
+- **The tests carry the claims.** `ShoutKitSchemaTests` writes a store with the unversioned
+  schema and reopens it under the plan, writes a pre-`sortIndex` store and opens it through
+  the production sequence, and pins V1's entity and attribute names so that a model edit
+  without a new version fails.
+- **The diagnostics store stays unversioned.** Its rows expire in 30 days.
+
+**Not verified here:** written without a Swift toolchain; CI is the first compile and run.
+The pre-V1 test proves the favorites survive, not which of the two opens accepted the store.
+
 ## 2026-11-22 (GRDB is gone; diagnostics payloads move to a SwiftData store of their own)
 
 The 2026-11-07 size entry ended "GRDB is load-bearing". It was load-bearing for one file.
