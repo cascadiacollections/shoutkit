@@ -26,7 +26,6 @@ let package = Package(
     dependencies: [
         .package(path: "../RadioDirectory"),
         .package(path: "../FeatureFlags"),
-        .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.11.1"),
         // exact, matching every other manifest that depends on Factory: a public
         // `extension Container` is public API surface, so a version drift here
         // is a resolution failure for an adopter on a different Factory version,
@@ -39,7 +38,6 @@ let package = Package(
             dependencies: [
                 "RadioDirectory",
                 "FeatureFlags",
-                .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "FactoryKit", package: "Factory"),
             ],
             swiftSettings: [optimizeForSize],

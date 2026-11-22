@@ -6,7 +6,7 @@ Favorites, recents, settings, and listening history, on top of SwiftData.
 
 `Persistence` holds the app's local stores: ``LibraryStore`` for favorites and recently played
 stations, ``SettingsStore`` for user preferences, and a diagnostics pipeline that records
-MetricKit payloads into GRDB.
+MetricKit payloads into a SwiftData store of its own.
 
 Build a model container, then a store over it:
 

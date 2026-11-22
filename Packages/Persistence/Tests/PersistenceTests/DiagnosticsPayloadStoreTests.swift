@@ -4,7 +4,7 @@ import Testing
 
 struct DiagnosticsPayloadStoreTests {
     @Test func `persists metric and diagnostic payloads`() throws {
-        let store = try DiagnosticsPayloadStore(path: ":memory:")
+        let store = try DiagnosticsPayloadStore.inMemory()
 
         try store.persist(
             metricPayloads: [Data("metric-a".utf8), Data("metric-b".utf8)],
@@ -16,7 +16,7 @@ struct DiagnosticsPayloadStoreTests {
     }
 
     @Test func `extracts launch summaries from stored metric payloads`() throws {
-        let store = try DiagnosticsPayloadStore(path: ":memory:")
+        let store = try DiagnosticsPayloadStore.inMemory()
         let payload = try JSONSerialization.data(withJSONObject: [
             "applicationLaunchMetrics": [
                 "histogrammedTimeToFirstDraw": [
@@ -47,7 +47,7 @@ struct DiagnosticsPayloadStoreTests {
     }
 
     @Test func `ignores unparseable metric payloads when summarizing`() throws {
-        let store = try DiagnosticsPayloadStore(path: ":memory:")
+        let store = try DiagnosticsPayloadStore.inMemory()
 
         try store.persist(metricPayloads: [Data("not-json".utf8)], diagnosticPayloads: [], receivedAt: Date())
 
@@ -55,7 +55,7 @@ struct DiagnosticsPayloadStoreTests {
     }
 
     @Test func `prunes payloads outside retention window`() throws {
-        let store = try DiagnosticsPayloadStore(path: ":memory:")
+        let store = try DiagnosticsPayloadStore.inMemory()
         let oldDate = try #require(Calendar.current.date(byAdding: .day, value: -40, to: Date()))
         let currentDate = Date()
 
@@ -74,7 +74,7 @@ struct DiagnosticsPayloadStoreTests {
     }
 
     @Test func `parses histogram duration strings across supported formats`() throws {
-        let store = try DiagnosticsPayloadStore(path: ":memory:")
+        let store = try DiagnosticsPayloadStore.inMemory()
         let payload = try JSONSerialization.data(withJSONObject: [
             "applicationLaunchMetrics": [
                 "histogrammedTimeToFirstDraw": [
@@ -99,7 +99,7 @@ struct DiagnosticsPayloadStoreTests {
     }
 
     @Test func `ignores malformed histogram duration strings`() throws {
-        let store = try DiagnosticsPayloadStore(path: ":memory:")
+        let store = try DiagnosticsPayloadStore.inMemory()
         let payload = try JSONSerialization.data(withJSONObject: [
             "applicationLaunchMetrics": [
                 "histogrammedTimeToFirstDraw": [
@@ -113,5 +113,71 @@ struct DiagnosticsPayloadStoreTests {
         try store.persist(metricPayloads: [payload], diagnosticPayloads: [], receivedAt: Date())
 
         #expect(try store.metricPayloadSummaries(limit: 1).isEmpty)
+    }
+
+    @Test func `summarizes the newest metric payloads first`() throws {
+        let store = try DiagnosticsPayloadStore.inMemory()
+        let now = Date()
+
+        try store.persist(
+            metricPayloads: [Self.launchPayload(milliseconds: 100)],
+            diagnosticPayloads: [],
+            receivedAt: now.addingTimeInterval(-60),
+        )
+        try store.persist(
+            metricPayloads: [Self.launchPayload(milliseconds: 200), Self.launchPayload(milliseconds: 300)],
+            diagnosticPayloads: [Self.launchPayload(milliseconds: 999)],
+            receivedAt: now,
+        )
+
+        let all = try store.metricPayloadSummaries(limit: 5)
+        #expect(all.map(\.launch?.meanTimeToFirstDrawMilliseconds) == [300, 200, 100])
+        let limited = try store.metricPayloadSummaries(limit: 2)
+        #expect(limited.map(\.launch?.meanTimeToFirstDrawMilliseconds) == [300, 200])
+    }
+
+    @Test func `keeps payloads across a reopen of the same file`() throws {
+        let folder = FileManager.default.temporaryDirectory
+            .appendingPathComponent("DiagnosticsPayloadStoreTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let url = folder.appendingPathComponent("diagnostics.store")
+
+        try DiagnosticsPayloadStore(url: url).persist(
+            metricPayloads: [Data("metric".utf8)],
+            diagnosticPayloads: [Data("diag".utf8)],
+            receivedAt: Date(),
+        )
+
+        #expect(try DiagnosticsPayloadStore(url: url).payloadCount() == 2)
+    }
+
+    @Test func `removes the database the GRDB store left behind`() throws {
+        let folder = FileManager.default.temporaryDirectory
+            .appendingPathComponent("DiagnosticsPayloadStoreTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let legacy = ["diagnostics.sqlite", "diagnostics.sqlite-wal"].map { folder.appendingPathComponent($0) }
+        let unrelated = folder.appendingPathComponent("diagnostics.store")
+        for url in legacy + [unrelated] {
+            try Data("x".utf8).write(to: url)
+        }
+
+        DiagnosticsPayloadStore.removeLegacyDatabase(in: folder)
+
+        for url in legacy {
+            #expect(!FileManager.default.fileExists(atPath: url.path))
+        }
+        #expect(FileManager.default.fileExists(atPath: unrelated.path))
+    }
+
+    private static func launchPayload(milliseconds: Int) throws -> Data {
+        try JSONSerialization.data(withJSONObject: [
+            "applicationLaunchMetrics": [
+                "histogrammedTimeToFirstDraw": [
+                    "histogramValue": ["0": "\(milliseconds) ms"],
+                ],
+            ],
+        ])
     }
 }

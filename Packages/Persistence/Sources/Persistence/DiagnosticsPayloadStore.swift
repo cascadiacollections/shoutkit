@@ -1,14 +1,13 @@
 import Foundation
-import GRDB
+import SwiftData
 
 public protocol DiagnosticsPayloadPersisting: AnyObject, Sendable {
     func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date) throws
     func metricPayloadSummaries(limit: Int) throws -> [DiagnosticsMetricPayloadSummary]
 }
 
-/// File-scope (not nested in `Record`) to satisfy SwiftLint's one-level
-/// type-nesting limit; the raw values are what lands in the `kind` column.
-private enum DiagnosticsPayloadKind: String, Codable {
+/// The raw values are what lands in `DiagnosticsPayloadRecord.kindRawValue`.
+private enum DiagnosticsPayloadKind: String {
     case metric
     case diagnostic
 }
@@ -18,7 +17,7 @@ private enum DiagnosticsPayloadKind: String, Codable {
 /// Public because it escapes through public `throws` signatures
 /// (``DiagnosticsPayloadStore/persist(metricPayloads:diagnosticPayloads:receivedAt:)``);
 /// a caller cannot catch by type an error it cannot name. Failures originating
-/// in GRDB are propagated unwrapped and are not part of this enum.
+/// in SwiftData are propagated unwrapped and are not part of this enum.
 /// No `LocalizedError` conformance, unlike `RadioDirectoryError` and
 /// `PlaybackError`: this package declares no resources, so it has no string
 /// catalog to localize against, and nothing here is shown to a listener —
@@ -32,24 +31,71 @@ public enum DiagnosticsPayloadStoreError: Error, Equatable, Sendable {
 
 private let diagnosticsPayloadRetentionDays = 30
 
+/// One stored MetricKit payload. It lives in its own store file, apart from
+/// ``ShoutKitModelContainer``'s schema, so a change here can never stop the
+/// favorites store from opening (DECISIONS.md, 2026-11-22).
+@Model
+final class DiagnosticsPayloadRecord {
+    /// A ``DiagnosticsPayloadKind`` raw value. Stored as a plain `String` so
+    /// `#Predicate` can compare it.
+    var kindRawValue: String
+    var payload: Data
+    var receivedAt: Date
+    /// Position within the `persist` call that wrote this row. Payloads from one
+    /// call share a `receivedAt`, so this is what orders them.
+    var batchIndex: Int
+
+    init(kindRawValue: String, payload: Data, receivedAt: Date, batchIndex: Int) {
+        self.kindRawValue = kindRawValue
+        self.payload = payload
+        self.receivedAt = receivedAt
+        self.batchIndex = batchIndex
+    }
+}
+
+/// SwiftData-backed store for MetricKit payloads, with 30-day retention.
+///
+/// Each call works in a `ModelContext` of its own, so the store can be used
+/// from any isolation; `DiagnosticsService` serializes its calls on an actor.
 public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
-    private struct Record: Codable, FetchableRecord, PersistableRecord {
-        static let databaseTableName = "diagnostic_payloads"
+    private static let schema = Schema([DiagnosticsPayloadRecord.self])
 
-        var id: Int64?
-        var kind: DiagnosticsPayloadKind
-        var payload: Data
-        var receivedAt: Date
+    private let container: ModelContainer
+
+    /// Opens, or creates, the store file at `url`.
+    public convenience init(url: URL) throws {
+        try self.init(
+            configuration: ModelConfiguration(
+                "ShoutKitDiagnostics",
+                schema: Self.schema,
+                url: url,
+                cloudKitDatabase: .none,
+            ),
+        )
     }
 
-    private let dbQueue: DatabaseQueue
-    public init(path: String) throws {
-        dbQueue = try DatabaseQueue(path: path)
-        try migrate()
-    }
-
+    /// Opens the store at its default location in Application Support.
     public convenience init() throws {
-        try self.init(path: Self.defaultDatabasePath().path)
+        let folder = try Self.defaultFolder()
+        Self.removeLegacyDatabase(in: folder)
+        try self.init(url: folder.appendingPathComponent("diagnostics.store"))
+    }
+
+    init(configuration: ModelConfiguration) throws {
+        container = try ModelContainer(for: Self.schema, configurations: [configuration])
+    }
+
+    /// A store that keeps nothing on disk, for tests. The unique name keeps two
+    /// of them from sharing rows.
+    static func inMemory() throws -> DiagnosticsPayloadStore {
+        try DiagnosticsPayloadStore(
+            configuration: ModelConfiguration(
+                "ShoutKitDiagnosticsInMemory-\(UUID().uuidString)",
+                schema: schema,
+                isStoredInMemoryOnly: true,
+                cloudKitDatabase: .none,
+            ),
+        )
     }
 
     public func persist(metricPayloads: [Data], diagnosticPayloads: [Data], receivedAt: Date) throws {
@@ -61,56 +107,55 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
         ) else {
             throw DiagnosticsPayloadStoreError.invalidRetentionCutoffDate
         }
-        try dbQueue.write { database in
-            for payload in metricPayloads {
-                try Record(id: nil, kind: .metric, payload: payload, receivedAt: receivedAt).insert(database)
-            }
-            for payload in diagnosticPayloads {
-                try Record(id: nil, kind: .diagnostic, payload: payload, receivedAt: receivedAt).insert(database)
-            }
+        let context = ModelContext(container)
+        context.autosaveEnabled = false
 
-            _ = try Record
-                .filter(Column("receivedAt") < cutoff)
-                .deleteAll(database)
+        let kinded = metricPayloads.map { (DiagnosticsPayloadKind.metric, $0) }
+            + diagnosticPayloads.map { (DiagnosticsPayloadKind.diagnostic, $0) }
+        for (index, entry) in kinded.enumerated() {
+            context.insert(
+                DiagnosticsPayloadRecord(
+                    kindRawValue: entry.0.rawValue,
+                    payload: entry.1,
+                    receivedAt: receivedAt,
+                    batchIndex: index,
+                ),
+            )
         }
+
+        // Fetch-and-delete rather than `delete(model:where:)`: the table holds a
+        // few dozen rows, and this path behaves the same on an in-memory store.
+        let expired = FetchDescriptor<DiagnosticsPayloadRecord>(
+            predicate: #Predicate<DiagnosticsPayloadRecord> { $0.receivedAt < cutoff },
+        )
+        for record in try context.fetch(expired) {
+            context.delete(record)
+        }
+        try context.save()
     }
 
     public func metricPayloadSummaries(limit: Int) throws -> [DiagnosticsMetricPayloadSummary] {
         guard limit > 0 else { return [] }
-        return try dbQueue.read { database in
-            let records = try Record
-                .filter(Column("kind") == DiagnosticsPayloadKind.metric.rawValue)
-                .order(Column("receivedAt").desc)
-                .order(Column("id").desc)
-                .limit(limit)
-                .fetchAll(database)
+        let metricKind = DiagnosticsPayloadKind.metric.rawValue
+        var descriptor = FetchDescriptor<DiagnosticsPayloadRecord>(
+            predicate: #Predicate<DiagnosticsPayloadRecord> { $0.kindRawValue == metricKind },
+            sortBy: [
+                SortDescriptor(\.receivedAt, order: .reverse),
+                SortDescriptor(\.batchIndex, order: .reverse),
+            ],
+        )
+        descriptor.fetchLimit = limit
 
-            return records.compactMap {
-                DiagnosticsMetricSummaryExtractor.summary(from: $0.payload, receivedAt: $0.receivedAt)
-            }
+        return try ModelContext(container).fetch(descriptor).compactMap {
+            DiagnosticsMetricSummaryExtractor.summary(from: $0.payload, receivedAt: $0.receivedAt)
         }
     }
 
     func payloadCount() throws -> Int {
-        try dbQueue.read { database in
-            try Record.fetchCount(database)
-        }
+        try ModelContext(container).fetchCount(FetchDescriptor<DiagnosticsPayloadRecord>())
     }
 
-    private func migrate() throws {
-        var migrator = DatabaseMigrator()
-        migrator.registerMigration("createDiagnosticsPayloads") { database in
-            try database.create(table: Record.databaseTableName) { table in
-                table.autoIncrementedPrimaryKey("id")
-                table.column("kind", .text).notNull()
-                table.column("payload", .blob).notNull()
-                table.column("receivedAt", .datetime).notNull()
-            }
-        }
-        try migrator.migrate(dbQueue)
-    }
-
-    private static func defaultDatabasePath(fileManager: FileManager = .default) throws -> URL {
+    private static func defaultFolder(fileManager: FileManager = .default) throws -> URL {
         let appSupport = try fileManager.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
@@ -119,7 +164,16 @@ public final class DiagnosticsPayloadStore: DiagnosticsPayloadPersisting {
         )
         let folder = appSupport.appendingPathComponent("ShoutKit", isDirectory: true)
         try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
-        return folder.appendingPathComponent("diagnostics.sqlite")
+        return folder
+    }
+
+    /// Deletes the GRDB database this store replaced, and its journal files.
+    /// Its rows are not migrated: they are developer diagnostics that expire
+    /// after 30 days anyway.
+    static func removeLegacyDatabase(in folder: URL, fileManager: FileManager = .default) {
+        for suffix in ["", "-journal", "-wal", "-shm"] {
+            try? fileManager.removeItem(at: folder.appendingPathComponent("diagnostics.sqlite" + suffix))
+        }
     }
 }
 

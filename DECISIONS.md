@@ -1,5 +1,42 @@
 # Decisions
 
+## 2026-11-22 (GRDB is gone; diagnostics payloads move to a SwiftData store of their own)
+
+The 2026-11-07 size entry ended "GRDB is load-bearing". It was load-bearing for one file.
+`DiagnosticsPayloadStore.swift` was the only `import GRDB` in the repository, and it used it
+for one table (`id`, `kind`, `payload`, `receivedAt`) with an insert, a 30-day trim and a
+"latest N" read. That file backs the diagnostics instrument, which is double-gated, off by
+default and has no UI (2026-08-13). GRDB measured 1,570 KB of the 4.73 MB phone binary at
+`-Osize`, so about a third of the binary served a feature no listener can turn on.
+
+**Decision: remove GRDB and keep the store on SwiftData**, the framework `Persistence`
+already uses for everything else. `DiagnosticsPayloadPersisting` is unchanged, so
+`DiagnosticsService` and its tests did not move.
+
+- **A separate store file, not a fourth model in `ShoutKitModelContainer`.** The record
+  lives in `Application Support/ShoutKit/diagnostics.store` with its own `ModelContainer`.
+  A schema change to a developer instrument must never be able to stop the favorites store
+  from opening, and that store falls back to in-memory when it fails to open.
+- **A `ModelContext` per call, not a `@ModelActor`.** The protocol is synchronous and
+  `Sendable`, and `DiagnosticsService` already serializes calls on its ingest actor. A fresh
+  context per call needs no isolation of its own.
+- **`batchIndex` replaces the autoincrement id as the tie-break.** Payloads written by one
+  `persist` call share a `receivedAt`; SwiftData has no rowid to order them by.
+- **Expired rows are fetched and deleted, not batch-deleted.** The table holds a few dozen
+  rows, and this is the same shape `LibraryStore` uses for its trims.
+- **Old rows are not migrated.** The default initializer deletes `diagnostics.sqlite` and
+  its journal files. The rows were developer diagnostics with 30 days to live.
+- **The system `SQLite3` module was the alternative**, at the same binary cost of zero. It
+  would have kept the old file readable, for about 100 lines of hand-managed statements and
+  a second persistence idiom in the package. Not worth it for data nobody needs to keep.
+
+`DiagnosticsPayloadStore.init(path:)` became `init(url:)`. The app only calls `init()`.
+
+**Not verified here:** this was written without a Swift toolchain, so CI is the first
+compile and test run. The size saving is an expectation from the 2026-11-07 link map, not a
+measurement. Re-run the Release archive and record the phone and watch numbers; the
+`Shipping.xcconfig` and `docs/RELEASING.md` figures still describe the build with GRDB in it.
+
 ## 2026-11-20 (the public name is ShoutKit again; Holmdel stays as the code name)
 
 The 2026-08-24 entry split the names: Holmdel for the app, ShoutKit for the packages. Since
