@@ -1,6 +1,6 @@
 # Decisions
 
-## 2026-11-22 (iCloud sync is on for iPhone, iPad and Mac)
+## 2026-11-22 (iCloud sync is on, for every app that has a library)
 
 The schema has been CloudKit-compatible since the entry below. This one turns sync on.
 
@@ -27,8 +27,14 @@ recently heard tracks), and sync is on by default with a switch to turn it off.
 - **Both devices must pick the same survivor**, or each deletes the other's row. The merge
   orders by `sortIndex` then `createdAt` (favorites) and by `playedAt` (recents), all synced
   values, so the choice is the same everywhere short of an exact timestamp tie.
-- **Watch and Apple TV are not in this change.** Neither has an entitlements file or a
-  Settings surface, so sync there would have had no off switch. They keep local stores.
+- **Watch and Apple TV sync too, each with its own switch.** Neither has a Settings screen,
+  so the toggle sits at the bottom of the watch's list and under the TV's shelves. The
+  setting is per device and is not itself synced: turning sync off on the phone says nothing
+  about the watch. Each app got an entitlements file and the `remote-notification`
+  background mode.
+- **Six places name the container** (an entitlements file and a constant per app), and a
+  mismatch builds: the synced open fails and the library opens locally, silently.
+  `.github/scripts/check-icloud-container.sh` fails CI when they disagree.
 - **"Nothing leaves the device" is no longer true** and the README, the store-listing notes
   and the Settings footer say what does. The privacy manifest is unchanged: data in the
   listener's private database is not collected by the developer.
@@ -36,8 +42,10 @@ recently heard tracks), and sync is on by default with a switch to turn it off.
 **Not verified, and not verifiable from CI:** that two devices actually sync. That needs a
 signed build, an iCloud account and the container (`docs/RELEASING.md`, "iCloud sync"). Also
 unchecked: whether the Mac Catalyst build accepts `aps-environment` from the shared
-entitlements file or needs `com.apple.developer.aps-environment`, and what the simulator
-does at launch with the entitlement and no account. CI covers the last one.
+entitlements file or needs `com.apple.developer.aps-environment`, whether App Store upload
+validation accepts `remote-notification` in the watch app's `UIBackgroundModes` (that plist
+has been rejected at upload before for a wrong background-mode key), and what the simulator
+does at launch with the entitlement and no account. CI covers the last one for the phone.
 
 ## 2026-11-22 (schema version 2: the library becomes CloudKit-compatible, sync not yet on)
 

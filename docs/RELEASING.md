@@ -408,8 +408,10 @@ The library syncs through the private database of `iCloud.com.cascadiacollection
 (`DECISIONS.md`, 2026-11-22). Three things live outside the repository and have to be true
 before a build with the iCloud entitlement is archived:
 
-1. The container exists under the team, and the `com.cascadiacollections.holmdel` App ID has
-   the iCloud (CloudKit) and Push Notifications capabilities with that container selected.
+1. The container exists under the team, and three App IDs have the iCloud (CloudKit) and
+   Push Notifications capabilities with that container selected:
+   `com.cascadiacollections.holmdel`, `com.cascadiacollections.holmdel.watch` and
+   `com.cascadiacollections.holmdel.tv`.
 2. The CloudKit schema is deployed to Production. SwiftData creates the record types in the
    Development environment the first time a debug build syncs; "Deploy Schema Changes" in the
    CloudKit console copies them. A TestFlight or App Store build talks to Production only, so

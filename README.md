@@ -190,9 +190,9 @@ tracking. The complete list of network traffic the app produces:
   default; Settings → Privacy → Fetch Album Artwork turns it off, and the app then shows
   station artwork only.
 - **iCloud sync** of your favorites, recently played stations and listening history, to your
-  own iCloud account's private database, so they match on your iPhone, iPad and Mac. Apple
+  own iCloud account's private database, so they match on your iPhone, iPad, Mac, Apple Watch and Apple TV. Apple
   stores it for you; ShoutKit's developer cannot read it. On by default when the device is
-  signed in to iCloud; Settings → iCloud → Sync with iCloud turns it off.
+  signed in to iCloud; Settings → iCloud → Sync with iCloud turns it off, per device.
 
 Play reports can be turned off in Settings → Privacy as well.
 

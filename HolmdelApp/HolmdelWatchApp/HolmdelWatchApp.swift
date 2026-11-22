@@ -18,6 +18,7 @@ struct HolmdelWatchApp: App {
             .modelContainer(services.container)
             .libraryStore(services.libraryStore)
             .playbackController(services.playbackController)
+            .settingsStore(services.settingsStore)
             .onOpenURL { url in
                 if WatchLaunchRoute.isPlayLast(url) {
                     WatchAppDependencies.playLastStation()

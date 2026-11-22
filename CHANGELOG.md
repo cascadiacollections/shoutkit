@@ -16,9 +16,9 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
 
 ### Added
 - **Your stations follow you.** Favorites, recently played stations and listening history now
-  sync through your own iCloud account between iPhone, iPad and Mac. It is on by default and
-  can be turned off in Settings → iCloud. Apple Watch and Apple TV keep their own lists for
-  now.
+  sync through your own iCloud account between iPhone, iPad, Mac, Apple Watch and Apple TV.
+  It is on by default and can be turned off on each device: in Settings → iCloud on iPhone,
+  iPad and Mac, and at the bottom of the main screen on Apple Watch and Apple TV.
 - **The app is called ShoutKit.** The Home Screen, Siri and Shortcuts, the widgets, the watch
   and Apple TV apps and Settings all say ShoutKit. Beta builds up to 0.5.1 (31) said Holmdel.
   Nothing else changed: favorites, recents and settings carry over.
