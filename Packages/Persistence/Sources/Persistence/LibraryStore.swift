@@ -38,6 +38,7 @@ public final class LibraryStore {
 
     public init(context: ModelContext) {
         self.context = context
+        mergeDuplicateStations()
         reloadFavoriteIDs()
         normalizeSortIndicesIfNeeded()
     }

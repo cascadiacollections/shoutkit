@@ -7,7 +7,7 @@ import SwiftData
 public enum ShoutKitModelContainer {
     /// The SwiftData schema backing favorites, recents, and recently heard
     /// tracks: the newest version in ``ShoutKitMigrationPlan``.
-    public static let schema = Schema(versionedSchema: ShoutKitSchemaV1.self)
+    public static let schema = Schema(versionedSchema: ShoutKitSchemaV2.self)
 
     /// `false` when opening the persistent on-disk store failed and the app is
     /// running against a fallback in-memory store.

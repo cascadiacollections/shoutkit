@@ -1,5 +1,34 @@
 # Decisions
 
+## 2026-11-22 (schema version 2: the library becomes CloudKit-compatible, sync not yet on)
+
+The decision is to sync favorites, recents and recently heard tracks through the listener's
+private iCloud database, on by default with a switch to turn it off. That needs SwiftData's
+CloudKit mode, and CloudKit rejects two things the V1 models had: a unique attribute
+(`stationID` on favorites and recents) and non-optional attributes without a default.
+
+**This entry is the half that can be tested without an iCloud account.** Turning sync on
+(entitlements, the CloudKit container, the Settings switch, the privacy wording) is a second
+change, and it needs a signed build on real devices.
+
+- **`ShoutKitSchemaV2` drops the constraint and adds defaults.** V1 is now frozen copies in
+  `ShoutKitSchemaV1.swift`; the stage between them is lightweight, since no row is rewritten.
+- **`LibraryStore` owns "one row per station" now.** It already looked before inserting, in
+  `addFavorite`, `logRecent` and the favorites import, so nothing local relied on the
+  constraint. What is new is `mergeDuplicateStations()`, for the case the constraint could
+  never have handled: two devices add the same station before they sync. Favorites keep the
+  row highest in the list; recents keep the latest play and add the play counts together.
+  It runs when the store is created, and the sync change will call it after remote merges.
+- **Recently heard tracks are not merged.** A row is an event, not an identity: the same song
+  heard on two devices is two listens.
+- **The fallback open from the entry below still applies**, and now covers the migration too.
+
+**Not verified here:** written without a Swift toolchain. `ShoutKitSchemaTests` migrates a V1
+store, written both with and without a versioned schema, through the plan and checks the
+rows; until CI runs it, that migration is a belief. If SwiftData gives V1 and V2 the same
+checksum, the plan is rejected outright and every container test fails, which is the signal
+to make the stage custom.
+
 ## 2026-11-22 (the library store gets a versioned schema and a migration plan)
 
 `ShoutKitModelContainer` opened the store with a bare `Schema([...])`. Every model change so

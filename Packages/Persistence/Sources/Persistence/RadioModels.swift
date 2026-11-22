@@ -2,14 +2,19 @@ import Foundation
 import RadioDirectory
 import SwiftData
 
+// Every stored property below is optional or has a default, and none is
+// unique: CloudKit accepts no other shape (DECISIONS.md, 2026-11-22). One row
+// per station is kept by `LibraryStore`, which looks before it inserts and
+// merges duplicates that arrive from another device.
+
 @Model
 public final class FavoriteStation {
-    @Attribute(.unique) public var stationID: String
-    public var name: String
-    public var genre: String
+    public var stationID: String = ""
+    public var name: String = ""
+    public var genre: String = ""
     public var artworkURLString: String?
     public var streamURLString: String?
-    public var createdAt: Date
+    public var createdAt: Date = Date.now
     /// User-defined ordering for the Favorites list, ascending (0 = top). A default
     /// value keeps the schema change a lightweight, additive migration; existing rows
     /// migrate to 0 and are re-based on first launch by `LibraryStore`.
@@ -47,9 +52,9 @@ public final class FavoriteStation {
 
 @Model
 public final class RecentStation {
-    @Attribute(.unique) public var stationID: String
-    public var name: String
-    public var genre: String
+    public var stationID: String = ""
+    public var name: String = ""
+    public var genre: String = ""
     public var tagsCSV: String?
     public var country: String?
     public var codec: String?
@@ -59,7 +64,7 @@ public final class RecentStation {
     public var bitrate: Int?
     public var artworkURLString: String?
     public var streamURLString: String?
-    public var playedAt: Date
+    public var playedAt: Date = Date.now
     /// Hides this entry from the Listen Now "Recently Played" teaser without
     /// deleting the underlying play record, so recommendation scoring still
     /// sees it as history. A default value keeps this a lightweight, additive
@@ -128,11 +133,11 @@ public final class RecentStation {
 
 @Model
 public final class RecentlyHeardTrack {
-    public var stationID: String
-    public var stationName: String
+    public var stationID: String = ""
+    public var stationName: String = ""
     public var title: String?
     public var artist: String?
-    public var heardAt: Date
+    public var heardAt: Date = Date.now
     public var appleMusicURLString: String?
     /// Cover art resolved for this track by `AlbumArtLookup`, or `nil` when
     /// album art is disabled or the lookup found none. Added alongside
