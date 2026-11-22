@@ -29,9 +29,12 @@ public enum ShoutKitModelContainer {
     ///
     /// - Parameter cloudKitContainerIdentifier: The iCloud container whose
     ///   private database the library syncs with, or `nil` to keep it on this
-    ///   device. The process needs the matching iCloud entitlement. If the
-    ///   store cannot be opened with sync, it is opened without it, and
-    ///   ``isCloudSyncActive`` says which happened. Ignored when `inMemory`.
+    ///   device. **The process must have the matching iCloud entitlement:**
+    ///   without it CloudKit kills the process instead of throwing, so check
+    ///   ``CloudSyncEntitlement`` before passing one. If the store cannot be
+    ///   opened with sync for a reason that does throw, it is opened without
+    ///   it, and ``isCloudSyncActive`` says which happened. Ignored when
+    ///   `inMemory`.
     @MainActor
     public static func makeContainer(
         inMemory: Bool = false,

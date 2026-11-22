@@ -46,8 +46,11 @@ enum TVAppDependencies {
         }
 
         let settingsStore = SettingsStore()
+        // An unsigned build has no iCloud entitlement, and CloudKit crashes a
+        // process that asks for a container without one.
+        let syncs = settingsStore.isICloudSyncEnabled && CloudSyncEntitlement.isPresent()
         let container = ShoutKitModelContainer.makeContainer(
-            cloudKitContainerIdentifier: settingsStore.isICloudSyncEnabled ? cloudKitContainerIdentifier : nil,
+            cloudKitContainerIdentifier: syncs ? cloudKitContainerIdentifier : nil,
         )
         let libraryStore = LibraryStore(context: container.mainContext)
         libraryStore.observeRemoteChanges()

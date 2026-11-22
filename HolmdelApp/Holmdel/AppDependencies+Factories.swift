@@ -23,9 +23,13 @@ extension AppDependencies {
     /// The library's model container, synced through iCloud unless the listener
     /// turned that off. The setting is read here and nowhere else, which is why
     /// changing it takes effect at the next launch.
+    ///
+    /// An unsigned build has no iCloud entitlement, and CloudKit crashes a
+    /// process that asks for a container without one, so those never ask.
     static func makeLibraryContainer(settings: SettingsStore) -> ModelContainer {
-        ShoutKitModelContainer.makeContainer(
-            cloudKitContainerIdentifier: settings.isICloudSyncEnabled ? cloudKitContainerIdentifier : nil,
+        let syncs = settings.isICloudSyncEnabled && CloudSyncEntitlement.isPresent()
+        return ShoutKitModelContainer.makeContainer(
+            cloudKitContainerIdentifier: syncs ? cloudKitContainerIdentifier : nil,
         )
     }
 }

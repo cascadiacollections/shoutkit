@@ -106,6 +106,22 @@ swift test --skip-build
 - Directory errors are typed (`throws(RadioDirectoryError)`); user-facing failures should carry
   the error, not a bare `String`.
 
+## Building without the iCloud capability
+
+The phone, watch and TV apps sync through CloudKit, and their entitlements files name the
+project's iCloud container. A free Apple developer account cannot sign for CloudKit, and a paid
+one cannot sign for a container it does not own. To run on a device from a fork, do both of
+these, in each app target you build:
+
+1. Delete the three iCloud keys and `aps-environment` from the target's `.entitlements` file
+   (or point the container at one you own, in the entitlements file and in
+   `cloudKitContainerIdentifier`; CI checks that the two agree).
+2. Set `ShoutKitCodeSigningAllowed` to `NO` in the target's `Info.plist`.
+
+Step 2 is not optional. A process that asks CloudKit for a container without holding the
+entitlement is killed at launch, not handed an error. Simulator builds made with
+`CODE_SIGNING_ALLOWED=NO`, as CI makes them, set the key to `NO` by themselves.
+
 ## Changing a SwiftData model
 
 The library store (`FavoriteStation`, `RecentStation`, `RecentlyHeardTrack`) is opened with a

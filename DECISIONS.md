@@ -15,9 +15,24 @@ recently heard tracks), and sync is on by default with a switch to turn it off.
   syncs any store as soon as the process has an iCloud entitlement. With the entitlement
   added, leaving the default would have turned sync on behind the Settings switch's back,
   and for the diagnostics store's neighbours in tests.
-- **Sync failing to start is not the library failing to open.** The open sequence is: with
-  sync, then the two local opens from the versioned-schema entry. `isCloudSyncActive`
-  records which one won.
+- **Sync failing to start is not the library failing to open, with one exception that
+  crashes.** The open sequence is: with sync, then the two local opens from the
+  versioned-schema entry; `isCloudSyncActive` records which one won. That covers failures
+  that throw. A process with no `com.apple.developer.icloud-services` entitlement does not
+  get an error: CloudKit raises an exception on its own queue and the app dies at launch.
+  The first CI run of this change found it, because CI builds with `CODE_SIGNING_ALLOWED=NO`
+  and an unsigned build carries no entitlements. Both the unit-test host and
+  `FirstLaunchUITests` crashed on launch.
+- **So an unsigned build never asks for sync.** iOS has no public API for reading a
+  process's entitlements, but whether a build was signed is known at build time. Each app's
+  `Info.plist` has `ShoutKitCodeSigningAllowed = $(CODE_SIGNING_ALLOWED)`, and
+  `CloudSyncEntitlement.isPresent()` returns `false` only when that reads `NO`. Anything
+  else, an unexpanded or missing value included, counts as signed: the wrong guess that way
+  crashes an unsigned build, which CI launches on every pull request, while the wrong guess
+  the other way would turn sync off in a shipped build with no symptom. **Consequence: CI
+  never opens the store with sync.** A signed build whose entitlements file was stripped or
+  edited by hand still crashes; `CONTRIBUTING.md` says what a fork without the capability
+  has to do.
 - **The switch takes effect at the next launch.** The setting is read once, when the
   container is built. Swapping a live `ModelContainer` under every `@Query` in the app is a
   larger change than the feature is worth.

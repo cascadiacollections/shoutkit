@@ -36,6 +36,7 @@ that shares the suite.
 ### Model Container
 
 - ``ShoutKitModelContainer``
+- ``CloudSyncEntitlement``
 - ``ShoutKitSchemaV1``
 - ``ShoutKitSchemaV2``
 - ``ShoutKitMigrationPlan``
