@@ -41,7 +41,9 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
 - **A smaller download.** Two Apple utility libraries were replaced by a few lines of
   ShoutKit's own code, and the debug-only network inspector no longer ships in release
   builds, and every library is now optimized for size. The iPhone app binary is up to
-  40% smaller (8.1 → 4.7 MB) and the Watch app about 1.2 MB smaller.
+  40% smaller (8.1 → 4.7 MB) and the Watch app about 1.2 MB smaller. A database library
+  that only internal diagnostics used is gone as well; that saving is not in these numbers
+  and has not been measured yet.
 - **The Mac app now requires Apple silicon.** Intel Macs are no longer supported, which
   roughly halves the Mac app's code size.
 

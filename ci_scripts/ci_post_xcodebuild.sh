@@ -11,7 +11,7 @@ set -uo pipefail
 [ "${CI_XCODEBUILD_ACTION:-}" = "archive" ] || exit 0
 
 if [ -z "${XCODE_XCCONFIG_FILE:-}" ]; then
-  echo "warning: XCODE_XCCONFIG_FILE is not set on this Xcode Cloud workflow, so packages such as GRDB were built at -O instead of -Osize. Set it to /Volumes/workspace/repository/HolmdelApp/Config/Shipping.xcconfig."
+  echo "warning: XCODE_XCCONFIG_FILE is not set on this Xcode Cloud workflow, so remote packages were built at -O instead of -Osize. Set it to /Volumes/workspace/repository/HolmdelApp/Config/Shipping.xcconfig."
 elif [ ! -f "$XCODE_XCCONFIG_FILE" ]; then
   echo "warning: XCODE_XCCONFIG_FILE points at $XCODE_XCCONFIG_FILE, which does not exist in this checkout; the size-optimized package build did not apply."
 else

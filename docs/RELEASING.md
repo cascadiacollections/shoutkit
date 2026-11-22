@@ -343,10 +343,11 @@ Variables**):
 XCODE_XCCONFIG_FILE = /Volumes/workspace/repository/HolmdelApp/Config/Shipping.xcconfig
 ```
 
-`xcodebuild` applies that file to every target, Swift packages included, so GRDB and the
-other remote packages build at `-Osize`. No project or manifest setting can reach them.
-It makes the phone binary 0.8 MB smaller and the watch app 1.2 MB smaller
-(`DECISIONS.md`, 2026-11-07). Without it the build still succeeds, just larger, and
+`xcodebuild` applies that file to every target, Swift packages included, so the
+remote packages build at `-Osize`. No project or manifest setting can reach them.
+It made the phone binary 0.8 MB smaller and the watch app 1.2 MB smaller when measured
+(`DECISIONS.md`, 2026-11-07). Most of the phone saving was GRDB, which was removed on
+2026-11-22, and neither figure has been re-measured since. Without it the build still succeeds, just larger, and
 `ci_scripts/ci_post_xcodebuild.sh` prints a warning in the archive log.
 
 ### How to verify

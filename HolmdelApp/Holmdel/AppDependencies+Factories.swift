@@ -29,7 +29,7 @@ extension AppDependencies {
         return diagnosticsService
     }
 
-    /// GRDB-backed on-disk store, falling back to an in-memory store (payloads
+    /// SwiftData-backed on-disk store, falling back to an in-memory store (payloads
     /// lost on relaunch) if the database can't be opened.
     private static func makeDiagnosticsPayloadStore() -> any DiagnosticsPayloadPersisting {
         do {

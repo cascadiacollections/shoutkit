@@ -4,8 +4,9 @@
 // targets, which is the whole reason this file exists (DECISIONS.md, 2026-11-07).
 //
 // What it buys: -Osize on remote packages that no manifest here can configure.
-// GRDB alone drops 2,144 -> 1,570 KB; the phone binary 5.51 -> 4.73 MB, and the
-// watch app ~1.2 MB.
+// Measured 2026-11-07, while GRDB was still linked: the phone binary 5.51 ->
+// 4.73 MB and the watch app ~1.2 MB. Most of the phone saving was GRDB (2,144
+// -> 1,570 KB), which was removed on 2026-11-22; not re-measured since.
 //
 // Where it is set:
 //   - Xcode Cloud: an environment variable on the TestFlight workflow,
