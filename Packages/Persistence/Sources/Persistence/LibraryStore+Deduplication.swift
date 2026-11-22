@@ -15,8 +15,7 @@ public extension LibraryStore {
     @discardableResult
     func mergeDuplicateStations() -> Int {
         let deleted = mergeDuplicateFavorites() + mergeDuplicateRecents()
-        guard deleted > 0 else { return 0 }
-        guard save(operation: "merge duplicate stations") else { return 0 }
+        guard deleted > 0, save(operation: "merge duplicate stations") else { return 0 }
         reloadFavoriteIDs()
         return deleted
     }
