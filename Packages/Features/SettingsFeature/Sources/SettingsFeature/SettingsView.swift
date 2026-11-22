@@ -23,6 +23,7 @@ public struct SettingsView: View {
             Form {
                 playbackSection
                 privacySection
+                ICloudSyncSection()
                 if let playbackController,
                    playbackController.supportsEqualizer || playbackController.supportsSpatialAudio
                    || playbackController.supportsAudioLevels {

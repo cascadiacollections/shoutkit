@@ -1,5 +1,44 @@
 # Decisions
 
+## 2026-11-22 (iCloud sync is on for iPhone, iPad and Mac)
+
+The schema has been CloudKit-compatible since the entry below. This one turns sync on.
+
+**Decided with the maintainer:** everything in the library syncs (favorites, recents,
+recently heard tracks), and sync is on by default with a switch to turn it off.
+
+- **Private database, one container:** `iCloud.com.cascadiacollections.holmdel`. The
+  identifier lives in the app target (`AppDependencies.cloudKitContainerIdentifier`) and the
+  entitlements file. `Persistence` only takes it as a parameter, so the package stays
+  adoptable.
+- **Every local open now says `cloudKitDatabase: .none`.** The default is `.automatic`, which
+  syncs any store as soon as the process has an iCloud entitlement. With the entitlement
+  added, leaving the default would have turned sync on behind the Settings switch's back,
+  and for the diagnostics store's neighbours in tests.
+- **Sync failing to start is not the library failing to open.** The open sequence is: with
+  sync, then the two local opens from the versioned-schema entry. `isCloudSyncActive`
+  records which one won.
+- **The switch takes effect at the next launch.** The setting is read once, when the
+  container is built. Swapping a live `ModelContainer` under every `@Query` in the app is a
+  larger change than the feature is worth.
+- **Remote changes are reconciled, not only merged.** `LibraryStore.favoriteIDs` is a cache
+  the import does not touch, so a favorite added on another device would not light its heart.
+  `observeRemoteChanges()` reloads it and runs `mergeDuplicateStations()`.
+- **Both devices must pick the same survivor**, or each deletes the other's row. The merge
+  orders by `sortIndex` then `createdAt` (favorites) and by `playedAt` (recents), all synced
+  values, so the choice is the same everywhere short of an exact timestamp tie.
+- **Watch and Apple TV are not in this change.** Neither has an entitlements file or a
+  Settings surface, so sync there would have had no off switch. They keep local stores.
+- **"Nothing leaves the device" is no longer true** and the README, the store-listing notes
+  and the Settings footer say what does. The privacy manifest is unchanged: data in the
+  listener's private database is not collected by the developer.
+
+**Not verified, and not verifiable from CI:** that two devices actually sync. That needs a
+signed build, an iCloud account and the container (`docs/RELEASING.md`, "iCloud sync"). Also
+unchecked: whether the Mac Catalyst build accepts `aps-environment` from the shared
+entitlements file or needs `com.apple.developer.aps-environment`, and what the simulator
+does at launch with the entitlement and no account. CI covers the last one.
+
 ## 2026-11-22 (schema version 2: the library becomes CloudKit-compatible, sync not yet on)
 
 The decision is to sync favorites, recents and recently heard tracks through the listener's

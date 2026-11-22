@@ -56,10 +56,11 @@ enum AppDependencies {
 
         installProcessWideServices()
 
-        let container = ShoutKitModelContainer.makeContainer()
+        let settings = SettingsStore()
+        let container = makeLibraryContainer(settings: settings)
         let isPersistentStoreAvailable = ShoutKitModelContainer.isPersistentStoreAvailable
         let store = LibraryStore(context: container.mainContext)
-        let settings = SettingsStore()
+        store.observeRemoteChanges()
         let featureFlags = sharedFeatureFlags()
         let diagnosticsService = makeDiagnosticsService(settings: settings, featureFlags: featureFlags)
         let directoryServices = makeDirectory()

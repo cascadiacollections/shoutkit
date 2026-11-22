@@ -2,6 +2,7 @@ import FeatureFlags
 import Foundation
 import Persistence
 import RadioDirectory
+import SwiftData
 
 // The two service stacks `bootstrap()` doesn't build inline — diagnostics and
 // the directory — each of which picks between concrete implementations and
@@ -11,6 +12,23 @@ import RadioDirectory
 // `file_length` limit CI enforces via `swiftlint --strict`. These helpers are
 // `internal` only because an extension in another file can't reach `private`
 // members; nothing outside `AppDependencies` calls them.
+
+// MARK: - Library
+
+extension AppDependencies {
+    /// The iCloud container the library syncs with. It has to match
+    /// `com.apple.developer.icloud-container-identifiers` in `Holmdel.entitlements`.
+    static let cloudKitContainerIdentifier = "iCloud.com.cascadiacollections.holmdel"
+
+    /// The library's model container, synced through iCloud unless the listener
+    /// turned that off. The setting is read here and nowhere else, which is why
+    /// changing it takes effect at the next launch.
+    static func makeLibraryContainer(settings: SettingsStore) -> ModelContainer {
+        ShoutKitModelContainer.makeContainer(
+            cloudKitContainerIdentifier: settings.isICloudSyncEnabled ? cloudKitContainerIdentifier : nil,
+        )
+    }
+}
 
 // MARK: - Diagnostics
 
