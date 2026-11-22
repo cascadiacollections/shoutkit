@@ -72,7 +72,7 @@ struct ShoutKitSchemaTests {
 
     @Test func `version 2 has the same attributes and nothing unique`() {
         #expect(Self.attributeNames(of: ShoutKitSchemaV2.self) == Self.shippedShape)
-        #expect(Self.uniqueAttributes(of: ShoutKitSchemaV2.self).values.allSatisfy { $0.isEmpty })
+        #expect(Array(Self.uniqueAttributes(of: ShoutKitSchemaV2.self).values.joined()).isEmpty)
     }
 
     /// CloudKit refuses a non-optional attribute that has no default.
