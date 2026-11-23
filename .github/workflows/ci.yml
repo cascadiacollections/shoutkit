@@ -107,6 +107,20 @@ jobs:
       - name: Check which pushes should upload to TestFlight
         run: .github/scripts/testflight-changes.sh --self-test
 
+  # The marketing-site promo window is a date check in plain HTML. It runs here,
+  # on a free Linux runner, rather than on the billed mac job that publishes the
+  # site. See DECISIONS.md (2026-11-23).
+  site-promo:
+    name: Site promo window
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Test the Black Friday promo window
+        run: node --test .github/scripts/test-site-promo.mjs
+
   # Deliberately ungated and first: it is by far the cheapest job here, and both
   # mac jobs below `needs` it.
   lint:

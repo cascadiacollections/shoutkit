@@ -146,7 +146,10 @@ Still to do in App Store Connect, by hand:
 - **Name and claims on the marketing site.** Since 2026-11-12 `site/index.html` no longer
   claims CarPlay or the Live Activity, and labels Apple TV "build from source"; recheck it if
   either ships. Its holiday promo hides itself after 2027-01-07, and its holiday title and
-  descriptions need reverting by hand (see `DECISIONS.md`, 2026-11-12). README's
+  descriptions need reverting by hand (see `DECISIONS.md`, 2026-11-12). The Black Friday
+  banner is separate: it shows itself from 2026-11-27 00:00 through 2026-12-01 23:59
+  America/Los_Angeles and then stops, so it does not need a follow-up change
+  (`DECISIONS.md`, 2026-11-23). README's
   capabilities section still describes the Live Activity as part of the shipping app. Fix
   that copy before the listing quotes it. The release notes do not claim those features.
 - **Settings copy.** Privacy footnotes mention geo-stations and Share diagnostics. Both
