@@ -349,6 +349,49 @@
     .promo-bar[hidden] { display: none; }
     .holiday-note { max-width: 40em; margin: 28px auto 0; text-align: center; font-size: 14px; color: var(--muted); }
 
+    /* -------------------------------- Black Friday / Cyber Monday 2026 */
+    /* Ships hidden. The script at the end of the page reveals it inside the
+       window (or with ?promo=bf2026). Author display rules must not override
+       the hidden attribute, or the banner would show with JavaScript off. */
+    .bf-banner {
+      display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 8px;
+      position: relative; padding: 4px 8px 4px 22px;
+      background: var(--tile); color: var(--text); border-bottom: 1px solid var(--line);
+      font-size: 15px; line-height: 1.45;
+    }
+    .bf-banner::before {
+      content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--grad);
+    }
+    .bf-banner p { margin: 0; text-align: center; text-wrap: balance; }
+    .bf-banner a { font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+    .bf-dismiss {
+      display: grid; place-items: center; width: 44px; height: 44px; padding: 0;
+      border: 0; border-radius: 12px; background: transparent; color: var(--text); cursor: pointer;
+    }
+    .bf-dismiss:hover { background: var(--bg-alt); }
+    .bf-dismiss svg { width: 18px; height: 18px; }
+    .bf-banner[hidden] { display: none; }
+    .bf-section {
+      padding: 56px 0 60px;
+      background:
+        linear-gradient(90deg, color-mix(in srgb, var(--sky) 10%, var(--bg)), color-mix(in srgb, var(--coral) 12%, var(--bg)));
+      border-bottom: 1px solid var(--line);
+    }
+    .bf-section[hidden] { display: none; }
+    .bf-section .section-head { margin-bottom: 8px; }
+    .bf-section .cta-row { justify-content: center; margin-top: 22px; }
+    .bf-text-dismiss {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 48px; padding: 12px 16px; border: 0; border-radius: 980px;
+      background: transparent; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer;
+    }
+    .bf-text-dismiss:hover { text-decoration: underline; }
+    @media (forced-colors: active) {
+      .bf-banner, .bf-section { background: Canvas; color: CanvasText; border-bottom: 1px solid CanvasText; }
+      .bf-banner::before { background: CanvasText; }
+      .bf-dismiss { color: CanvasText; }
+    }
+
     /* ------------------------------------------------------------ footer */
     footer { border-top: 1px solid var(--line); padding: 26px 0 40px; font-size: 12px; color: var(--muted); }
     .footer-inner { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; align-items: center; }
@@ -375,6 +418,8 @@
       .screens { grid-template-columns: 1fr; gap: 48px; }
       .screens .phone { width: 235px; }
       .facts { justify-content: flex-start; }
+      .bf-banner { padding-left: 16px; }
+      .bf-section { padding: 40px 0 44px; }
       .closer-card { padding: 52px 20px; border-radius: 24px; }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -382,7 +427,7 @@
       .heroart .ring { transform: scale(1); opacity: 0.6; }
       .heroart .ring:nth-child(2) { transform: scale(1.25); opacity: 0.4; }
       .heroart .ring:nth-child(3) { display: none; }
-      .btn, .tile { transition: none; }
+      .btn, .tile, .bf-dismiss, .bf-text-dismiss { transition: none; }
       .btn:hover, .tile:hover { transform: none; }
     }
   </style>
@@ -520,6 +565,18 @@
 <body>
   <a class="skip" href="#main">Skip to content</a>
 
+  <!-- Black Friday / Cyber Monday. Hidden unless shoutkit-bf2026 shows it. -->
+  <aside id="bf-promo" class="bf-banner" hidden aria-label="Black Friday and Cyber Monday">
+    <p>
+      <strong>Black Friday through Cyber Monday.</strong>
+      Skip the checkout line. ShoutKit is free, with no ads, no account and no tracking.
+      <a data-link="testflight" href="https://testflight.apple.com/join/ZBSBTbRU">Join the beta on TestFlight ›</a>
+    </p>
+    <button type="button" class="bf-dismiss" data-bf-dismiss aria-label="Dismiss promotion">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+    </button>
+  </aside>
+
   <!-- Holiday promo: hides itself after data-until (script at the end of the page). -->
   <div class="promo-bar" id="promo-bar" data-until="2027-01-07">
     Holiday radio, free: Christmas music, New Year countdowns or a long drive over the break. <a href="#holidays">Tune in for the holidays ›</a>
@@ -591,6 +648,20 @@
         </p>
       </div>
     </div>
+
+    <section id="bf2026" class="bf-section" hidden aria-labelledby="bf2026-h">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="kicker">Black Friday through Cyber Monday</p>
+          <h2 id="bf2026-h">Skip the checkout line.</h2>
+          <p>The TestFlight beta is free, the same as any other week: no ads, no account and no tracking.</p>
+        </div>
+        <div class="cta-row">
+          <a class="btn btn-solid" data-link="testflight" href="https://testflight.apple.com/join/ZBSBTbRU">Join the beta on TestFlight <span aria-hidden="true">→</span></a>
+          <button type="button" class="bf-text-dismiss" data-bf-dismiss>Dismiss</button>
+        </div>
+      </div>
+    </section>
 
     <section id="holidays" aria-labelledby="holidays-h">
       <div class="wrap">
@@ -934,6 +1005,125 @@ open Holmdel.xcworkspace <span class="c"># then ⌘R</span></code></pre>
       });
     })();
 
+  </script>
+  <script id="shoutkit-bf2026">
+    // Black Friday through Cyber Monday 2026. This object is the only place
+    // the window is defined. Start and end are inclusive minutes in timeZone.
+    (() => {
+      const PROMO = {
+        id: "bf2026",
+        timeZone: "America/Los_Angeles",
+        start: "2026-11-27T00:00",
+        end: "2026-12-01T23:59",
+        storageKey: "shoutkit.promo.bf2026.dismissed",
+        previewParam: "promo",
+        previewValue: "bf2026",
+      };
+
+      function wallClockMinute(date, timeZone) {
+        const fmt = new Intl.DateTimeFormat("en-US", {
+          timeZone,
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hourCycle: "h23",
+        });
+        const parts = {};
+        for (const part of fmt.formatToParts(date)) {
+          if (part.type !== "literal") parts[part.type] = part.value;
+        }
+        // A few engines report midnight as hour 24 on the same calendar day.
+        const hour = parts.hour === "24" ? "00" : parts.hour;
+        return `${parts.year}-${parts.month}-${parts.day}T${hour}:${parts.minute}`;
+      }
+
+      function isPromoPreview(search) {
+        const query = typeof search === "string" ? search : "";
+        const params = new URLSearchParams(query.charAt(0) === "?" ? query.slice(1) : query);
+        return params.get(PROMO.previewParam) === PROMO.previewValue;
+      }
+
+      function isPromoWindow(date) {
+        try {
+          const wall = wallClockMinute(date, PROMO.timeZone);
+          return wall >= PROMO.start && wall <= PROMO.end;
+        } catch {
+          return false;
+        }
+      }
+
+      function isPromoDismissed(storage) {
+        if (!storage || typeof storage.getItem !== "function") return false;
+        try {
+          return storage.getItem(PROMO.storageKey) === "1";
+        } catch {
+          return false;
+        }
+      }
+
+      function shouldShow(date, search, storage) {
+        if (isPromoWindow(date)) return !isPromoDismissed(storage);
+        return isPromoPreview(search);
+      }
+
+      function applyPromo(doc, loc, storage, now) {
+        const banner = doc.getElementById("bf-promo");
+        const section = doc.getElementById("bf2026");
+        if (!banner && !section) return false;
+        const inWindow = isPromoWindow(now);
+        const show = inWindow ? !isPromoDismissed(storage) : isPromoPreview((loc && loc.search) || "");
+        if (!show) return false;
+        if (banner) banner.hidden = false;
+        if (section) section.hidden = false;
+
+        function hide() {
+          // Preview is for review before the window. Don't let that dismissal
+          // suppress the real one. Inside the window, remember it for later
+          // visits. A blocked store (private mode) still hides it for this view.
+          if (inWindow) {
+            try { storage.setItem(PROMO.storageKey, "1"); } catch { /* private mode */ }
+          }
+          if (banner) banner.hidden = true;
+          if (section) section.hidden = true;
+          const next = doc.querySelector("a.brand");
+          if (next && typeof next.focus === "function") {
+            try { next.focus({ preventScroll: true }); } catch { next.focus(); }
+          }
+        }
+
+        for (const button of doc.querySelectorAll("[data-bf-dismiss]")) {
+          button.addEventListener("click", hide);
+        }
+        doc.addEventListener("keydown", (event) => {
+          if (event.key !== "Escape" || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+          const target = event.target;
+          const inside = (banner && !banner.hidden && banner.contains && banner.contains(target))
+            || (section && !section.hidden && section.contains && section.contains(target));
+          if (!inside) return;
+          if (typeof event.preventDefault === "function") event.preventDefault();
+          hide();
+        });
+        return true;
+      }
+
+      globalThis.SHOUTKIT_BF2026 = {
+        config: PROMO,
+        wallClockMinute,
+        isPromoPreview,
+        isPromoWindow,
+        isPromoDismissed,
+        shouldShow,
+        applyPromo,
+      };
+
+      try {
+        applyPromo(document, location, localStorage, new Date());
+      } catch {
+        // Stay hidden. A failure here must not disturb the rest of the page.
+      }
+    })();
   </script>
 </body>
 </html>

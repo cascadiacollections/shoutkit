@@ -1,5 +1,37 @@
 # Decisions
 
+## 2026-11-23 (a Black Friday banner that removes itself)
+
+The marketing site gets a Black Friday / Cyber Monday 2026 notice: a dismissible
+banner and a short section for people who would rather not buy another app that
+week. The copy stays inside claims the site, the README and the privacy manifest
+already make. The TestFlight beta is free, there are no ads and no account, and
+the manifest declares no tracking. It does not name an App Store price, because
+that price is undecided (`SHOUTKIT_LINKS.appstore` is still empty), and it does
+not say the phone is silent on the network. Directory lookups, play reports and
+album-art requests stay described in the privacy section, where the caveats are.
+
+The window is 2026-11-27 00:00 through 2026-12-01 23:59 America/Los_Angeles,
+inclusive of that last minute. Black Friday 2026 is the 27th; the extra day
+through the 1st is the window that was asked for, not a claim that Cyber Monday
+falls on December 1. It lives in one object, `PROMO`, inside the inline script
+`#shoutkit-bf2026` in `site/index.html`. The page is not generated. `pages.yml`
+publishes `site/` as it is committed, so there is no build that could strip the
+markup after December, and a build-time check would never run. The markup ships
+`hidden`, and the CSS keeps `display` from overriding that attribute. The script
+shows it only inside the window, or when the URL has `?promo=bf2026`, so it can
+be reviewed on any day. With JavaScript off it stays hidden. Outside the window
+the script returns without touching layout, so the page paints as it did before
+this change. The holiday bar and the "For the holidays" section are not part of
+this notice. They already run through 2027-01-07 and are left alone.
+
+Dismissal is stored in `localStorage` under a key named in that same object. No
+cookie, no extra request, no analytics. The preview query does not write the
+key, so trying the banner before the window does not suppress the real one.
+Dismissing moves focus to the site name. Escape dismisses only while focus is
+inside the notice. The social image stays the evergreen `og-image.png`. Crawlers
+do not run the date check, and the 2026-11-12 entry already left that image
+season-less so a later edit does not have to regenerate it.
 ## 2026-11-22 (iCloud sync is on, for every app that has a library)
 
 The schema has been CloudKit-compatible since the entry below. This one turns sync on.
