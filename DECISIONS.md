@@ -1,5 +1,46 @@
 # Decisions
 
+## 2026-11-24 (first-run genre chips, on the device)
+
+The welcome screen stays one screen. Above Get Started is a row of six chips —
+Christmas, Talk, Rock, News, Jazz, Country — in that order. On a narrow phone
+the row scrolls sideways. It does not page, and it is not a second step. Each
+chip is a button VoiceOver reads by its genre name, with the selected trait on
+the one that is held. Tapping the held chip clears it. Get Started with nothing
+held is the path the screen had before: Listen Now shows popular stations.
+
+What starts held is a saved campaign genre when one is stored, otherwise
+Christmas from 15 November through 31 December in the device calendar, otherwise
+nothing. The window is that calendar, so the day turns over when the listener's
+day does. The seasonal choice is computed when the screen is shown and is not
+written down. January does not inherit December. A stored string that is not one
+of the six chips is ignored, including one that is merely very long.
+
+Christmas is absent from `Genre.paintTimeDefaults` because that list is the
+year-round top of Radio-Browser's tag list, and a seasonal tag would reshuffle
+the Search strip for the other eleven months. It is a real tag. A check of
+`de1.api.radio-browser.info` on 2026-11-24 reported 126 stations tagged
+`christmas` (170 tagged `christmas music`). The chip uses `christmas`,
+capitalised to `Christmas` the same way `RadioBrowserDirectoryClient` capitalises
+tag names, and the client lowercases the tag again on the request. The genre
+fetch asks for 30 stations, so 126 is enough to fill it.
+
+`BrowseViewModel.toggleGenreFilter` already fetched that list into `genrePhase`,
+and Listen Now never read it. Search has its own genre query. A chip would have
+loaded stations the home screen did not show. While a genre is selected, Listen
+Now draws that list in place of the popular grid, with All Stations to clear it.
+Recently Played stays; those are the listener's own stations. The request is the
+same `stations(inGenre:)` call Search already makes: a directory query whose
+genre name is already in the README's list of network traffic. It is not a new
+host, not an identifier, and the per-genre list is still not persisted.
+
+The only new stored value is the campaign genre, one UserDefaults string under
+`firstRunGenrePreset`, and only when something has saved one. This screen reads
+it. UserDefaults is already declared as `CA92.1`. `PrivacyInfo.xcprivacy` is
+unchanged. The type lives in the app target. A seasonal welcome preset is
+ShoutKit's onboarding; `RadioDirectory` is the MIT package other clients import.
+The date boundaries are unit-tested in `HolmdelTests`.
+
 ## 2026-11-23 (a Black Friday banner that removes itself)
 
 The marketing site gets a Black Friday / Cyber Monday 2026 notice: a dismissible

@@ -69,8 +69,8 @@ struct RootView: View {
                     .presentationDetents([.large])
             }
             .fullScreenCover(isPresented: .init(get: { hasCompletedFirstRun == false }, set: { _ in })) {
-                WelcomeOverlayView {
-                    hasCompletedFirstRun = true
+                WelcomeOverlayView(preselected: FirstRunGenre.preselected()) { picked in
+                    finishFirstRun(picking: picked)
                 }
             }
             .task {
@@ -156,6 +156,14 @@ struct RootView: View {
         // iPhone keeps the bottom tab bar; iPad gets the Apple Music-style
         // sidebar with a user toggle back to a top tab bar.
         .tabViewStyle(.sidebarAdaptable)
+    }
+
+    /// Dismisses the welcome screen. A chip filters Listen Now to that genre;
+    /// leaving it empty keeps the popular stations this screen already shows.
+    private func finishFirstRun(picking genre: FirstRunGenre?) {
+        hasCompletedFirstRun = true
+        guard let genre else { return }
+        listenNowViewModel.toggleGenreFilter(genre.directoryTag)
     }
 
     private func handle(_ link: StationLink) {

@@ -70,7 +70,8 @@ public final class BrowseViewModel {
     public private(set) var refreshError: RadioDirectoryError?
 
     /// Active genre filter. Selecting one queries the directory for that genre —
-    /// the top-stations list is far too small to filter client-side.
+    /// the top-stations list is far too small to filter client-side. Listen Now
+    /// draws ``genrePhase`` in place of the popular grid while this is set.
     public private(set) var selectedGenre: String?
     public private(set) var genrePhase: GenreStationsPhase?
 
@@ -215,33 +216,50 @@ public final class BrowseViewModel {
     }
 
     public func toggleGenreFilter(_ genre: String) {
-        genreTask?.cancel()
-
         if selectedGenre == genre {
+            genreTask?.cancel()
             selectedGenre = nil
             genrePhase = nil
             return
         }
 
+        beginGenreLoad(genre)
+    }
+
+    /// Fetches the genre already on screen again. Try Again uses this;
+    /// `toggleGenreFilter` would clear the filter instead.
+    public func reloadGenreFilter() {
+        guard let selectedGenre else { return }
+        beginGenreLoad(selectedGenre)
+    }
+
+    private func beginGenreLoad(_ genre: String) {
+        genreTask?.cancel()
         selectedGenre = genre
         genrePhase = .loading
 
         genreTask = Task { [weak self] in
             guard let self else { return }
-            do {
-                let stations = try await directory.stations(
-                    inGenre: genre,
-                    limit: Configuration.genreStationsLimit,
-                )
-                guard Task.isCancelled == false, self.selectedGenre == genre else { return }
-                self.genrePhase = .loaded(stations)
-            } catch let error as RadioDirectoryError {
-                guard Task.isCancelled == false, self.selectedGenre == genre else { return }
-                self.genrePhase = .failed(error)
-            } catch {
-                guard Task.isCancelled == false, self.selectedGenre == genre else { return }
-                self.genrePhase = .failed(.transport(error.localizedDescription))
-            }
+            let phase = await Self.genrePhase(for: genre, from: directory)
+            guard Task.isCancelled == false, self.selectedGenre == genre else { return }
+            self.genrePhase = phase
+        }
+    }
+
+    private static func genrePhase(
+        for genre: String,
+        from directory: any RadioDirectoryProviding,
+    ) async -> GenreStationsPhase {
+        do {
+            let stations = try await directory.stations(
+                inGenre: genre,
+                limit: Configuration.genreStationsLimit,
+            )
+            return .loaded(stations)
+        } catch let error as RadioDirectoryError {
+            return .failed(error)
+        } catch {
+            return .failed(.transport(error.localizedDescription))
         }
     }
 }
