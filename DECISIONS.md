@@ -1,5 +1,34 @@
 # Decisions
 
+## 2026-11-24 (Pages deploy lists the artifact from a later job)
+
+The publish workflow built the docs and deployed in one job. `actions/deploy-pages`
+v5.0.1 asks the artifact service for `github-pages` the moment
+`upload-pages-artifact` returns. That list is briefly empty. The same pins
+found the artifact on 2026-11-22 (run 45053740996, about 400 ms after
+finalize). On 2026-11-23 (run 45110530463) and 2026-11-24 (run 45355719942)
+the list came back with zero artifacts a few hundred milliseconds after
+finalize, and the deploy step failed in under a second. The archive was
+uploaded: run 45355719942's artifact 14901864786 is named `github-pages` and
+is still listed by the REST API. Permissions, the `github-pages` environment,
+and the Pages source were unchanged from the successful run. This is
+[actions/deploy-pages#451](https://github.com/actions/deploy-pages/issues/451).
+It was intermittent through October and, from 2026-11-22, started failing
+most same-job publishes. No released `deploy-pages` accepts an artifact id or
+retries the lookup (the retry is an open pull request, not a tag).
+
+The 2026-08-13 two-job layout was reverted because `actions/upload-artifact`
+rejects `:` in filenames and DocC writes those names. That handoff is not
+what this split does. The build job still tars the site with
+`upload-pages-artifact`. The deploy job only runs `deploy-pages`, which reads
+that one archive. It runs on `ubuntu-latest`, so the lookup does not keep the
+billed `xcode-27` runner. One retry, 20 seconds later, runs only when the
+first attempt never created a deployment, which is the empty-list failure. A
+two-second pause between jobs was already not enough on the morning of
+2026-11-24. Re-running the failed same-job deploy is the wrong recovery: the
+re-run uploads a second `github-pages` artifact and the next lookup fails
+with "multiple artifacts".
+
 ## 2026-11-24 (`holmdel://welcome?genre=` presets the first-run genre)
 
 A custom-scheme link can name one of the six welcome chips. `holmdel://welcome?genre=rock`
@@ -2412,9 +2441,11 @@ that hands the six archives to the existing `ubuntu-latest` deploy job, which me
 **Superseded twice, same day and after.** The two-job split above never worked and was reverted in
 `8696fba`: `actions/upload-artifact` rejects filenames containing `:`, and DocC encodes Swift
 argument labels straight into filenames (`start(url:streamGeneration:).json`), so the handoff
-failed outright. `pages.yml` has been a single `xcode-27` build-and-deploy job ever since, and the
-comment at the top of that job records why. See also 2026-08-15, which moved the build into
-`.github/scripts/build-docs.sh` and replaced the six independent archives with one merged one.
+failed outright. `pages.yml` was a single `xcode-27` build-and-deploy job from then until
+2026-11-24, when the deploy step moved to its own job. That split still uploads with
+`upload-pages-artifact` (one tar), so the colon-filename handoff does not return. See that
+entry. See also 2026-08-15, which moved the build into `.github/scripts/build-docs.sh` and
+replaced the six independent archives with one merged one.
 
 Scope is the packages carrying a per-package `LICENSE` file per the Licensing table in
 `README.md`: `DesignSystem`, `FeatureFlags`, `Persistence`, `Playback`,
