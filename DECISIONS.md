@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-11-24 (`holmdel://welcome?genre=` presets the first-run genre)
+
+A custom-scheme link can name one of the six welcome chips. `holmdel://welcome?genre=rock`
+selects Rock. The same six tokens the chips use are the whole allow-list. Anything else —
+unknown genre, empty, whitespace, a token longer than 32 characters — is ignored and is not
+written down. Scheme, host, and the `genre` query name are matched case-insensitively, and the
+value is trimmed and lowercased before it is compared, because a link is untrusted input.
+`station` and `play` are still station links. `welcome` is handled first, in `onOpenURL`, and
+`StationLink` continues to reject that host.
+
+The value stored is the chip's raw token and nothing else. Other query items are not read.
+There is no clipboard read, no identifier, and no request. UserDefaults already declares
+`CA92.1`, so the privacy manifest stays as it is. A custom scheme does nothing when the app is
+not installed. This is for someone who already has ShoutKit, and for the Open button on a
+Custom Product Page, not a deferred install attribution.
+
+Before first run, the link moves the chip on the welcome screen, including when it arrives
+after that screen is already up, unless the listener has already tapped a chip. After first
+run, it switches to Listen Now and selects that genre there. Selecting the genre already on
+screen does not clear it: `toggleGenreFilter` would. The pending value waits in
+`WelcomeGenreRouter` the same way a station link waits in `StationLaunchRouter`, so a cold
+launch is not dropped.
+
+The allow-list tests live in `HolmdelTests`, beside the seasonal-default tests, because the
+type lives in the app target (see the first-run genre chips entry). `StationLinkTests` gains the `welcome`
+URL as a link that must not parse as a station.
+
 ## 2026-11-24 (first-run genre chips, on the device)
 
 The welcome screen stays one screen. Above Get Started is a row of six chips —

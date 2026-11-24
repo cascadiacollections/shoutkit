@@ -15,6 +15,7 @@
 		000000000000000000000025 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000019 /* PrivacyInfo.xcprivacy */; };
 		000000000000000000000026 /* WelcomeOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000001A /* WelcomeOverlayView.swift */; };
 		000000000000000000000117 /* FirstRunGenre.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000116 /* FirstRunGenre.swift */; };
+		00000000000000000000011B /* WelcomeGenreRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000011A /* WelcomeGenreRouter.swift */; };
 		000000000000000000000060 /* DesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000050 /* DesignSystem */; };
 		000000000000000000000061 /* RadioDirectory in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000051 /* RadioDirectory */; };
 		000000000000000000000062 /* Playback in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000052 /* Playback */; };
@@ -42,6 +43,7 @@
 		0000000000000000000000C2 /* QuickPlayWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000D1 /* QuickPlayWidget.swift */; };
 		0000000000000000000000ED /* IntentSupportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000EB /* IntentSupportTests.swift */; };
 		000000000000000000000119 /* FirstRunGenreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000118 /* FirstRunGenreTests.swift */; };
+		00000000000000000000011D /* FirstRunGenreLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000011C /* FirstRunGenreLinkTests.swift */; };
 		0000000000000000000000EE /* AppIntentsPathwayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000EC /* AppIntentsPathwayTests.swift */; };
 		0000000000000000000000F0 /* HolmdelWatchApp.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 1F9BBE8DA0AFDC04C965EF42 /* HolmdelWatchApp.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		0000000000000000000000FC /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000FA /* PrivacyInfo.xcprivacy */; };
@@ -179,6 +181,7 @@
 		000000000000000000000019 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		00000000000000000000001A /* WelcomeOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeOverlayView.swift; sourceTree = "<group>"; };
 		000000000000000000000116 /* FirstRunGenre.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunGenre.swift; sourceTree = "<group>"; };
+		00000000000000000000011A /* WelcomeGenreRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeGenreRouter.swift; sourceTree = "<group>"; };
 		000000000000000000000070 /* HolmdelWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HolmdelWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		000000000000000000000071 /* HolmdelWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolmdelWidgetsBundle.swift; sourceTree = "<group>"; };
 		000000000000000000000073 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -195,6 +198,7 @@
 		0000000000000000000000E1 /* HolmdelTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HolmdelTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0000000000000000000000EB /* IntentSupportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentSupportTests.swift; sourceTree = "<group>"; };
 		000000000000000000000118 /* FirstRunGenreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunGenreTests.swift; sourceTree = "<group>"; };
+		00000000000000000000011C /* FirstRunGenreLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunGenreLinkTests.swift; sourceTree = "<group>"; };
 		0000000000000000000000EC /* AppIntentsPathwayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntentsPathwayTests.swift; sourceTree = "<group>"; };
 		0000000000000000000000FA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		000000000000000000000100 /* AppDependencies+Networking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDependencies+Networking.swift"; sourceTree = "<group>"; };
@@ -357,6 +361,7 @@
 				000000000000000000000019 /* PrivacyInfo.xcprivacy */,
 				00000000000000000000001A /* WelcomeOverlayView.swift */,
 				000000000000000000000116 /* FirstRunGenre.swift */,
+				00000000000000000000011A /* WelcomeGenreRouter.swift */,
 				000000000000000000000083 /* Localizable.xcstrings */,
 				000000000000000000000092 /* Holmdel.entitlements */,
 			);
@@ -398,6 +403,7 @@
 			children = (
 				0000000000000000000000EB /* IntentSupportTests.swift */,
 				000000000000000000000118 /* FirstRunGenreTests.swift */,
+				00000000000000000000011C /* FirstRunGenreLinkTests.swift */,
 				0000000000000000000000EC /* AppIntentsPathwayTests.swift */,
 			);
 			path = HolmdelTests;
@@ -747,6 +753,7 @@
 				000000000000000000000021 /* RootView.swift in Sources */,
 				000000000000000000000026 /* WelcomeOverlayView.swift in Sources */,
 				000000000000000000000117 /* FirstRunGenre.swift in Sources */,
+				00000000000000000000011B /* WelcomeGenreRouter.swift in Sources */,
 				000000000000000000000022 /* AppDependencies.swift in Sources */,
 				000000000000000000000110 /* AppDependencies+Networking.swift in Sources */,
 				000000000000000000000111 /* AppDependencies+Factories.swift in Sources */,
@@ -776,6 +783,7 @@
 			files = (
 				0000000000000000000000ED /* IntentSupportTests.swift in Sources */,
 				000000000000000000000119 /* FirstRunGenreTests.swift in Sources */,
+				00000000000000000000011D /* FirstRunGenreLinkTests.swift in Sources */,
 				0000000000000000000000EE /* AppIntentsPathwayTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

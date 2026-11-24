@@ -1,4 +1,5 @@
 import Foundation
+import RadioDirectory
 
 /// The six genres offered on the one-time welcome screen.
 ///
@@ -58,5 +59,39 @@ enum FirstRunGenre: String, CaseIterable, Identifiable, Sendable {
         defaults: UserDefaults = .standard,
     ) -> FirstRunGenre? {
         saved(in: defaults) ?? fallback(now: now, calendar: calendar)
+    }
+
+    /// Longer than any chip name. A longer token is rejected before it is
+    /// lowercased or stored, so a huge query string cannot land in UserDefaults.
+    private static let maximumTokenLength = 32
+
+    /// `holmdel://welcome?genre=christmas`. Links are untrusted — any app or
+    /// page can open one — so only an allow-listed token is kept. The rest of
+    /// the URL, including other query items, is not read and not stored.
+    /// Returns false when this is not that route or the genre is not a chip,
+    /// and leaves `defaults` unchanged in that case.
+    @discardableResult
+    static func capture(from url: URL, defaults: UserDefaults = .standard) -> Bool {
+        guard let genre = genre(matching: url) else { return false }
+        defaults.set(genre.rawValue, forKey: key)
+        return true
+    }
+
+    /// The chip named by a welcome link, or nil when the URL is not one or the
+    /// genre is not allow-listed. Does not write anything.
+    static func genre(matching url: URL) -> FirstRunGenre? {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              components.scheme?.caseInsensitiveCompare(StationLink.appScheme) == .orderedSame,
+              components.host?.caseInsensitiveCompare("welcome") == .orderedSame,
+              let value = components.queryItems?.first(where: {
+                  $0.name.caseInsensitiveCompare("genre") == .orderedSame
+              })?.value
+        else {
+            return nil
+        }
+
+        let token = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard token.isEmpty == false, token.count <= maximumTokenLength else { return nil }
+        return FirstRunGenre(rawValue: token.lowercased())
     }
 }

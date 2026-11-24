@@ -15,6 +15,7 @@ import SwiftUI
 
 struct RootView: View {
     let launchRouter: StationLaunchRouter
+    let welcomeGenreRouter: WelcomeGenreRouter
     let isPersistentStoreAvailable: Bool
 
     // Read only to verify injection below; feature views read these themselves.
@@ -37,6 +38,10 @@ struct RootView: View {
     // can't observe it — this binding's `set` fires on every tap regardless.
     @State private var searchReactivationToken = 0
     @AppStorage("hasCompletedFirstRun") private var hasCompletedFirstRun = false
+    /// What the welcome chips show as selected. Starts from the saved genre or
+    /// the season, then follows a welcome link that arrives while the screen
+    /// is up.
+    @State private var welcomePreset = FirstRunGenre.preselected()
 
     var body: some View {
         // Deliberately no root-level swipe-between-tabs gesture. A
@@ -69,7 +74,7 @@ struct RootView: View {
                     .presentationDetents([.large])
             }
             .fullScreenCover(isPresented: .init(get: { hasCompletedFirstRun == false }, set: { _ in })) {
-                WelcomeOverlayView(preselected: FirstRunGenre.preselected()) { picked in
+                WelcomeOverlayView(preselected: welcomePreset) { picked in
                     finishFirstRun(picking: picked)
                 }
             }
@@ -85,6 +90,10 @@ struct RootView: View {
             .onChange(of: launchRouter.pending, initial: true) { _, link in
                 guard let link, launchRouter.consumePending(link) else { return }
                 handle(link)
+            }
+            .onChange(of: welcomeGenreRouter.pending, initial: true) { _, genre in
+                guard let genre, welcomeGenreRouter.consumePending(genre) else { return }
+                applyWelcomeGenre(genre)
             }
             // Keep the quick-play widget's favorite list in sync. `initial: true`
             // covers cold launch; the signature captures membership *and* order,
@@ -158,6 +167,20 @@ struct RootView: View {
         .tabViewStyle(.sidebarAdaptable)
     }
 
+    /// Before first run, the link only moves the welcome chip. After it, Listen
+    /// Now switches to that genre. Toggling the genre already on screen would
+    /// clear the filter, so a repeat of the current genre is left alone.
+    private func applyWelcomeGenre(_ genre: FirstRunGenre) {
+        guard hasCompletedFirstRun else {
+            welcomePreset = genre
+            return
+        }
+        selectedTab = .listenNow
+        let tag = genre.directoryTag
+        guard listenNowViewModel.selectedGenre != tag else { return }
+        listenNowViewModel.toggleGenreFilter(tag)
+    }
+
     /// Dismisses the welcome screen. A chip filters Listen Now to that genre;
     /// leaving it empty keeps the popular stations this screen already shows.
     private func finishFirstRun(picking genre: FirstRunGenre?) {
@@ -223,6 +246,7 @@ private enum HolmdelTab: Hashable {
 #Preview {
     RootView(
         launchRouter: StationLaunchRouter(),
+        welcomeGenreRouter: WelcomeGenreRouter(),
         isPersistentStoreAvailable: true,
     )
     .tint(.shoutKitAccent)
@@ -231,6 +255,7 @@ private enum HolmdelTab: Hashable {
 #Preview("iPhone SE · AX3", traits: .iPhoneSE) {
     RootView(
         launchRouter: StationLaunchRouter(),
+        welcomeGenreRouter: WelcomeGenreRouter(),
         isPersistentStoreAvailable: true,
     )
     .dynamicTypeSize(.narrowScreenPreview)
