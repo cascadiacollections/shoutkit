@@ -41,7 +41,9 @@ struct HolmdelApp: App {
             .onOpenURL { url in
                 // Welcome genre links are not station routes. Handle them first
                 // so a chip preset is never parsed as a station.
-                if services.welcomeGenreRouter.open(url: url) { return }
+                if services.welcomeGenreRouter.open(url: url) {
+                    return
+                }
                 services.stationLaunchRouter.open(url: url)
             }
             .onChange(of: scenePhase) { _, newPhase in

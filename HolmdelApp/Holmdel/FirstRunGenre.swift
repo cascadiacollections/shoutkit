@@ -82,14 +82,11 @@ enum FirstRunGenre: String, CaseIterable, Identifiable, Sendable {
     static func genre(matching url: URL) -> FirstRunGenre? {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               components.scheme?.caseInsensitiveCompare(StationLink.appScheme) == .orderedSame,
-              components.host?.caseInsensitiveCompare("welcome") == .orderedSame
+              components.host?.caseInsensitiveCompare("welcome") == .orderedSame,
+              let value = components.queryItems?.first(where: {
+                  $0.name.caseInsensitiveCompare("genre") == .orderedSame
+              })?.value
         else {
-            return nil
-        }
-
-        guard let value = components.queryItems?.first(where: {
-            $0.name.caseInsensitiveCompare("genre") == .orderedSame
-        })?.value else {
             return nil
         }
 
