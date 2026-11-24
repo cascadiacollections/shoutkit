@@ -3,9 +3,11 @@ import XCTest
 /// A fresh install must open to onboarding with no system prompt over it.
 ///
 /// Holmdel asks for nothing at launch: motion access waits for Spatial Audio
-/// (DECISIONS.md, 2026-11-14) and the app no longer uses location at all. This
-/// is the check that would have caught the motion prompt #244 removed, which
-/// shipped unnoticed because no test ever looked at a first launch.
+/// (DECISIONS.md, 2026-11-14) and the app no longer uses location at all. The
+/// genre chips on this screen are buttons. They don't prompt, and tapping one
+/// doesn't leave the screen. This is the check that would have caught the
+/// motion prompt #244 removed, which shipped unnoticed because no test ever
+/// looked at a first launch.
 ///
 /// XCTest rather than Swift Testing: UI automation is XCTest-only. It only proves
 /// something on a fresh install, because a permission already answered never
@@ -28,6 +30,15 @@ final class FirstLaunchUITests: XCTestCase {
             app.buttons["Get Started"].waitForExistence(timeout: 20),
             "Onboarding never appeared",
         )
+
+        // The spoken names. Selection depends on the date and is covered by
+        // FirstRunGenreTests; this only proves the chips are on the one screen.
+        for name in ["Christmas", "Talk", "Rock", "News", "Jazz", "Country"] {
+            XCTAssertTrue(
+                app.buttons[name].exists,
+                "Genre chip \(name) was not on the welcome screen",
+            )
+        }
 
         // Permission prompts are drawn by SpringBoard, not the app. Give a late
         // one a moment to arrive before concluding there is none.

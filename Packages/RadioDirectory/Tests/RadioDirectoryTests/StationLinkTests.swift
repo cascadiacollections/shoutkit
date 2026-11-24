@@ -76,8 +76,10 @@ struct StationLinkTests {
         // not configured (no associated domains) and must not parse.
         "https://example.com/station?id=kexp&name=KEXP",
         "file:///station?id=kexp&name=KEXP",
-        // Unknown route hosts must not parse.
+        // Unknown route hosts must not parse. `welcome` is a genre preset
+        // handled before this parser, and must not become a station.
         "holmdel://settings?id=kexp&name=KEXP",
+        "holmdel://welcome?genre=rock",
         // A station identified only by a cleartext stream URL has no usable
         // id or playable stream, so the whole link is rejected.
         "holmdel://station?name=KEXP&streamURL=http://example.com/live.mp3",

@@ -1,5 +1,102 @@
 # Decisions
 
+## 2026-11-24 (Pages deploy lists the artifact from a later job)
+
+The publish workflow built the docs and deployed in one job. `actions/deploy-pages`
+v5.0.1 asks the artifact service for `github-pages` the moment
+`upload-pages-artifact` returns. That list is briefly empty. The same pins
+found the artifact on 2026-11-22 (run 45053740996, about 400 ms after
+finalize). On 2026-11-23 (run 45110530463) and 2026-11-24 (run 45355719942)
+the list came back with zero artifacts a few hundred milliseconds after
+finalize, and the deploy step failed in under a second. The archive was
+uploaded: run 45355719942's artifact 14901864786 is named `github-pages` and
+is still listed by the REST API. Permissions, the `github-pages` environment,
+and the Pages source were unchanged from the successful run. This is
+[actions/deploy-pages#451](https://github.com/actions/deploy-pages/issues/451).
+It was intermittent through October and, from 2026-11-22, started failing
+most same-job publishes. No released `deploy-pages` accepts an artifact id or
+retries the lookup (the retry is an open pull request, not a tag).
+
+The 2026-08-13 two-job layout was reverted because `actions/upload-artifact`
+rejects `:` in filenames and DocC writes those names. That handoff is not
+what this split does. The build job still tars the site with
+`upload-pages-artifact`. The deploy job only runs `deploy-pages`, which reads
+that one archive. It runs on `ubuntu-latest`, so the lookup does not keep the
+billed `xcode-27` runner. One retry, 20 seconds later, runs only when the
+first attempt never created a deployment, which is the empty-list failure. A
+two-second pause between jobs was already not enough on the morning of
+2026-11-24. Re-running the failed same-job deploy is the wrong recovery: the
+re-run uploads a second `github-pages` artifact and the next lookup fails
+with "multiple artifacts".
+
+## 2026-11-24 (`holmdel://welcome?genre=` presets the first-run genre)
+
+A custom-scheme link can name one of the six welcome chips. `holmdel://welcome?genre=rock`
+selects Rock. The same six tokens the chips use are the whole allow-list. Anything else —
+unknown genre, empty, whitespace, a token longer than 32 characters — is ignored and is not
+written down. Scheme, host, and the `genre` query name are matched case-insensitively, and the
+value is trimmed and lowercased before it is compared, because a link is untrusted input.
+`station` and `play` are still station links. `welcome` is handled first, in `onOpenURL`, and
+`StationLink` continues to reject that host.
+
+The value stored is the chip's raw token and nothing else. Other query items are not read.
+There is no clipboard read, no identifier, and no request. UserDefaults already declares
+`CA92.1`, so the privacy manifest stays as it is. A custom scheme does nothing when the app is
+not installed. This is for someone who already has ShoutKit, and for the Open button on a
+Custom Product Page, not a deferred install attribution.
+
+Before first run, the link moves the chip on the welcome screen, including when it arrives
+after that screen is already up, unless the listener has already tapped a chip. After first
+run, it switches to Listen Now and selects that genre there. Selecting the genre already on
+screen does not clear it: `toggleGenreFilter` would. The pending value waits in
+`WelcomeGenreRouter` the same way a station link waits in `StationLaunchRouter`, so a cold
+launch is not dropped.
+
+The allow-list tests live in `HolmdelTests`, beside the seasonal-default tests, because the
+type lives in the app target (see the first-run genre chips entry). `StationLinkTests` gains the `welcome`
+URL as a link that must not parse as a station.
+
+## 2026-11-24 (first-run genre chips, on the device)
+
+The welcome screen stays one screen. Above Get Started is a row of six chips —
+Christmas, Talk, Rock, News, Jazz, Country — in that order. On a narrow phone
+the row scrolls sideways. It does not page, and it is not a second step. Each
+chip is a button VoiceOver reads by its genre name, with the selected trait on
+the one that is held. Tapping the held chip clears it. Get Started with nothing
+held is the path the screen had before: Listen Now shows popular stations.
+
+What starts held is a saved campaign genre when one is stored, otherwise
+Christmas from 15 November through 31 December in the device calendar, otherwise
+nothing. The window is that calendar, so the day turns over when the listener's
+day does. The seasonal choice is computed when the screen is shown and is not
+written down. January does not inherit December. A stored string that is not one
+of the six chips is ignored, including one that is merely very long.
+
+Christmas is absent from `Genre.paintTimeDefaults` because that list is the
+year-round top of Radio-Browser's tag list, and a seasonal tag would reshuffle
+the Search strip for the other eleven months. It is a real tag. A check of
+`de1.api.radio-browser.info` on 2026-11-24 reported 126 stations tagged
+`christmas` (170 tagged `christmas music`). The chip uses `christmas`,
+capitalised to `Christmas` the same way `RadioBrowserDirectoryClient` capitalises
+tag names, and the client lowercases the tag again on the request. The genre
+fetch asks for 30 stations, so 126 is enough to fill it.
+
+`BrowseViewModel.toggleGenreFilter` already fetched that list into `genrePhase`,
+and Listen Now never read it. Search has its own genre query. A chip would have
+loaded stations the home screen did not show. While a genre is selected, Listen
+Now draws that list in place of the popular grid, with All Stations to clear it.
+Recently Played stays; those are the listener's own stations. The request is the
+same `stations(inGenre:)` call Search already makes: a directory query whose
+genre name is already in the README's list of network traffic. It is not a new
+host, not an identifier, and the per-genre list is still not persisted.
+
+The only new stored value is the campaign genre, one UserDefaults string under
+`firstRunGenrePreset`, and only when something has saved one. This screen reads
+it. UserDefaults is already declared as `CA92.1`. `PrivacyInfo.xcprivacy` is
+unchanged. The type lives in the app target. A seasonal welcome preset is
+ShoutKit's onboarding; `RadioDirectory` is the MIT package other clients import.
+The date boundaries are unit-tested in `HolmdelTests`.
+
 ## 2026-11-23 (a Black Friday banner that removes itself)
 
 The marketing site gets a Black Friday / Cyber Monday 2026 notice: a dismissible
@@ -32,6 +129,7 @@ Dismissing moves focus to the site name. Escape dismisses only while focus is
 inside the notice. The social image stays the evergreen `og-image.png`. Crawlers
 do not run the date check, and the 2026-11-12 entry already left that image
 season-less so a later edit does not have to regenerate it.
+
 ## 2026-11-22 (iCloud sync is on, for every app that has a library)
 
 The schema has been CloudKit-compatible since the entry below. This one turns sync on.
@@ -2405,9 +2503,11 @@ that hands the six archives to the existing `ubuntu-latest` deploy job, which me
 **Superseded twice, same day and after.** The two-job split above never worked and was reverted in
 `8696fba`: `actions/upload-artifact` rejects filenames containing `:`, and DocC encodes Swift
 argument labels straight into filenames (`start(url:streamGeneration:).json`), so the handoff
-failed outright. `pages.yml` has been a single `xcode-27` build-and-deploy job ever since, and the
-comment at the top of that job records why. See also 2026-08-15, which moved the build into
-`.github/scripts/build-docs.sh` and replaced the six independent archives with one merged one.
+failed outright. `pages.yml` was a single `xcode-27` build-and-deploy job from then until
+2026-11-24, when the deploy step moved to its own job. That split still uploads with
+`upload-pages-artifact` (one tar), so the colon-filename handoff does not return. See that
+entry. See also 2026-08-15, which moved the build into `.github/scripts/build-docs.sh` and
+replaced the six independent archives with one merged one.
 
 Scope is the packages carrying a per-package `LICENSE` file per the Licensing table in
 `README.md`: `DesignSystem`, `FeatureFlags`, `Persistence`, `Playback`,

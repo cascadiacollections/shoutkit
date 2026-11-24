@@ -15,6 +15,15 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
 ## [Unreleased]
 
 ### Added
+- **A genre to start with.** The first time you open ShoutKit, the welcome screen
+  offers Christmas, Talk, Rock, News, Jazz, or Country. Listen Now opens on the
+  one you leave selected. From November 15 through December 31, Christmas starts
+  selected; you can clear it. Leaving nothing selected shows popular stations,
+  as before.
+- **Open a genre from a link.** A ShoutKit link can start you on Christmas, Talk, Rock,
+  News, Jazz, or Country. The first time you open the app, that chip is already selected.
+  After that, Listen Now switches to it. Any other value is ignored, and the choice stays
+  on your device.
 - **Your stations follow you.** Favorites, recently played stations and listening history now
   sync through your own iCloud account between iPhone, iPad, Mac, Apple Watch and Apple TV.
   It is on by default and can be turned off on each device: in Settings → iCloud on iPhone,

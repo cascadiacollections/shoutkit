@@ -113,8 +113,25 @@ public struct ListenNowView: View {
         return recentlyPlayedTeaser.displayedIDs.compactMap { byID[$0] }
     }
 
+    /// A selected genre replaces the popular grid. Recently Played stays,
+    /// because that list is the listener's own stations, not the directory's.
     @ViewBuilder
     private var content: some View {
+        if let genre = viewModel.selectedGenre {
+            recentlyPlayed
+            ListenNowGenreSection(
+                genre: genre,
+                phase: viewModel.genrePhase,
+                onShowAll: { viewModel.toggleGenreFilter(genre) },
+                onRetry: { viewModel.reloadGenreFilter() },
+            )
+        } else {
+            unfilteredContent
+        }
+    }
+
+    @ViewBuilder
+    private var unfilteredContent: some View {
         switch viewModel.phase {
         case .loading:
             loadingState

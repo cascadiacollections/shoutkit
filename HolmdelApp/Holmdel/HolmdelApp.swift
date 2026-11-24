@@ -26,6 +26,7 @@ struct HolmdelApp: App {
         WindowGroup {
             RootView(
                 launchRouter: services.stationLaunchRouter,
+                welcomeGenreRouter: services.welcomeGenreRouter,
                 isPersistentStoreAvailable: services.isPersistentStoreAvailable,
             )
             .modelContainer(services.container)
@@ -38,6 +39,11 @@ struct HolmdelApp: App {
                 services.diagnosticsService.refreshSubscription()
             }
             .onOpenURL { url in
+                // Welcome genre links are not station routes. Handle them first
+                // so a chip preset is never parsed as a station.
+                if services.welcomeGenreRouter.open(url: url) {
+                    return
+                }
                 services.stationLaunchRouter.open(url: url)
             }
             .onChange(of: scenePhase) { _, newPhase in
