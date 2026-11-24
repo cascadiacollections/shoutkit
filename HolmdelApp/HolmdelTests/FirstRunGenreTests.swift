@@ -46,7 +46,7 @@ struct FirstRunGenreTests {
 
     @Test func `an unknown or oversized stored value is ignored`() throws {
         let defaults = try makeDefaults()
-        defaults.set(String(repeating: "x", count: 10_000), forKey: FirstRunGenre.key)
+        defaults.set(String(repeating: "x", count: 10000), forKey: FirstRunGenre.key)
         let calendar = try utcCalendar()
         let newYear = try date(month: 1, day: 1, calendar: calendar)
         let christmasEve = try date(month: 12, day: 24, calendar: calendar)

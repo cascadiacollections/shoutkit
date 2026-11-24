@@ -15,10 +15,14 @@ enum FirstRunGenre: String, CaseIterable, Identifiable, Sendable {
     case jazz
     case country
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     /// Radio-Browser tag, capitalised the same way `Genre` names are.
-    var directoryTag: String { rawValue.capitalized }
+    var directoryTag: String {
+        rawValue.capitalized
+    }
 
     /// UserDefaults key for a campaign genre. The seasonal default is not
     /// written here; it is computed when the welcome screen is shown, so
