@@ -30,6 +30,7 @@ struct AppServices {
     /// following playback for the app's lifetime.
     let nowPlayingWidgetCoordinator: NowPlayingWidgetCoordinator
     let stationLaunchRouter: StationLaunchRouter
+    let welcomeGenreRouter: WelcomeGenreRouter
 }
 
 // This file is the shared graph and the one call that assembles it. Each step
@@ -98,6 +99,7 @@ enum AppDependencies {
             directoryDiscoveryCache: directoryServices.discoveryCache,
             nowPlayingWidgetCoordinator: nowPlayingWidgetCoordinator,
             stationLaunchRouter: StationLaunchRouter(),
+            welcomeGenreRouter: WelcomeGenreRouter(),
         )
         scheduleLaunchWarmups()
 

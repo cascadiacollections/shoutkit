@@ -11,12 +11,17 @@ import SwiftUI
 struct WelcomeOverlayView: View {
     let onContinue: (FirstRunGenre?) -> Void
 
+    private let preselected: FirstRunGenre?
     @State private var selection: FirstRunGenre?
+    /// A tap owns the selection after this. A welcome link that arrives later
+    /// must not overwrite a chip the listener already chose.
+    @State private var didEditSelection = false
 
     init(
         preselected: FirstRunGenre? = nil,
         onContinue: @escaping (FirstRunGenre?) -> Void,
     ) {
+        self.preselected = preselected
         self.onContinue = onContinue
         _selection = State(initialValue: preselected)
     }
@@ -28,6 +33,10 @@ struct WelcomeOverlayView: View {
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             continueButton
+        }
+        .onChange(of: preselected) { _, newValue in
+            guard didEditSelection == false else { return }
+            selection = newValue
         }
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.isModal)
@@ -142,6 +151,7 @@ struct WelcomeOverlayView: View {
     }
 
     private func toggle(_ genre: FirstRunGenre) {
+        didEditSelection = true
         selection = selection == genre ? nil : genre
     }
 

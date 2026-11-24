@@ -8,8 +8,9 @@ import SwiftUI
 /// The popular-stations grid, replaced by one genre.
 ///
 /// `BrowseViewModel.toggleGenreFilter` already fetched this list into
-/// `genrePhase`. Listen Now never read it, so a welcome chip would have loaded
-/// stations the screen did not show. Recently Played stays with the parent:
+/// `genrePhase`. Listen Now never read it, so a welcome chip or a
+/// `holmdel://welcome` link would have loaded stations the screen did not show.
+/// Recently Played stays with the parent:
 /// this is only the directory section. All Stations clears the filter and the
 /// popular grid returns.
 struct ListenNowGenreSection: View {

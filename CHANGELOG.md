@@ -20,6 +20,10 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
   one you leave selected. From November 15 through December 31, Christmas starts
   selected; you can clear it. Leaving nothing selected shows popular stations,
   as before.
+- **Open a genre from a link.** A ShoutKit link can start you on Christmas, Talk, Rock,
+  News, Jazz, or Country. The first time you open the app, that chip is already selected.
+  After that, Listen Now switches to it. Any other value is ignored, and the choice stays
+  on your device.
 - **The app is called ShoutKit.** The Home Screen, Siri and Shortcuts, the widgets, the watch
   and Apple TV apps and Settings all say ShoutKit. Beta builds up to 0.5.1 (31) said Holmdel.
   Nothing else changed: favorites, recents and settings carry over.
