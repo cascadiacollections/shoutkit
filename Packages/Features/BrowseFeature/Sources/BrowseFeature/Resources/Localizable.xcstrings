@@ -4,6 +4,9 @@
     "%@ removed" : {
 
     },
+    "All Stations" : {
+      "comment" : "Clears the Listen Now genre filter and shows popular stations."
+    },
     "Couldn't reach the station directory. Showing what's loaded." : {
 
     },
@@ -12,6 +15,9 @@
     },
     "Nothing here yet" : {
 
+    },
+    "Nothing in this genre right now" : {
+      "comment" : "Empty state when Listen Now is filtered to a genre that returned no stations."
     },
     "Offline — showing saved stations." : {
 
@@ -30,6 +36,9 @@
     },
     "Remove from Recently Played" : {
 
+    },
+    "Show all stations to see what's popular." : {
+      "comment" : "Empty-state detail under a Listen Now genre filter. All Stations is the button that clears it."
     },
     "Tuning in…" : {
 

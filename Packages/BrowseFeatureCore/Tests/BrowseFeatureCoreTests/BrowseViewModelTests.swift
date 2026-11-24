@@ -139,6 +139,24 @@ struct BrowseViewModelTests {
         #expect(viewModel.genrePhase == .loaded([.fixture(id: "r1", name: "Rock One")]))
     }
 
+    @Test func `reloading the selected genre fetches again without clearing it`() async {
+        let directory = FakeRadioDirectory()
+        let jazzStations: [Station] = [.fixture(id: "j1", name: "Jazz One", genre: "Jazz")]
+        await directory.setGenreStations(.success(jazzStations), forGenre: "Jazz")
+        let viewModel = BrowseViewModel(directory: directory)
+
+        viewModel.toggleGenreFilter("Jazz")
+        await waitUntil { viewModel.genrePhase != .loading }
+        viewModel.reloadGenreFilter()
+
+        #expect(viewModel.selectedGenre == "Jazz")
+        #expect(viewModel.genrePhase == .loading)
+
+        await waitUntil { viewModel.genrePhase != .loading }
+        #expect(viewModel.genrePhase == .loaded(jazzStations))
+        #expect(await directory.genreStationsCallCount == 2)
+    }
+
     @Test func `older refresh failure does not override newer loaded result`() async {
         let directory = SequencedTopStationsDirectory()
         let viewModel = BrowseViewModel(directory: directory)
