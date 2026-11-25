@@ -113,11 +113,11 @@ struct ICYInBodyHeaders {
     /// Index just past the blank line that ends the block, whichever line
     /// ending arrives first.
     private static func headerEnd(in data: Data) -> Int? {
-        let crlf = data.range(of: crlfBlank)?.upperBound
-        let lf = data.range(of: lfBlank)?.upperBound
-        switch (crlf, lf) {
-        case let (.some(crlfEnd), .some(lfEnd)):
-            return min(crlfEnd, lfEnd)
+        let carriageReturn = data.range(of: crlfBlank)?.upperBound
+        let lineFeed = data.range(of: lfBlank)?.upperBound
+        switch (carriageReturn, lineFeed) {
+        case let (.some(carriageReturnEnd), .some(lineFeedEnd)):
+            return min(carriageReturnEnd, lineFeedEnd)
         case let (.some(end), .none), let (.none, .some(end)):
             return end
         case (.none, .none):
