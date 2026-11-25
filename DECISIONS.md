@@ -1,5 +1,26 @@
 # Decisions
 
+## 2026-11-25 (in-body ICY headers are assembled, with a hard size cap)
+
+`ICYInBodyHeaders` was ported from AudioStreaming's `IcycastHeadersProcessor`
+on 2026-11-14, including the part that does not reassemble a header block
+split across reads. Each unfinished chunk was passed straight through as
+audio, and the bytes were also kept. `URLSession` chooses the chunk sizes.
+On an old Shoutcast server (the only responses this reader runs for: two
+HTTP headers or fewer, real headers in the body) the first callback is often
+shorter than the block, so the decoder was handed `ICY 200 OK...` as audio.
+If that body started with `ICY ` or `HTTP` and never sent a blank line, the
+kept buffer grew by every later byte for the rest of the session.
+
+The reader now holds bytes only while they might still be a header. A single
+audio byte that cannot be `ICY ` or `HTTP` is returned immediately, so a
+normal stream is not delayed. A real block is returned as fields plus the
+audio after the blank line, including when the block spans callbacks. At
+8 KB without a blank line the buffer is released and treated as audio. Bytes
+still held when the connection ends are flushed, so a short body is not
+dropped. The 8 KB cap is far above a real ICY status block (a few hundred
+bytes) and is what stops a malformed stream from pinning the session.
+
 ## 2026-11-24 (Pages deploy lists the artifact from a later job)
 
 The publish workflow built the docs and deployed in one job. `actions/deploy-pages`

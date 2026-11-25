@@ -57,6 +57,12 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
   roughly halves the Mac app's code size.
 
 ### Fixed
+- **Old Shoutcast stations start cleanly.** Some stations put their real headers
+  in the stream body. When those headers arrived in more than one piece, the
+  first piece was played as audio, and a body that started like a header but
+  never finished one kept every following byte in memory for the rest of the
+  session. Headers are now assembled before any audio is played, and a block
+  that never ends is given up at 8 KB.
 - **Filtered searches fill the list.** With a bitrate, tag or country filter on, a directory
   that filters on the device could return a short or empty list when the first matches failed
   the filter. It now looks further before giving up. Radio-Browser, the default directory,
