@@ -345,7 +345,9 @@ extension PlaybackController {
             // main actor.
             let sameAnswer = self.albumArtURL == resources.artworkURL
                 && self.appleMusicURL == resources.appleMusicURL
-            if sameAnswer, self.didPublishTrackResources { return }
+            if sameAnswer, self.didPublishTrackResources {
+                return
+            }
             self.didPublishTrackResources = true
             self.albumArtURL = resources.artworkURL
             self.appleMusicURL = resources.appleMusicURL
