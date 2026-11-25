@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-11-25 (the rejoin fade does not run when a buffer underrun recovers)
+
+`fadeInVolume()` ran on every AudioStreaming transition into `.playing`.
+That is the right moment for a rejoin: `silenceForUpcomingPlayback()` has
+just set the mixer to zero in `start`, `resume`, and `replayCurrentStream`,
+and the fade brings it back over 350 ms so the live edge does not arrive as
+a click. The 2026-08-20 entry describes that and nothing else.
+
+AudioStreaming also enters `.playing` when a buffer underrun ends. The
+player is already at full volume. The fade still waited one step, then set
+the mixer to 1/14 and swelled back to full. The listener heard the stream
+return, then a dip. Nothing in that path calls `silenceForUpcomingPlayback()`.
+
+The fade is now armed only by that silence. A `.playing` that was not armed
+leaves the current volume alone, and it does not cancel a fade that is
+already running. Cancelling one there would freeze the mixer wherever the
+ramp had reached.
+
 ## 2026-11-25 (a repeated ICY title retries the lookup, and publishes only when the answer changes)
 
 Album art for the current track is resolved once, then again on a duplicate

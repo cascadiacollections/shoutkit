@@ -57,6 +57,10 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
   roughly halves the Mac app's code size.
 
 ### Fixed
+- **A brief dropout no longer dips the volume.** Coming back from a short
+  buffer underrun used to cut the audio and fade it back up, because that
+  fade runs for a fresh start, a resume, and a reconnect. It now runs only
+  for those.
 - **Repeated titles no longer rewrite listening history.** A station re-sends
   the current song's title for as long as it plays. When the catalog has no
   art for it, each repeat was saving the library on the main thread. The
