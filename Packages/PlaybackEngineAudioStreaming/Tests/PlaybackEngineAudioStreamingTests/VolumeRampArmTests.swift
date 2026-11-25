@@ -8,15 +8,18 @@ struct VolumeRampArmTests {
         #expect(arm.consume() == false)
 
         arm.arm()
-        #expect(arm.consume())
-        #expect(arm.consume() == false)
+        let faded = arm.consume()
+        let fadedAgain = arm.consume()
+        #expect(faded)
+        #expect(fadedAgain == false)
     }
 
     @Test func `arming again allows one more fade`() {
         var arm = VolumeRampArm()
         arm.arm()
         arm.arm()
-        #expect(arm.consume())
+        let faded = arm.consume()
+        #expect(faded)
         #expect(arm.isArmed == false)
     }
 }
