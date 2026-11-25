@@ -27,39 +27,102 @@ struct ICYInBodyHeaders {
         let fileType: AudioFileTypeID
     }
 
+    /// Real ICY status blocks are a few hundred bytes. Past this the body is
+    /// not a header, and holding it would pin the rest of the listening
+    /// session: a stream that starts with `ICY ` or `HTTP` and never sends a
+    /// blank line used to append every later byte.
+    static let maximumHeaderBytes = 8 * 1024
+
+    private static let icyPrefix = Data("ICY ".utf8)
+    private static let httpPrefix = Data("HTTP".utf8)
+    private static let crlfBlank = Data("\r\n\r\n".utf8)
+    private static let lfBlank = Data("\n\n".utf8)
+
     private var collected = Data(capacity: 1024)
     private var searchComplete = false
 
-    /// The header block, if `data` completes one, and the bytes after it. Data
-    /// that doesn't start with `ICY ` or `HTTP` is passed through untouched.
+    /// True once this reader will not hold further bytes. The stream source
+    /// drops it then, instead of consulting it for the rest of the session.
+    var isFinished: Bool {
+        searchComplete
+    }
+
+    /// The header block, if `data` completes one, and the bytes after it.
+    ///
+    /// Bytes that might still be a header stay here until the block ends or
+    /// it is clearly audio. `URLSession` delivers the body in whatever sizes
+    /// it likes, so a block split across callbacks has to be assembled: the
+    /// previous version played the first piece as audio and, when the blank
+    /// line never arrived, retained every byte after it for the session.
+    /// Audio that cannot be a header is returned immediately, including a
+    /// single byte, so a normal stream is not delayed.
     mutating func process(_ data: Data) -> (fields: Fields?, remainder: Data) {
         guard searchComplete == false, data.isEmpty == false else { return (nil, data) }
-        let terminators: [[UInt8]] = [Array("\n\n".utf8), Array("\r\n\r\n".utf8)]
-        let prefixes: [[UInt8]] = [Array("ICY ".utf8), Array("HTTP".utf8)]
-        var found = false
-        var consumed = 0
-
-        for byte in data {
-            collected.append(byte)
-            consumed += 1
-            if terminators.contains(where: { collected.suffix($0.count).elementsEqual($0) }) {
-                found = true
-                searchComplete = true
-                break
-            }
-            if collected.count >= 4, prefixes.contains(where: { collected.prefix(4).elementsEqual($0) }) == false {
-                searchComplete = true
-                break
-            }
+        collected.append(data)
+        switch Self.classification(of: collected) {
+        case .needMore:
+            return (nil, Data())
+        case .notHeader:
+            return passThrough()
+        case .header:
+            break
         }
-
-        guard found else {
-            // Not a header block, or not complete yet. The original passed the
-            // whole chunk on in both cases; incomplete header blocks spanning
-            // chunks are rare enough that it never handled them either.
-            return (nil, data)
+        if let end = Self.headerEnd(in: collected) {
+            searchComplete = true
+            let header = Data(collected.prefix(end))
+            let remainder = Data(collected.dropFirst(end))
+            collected = Data()
+            return (Self.parse(header), remainder)
         }
-        return (Self.parse(collected), Data(data.dropFirst(consumed)))
+        guard collected.count <= Self.maximumHeaderBytes else { return passThrough() }
+        return (nil, Data())
+    }
+
+    /// Bytes held while a block is still undecided. The stream source flushes
+    /// these if the connection ends first, so a short body is not dropped.
+    mutating func takeBuffered() -> Data {
+        guard searchComplete == false else { return Data() }
+        return passThrough().remainder
+    }
+
+    private mutating func passThrough() -> (fields: Fields?, remainder: Data) {
+        searchComplete = true
+        let remainder = collected
+        collected = Data()
+        return (nil, remainder)
+    }
+
+    private enum Classification {
+        case needMore
+        case header
+        case notHeader
+    }
+
+    /// `ICY ` / `HTTP` means keep reading the block. A shorter prefix of
+    /// either might still become one. Anything else is audio.
+    private static func classification(of data: Data) -> Classification {
+        if data.starts(with: icyPrefix) || data.starts(with: httpPrefix) {
+            return .header
+        }
+        if icyPrefix.starts(with: data) || httpPrefix.starts(with: data) {
+            return .needMore
+        }
+        return .notHeader
+    }
+
+    /// Index just past the blank line that ends the block, whichever line
+    /// ending arrives first.
+    private static func headerEnd(in data: Data) -> Int? {
+        let carriageReturn = data.range(of: crlfBlank)?.upperBound
+        let lineFeed = data.range(of: lfBlank)?.upperBound
+        switch (carriageReturn, lineFeed) {
+        case let (.some(carriageReturnEnd), .some(lineFeedEnd)):
+            return min(carriageReturnEnd, lineFeedEnd)
+        case let (.some(end), .none), let (.none, .some(end)):
+            return end
+        case (.none, .none):
+            return nil
+        }
     }
 
     static func parse(_ block: Data) -> Fields? {

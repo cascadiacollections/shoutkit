@@ -207,7 +207,6 @@ final class SingleRequestStreamSource: NSObject, CoreAudioStreamSource, @uncheck
             var remainder = data
             if var reader = state.inBodyHeaders {
                 let result = reader.process(data)
-                state.inBodyHeaders = reader
                 remainder = result.remainder
                 if let fields = result.fields {
                     state.inBodyHeaders = nil
@@ -215,6 +214,12 @@ final class SingleRequestStreamSource: NSObject, CoreAudioStreamSource, @uncheck
                     if state.fileHint == 0 {
                         state.fileHint = fields.fileType
                     }
+                } else if reader.isFinished {
+                    // Not a header, or the block overran the cap. Drop the
+                    // reader so later audio chunks skip it.
+                    state.inBodyHeaders = nil
+                } else {
+                    state.inBodyHeaders = reader
                 }
             }
             let split = state.demuxer.process(remainder)
@@ -292,6 +297,19 @@ extension SingleRequestStreamSource: URLSessionDataDelegate {
 
     func urlSession(_: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         guard isCurrent(task) else { return }
+        // A body shorter than the header prefix ("IC", "HT") is held until the
+        // next bytes prove what it is. The connection ending is that proof:
+        // hand the bytes on, or a tiny response is dropped and a longer one
+        // that died mid-header loses the audio already withheld.
+        let undecided = state.withLock { state -> Data in
+            guard var reader = state.inBodyHeaders else { return Data() }
+            let buffered = reader.takeBuffered()
+            state.inBodyHeaders = nil
+            return buffered
+        }
+        if undecided.isEmpty == false {
+            deliver(undecided)
+        }
         let deliveredAudio = state.withLock { $0.hasDeliveredAudio }
         if let error {
             if (error as? URLError)?.code == .cancelled {

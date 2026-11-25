@@ -56,11 +56,11 @@ public final class AudioStreamingPlaybackEngine: RadioPlaybackEngine {
     /// ``handleUnexpectedStop()`` for why the decision waits.
     var stopClassificationTask: Task<Void, Never>?
 
-    /// The in-flight volume ramp from a silent rejoin up to full volume — see
-    /// AudioStreamingPlaybackEngine+VolumeRamp.swift. `internal` rather than
-    /// `private` for the same reason as the session file: that extension drives
-    /// it from outside this file.
+    /// The in-flight fade from a silent rejoin, and whether the next `.playing`
+    /// should start one. Armed only by `silenceForUpcomingPlayback()`. A buffer
+    /// underrun returning to `.playing` is not a rejoin and must not dip the volume.
     var volumeRampTask: Task<Void, Never>?
+    var volumeRampArm = VolumeRampArm()
 
     /// How long a `.stopped` transition may stay unattributed while the
     /// end-of-playback callback that would claim it is still in flight. Both

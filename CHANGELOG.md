@@ -61,6 +61,21 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
   roughly halves the Mac app's code size.
 
 ### Fixed
+- **A brief dropout no longer dips the volume.** Coming back from a short
+  buffer underrun used to cut the audio and fade it back up, because that
+  fade runs for a fresh start, a resume, and a reconnect. It now runs only
+  for those.
+- **Repeated titles no longer rewrite listening history.** A station re-sends
+  the current song's title for as long as it plays. When the catalog has no
+  art for it, each repeat was saving the library on the main thread. The
+  lookup can still retry, but an unchanged miss does not touch history or the
+  lock screen again.
+- **Old Shoutcast stations start cleanly.** Some stations put their real headers
+  in the stream body. When those headers arrived in more than one piece, the
+  first piece was played as audio, and a body that started like a header but
+  never finished one kept every following byte in memory for the rest of the
+  session. Headers are now assembled before any audio is played, and a block
+  that never ends is given up at 8 KB.
 - **Filtered searches fill the list.** With a bitrate, tag or country filter on, a directory
   that filters on the device could return a short or empty list when the first matches failed
   the filter. It now looks further before giving up. Radio-Browser, the default directory,

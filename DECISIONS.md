@@ -1,5 +1,66 @@
 # Decisions
 
+## 2026-11-25 (the rejoin fade does not run when a buffer underrun recovers)
+
+`fadeInVolume()` ran on every AudioStreaming transition into `.playing`.
+That is the right moment for a rejoin: `silenceForUpcomingPlayback()` has
+just set the mixer to zero in `start`, `resume`, and `replayCurrentStream`,
+and the fade brings it back over 350 ms so the live edge does not arrive as
+a click. The 2026-08-20 entry describes that and nothing else.
+
+AudioStreaming also enters `.playing` when a buffer underrun ends. The
+player is already at full volume. The fade still waited one step, then set
+the mixer to 1/14 and swelled back to full. The listener heard the stream
+return, then a dip. Nothing in that path calls `silenceForUpcomingPlayback()`.
+
+The fade is now armed only by that silence. A `.playing` that was not armed
+leaves the current volume alone, and it does not cancel a fade that is
+already running. Cancelling one there would freeze the mixer wherever the
+ramp had reached.
+
+## 2026-11-25 (a repeated ICY title retries the lookup, and publishes only when the answer changes)
+
+Album art for the current track is resolved once, then again on a duplicate
+ICY push when that resolution produced neither an image nor an Apple Music
+link. The duplicate is the only retry for a transient failure: `AlbumArtLookup`
+caches hits and definitive misses, and deliberately does not cache a timeout
+or a transport error. That retry stays.
+
+What does not stay is publishing the same answer again. `resolveTrackResources`
+called `onTrackHeard` and `nowPlayingCenter.update` after every attempt,
+including a miss that matched the URLs already published. `onTrackHeard` is
+the app's listening-history write, and it runs on the main actor. Stations
+repeat `StreamTitle` for the whole song, often about once a metadata
+interval, including while the app is backgrounded for audio. A song the
+catalog does not know was therefore a SwiftData fetch and save on the main
+thread at that interval.
+
+The first answer still publishes when both URLs are nil. That `.resolved`
+push is what releases the artwork hold taken at the track boundary. A later
+attempt publishes only when an URL actually changes, which is how a retry
+that finally succeeds still reaches the lock screen and the history row.
+
+## 2026-11-25 (in-body ICY headers are assembled, with a hard size cap)
+
+`ICYInBodyHeaders` was ported from AudioStreaming's `IcycastHeadersProcessor`
+on 2026-11-14, including the part that does not reassemble a header block
+split across reads. Each unfinished chunk was passed straight through as
+audio, and the bytes were also kept. `URLSession` chooses the chunk sizes.
+On an old Shoutcast server (the only responses this reader runs for: two
+HTTP headers or fewer, real headers in the body) the first callback is often
+shorter than the block, so the decoder was handed `ICY 200 OK...` as audio.
+If that body started with `ICY ` or `HTTP` and never sent a blank line, the
+kept buffer grew by every later byte for the rest of the session.
+
+The reader now holds bytes only while they might still be a header. A single
+audio byte that cannot be `ICY ` or `HTTP` is returned immediately, so a
+normal stream is not delayed. A real block is returned as fields plus the
+audio after the blank line, including when the block spans callbacks. At
+8 KB without a blank line the buffer is released and treated as audio. Bytes
+still held when the connection ends are flushed, so a short body is not
+dropped. The 8 KB cap is far above a real ICY status block (a few hundred
+bytes) and is what stops a malformed stream from pinning the session.
+
 ## 2026-11-24 (Pages deploy lists the artifact from a later job)
 
 The publish workflow built the docs and deployed in one job. `actions/deploy-pages`
