@@ -57,6 +57,11 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
   roughly halves the Mac app's code size.
 
 ### Fixed
+- **Repeated titles no longer rewrite listening history.** A station re-sends
+  the current song's title for as long as it plays. When the catalog has no
+  art for it, each repeat was saving the library on the main thread. The
+  lookup can still retry, but an unchanged miss does not touch history or the
+  lock screen again.
 - **Old Shoutcast stations start cleanly.** Some stations put their real headers
   in the stream body. When those headers arrived in more than one piece, the
   first piece was played as audio, and a body that started like a header but

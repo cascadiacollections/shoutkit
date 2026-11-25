@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-11-25 (a repeated ICY title retries the lookup, and publishes only when the answer changes)
+
+Album art for the current track is resolved once, then again on a duplicate
+ICY push when that resolution produced neither an image nor an Apple Music
+link. The duplicate is the only retry for a transient failure: `AlbumArtLookup`
+caches hits and definitive misses, and deliberately does not cache a timeout
+or a transport error. That retry stays.
+
+What does not stay is publishing the same answer again. `resolveTrackResources`
+called `onTrackHeard` and `nowPlayingCenter.update` after every attempt,
+including a miss that matched the URLs already published. `onTrackHeard` is
+the app's listening-history write, and it runs on the main actor. Stations
+repeat `StreamTitle` for the whole song, often about once a metadata
+interval, including while the app is backgrounded for audio. A song the
+catalog does not know was therefore a SwiftData fetch and save on the main
+thread at that interval.
+
+The first answer still publishes when both URLs are nil. That `.resolved`
+push is what releases the artwork hold taken at the track boundary. A later
+attempt publishes only when an URL actually changes, which is how a retry
+that finally succeeds still reaches the lock screen and the history row.
+
 ## 2026-11-25 (in-body ICY headers are assembled, with a hard size cap)
 
 `ICYInBodyHeaders` was ported from AudioStreaming's `IcycastHeadersProcessor`

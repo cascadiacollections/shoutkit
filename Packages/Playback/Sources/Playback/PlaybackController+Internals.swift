@@ -48,6 +48,7 @@ extension PlaybackController {
             nowPlaying = nil
             albumArtURL = nil
             appleMusicURL = nil
+            didPublishTrackResources = false
         }
 
         resolveTask = Task { [weak self] in
@@ -275,15 +276,11 @@ extension PlaybackController {
            current.stationID == station.id,
            current.title == info.title,
            current.artist == info.artist {
-            // A repeated push is also the only signal on which a transiently
-            // failed resource lookup can retry: AlbumArtLookup caches hits and
-            // definitive misses but deliberately not transient failures, yet
-            // nothing else re-invokes it for the same track — one network blip
-            // would otherwise suppress album art on every surface for the
-            // whole song. No-op while a resolution is in flight or once one
-            // has produced a result; a cached miss answers without leaving
-            // the process. (Re-firing onTrackHeard is safe: the history log
-            // dedupes consecutive identical tracks.)
+            // A repeated push is the only retry for a lookup that failed
+            // transiently: hits and definitive misses are cached, transient
+            // failures are not, and nothing else asks again for this track.
+            // The lookup itself may run. Publishing the same answer again
+            // must not: each publication writes listening history.
             if albumArtURL == nil, appleMusicURL == nil, albumArtTask == nil {
                 resolveTrackResources(for: info)
             }
@@ -296,6 +293,7 @@ extension PlaybackController {
         // they can momentarily pair the new title with the previous track's art.
         albumArtURL = nil
         appleMusicURL = nil
+        didPublishTrackResources = false
         let metadata = NowPlayingMetadata(
             stationID: station.id,
             title: info.title,
@@ -339,6 +337,16 @@ extension PlaybackController {
             // (A superseded task returns above and leaves
             // the handle owned by its replacement.)
             self.albumArtTask = nil
+            // The first answer publishes even when both URLs are nil. That
+            // `.resolved` push is what releases the artwork hold taken at the
+            // track boundary. A later repeat that settles on the same answer
+            // must not publish: stations re-send the title for the whole
+            // song, and every publication writes listening history on the
+            // main actor.
+            let sameAnswer = self.albumArtURL == resources.artworkURL
+                && self.appleMusicURL == resources.appleMusicURL
+            if sameAnswer, self.didPublishTrackResources { return }
+            self.didPublishTrackResources = true
             self.albumArtURL = resources.artworkURL
             self.appleMusicURL = resources.appleMusicURL
             guard let station = self.activeStation else { return }

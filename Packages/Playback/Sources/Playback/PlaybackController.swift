@@ -136,6 +136,8 @@ public final class PlaybackController {
     @ObservationIgnored let nowPlayingCenter: any NowPlayingPresenting
     @ObservationIgnored var resolveTask: Task<Void, Never>?
     @ObservationIgnored var albumArtTask: Task<Void, Never>?
+    /// Set once the current track's lookup has been published, including a miss.
+    @ObservationIgnored var didPublishTrackResources = false
 
     /// The last endpoint resolved for `activeStation`, reused across reconnect
     /// attempts so a flaky stream doesn't re-run resolution (a `.pls` fetch +
@@ -361,6 +363,7 @@ public final class PlaybackController {
         nowPlaying = nil
         albumArtURL = nil
         appleMusicURL = nil
+        didPublishTrackResources = false
         outputStarted = false
         disarmInterruptionResume()
         nowPlayingCenter.clear()
