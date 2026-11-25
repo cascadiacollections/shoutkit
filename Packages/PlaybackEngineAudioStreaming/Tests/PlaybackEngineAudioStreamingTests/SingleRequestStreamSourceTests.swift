@@ -199,4 +199,36 @@ struct SingleRequestStreamSourceTests {
         #expect(delegate.errors.withLock { $0 } == 1)
         #expect(fallbacks.count.withLock { $0 } == 0)
     }
+
+    /// Two response headers is the old-Shoutcast signal that the real headers
+    /// are at the start of the body. A body chunk smaller than that block used
+    /// to be played as audio.
+    @Test func `an ICY header split across body chunks is not delivered as audio`() async {
+        let header = Data("ICY 200 OK\r\nicy-metaint: 8192\r\ncontent-type: audio/mpeg\r\n\r\n".utf8)
+        let audio = Data([1, 2, 3])
+        prepare(.init(
+            headers: ["Server": "old", "Date": "y"],
+            chunks: [Data(header.prefix(8)), Data(header.dropFirst(8)) + audio],
+        ))
+        let delegate = RecordingSourceDelegate()
+        let source = makeSource(queue: DispatchQueue(label: "test.source.split"))
+        source.delegate = delegate
+        source.seek(at: 0)
+        await eventually { delegate.endOfFile.withLock { $0 } }
+
+        #expect(delegate.audio.withLock { $0 } == audio)
+    }
+
+    @Test func `a short body that might be a header is delivered when the stream ends`() async {
+        let body = Data("IC".utf8)
+        prepare(.init(headers: ["Server": "old", "Date": "y"], chunks: [body]))
+        let delegate = RecordingSourceDelegate()
+        let source = makeSource(queue: DispatchQueue(label: "test.source.short"))
+        source.delegate = delegate
+        source.seek(at: 0)
+        await eventually { delegate.endOfFile.withLock { $0 } }
+
+        #expect(delegate.audio.withLock { $0 } == body)
+        #expect(delegate.endOfFile.withLock { $0 })
+    }
 }

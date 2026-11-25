@@ -98,6 +98,85 @@ struct ICYInBodyHeadersTests {
         let result = reader.process(audio)
         #expect(result.fields == nil)
         #expect(result.remainder == audio)
+        #expect(reader.isFinished)
+    }
+
+    @Test func `one audio byte is not held while a header is ruled out`() {
+        var reader = ICYInBodyHeaders()
+        #expect(reader.process(Data([0xFF])).remainder == Data([0xFF]))
+        let more = Data([0xF1, 0x50])
+        #expect(reader.process(more).remainder == more)
+    }
+
+    @Test func `a header split across chunks is assembled, not played`() {
+        let header = Data("ICY 200 OK\r\nicy-metaint: 8192\r\ncontent-type: audio/aacp\r\n\r\n".utf8)
+        let audio = Data([1, 2, 3])
+        let body = header + audio
+        var reader = ICYInBodyHeaders()
+
+        let first = reader.process(body.prefix(10))
+        #expect(first.fields == nil)
+        #expect(first.remainder.isEmpty)
+
+        let second = reader.process(body.dropFirst(10))
+        #expect(second.fields == .init(metadataStep: 8192, fileType: kAudioFileAAC_ADTSType))
+        #expect(second.remainder == audio)
+        #expect(reader.isFinished)
+    }
+
+    @Test func `a line-feed blank line ends the block`() {
+        let header = Data("ICY 200 OK\nicy-metaint: 16\ncontent-type: audio/mpeg\n\n".utf8)
+        let audio = Data([9])
+        var reader = ICYInBodyHeaders()
+        let result = reader.process(header + audio)
+        #expect(result.fields?.metadataStep == 16)
+        #expect(result.remainder == audio)
+    }
+
+    @Test func `a prefix that is not a header is released with the deciding bytes`() {
+        var reader = ICYInBodyHeaders()
+        #expect(reader.process(Data("IC".utf8)).remainder.isEmpty)
+        #expect(reader.process(Data("X audio".utf8)).remainder == Data("ICX audio".utf8))
+    }
+
+    @Test func `a header followed by more than the cap of audio still parses`() {
+        let header = Data("ICY 200 OK\r\nicy-metaint: 16000\r\ncontent-type: audio/mpeg\r\n\r\n".utf8)
+        let audio = Data(repeating: 0xFF, count: ICYInBodyHeaders.maximumHeaderBytes)
+        var reader = ICYInBodyHeaders()
+        let result = reader.process(header + audio)
+        #expect(result.fields?.metadataStep == 16000)
+        #expect(result.remainder == audio)
+    }
+
+    @Test func `a block that never ends is released, and later audio is not retained`() {
+        var reader = ICYInBodyHeaders()
+        #expect(reader.process(Data("ICY ".utf8)).remainder.isEmpty)
+
+        let chunk = Data(repeating: 0x11, count: 1024)
+        var released = Data()
+        for _ in 0 ..< 20 {
+            let result = reader.process(chunk)
+            if result.remainder.isEmpty == false {
+                released = result.remainder
+                break
+            }
+        }
+
+        #expect(released.isEmpty == false)
+        #expect(released.count <= ICYInBodyHeaders.maximumHeaderBytes + chunk.count)
+        #expect(reader.isFinished)
+        let tail = Data([1, 2, 3, 4])
+        let next = reader.process(tail)
+        #expect(next.fields == nil)
+        #expect(next.remainder == tail)
+    }
+
+    @Test func `bytes held when the stream ends can be flushed`() {
+        var reader = ICYInBodyHeaders()
+        #expect(reader.process(Data("HT".utf8)).remainder.isEmpty)
+        #expect(reader.takeBuffered() == Data("HT".utf8))
+        #expect(reader.takeBuffered().isEmpty)
+        #expect(reader.isFinished)
     }
 }
 
