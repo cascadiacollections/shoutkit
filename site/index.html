@@ -273,6 +273,7 @@
     .checks svg { flex: none; width: 22px; height: 22px; margin-top: 2px; color: var(--accent); }
     .checks strong { display: block; font-weight: 600; }
     .checks p { color: var(--muted); font-size: 15px; margin-top: 2px; }
+    .privacy-more { text-align: center; margin: 28px auto 0; max-width: 36em; color: var(--muted); }
 
     /* -------------------------------------------------------------- get */
     .stores { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
@@ -505,7 +506,7 @@
             "name": "Does it track me?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "No. No ads, no analytics, no account, and the privacy manifest declares no collected data and no tracking. The app talks only to what radio needs: the station directory, the streams you play, Apple’s iTunes Search for album art (it sends the current artist and track title), and anonymous play counts that help the directory rank stations."
+              "text": "No. No ads, no analytics, no account, and the privacy manifest declares no collected data and no tracking. The app talks only to what radio needs: the station directory, the streams you play, Apple’s iTunes Search for album art (it sends the current artist and track title), and anonymous play counts that help the directory rank stations. The privacy page lists each of those requests."
             }
           },
           {
@@ -590,7 +591,7 @@
       </a>
       <nav class="nav-links" aria-label="Primary">
         <a class="opt" href="#features">Features</a>
-        <a class="opt" href="#privacy">Privacy</a>
+        <a class="opt" href="privacy/">Privacy</a>
         <a class="opt" href="#source">Source</a>
         <a class="opt" href="#faq">FAQ</a>
         <a class="nav-cta" href="#get">Get the beta</a>
@@ -813,6 +814,7 @@
             <div><strong>This page, too.</strong><p>No web fonts, no analytics, no cookies. System fonts, one HTML file and a few screenshots.</p></div>
           </li>
         </ul>
+        <p class="privacy-more">The <a href="privacy/">privacy page</a> lists what the iPhone app sends and what stays on the device.</p>
       </div>
     </section>
 
@@ -836,7 +838,7 @@
           </li>
           <li>
             <h3>Android</h3>
-            <p>Signed APK available now; F-Droid and Google Play coming soon.</p>
+            <p>Signed APK available now. F-Droid would be a separate install that F-Droid signs, and no listing has been submitted. Google Play is coming soon.</p>
             <a class="btn btn-line" data-link="android" href="https://cascadiacollections.github.io/shoutkit-android/">ShoutKit for Android</a>
           </li>
           <li>
@@ -883,7 +885,7 @@ open Holmdel.xcworkspace <span class="c"># then ⌘R</span></code></pre>
             <ul class="linklist">
               <li><a href="https://github.com/cascadiacollections/shoutkit">iPhone source</a><br /><span>The app, its packages and CI, on GitHub.</span></li>
               <li><a href="https://github.com/cascadiacollections/shoutkit-android">Android source</a><br /><span>The Android app, with no Google services in its FOSS build.</span></li>
-              <li><a href="https://github.com/cascadiacollections/shoutkit-android/pull/306">Reproducible Android builds</a><br /><span>How the Android FOSS APK was made reproducible for F-Droid.</span></li>
+              <li><a href="https://github.com/cascadiacollections/shoutkit-android/blob/main/docs/fdroid-submission.md">Android on F-Droid</a><br /><span>The plan is a separate F-Droid-signed <code>.foss</code> install. No listing has been submitted.</span></li>
               <li><a href="https://github.com/cascadiacollections/shoutkit/security/advisories/new">Report a security issue</a><br /><span>Privately, not in a public issue. See the <a href="https://github.com/cascadiacollections/shoutkit/blob/main/SECURITY.md">security policy</a>.</span></li>
             </ul>
           </div>
@@ -926,7 +928,7 @@ open Holmdel.xcworkspace <span class="c"># then ⌘R</span></code></pre>
         <div class="faq">
           <details><summary>Is it really free?</summary><p>Yes. No ads, no subscription and no in-app purchases. The app is open source, and every feature works for everyone.</p></details>
           <details><summary>Why would I pay for a store version?</summary><p>You don’t have to. App Store pricing hasn’t been decided. If a store version ever costs something, you’d be paying for the convenience of installing and updating through the store, and helping fund development, not unlocking features. The source stays open, so you can always build it yourself.</p></details>
-          <details><summary>Does it track me?</summary><p>No. No ads, no analytics, no account, and the privacy manifest declares no collected data and no tracking. The app talks only to what radio needs: the station directory, the streams you play, Apple’s iTunes Search for album art (it sends the current artist and track title), and anonymous play counts that help the directory rank stations.</p></details>
+          <details><summary>Does it track me?</summary><p>No. No ads, no analytics, no account, and the privacy manifest declares no collected data and no tracking. The app talks only to what radio needs: the station directory, the streams you play, Apple’s iTunes Search for album art (it sends the current artist and track title), and anonymous play counts that help the directory rank stations. The <a href="privacy/">privacy page</a> lists each of those requests.</p></details>
           <details><summary>Which stations can I listen to?</summary><p>Thousands. Stations come from <a href="https://www.radio-browser.info">Radio-Browser</a>, a free, community-run directory that anyone can add to or correct, so no API key or account is needed.</p></details>
           <details><summary>Can I find Christmas and holiday music?</summary><p>Yes. Search for “Christmas”, “holiday” or “carols”, or use the search filters to narrow by tag and country. Stations come from <a href="https://www.radio-browser.info">Radio-Browser</a>, so what you find depends on what broadcasters and volunteers have listed.</p></details>
           <details><summary>Does radio use mobile data?</summary><p>Yes. Live streams need a connection and can use mobile data. Use Wi-Fi when you want to save your data allowance.</p></details>
@@ -958,6 +960,7 @@ open Holmdel.xcworkspace <span class="c"># then ⌘R</span></code></pre>
         <p>© <span id="year">2026</span> Cascadia Collections · ShoutKit</p>
         <nav class="footer-links" aria-label="Footer">
           <a href="https://github.com/cascadiacollections/shoutkit">Source</a>
+          <a href="privacy/">Privacy</a>
           <a href="https://cascadiacollections.github.io/shoutkit-android/">ShoutKit for Android</a>
           <a href="api/">API reference</a>
           <a href="https://github.com/cascadiacollections/shoutkit/blob/main/CHANGELOG.md">Changelog</a>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy · ShoutKit</title>
+  <meta name="description" content="ShoutKit for iPhone does not collect your data. No account, no ads, no analytics. What the app sends, and what stays on the device." />
+  <link rel="canonical" href="https://cascadiacollections.github.io/shoutkit/privacy/" />
+  <meta name="robots" content="index, follow" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+
+  <meta property="og:site_name" content="ShoutKit" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:title" content="Privacy · ShoutKit" />
+  <meta property="og:description" content="ShoutKit for iPhone does not collect your data. No account, no ads, no analytics." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://cascadiacollections.github.io/shoutkit/privacy/" />
+  <meta property="og:image" content="https://cascadiacollections.github.io/shoutkit/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="ShoutKit: free internet radio. No ads, no account, no tracking." />
+
+  <link rel="icon" href="../assets/app-icon-64.png" type="image/png" />
+  <link rel="apple-touch-icon" href="../assets/app-icon-256.png" />
+
+  <style>
+    :root {
+      --bg: #f7f9fc;
+      --bg-alt: #eef3f8;
+      --tile: #ffffff;
+      --text: #14181f;
+      --muted: #5c6470;
+      --line: rgba(10, 30, 60, 0.09);
+      --accent: #0670a8;
+      --accent-hover: #055d8c;
+      --accent-ink: #ffffff;
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+      --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+      --wrap: 1040px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #070b12;
+        --bg-alt: #0d131d;
+        --tile: #131b27;
+        --text: #f3f5f8;
+        --muted: #a3acb9;
+        --line: rgba(255, 255, 255, 0.10);
+        --accent: #4cb2ea;
+        --accent-hover: #74c4f0;
+        --accent-ink: #00141f;
+      }
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 17px/1.55 var(--font);
+      letter-spacing: -0.01em;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+    code { font-family: var(--mono); font-size: 0.9em; }
+    .skip { position: absolute; left: -9999px; }
+    .skip:focus { left: 16px; top: 12px; z-index: 10; background: var(--tile); padding: 8px 12px; border-radius: 10px; }
+    .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 22px; }
+
+    .site-header {
+      position: sticky; top: 0; z-index: 5;
+      background: color-mix(in srgb, var(--bg) 80%, transparent);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav { display: flex; align-items: center; justify-content: space-between; height: 52px; }
+    .brand { display: flex; align-items: center; gap: 9px; color: var(--text); font-weight: 600; font-size: 17px; }
+    .brand:hover { text-decoration: none; }
+    .brand img { width: 26px; height: 26px; border-radius: 6px; }
+    .nav-links { display: flex; align-items: center; gap: 24px; font-size: 13px; }
+    .nav-links a { color: var(--text); opacity: 0.8; }
+    .nav-links a:hover { opacity: 1; text-decoration: none; }
+    .nav-links .nav-cta {
+      opacity: 1; background: var(--accent); color: var(--accent-ink);
+      padding: 5px 12px; border-radius: 980px; font-weight: 500;
+    }
+    .nav-links .nav-cta:hover { background: var(--accent-hover); }
+    @media (max-width: 640px) {
+      .nav-links .opt { display: none; }
+      .wrap { padding: 0 16px; }
+    }
+
+    .prose { max-width: 42em; padding: 48px 22px 72px; }
+    .kicker { margin: 0 0 8px; font-size: 17px; font-weight: 600; color: var(--accent); }
+    h1 {
+      margin: 0;
+      font-size: clamp(34px, 5vw, 48px);
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      font-weight: 700;
+    }
+    h2 {
+      margin: 2.1em 0 0.45em;
+      font-size: 26px;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      font-weight: 700;
+    }
+    h3 {
+      margin: 1.5em 0 0.35em;
+      font-size: 19px;
+      line-height: 1.25;
+      letter-spacing: -0.015em;
+      font-weight: 600;
+    }
+    .prose p { margin: 0.75em 0 0; }
+    .prose .lead { margin-top: 18px; font-size: 19px; line-height: 1.45; }
+    .prose p, .prose li { color: var(--muted); }
+    .prose strong { color: var(--text); font-weight: 600; }
+    .prose ul { margin: 0.75em 0 0; padding-left: 1.2em; }
+    .prose li + li { margin-top: 0.4em; }
+
+    footer { border-top: 1px solid var(--line); padding: 26px 0 40px; font-size: 12px; color: var(--muted); }
+    .footer-inner { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; align-items: center; }
+    .footer-links { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+    .footer-links a { color: var(--muted); }
+    .footnote { margin-top: 14px; max-width: 70em; line-height: 1.5; }
+    .footnote a { color: var(--muted); text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap nav">
+      <a class="brand" href="../">
+        <img src="../assets/app-icon-64.png" alt="" width="26" height="26" />
+        ShoutKit
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a class="opt" href="../#features">Features</a>
+        <a class="opt" href="./" aria-current="page">Privacy</a>
+        <a class="opt" href="../#source">Source</a>
+        <a class="opt" href="../#faq">FAQ</a>
+        <a class="nav-cta" href="../#get">Get the beta</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <article class="wrap prose">
+      <p class="kicker">Privacy</p>
+      <h1>ShoutKit does not collect your data.</h1>
+      <p class="lead">There is no account, no ads, and no analytics. The app’s privacy manifest declares nothing collected and nothing tracked. ShoutKit has no server of its own.</p>
+      <p>This page is about the iPhone and iPad app, including the Apple Watch app that ships with it. It describes the public source as of 26 November 2026.</p>
+
+      <h2>What stays on the device</h2>
+      <p>Favorites, recently played stations, recently heard tracks, and your settings are stored on the device. So is a snapshot of the station lists Listen Now last loaded, which lets those screens open before the network answers. The Home Screen widget reads the same on-device favorites. Siri, Shortcuts, and Spotlight use stations stored on the device.</p>
+      <p>You can export favorites as a JSON file and import one back. That file is one you save or open yourself. Recents and recently heard tracks are left out of it.</p>
+      <p>Favorites are not synced through iCloud. While a station is playing, the app publishes it through Apple’s Handoff so you can resume that station on another of your devices. The activity carries the station you are playing. If the Apple Watch app is installed, the phone also sends that last station to the paired watch. Both stay between your devices.</p>
+      <p>Spatial Audio is off until you turn it on in Settings. It uses your headphones’ motion sensors on the device to place a stereo image. The app does not send that motion anywhere.</p>
+
+      <h2>What the app contacts</h2>
+      <p>The requests below go straight to the service named. ShoutKit does not receive them. Each of those servers sees the IP address of the connection, the way any server does. The requests do not include an account or an advertising identifier.</p>
+
+      <h3>Radio-Browser</h3>
+      <p>Stations come from <a href="https://www.radio-browser.info">Radio-Browser</a>, a public community directory. A search sends the text you type, and any filters you set, such as a tag, a country, or a bitrate. Choosing a genre sends that genre name. Listen Now asks for popular stations in the country from your device’s region setting, then for popular stations worldwide. The app reads that country from the region setting. It does not ask for location access.</p>
+      <p>Directory requests name the app with the User-Agent <code>Holmdel/0.1</code>. That is the app’s name on the request, shared by everyone who uses this build. It is not an id for your device. Holmdel is the app’s earlier name; TestFlight builds from before late November 2026 still install under it.</p>
+      <p>When you play a station that came from Radio-Browser, the app tells the directory that station’s public id, so the directory can rank popularity. That report is on by default. Settings → Privacy → Report Plays to Radio-Browser turns it off. Stations that did not come from Radio-Browser are not reported.</p>
+      <p>iOS will not run a background refresh more often than every four hours. When it does, the app asks the directory again for popular stations, for genres, and for a current stream address for each favorite. Those are the same kinds of directory requests.</p>
+
+      <h3>The station you play</h3>
+      <p>The stream, and the station’s own artwork, are fetched from the address listed for the station you chose. Many stations use ordinary HTTP. The broadcaster sees a playback request.</p>
+
+      <h3>Album art</h3>
+      <p>While a track is playing, the app can ask Apple’s iTunes Search for artwork and a link to that song in Apple Music. The request sends the artist, the title, and, when your device has one, the country from its region setting, so the result matches that storefront. The app then downloads the image at the address Apple returns. This is on by default. Settings → Privacy → Fetch Album Artwork turns it off, and the app shows the station’s artwork instead. “View in Apple Music” opens only when you tap it.</p>
+
+      <h2>What is not in the app</h2>
+      <p>The app does not include an analytics SDK, an advertising SDK, or a crash-reporting SDK. A debug build can include a network inspector for development. That inspector is not in TestFlight or App Store builds. The TestFlight beta is delivered by Apple, and this app does not add a reporter of its own.</p>
+      <p>Developer builds can keep Apple’s MetricKit performance reports on the device. That path is off unless an internal flag is turned on, it is not shown in Settings in the app you install, and nothing in it is uploaded.</p>
+      <p>The Apple Watch app plays the streams you start. That asks Radio-Browser for the station’s stream address, then connects to the station. It does not send play reports or album-art lookups. The Apple TV app is not in the TestFlight beta. Built from source, it loads station lists from Radio-Browser and plays streams, and it does not send play reports or album-art lookups.</p>
+
+      <h2>This website</h2>
+      <p>These pages are static files. They load no analytics and no web fonts, and they do not set cookies. If you dismiss the seasonal notice on the home page, the browser stores that choice in its own local storage. This page stores nothing.</p>
+
+      <h2>Questions</h2>
+      <p>The source is public, including the <a href="https://github.com/cascadiacollections/shoutkit/blob/main/HolmdelApp/Holmdel/PrivacyInfo.xcprivacy">privacy manifest</a>. Questions can go to <a href="https://github.com/cascadiacollections/shoutkit/issues">GitHub issues</a>. Security reports follow the <a href="https://github.com/cascadiacollections/shoutkit/blob/main/SECURITY.md">security policy</a>.</p>
+    </article>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="footer-inner">
+        <p>© <span id="year">2026</span> Cascadia Collections · ShoutKit</p>
+        <nav class="footer-links" aria-label="Footer">
+          <a href="https://github.com/cascadiacollections/shoutkit">Source</a>
+          <a href="./" aria-current="page">Privacy</a>
+          <a href="https://cascadiacollections.github.io/shoutkit-android/">ShoutKit for Android</a>
+          <a href="../api/">API reference</a>
+          <a href="https://github.com/cascadiacollections/shoutkit/blob/main/CHANGELOG.md">Changelog</a>
+          <a href="https://github.com/cascadiacollections/shoutkit/blob/main/LICENSE">Licence</a>
+          <a href="https://github.com/cascadiacollections/shoutkit/blob/main/SECURITY.md">Security</a>
+        </nav>
+      </div>
+      <p class="footnote">
+        ShoutKit is not affiliated with or endorsed by Apple or Radio-Browser.
+        iPhone, iPad, Apple Watch, Apple TV and TestFlight are trademarks of Apple Inc.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
