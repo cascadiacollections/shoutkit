@@ -38,7 +38,7 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
     func genres() async throws(RadioDirectoryError) -> [Genre] {
         genresCallCount += 1
         switch genresResult {
-        case let .success(genres): genres
+        case let .success(genres): return genres
         case let .failure(error): throw error
         }
     }
