@@ -46,7 +46,8 @@ struct FavoriteStationQuery: EntityQuery {
 // MARK: - Configuration intent
 
 /// The widget's edit-mode configuration: which favorite the tile plays. Leaving
-/// it unset falls back to the user's first favorite (see `QuickPlayProvider`).
+/// it unset falls back to the user's first favorite. A favorite that was
+/// removed does not: the tile stays empty instead of playing another station.
 struct SelectFavoriteStationIntent: WidgetConfigurationIntent {
     static let title: LocalizedStringResource = "Choose Station"
     static let description = IntentDescription("Pick a favorite station to play with one tap.")
@@ -60,6 +61,9 @@ struct SelectFavoriteStationIntent: WidgetConfigurationIntent {
 struct QuickPlayEntry: TimelineEntry {
     let date: Date
     let station: QuickPlayStationSnapshot?
+    /// The widget was edited to a favorite that is no longer in the list.
+    /// The tile must not substitute a different station.
+    var configuredStationMissing = false
     /// Set while a station is playing or paused (and, when the widget is
     /// configured, only if it's the configured station). Takes over the tile.
     var nowPlaying: NowPlayingWidgetSnapshot?
@@ -93,7 +97,11 @@ struct QuickPlayProvider: AppIntentTimelineProvider {
         }
         // If the app dies without writing `.stopped`, drop back to the quick-play
         // tile once the snapshot expires instead of showing a dead station as live.
-        let fallback = QuickPlayEntry(date: nowPlaying.expiresAt, station: current.station)
+        let fallback = QuickPlayEntry(
+            date: nowPlaying.expiresAt,
+            station: current.station,
+            configuredStationMissing: current.configuredStationMissing,
+        )
         return Timeline(
             entries: [current, fallback],
             policy: .after(now.addingTimeInterval(Self.liveRefreshInterval)),
@@ -101,9 +109,12 @@ struct QuickPlayProvider: AppIntentTimelineProvider {
     }
 
     private func entry(for configuration: SelectFavoriteStationIntent, at date: Date) -> QuickPlayEntry {
-        QuickPlayEntry(
+        let favorites = QuickPlayFavoritesStore.load()
+        let station = QuickPlayFavoritesStore.station(matching: configuration.station?.id, in: favorites)
+        return QuickPlayEntry(
             date: date,
-            station: resolved(configuration),
+            station: station,
+            configuredStationMissing: configuration.station != nil && station == nil,
             nowPlaying: nowPlaying(for: configuration, at: date),
         )
     }
@@ -120,16 +131,6 @@ struct QuickPlayProvider: AppIntentTimelineProvider {
         }
         return snapshot
     }
-
-    /// The user's chosen station, falling back to their first favorite so a
-    /// freshly added widget still shows something before it's configured.
-    private func resolved(_ configuration: SelectFavoriteStationIntent) -> QuickPlayStationSnapshot? {
-        let favorites = QuickPlayFavoritesStore.load()
-        if let id = configuration.station?.id, let match = favorites.first(where: { $0.id == id }) {
-            return match
-        }
-        return favorites.first
-    }
 }
 
 // MARK: - View
@@ -143,6 +144,8 @@ struct QuickPlayWidgetEntryView: View {
                 NowPlayingTileView(snapshot: nowPlaying)
             } else if let station = entry.station {
                 stationView(station)
+            } else if entry.configuredStationMissing {
+                missingFavoriteView
             } else {
                 emptyView
             }
@@ -183,6 +186,19 @@ struct QuickPlayWidgetEntryView: View {
         } else {
             content
         }
+    }
+
+    private var missingFavoriteView: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "heart.slash")
+                .font(.title2)
+                .foregroundStyle(.secondary)
+            Text("This station is no longer a favorite. Edit the widget to choose another.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var emptyView: some View {

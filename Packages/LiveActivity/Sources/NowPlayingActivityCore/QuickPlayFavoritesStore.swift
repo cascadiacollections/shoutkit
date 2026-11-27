@@ -65,6 +65,20 @@ public enum QuickPlayFavoritesStore {
         }
     }
 
+    /// The favorite a quick-play tile should open.
+    ///
+    /// An unset configuration uses the first favorite, so a widget that has
+    /// not been edited yet still shows a station. A configuration that names a
+    /// station no longer in `favorites` does not fall through to another one:
+    /// that tile would play a station the listener did not choose.
+    public static func station(
+        matching configuredID: String?,
+        in favorites: [QuickPlayStationSnapshot],
+    ) -> QuickPlayStationSnapshot? {
+        guard let configuredID else { return favorites.first }
+        return favorites.first { $0.id == configuredID }
+    }
+
     /// Reads the staged favorites, or an empty list if none are staged or the
     /// file can't be read. Read side, used by the widget.
     public static func load() -> [QuickPlayStationSnapshot] {
