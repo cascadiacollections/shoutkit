@@ -86,6 +86,6 @@ jobs:
         run: |
           gh release create "$TAG" \
             --verify-tag \
-            --title "Holmdel $VERSION" \
+            --title "ShoutKit $VERSION" \
             --notes-file release-notes.md \
             --draft
