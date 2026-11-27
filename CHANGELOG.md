@@ -66,6 +66,11 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
   moment before that — the screen still says Connecting, but the stream has
   started — the station kept going on the built-in speaker. It now pauses,
   and plugging back in starts it again.
+- **The Quick Play widget no longer plays a different station.** If you set
+  the widget to a favorite and later remove that favorite, the tile played
+  whichever favorite was left at the top of the list. It now says the station
+  is gone and waits for you to pick another. A widget you have not configured
+  still plays your first favorite.
 - **A brief dropout no longer dips the volume.** Coming back from a short
   buffer underrun used to cut the audio and fade it back up, because that
   fade runs for a fresh start, a resume, and a reconnect. It now runs only

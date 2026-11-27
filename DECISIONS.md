@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-11-27 (a removed Quick Play favorite is not replaced)
+
+`QuickPlayProvider.resolved` treated a configured id that was no longer in
+the App Group snapshot the same as an unset configuration: both returned
+`favorites.first`. That is right for a widget the listener has never edited.
+It is wrong once they have chosen a station. Removing that favorite — or
+the snapshot briefly not containing it — made the tile open a different
+station, with that station's name on it, and no sign the choice had changed.
+
+The choice now lives on `QuickPlayFavoritesStore.station(matching:in:)`,
+which the widget calls. A missing configured id returns nil. The tile shows
+that the station is no longer a favorite and has no `widgetURL`, so a tap
+opens the app and does not auto-play someone else. An unset configuration
+still uses the first favorite.
+
 ## 2026-11-27 (unplugging headphones during Connecting pauses the stream)
 
 `handleRouteLost()` paused for `.playing` and `.buffering` only. That matched

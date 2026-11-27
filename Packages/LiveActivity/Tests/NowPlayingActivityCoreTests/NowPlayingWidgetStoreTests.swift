@@ -152,3 +152,34 @@ struct NowPlayingWidgetStoreTests {
         }
     }
 }
+
+struct QuickPlayStationChoiceTests {
+    private func favorite(_ id: String) -> QuickPlayStationSnapshot {
+        QuickPlayStationSnapshot(
+            id: id,
+            name: id.uppercased(),
+            genre: "Rock",
+            deepLinkURLString: "holmdel://station?id=\(id)&autoPlay=1",
+        )
+    }
+
+    @Test func `an unconfigured widget uses the first favorite`() {
+        let favorites = [favorite("kexp"), favorite("wfmu")]
+        #expect(QuickPlayFavoritesStore.station(matching: nil, in: favorites)?.id == "kexp")
+    }
+
+    @Test func `a configured favorite is the station the tile plays`() {
+        let favorites = [favorite("kexp"), favorite("wfmu")]
+        #expect(QuickPlayFavoritesStore.station(matching: "wfmu", in: favorites)?.id == "wfmu")
+    }
+
+    @Test func `a removed favorite is not replaced by another station`() {
+        let favorites = [favorite("kexp")]
+        #expect(QuickPlayFavoritesStore.station(matching: "wfmu", in: favorites) == nil)
+    }
+
+    @Test func `no favorites leaves the tile empty`() {
+        #expect(QuickPlayFavoritesStore.station(matching: nil, in: []) == nil)
+        #expect(QuickPlayFavoritesStore.station(matching: "kexp", in: []) == nil)
+    }
+}
