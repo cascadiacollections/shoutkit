@@ -25,6 +25,20 @@ private actor FakeDiscoveryCache: DirectoryDiscoveryCaching {
 
 private let capturedAt = Date(timeIntervalSinceReferenceDate: 0)
 
+private func stationsOnlyState(isFresh: Bool) -> DirectoryDiscoverySnapshotState {
+    DirectoryDiscoverySnapshotState(
+        snapshot: DirectoryDiscoverySnapshot(
+            topStations: DirectoryDiscoverySnapshot.TopStations(
+                stations: [.fixture(id: "saved", name: "Saved Station")],
+                limit: 24,
+                capturedAt: capturedAt,
+            ),
+            sourceIdentity: "test",
+        ),
+        isFresh: isFresh,
+    )
+}
+
 private func savedState(isFresh: Bool) -> DirectoryDiscoverySnapshotState {
     DirectoryDiscoverySnapshotState(
         snapshot: DirectoryDiscoverySnapshot(
@@ -65,6 +79,53 @@ struct BrowseSavedContentTests {
         #expect(content.genres == [Genre(name: "Saved Genre")])
         #expect(content.origin == .saved(capturedAt: capturedAt))
         #expect(await directory.topStationsCallCount == 0)
+        #expect(await directory.genresCallCount == 0)
+    }
+
+    @Test func `fresh stations with no saved genres still fetch the genre strip`() async {
+        let directory = FakeRadioDirectory()
+        await directory.setGenresResult(.success([Genre(name: "Jazz")]))
+        let viewModel = BrowseViewModel(
+            directory: directory,
+            discoveryCache: FakeDiscoveryCache(state: stationsOnlyState(isFresh: true)),
+        )
+
+        await viewModel.refresh()
+
+        guard case let .loaded(content) = viewModel.phase else {
+            Issue.record("Expected .loaded, got \(viewModel.phase)")
+            return
+        }
+        // The station list stays the saved one. Only the missing genre half is fetched,
+        // so a genres failure on the previous launch does not reshuffle popular stations.
+        #expect(content.stations.map(\.id) == ["saved"])
+        #expect(content.genres == [Genre(name: "Jazz")])
+        #expect(content.origin == .saved(capturedAt: capturedAt))
+        #expect(await directory.topStationsCallCount == 0)
+        #expect(await directory.genresCallCount == 1)
+        #expect(viewModel.genresError == nil)
+    }
+
+    @Test func `a failed genre fill in keeps the saved station list`() async {
+        let directory = FakeRadioDirectory()
+        await directory.setGenresResult(.failure(.transport("offline")))
+        let viewModel = BrowseViewModel(
+            directory: directory,
+            discoveryCache: FakeDiscoveryCache(state: stationsOnlyState(isFresh: true)),
+        )
+
+        await viewModel.refresh()
+
+        guard case let .loaded(content) = viewModel.phase else {
+            Issue.record("Expected saved stations to stay, got \(viewModel.phase)")
+            return
+        }
+        #expect(content.stations.map(\.id) == ["saved"])
+        #expect(content.genres.isEmpty)
+        #expect(content.origin == .saved(capturedAt: capturedAt))
+        #expect(await directory.topStationsCallCount == 0)
+        #expect(viewModel.genresError == .transport("offline"))
+        #expect(viewModel.refreshError == nil)
     }
 
     @Test func `stale saved content is replaced by live content`() async {
