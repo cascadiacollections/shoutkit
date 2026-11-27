@@ -449,15 +449,50 @@ jobs:
           xcrun simctl boot "${{ steps.toolchain.outputs.udid }}" || true
           xcrun simctl bootstatus "${{ steps.toolchain.outputs.udid }}" -b
 
+      # What the runner is busy with once the simulator reports booted. Over 60
+      # runs to 2026-11-27 the test step's median was 8.7 minutes, and the tests
+      # themselves are about 3 of them: in the three runs read line by line,
+      # xcodebuild took 3-4 minutes to print its first line (2 seconds in the
+      # build step above) and then 0.5-3.5 minutes on "Resolve Package Graph".
+      # A snapshot here says what is using the machine at that moment, in the
+      # log where the Checks API can reach it. A few seconds; never fatal.
+      - name: Runner load after boot
+        continue-on-error: true
+        timeout-minutes: 1
+        run: |
+          uptime
+          sysctl -n hw.ncpu hw.memsize
+          top -l 2 -s 2 -n 12 -o cpu -stats pid,command,cpu,time,mem | tail -n 14
+
+      # From the .xctestrun file that build-for-testing wrote, when there is
+      # exactly one for the Holmdel plan. That is the form meant for running a
+      # finished build: xcodebuild does not open the workspace or resolve the
+      # package graph again, which is the 0.5-3.5 minutes measured above. The
+      # file carries the plan's settings, coverage included. Anything other
+      # than exactly one match falls back to the workspace form this step
+      # always used, so a renamed plan or a second file cannot fail the job;
+      # the "Verify every test plan target ran" step below checks either path.
       - name: Test app (Debug)
         run: |
           set -o pipefail
-          xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
-            -destination "platform=iOS Simulator,id=${{ steps.toolchain.outputs.udid }}" \
-            -derivedDataPath DerivedData \
-            -resultBundlePath TestResults.xcresult \
-            CODE_SIGNING_ALLOWED=NO \
-            test-without-building 2>&1 | tee -a build.log
+          shopt -s nullglob
+          runs=(DerivedData/Build/Products/Holmdel_Holmdel_*.xctestrun)
+          if [ "${#runs[@]}" -eq 1 ]; then
+            echo "Testing from ${runs[0]}"
+            xcodebuild -xctestrun "${runs[0]}" \
+              -destination "platform=iOS Simulator,id=${{ steps.toolchain.outputs.udid }}" \
+              -resultBundlePath TestResults.xcresult \
+              test-without-building 2>&1 | tee -a build.log
+          else
+            echo "Expected one Holmdel .xctestrun file, found ${#runs[@]}; testing from the workspace."
+            printf '%s\n' DerivedData/Build/Products/*.xctestrun
+            xcodebuild -workspace Holmdel.xcworkspace -scheme Holmdel \
+              -destination "platform=iOS Simulator,id=${{ steps.toolchain.outputs.udid }}" \
+              -derivedDataPath DerivedData \
+              -resultBundlePath TestResults.xcresult \
+              CODE_SIGNING_ALLOWED=NO \
+              test-without-building 2>&1 | tee -a build.log
+          fi
 
       # Xcode can succeed while silently omitting unresolved package targets.
       - name: Verify every test plan target ran
