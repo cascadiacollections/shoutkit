@@ -30,12 +30,30 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
 
     private let snapshotStore: any DirectorySnapshotStoring?
     private let snapshotTimeToLive: TimeInterval
-    /// Evaluated per snapshot read/write rather than captured once: the geo
-    /// filter it describes changes at runtime.
+    /// Evaluated per memory-cache read and per snapshot read/write rather than
+    /// captured once: the geo filter it describes changes at runtime.
     private let snapshotIdentity: @Sendable () async -> String?
 
-    private var genresCache: (value: [Genre], fetchedAt: Date)?
-    private var genresInFlight: Task<Result<[Genre], RadioDirectoryError>, Never>?
+    private struct GenresCache {
+        let value: [Genre]
+        let fetchedAt: Date
+        /// ``snapshotIdentity`` when this value was fetched. A later read under
+        /// another region must not be served from it.
+        let identity: String?
+    }
+
+    private var genresCache: GenresCache?
+
+    /// An in-flight genres fetch. The generation keeps a fetch for one region
+    /// from clearing a newer registration when the region changes mid-flight.
+    private struct GenresInFlight {
+        let task: Task<Result<[Genre], RadioDirectoryError>, Never>
+        let identity: String?
+        let generation: Int
+    }
+
+    private var genresInFlight: GenresInFlight?
+    private var genresGeneration = 0
 
     /// A cached top-stations fetch, retained with the limit it was fetched at so
     /// a larger fetch can serve any smaller request.
@@ -43,6 +61,8 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
         let value: [Station]
         let fetchedLimit: Int
         let fetchedAt: Date
+        /// ``snapshotIdentity`` when this value was fetched.
+        let identity: String?
     }
 
     private var topStationsCache: TopStationsCache?
@@ -55,6 +75,7 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
         let task: Task<Result<[Station], RadioDirectoryError>, Never>
         let limit: Int
         let generation: Int
+        let identity: String?
     }
 
     private var topStationsInFlight: TopStationsInFlight?
@@ -85,16 +106,46 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
     // MARK: - Cached discovery calls
 
     public func genres() async throws(RadioDirectoryError) -> [Genre] {
-        if let cache = genresCache, isFresh(cache.fetchedAt) {
+        let identity = await snapshotIdentity()
+        if let cache = genresCache, cache.identity == identity, isFresh(cache.fetchedAt) {
             return cache.value
         }
 
-        if let inFlight = genresInFlight {
+        if let inFlight = genresInFlight, inFlight.identity == identity {
             // Coalescing intentionally awaits the shared unstructured task to
             // completion; cancelling one caller does not cancel the base fetch.
-            return try await (inFlight.value).get()
+            return try await inFlight.task.value.get()
         }
 
+        return try await fetchGenres(identity: identity)
+    }
+
+    public func topStations(limit: Int) async throws(RadioDirectoryError) -> [Station] {
+        let identity = await snapshotIdentity()
+        // A larger cached fetch can serve any smaller request, but only for
+        // the region it was fetched under.
+        if let cache = topStationsCache,
+           cache.identity == identity,
+           cache.fetchedLimit >= limit,
+           isFresh(cache.fetchedAt) {
+            return Array(cache.value.prefix(limit))
+        }
+
+        if let inFlight = topStationsInFlight, inFlight.identity == identity, inFlight.limit >= limit {
+            // Coalescing intentionally awaits the shared unstructured task to
+            // completion; cancelling one caller does not cancel the base fetch.
+            let stations = try await inFlight.task.value.get()
+            return Array(stations.prefix(limit))
+        }
+
+        let result = await fetchTopStations(limit: limit, identity: identity)
+        await storeTopStations(result, limit: limit, identity: identity)
+        return try Array(result.get().prefix(limit))
+    }
+
+    /// Issues the base genres fetch and stores it only while the region it was
+    /// fetched for is still the current one.
+    private func fetchGenres(identity: String?) async throws(RadioDirectoryError) -> [Genre] {
         let base = self.base
         let task = Task<Result<[Genre], RadioDirectoryError>, Never> {
             do {
@@ -106,48 +157,28 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
             }
         }
 
-        genresInFlight = task
+        genresGeneration += 1
+        let generation = genresGeneration
+        genresInFlight = GenresInFlight(task: task, identity: identity, generation: generation)
         let result = await task.value
-        genresInFlight = nil
+        if genresInFlight?.generation == generation {
+            genresInFlight = nil
+        }
 
-        if case let .success(genres) = result {
-            genresCache = (genres, now())
+        if case let .success(genres) = result, await snapshotIdentity() == identity {
+            genresCache = GenresCache(value: genres, fetchedAt: now(), identity: identity)
             await persist(genres: genres)
         }
         return try result.get()
     }
 
-    public func topStations(limit: Int) async throws(RadioDirectoryError) -> [Station] {
-        // A larger cached fetch can serve any smaller request.
-        if let cache = topStationsCache, cache.fetchedLimit >= limit, isFresh(cache.fetchedAt) {
-            return Array(cache.value.prefix(limit))
-        }
-
-        if let inFlight = topStationsInFlight, inFlight.limit >= limit {
-            // Coalescing intentionally awaits the shared unstructured task to
-            // completion; cancelling one caller does not cancel the base fetch.
-            let stations = try await (inFlight.task.value).get()
-            return Array(stations.prefix(limit))
-        }
-
-        let result = await fetchTopStations(limit: limit)
-
-        if case let .success(stations) = result {
-            // Don't let a slower, smaller fetch downgrade a fresher, larger
-            // cache entry a concurrent caller already stored.
-            let keepExisting = topStationsCache.map { isFresh($0.fetchedAt) && $0.fetchedLimit > limit } ?? false
-            if !keepExisting {
-                topStationsCache = TopStationsCache(value: stations, fetchedLimit: limit, fetchedAt: now())
-                await persist(topStations: stations, limit: limit)
-            }
-        }
-        return try Array(result.get().prefix(limit))
-    }
-
     /// Issues the base top-stations fetch, registering it so concurrent callers
-    /// can coalesce onto it. Extracted from `topStations(limit:)` so the cache
-    /// bookkeeping there stays readable.
-    private func fetchTopStations(limit: Int) async -> Result<[Station], RadioDirectoryError> {
+    /// for the same region can coalesce onto it. Extracted from
+    /// `topStations(limit:)` so the cache bookkeeping there stays readable.
+    private func fetchTopStations(
+        limit: Int,
+        identity: String?,
+    ) async -> Result<[Station], RadioDirectoryError> {
         let base = self.base
         let task = Task<Result<[Station], RadioDirectoryError>, Never> {
             do {
@@ -161,14 +192,44 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
 
         topStationsGeneration += 1
         let generation = topStationsGeneration
-        topStationsInFlight = TopStationsInFlight(task: task, limit: limit, generation: generation)
+        topStationsInFlight = TopStationsInFlight(
+            task: task,
+            limit: limit,
+            generation: generation,
+            identity: identity,
+        )
         let result = await task.value
         // Only deregister our own registration — a concurrent larger-limit
-        // fetch may have replaced it while we awaited.
+        // fetch, or one for a new region, may have replaced it while we awaited.
         if topStationsInFlight?.generation == generation {
             topStationsInFlight = nil
         }
         return result
+    }
+
+    /// Keeps a successful fetch when it still belongs to the current region,
+    /// and when it would not replace a fresher larger fetch for that region.
+    private func storeTopStations(
+        _ result: Result<[Station], RadioDirectoryError>,
+        limit: Int,
+        identity: String?,
+    ) async {
+        guard case let .success(stations) = result else { return }
+        // The region moved on while this fetch was in flight. Writing it now
+        // would label the previous region's stations with the new one, in
+        // memory and on disk.
+        guard await snapshotIdentity() == identity else { return }
+        let keepExisting = topStationsCache.map {
+            $0.identity == identity && isFresh($0.fetchedAt) && $0.fetchedLimit > limit
+        } ?? false
+        guard keepExisting == false else { return }
+        topStationsCache = TopStationsCache(
+            value: stations,
+            fetchedLimit: limit,
+            fetchedAt: now(),
+            identity: identity,
+        )
+        await persist(topStations: stations, limit: limit)
     }
 
     // MARK: - Persisted snapshot

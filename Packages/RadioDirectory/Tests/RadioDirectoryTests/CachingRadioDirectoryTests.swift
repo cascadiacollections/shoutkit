@@ -140,6 +140,65 @@ struct CachingRadioDirectoryTests {
         #expect(await counting.topStationsCalls == 2)
     }
 
+    @Test func `memory cache is not served after the snapshot identity changes`() async throws {
+        let identity = OSAllocatedUnfairLock(initialState: "country=US")
+        let counting = CountingDirectory()
+        let cache = CachingRadioDirectory(
+            base: counting,
+            snapshotIdentity: { identity.withLock { $0 } },
+        )
+
+        _ = try await cache.topStations(limit: 24)
+        _ = try await cache.genres()
+        identity.withLock { $0 = "country=JP" }
+        _ = try await cache.topStations(limit: 24)
+        _ = try await cache.genres()
+
+        // Travel, or a region change, has to miss the 60-second window too.
+        // The on-disk snapshot already did; the memory tier was still serving
+        // the previous region's list.
+        #expect(await counting.topStationsCalls == 2)
+        #expect(await counting.genresCalls == 2)
+    }
+
+    @Test func `same snapshot identity still serves the memory cache`() async throws {
+        let counting = CountingDirectory()
+        let cache = CachingRadioDirectory(
+            base: counting,
+            snapshotIdentity: { "country=US" },
+        )
+
+        _ = try await cache.topStations(limit: 24)
+        _ = try await cache.topStations(limit: 10)
+        _ = try await cache.genres()
+        _ = try await cache.genres()
+
+        #expect(await counting.topStationsCalls == 1)
+        #expect(await counting.genresCalls == 1)
+    }
+
+    @Test func `an in flight fetch is not reused after the identity changes`() async throws {
+        let identity = OSAllocatedUnfairLock(initialState: "country=US")
+        let counting = CountingDirectory()
+        await counting.setResponseDelay(.milliseconds(150))
+        let cache = CachingRadioDirectory(
+            base: counting,
+            snapshotIdentity: { identity.withLock { $0 } },
+        )
+
+        let first = Task { try await cache.topStations(limit: 24) }
+        try? await Task.sleep(for: .milliseconds(30))
+        identity.withLock { $0 = "country=JP" }
+        _ = try await cache.topStations(limit: 24)
+        _ = try await first.value
+
+        #expect(await counting.topStationsCalls == 2)
+
+        // The US result finishing late must not replace the JP cache entry.
+        _ = try await cache.topStations(limit: 24)
+        #expect(await counting.topStationsCalls == 2)
+    }
+
     @Test func `station lookup passes through to base`() async throws {
         let counting = CountingDirectory()
         let cache = CachingRadioDirectory(base: counting)

@@ -75,6 +75,10 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
   whichever favorite was left at the top of the list. It now says the station
   is gone and waits for you to pick another. A widget you have not configured
   still plays your first favorite.
+- **Changing region no longer shows the previous region's stations.** The
+  saved list already refetched after a region change. For about a minute
+  after that, the in-memory copy could still hand back the old list. It now
+  follows the region too.
 - **A brief dropout no longer dips the volume.** Coming back from a short
   buffer underrun used to cut the audio and fade it back up, because that
   fade runs for a fresh start, a resume, and a reconnect. It now runs only
