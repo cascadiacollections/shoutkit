@@ -16,6 +16,23 @@ moved on is not stored: writing it would label the old region's stations with
 the new one, in memory and, through `persist`, on disk. Switching back within
 the minute still hits the entry for that region.
 
+## 2026-11-27 (a fresh station snapshot still fetches genres that were never saved)
+
+Genres are non-fatal on the landing surfaces. A launch can persist
+`topStations` and leave `genres` nil. Freshness is the oldest half that is
+present, so that snapshot is fresh, and `BrowseViewModel.refresh` returned
+before any directory call. The genre strip then stayed empty until the
+six-hour window ended or the listener pulled to refresh. Refetching
+everything to fill the strip would also refetch popular stations, which is
+the reshuffle the window exists to prevent.
+
+When the painted snapshot is fresh and its genre half is nil, the automatic
+refresh now calls `genres()` only and keeps the saved station list and its
+saved origin. A failure leaves the stations up and records `genresError`;
+the next launch tries the strip again, because a failed genres fetch is not
+cached. A snapshot that already has a genre half, including an empty one, is
+unchanged: the window still skips the directory entirely.
+
 ## 2026-11-25 (the rejoin fade does not run when a buffer underrun recovers)
 
 `fadeInVolume()` ran on every AudioStreaming transition into `.playing`.
