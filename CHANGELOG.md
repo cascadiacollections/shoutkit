@@ -57,6 +57,10 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
   roughly halves the Mac app's code size.
 
 ### Fixed
+- **Genre chips come back after a failed load.** When the station list was
+  saved and the genre list was not, Listen Now kept the stations and left the
+  chips empty for up to six hours. It now fetches just the chips, and leaves
+  the station list as it was.
 - **The Quick Play widget no longer plays a different station.** If you set
   the widget to a favorite and later remove that favorite, the tile played
   whichever favorite was left at the top of the list. It now says the station
