@@ -1,3 +1,4 @@
+import CoreData
 import Foundation
 @testable import Persistence
 import SwiftData
@@ -64,5 +65,41 @@ struct LibraryStoreDeduplicationTests {
         #expect(store.mergeDuplicateStations() == 2)
         #expect(try context.fetchCount(FetchDescriptor<FavoriteStation>()) == 1)
         #expect(try context.fetchCount(FetchDescriptor<RecentStation>()) == 1)
+    }
+
+    @Test func `reconciling after a remote change picks up favorites it did not insert`() throws {
+        let context = ModelContext(container)
+        let store = LibraryStore(context: context)
+        #expect(store.favoriteIDs.isEmpty)
+
+        // What an import from another device looks like to the store: rows it
+        // never inserted, one of them a duplicate.
+        context.insert(FavoriteStation(stationID: "kexp", name: "KEXP", genre: "", sortIndex: 0))
+        context.insert(FavoriteStation(stationID: "kexp", name: "KEXP", genre: "", sortIndex: 1))
+        context.insert(FavoriteStation(stationID: "wfmu", name: "WFMU", genre: "", sortIndex: 2))
+        try context.save()
+
+        store.reconcileAfterRemoteChange()
+
+        #expect(store.favoriteIDs == ["kexp", "wfmu"])
+        #expect(try context.fetchCount(FetchDescriptor<FavoriteStation>()) == 2)
+    }
+
+    @Test func `a remote change notification reconciles the store`() async throws {
+        let context = ModelContext(container)
+        let store = LibraryStore(context: context)
+        let center = NotificationCenter()
+        let token = store.observeRemoteChanges(in: center)
+        defer { center.removeObserver(token) }
+
+        context.insert(FavoriteStation(stationID: "kexp", name: "KEXP", genre: ""))
+        try context.save()
+        center.post(name: .NSPersistentStoreRemoteChange, object: nil)
+
+        // The observer runs on the main queue, which may be after this line.
+        for _ in 0 ..< 200 where store.favoriteIDs.isEmpty {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(store.favoriteIDs == ["kexp"])
     }
 }

@@ -35,6 +35,9 @@ struct TVRootView: View {
 
                 topStationsShelf
                     .focusSection()
+
+                TVICloudToggle()
+                    .focusSection()
             }
             .padding(60)
         }
@@ -230,5 +233,32 @@ struct TVRootView: View {
             return true
         }
         return false
+    }
+}
+
+/// The TV app has no Settings screen, so the one setting it needs sits under
+/// the shelves.
+private struct TVICloudToggle: View {
+    @Environment(\.settingsStore) private var settings
+
+    var body: some View {
+        if let settings {
+            VStack(alignment: .leading, spacing: 12) {
+                Toggle(
+                    "Sync with iCloud",
+                    isOn: Binding(
+                        get: { settings.isICloudSyncEnabled },
+                        set: { settings.isICloudSyncEnabled = $0 },
+                    ),
+                )
+                .frame(maxWidth: 700)
+                Text("""
+                Shares favorites and recent stations with your other devices. \
+                Takes effect the next time you open ShoutKit.
+                """)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            }
+        }
     }
 }

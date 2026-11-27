@@ -92,6 +92,10 @@ jobs:
           persist-credentials: false
       - name: Check the registered URL scheme matches StationLink
         run: .github/scripts/check-url-scheme.sh
+      # Same shape of mistake, different string: three apps and three
+      # entitlements files name one iCloud container, and a mismatch builds.
+      - name: Check every app names the same iCloud container
+        run: .github/scripts/check-icloud-container.sh
 
   # Locks the path predicate the Xcode Cloud post-clone hook uses before a
   # TestFlight upload. It runs on Ubuntu, so the mac jobs never wait on it.

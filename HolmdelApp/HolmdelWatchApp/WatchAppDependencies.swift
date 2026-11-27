@@ -12,12 +12,16 @@ struct WatchAppServices {
     let container: ModelContainer
     let libraryStore: LibraryStore
     let playbackController: PlaybackController
+    let settingsStore: SettingsStore
 }
 
 @MainActor
 enum WatchAppDependencies {
     private static var services: WatchAppServices?
     private static let watchLastStationSync = WatchLastStationSync()
+    /// Has to match `HolmdelWatchApp.entitlements` and the phone and TV apps;
+    /// `.github/scripts/check-icloud-container.sh` holds them together.
+    static let cloudKitContainerIdentifier = "iCloud.com.cascadiacollections.holmdel"
 
     @discardableResult
     static func bootstrap() -> WatchAppServices {
@@ -25,8 +29,15 @@ enum WatchAppDependencies {
             return services
         }
 
-        let container = ShoutKitModelContainer.makeContainer()
+        let settingsStore = SettingsStore()
+        // An unsigned build has no iCloud entitlement, and CloudKit crashes a
+        // process that asks for a container without one.
+        let syncs = settingsStore.isICloudSyncEnabled && CloudSyncEntitlement.isPresent()
+        let container = ShoutKitModelContainer.makeContainer(
+            cloudKitContainerIdentifier: syncs ? cloudKitContainerIdentifier : nil,
+        )
         let libraryStore = LibraryStore(context: container.mainContext)
+        libraryStore.observeRemoteChanges()
         let directory = CachingRadioDirectory(
             base: PreferredRadioDirectory(
                 base: RadioBrowserDirectoryClient(userAgent: "Holmdel/0.1"),
@@ -47,6 +58,7 @@ enum WatchAppDependencies {
             container: container,
             libraryStore: libraryStore,
             playbackController: playbackController,
+            settingsStore: settingsStore,
         )
         Self.services = services
         return services

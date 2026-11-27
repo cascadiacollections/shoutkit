@@ -24,6 +24,10 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
   News, Jazz, or Country. The first time you open the app, that chip is already selected.
   After that, Listen Now switches to it. Any other value is ignored, and the choice stays
   on your device.
+- **Your stations follow you.** Favorites, recently played stations and listening history now
+  sync through your own iCloud account between iPhone, iPad, Mac, Apple Watch and Apple TV.
+  It is on by default and can be turned off on each device: in Settings → iCloud on iPhone,
+  iPad and Mac, and at the bottom of the main screen on Apple Watch and Apple TV.
 - **The app is called ShoutKit.** The Home Screen, Siri and Shortcuts, the widgets, the watch
   and Apple TV apps and Settings all say ShoutKit. Beta builds up to 0.5.1 (31) said Holmdel.
   Nothing else changed: favorites, recents and settings carry over.

@@ -17,6 +17,7 @@ struct HolmdelTVApp: App {
                 .modelContainer(services.container)
                 .libraryStore(services.libraryStore)
                 .playbackController(services.playbackController)
+                .settingsStore(services.settingsStore)
                 .environment(\.tvDirectory, services.directory)
         }
     }
