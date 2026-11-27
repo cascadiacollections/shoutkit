@@ -77,7 +77,7 @@ The first App Store release. Since the beta:
 |---|---|
 | Support URL | `https://github.com/cascadiacollections/shoutkit/issues` |
 | Marketing URL | `https://cascadiacollections.github.io/shoutkit/` |
-| Privacy Policy URL | `https://cascadiacollections.github.io/shoutkit/#privacy` |
+| Privacy Policy URL | `https://cascadiacollections.github.io/shoutkit/privacy/` |
 
 ## App privacy questionnaire
 

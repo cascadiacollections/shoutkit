@@ -131,11 +131,12 @@ Still to do in App Store Connect, by hand:
 - **Screenshots.** None are in the repo. The store requires them for the iPhone sizes you
   ship and for iPad. Capture them from a Release build that shows ShoutKit (a build made
   after 2026-11-20), and not Live Activity or CarPlay.
-- **Privacy policy URL.** `site/index.html#privacy` exists, and both it and the README now
-  list all four kinds of traffic: directory queries, streams, play reports, and album-art
-  lookups, which send artist and title to the iTunes Search API when Settings → Privacy →
-  Fetch Album Artwork is on (the default). Draft answers for the privacy questionnaire are
-  in `docs/APP_STORE_LISTING.md`. Point the listing at a URL you will keep up.
+- **Privacy policy URL.** `https://cascadiacollections.github.io/shoutkit/privacy/`
+  (`site/privacy/index.html`). The home page still has a short privacy section. The page
+  lists directory queries, streams, play reports, and album-art lookups, which send artist
+  and title to the iTunes Search API when Settings → Privacy → Fetch Album Artwork is on
+  (the default). Draft answers for the privacy questionnaire are in
+  `docs/APP_STORE_LISTING.md`.
 - **Support URL.** GitHub issues will do. Set it on the version.
 - **Age rating, subtitle, description, keywords, and the Mac availability checkbox.** Drafts
   for all but the last are in `docs/APP_STORE_LISTING.md`. Mac Catalyst is a destination of

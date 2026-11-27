@@ -1,5 +1,55 @@
 # Decisions
 
+## 2026-11-27 (a removed Quick Play favorite is not replaced)
+
+`QuickPlayProvider.resolved` treated a configured id that was no longer in
+the App Group snapshot the same as an unset configuration: both returned
+`favorites.first`. That is right for a widget the listener has never edited.
+It is wrong once they have chosen a station. Removing that favorite — or
+the snapshot briefly not containing it — made the tile open a different
+station, with that station's name on it, and no sign the choice had changed.
+
+The choice now lives on `QuickPlayFavoritesStore.station(matching:in:)`,
+which the widget calls. A missing configured id returns nil. The tile shows
+that the station is no longer a favorite and has no `widgetURL`, so a tap
+opens the app and does not auto-play someone else. An unset configuration
+still uses the first favorite.
+
+## 2026-11-27 (unplugging headphones during Connecting pauses the stream)
+
+`handleRouteLost()` paused for `.playing` and `.buffering` only. That matched
+the engine's "only when the player is active" check, and it missed the gap
+`handleInterruptionBegan` already closes: `state` stays `.loading` until the
+first stream status, while `output.start` has already run. AudioStreaming
+emits `.routeLost` as soon as its player is buffering. When that callback won
+the race with `.buffering`, the controller ignored it, the buffering status
+then moved the state forward with `playbackRequested` still set, and the
+station came out of the speaker.
+
+The loading case now does what a pause or an interruption during loading
+does: cancel the resolve, tear down a started player, and show paused. It
+also arms `resumeAfterRouteChange`, so a route coming back restarts the
+stream. A later explicit pause or stop still clears that arm. A late status
+from the torn-down player is dropped with the generation, the same boundary
+as every other teardown.
+
+## 2026-11-27 (a fresh station snapshot still fetches genres that were never saved)
+
+Genres are non-fatal on the landing surfaces. A launch can persist
+`topStations` and leave `genres` nil. Freshness is the oldest half that is
+present, so that snapshot is fresh, and `BrowseViewModel.refresh` returned
+before any directory call. The genre strip then stayed empty until the
+six-hour window ended or the listener pulled to refresh. Refetching
+everything to fill the strip would also refetch popular stations, which is
+the reshuffle the window exists to prevent.
+
+When the painted snapshot is fresh and its genre half is nil, the automatic
+refresh now calls `genres()` only and keeps the saved station list and its
+saved origin. A failure leaves the stations up and records `genresError`;
+the next launch tries the strip again, because a failed genres fetch is not
+cached. A snapshot that already has a genre half, including an empty one, is
+unchanged: the window still skips the directory entirely.
+
 ## 2026-11-25 (the rejoin fade does not run when a buffer underrun recovers)
 
 `fadeInVolume()` ran on every AudioStreaming transition into `.playing`.
