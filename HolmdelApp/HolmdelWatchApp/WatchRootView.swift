@@ -6,6 +6,7 @@ import SwiftUI
 
 struct WatchRootView: View {
     @Environment(\.playbackController) private var playback
+    @Environment(\.settingsStore) private var settings
     @Query(sort: \RecentStation.playedAt, order: .reverse) private var recents: [RecentStation]
 
     var body: some View {
@@ -77,8 +78,32 @@ struct WatchRootView: View {
                     }
                 }
             }
+
+            iCloudSection
         }
         .navigationTitle("ShoutKit")
+    }
+
+    /// The watch has no Settings screen, so the one setting it needs lives at
+    /// the bottom of the list.
+    @ViewBuilder
+    private var iCloudSection: some View {
+        if let settings {
+            Section {
+                Toggle(
+                    "Sync with iCloud",
+                    isOn: Binding(
+                        get: { settings.isICloudSyncEnabled },
+                        set: { settings.isICloudSyncEnabled = $0 },
+                    ),
+                )
+            } footer: {
+                Text("""
+                Shares favorites and recent stations with your other devices. \
+                Takes effect the next time you open ShoutKit.
+                """)
+            }
+        }
     }
 
     private var latestRecent: RecentStation? {

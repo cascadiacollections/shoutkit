@@ -76,4 +76,13 @@ struct SettingsStoreTests {
         let reloadedAgain = SettingsStore(defaults: defaults)
         #expect(reloadedAgain.isDiagnosticsSharingEnabled == false)
     }
+
+    @Test func `iCloud sync defaults to enabled and persists`() throws {
+        let defaults = try makeDefaults()
+        let store = SettingsStore(defaults: defaults)
+        #expect(store.isICloudSyncEnabled == true)
+
+        store.isICloudSyncEnabled = false
+        #expect(SettingsStore(defaults: defaults).isICloudSyncEnabled == false)
+    }
 }

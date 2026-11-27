@@ -96,6 +96,11 @@ third-party services, with no identifier attached:
 | Streams and station artwork | The station you chose | A plain HTTP request | No |
 | Play reports | Radio-Browser | The station's public id | Yes, Settings → Privacy |
 | Album-art lookups | Apple's iTunes Search API | Artist and title of the track on air | Yes, Settings → Privacy |
+| iCloud sync | The listener's own private iCloud database | Favorites, recently played stations, listening history | Yes, Settings → iCloud |
+
+iCloud sync is not collection either, by the same definition: the data goes to the listener's
+private CloudKit database, which the developer cannot read. The privacy manifests stay at zero
+collected data types.
 
 Each of those services sees the device's IP address, as any server does. If Apple or a
 reviewer reads "search terms sent to a third party" as collecting Search History, the

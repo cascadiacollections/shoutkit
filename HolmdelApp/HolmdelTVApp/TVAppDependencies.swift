@@ -10,6 +10,7 @@ struct TVAppServices {
     let container: ModelContainer
     let libraryStore: LibraryStore
     let playbackController: PlaybackController
+    let settingsStore: SettingsStore
     /// Exposed (the watch app does not) because the TV browses: `TVRootView` loads
     /// `topStations(limit:)` for its shelf, and there is no `Features/*` view model
     /// on this platform to hold a directory of its own.
@@ -34,6 +35,9 @@ struct TVAppServices {
 @MainActor
 enum TVAppDependencies {
     private static var services: TVAppServices?
+    /// Has to match `HolmdelTVApp.entitlements` and the phone and watch apps;
+    /// `.github/scripts/check-icloud-container.sh` holds them together.
+    static let cloudKitContainerIdentifier = "iCloud.com.cascadiacollections.holmdel"
 
     @discardableResult
     static func bootstrap() -> TVAppServices {
@@ -41,8 +45,15 @@ enum TVAppDependencies {
             return services
         }
 
-        let container = ShoutKitModelContainer.makeContainer()
+        let settingsStore = SettingsStore()
+        // An unsigned build has no iCloud entitlement, and CloudKit crashes a
+        // process that asks for a container without one.
+        let syncs = settingsStore.isICloudSyncEnabled && CloudSyncEntitlement.isPresent()
+        let container = ShoutKitModelContainer.makeContainer(
+            cloudKitContainerIdentifier: syncs ? cloudKitContainerIdentifier : nil,
+        )
         let libraryStore = LibraryStore(context: container.mainContext)
+        libraryStore.observeRemoteChanges()
         let directory = CachingRadioDirectory(
             base: PreferredRadioDirectory(
                 base: RadioBrowserDirectoryClient(userAgent: "Holmdel/0.1"),
@@ -62,6 +73,7 @@ enum TVAppDependencies {
             container: container,
             libraryStore: libraryStore,
             playbackController: playbackController,
+            settingsStore: settingsStore,
             directory: directory,
         )
         Self.services = services

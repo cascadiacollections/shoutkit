@@ -15,6 +15,7 @@ public final class SettingsStore {
         static let streamLooping = DefaultsKey<Bool>.plist("settings.streamLoopingEnabled", default: false)
         static let spatialAudio = DefaultsKey<Bool>.plist("settings.spatialAudioEnabled", default: false)
         static let visualizer = DefaultsKey<Bool>.plist("settings.visualizerEnabled", default: true)
+        static let iCloudSync = DefaultsKey<Bool>.plist("settings.iCloudSyncEnabled", default: true)
     }
 
     /// Whether plays are reported to Radio-Browser (station UUID only, per that
@@ -73,6 +74,14 @@ public final class SettingsStore {
         didSet { defaults.set(isVisualizerEnabled, for: Keys.visualizer) }
     }
 
+    /// Whether favorites, recents and recently heard tracks sync through the
+    /// listener's private iCloud database. Defaults to on, as the system's own
+    /// apps do. Read once, when the model container is built, so a change
+    /// takes effect at the next launch.
+    public var isICloudSyncEnabled: Bool {
+        didSet { defaults.set(isICloudSyncEnabled, for: Keys.iCloudSync) }
+    }
+
     @ObservationIgnored private let defaults: UserDefaults
 
     public init(defaults: UserDefaults = .standard) {
@@ -84,5 +93,6 @@ public final class SettingsStore {
         isStreamLoopingEnabled = defaults.value(for: Keys.streamLooping)
         isSpatialAudioEnabled = defaults.value(for: Keys.spatialAudio)
         isVisualizerEnabled = defaults.value(for: Keys.visualizer)
+        isICloudSyncEnabled = defaults.value(for: Keys.iCloudSync)
     }
 }
