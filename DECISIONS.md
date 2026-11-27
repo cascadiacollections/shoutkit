@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-11-27 (the in-memory discovery cache follows the region)
+
+The on-disk snapshot is checked against `snapshotIdentity` on every read, and
+a fetch does not carry the other region's half into the new file. The
+60-second memory cache was not. `genres()` and `topStations(limit:)` compared
+only the TTL, so a region change — or any other identity change — inside that
+minute still returned the previous region's list. Pull-to-refresh hid it,
+because that path drops the memory cache. An automatic refresh did not.
+
+Each memory entry now records the identity it was fetched under. A read
+misses when the identity differs, and an in-flight fetch is shared only with
+callers for that same identity. A fetch that finishes after the identity has
+moved on is not stored: writing it would label the old region's stations with
+the new one, in memory and, through `persist`, on disk. Switching back within
+the minute still hits the entry for that region.
+
 ## 2026-11-25 (the rejoin fade does not run when a buffer underrun recovers)
 
 `fadeInVolume()` ran on every AudioStreaming transition into `.playing`.
