@@ -244,6 +244,7 @@
     }
     .ico svg { width: 24px; height: 24px; }
     #holidays .tile { position: relative; overflow: hidden; }
+    #holidays .tile h3 { font-size: 17px; letter-spacing: -0.01em; }
     #holidays .tile::before { content: ""; position: absolute; inset: 0 0 auto; height: 4px; background: var(--grad); }
     .tile p { color: var(--muted); font-size: 15px; line-height: 1.5; }
     .tile .tag { margin-bottom: 10px; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--accent); }
@@ -506,7 +507,7 @@
             "name": "Does it track me?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "No. No ads, no analytics, no account, and the privacy manifest declares no collected data and no tracking. The app talks only to what radio needs: the station directory, the streams you play, Apple’s iTunes Search for album art (it sends the current artist and track title), and anonymous play counts that help the directory rank stations. The privacy page lists each of those requests."
+              "text": "No. No ads, no analytics, no account, and the privacy manifest declares no collected data and no tracking. The app talks only to what radio needs: the station directory, the streams you play, Apple’s iTunes Search for album art (it sends the current artist and track title), and anonymous play counts that help the directory rank stations. Favorites and recents also sync through your own private iCloud database unless you turn that off; ShoutKit’s developer can’t read it. The privacy page lists each of those requests."
             }
           },
           {
@@ -546,7 +547,7 @@
             "name": "Why does the beta say Holmdel or Squan?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "The app is ShoutKit. TestFlight still lists it as Squan, and beta builds from before late November 2026 install on your Home Screen as Holmdel. It’s the same app."
+              "text": "The app is ShoutKit. TestFlight still lists it as Squan, and the beta may install on your Home Screen as Holmdel, the app’s earlier name. It’s the same app."
             }
           },
           {
@@ -620,7 +621,7 @@
             </div>
             <p class="beta-note">
               Free public beta for iOS and iPadOS 26. For now TestFlight lists it as Squan, and
-              older beta builds install as Holmdel; it’s the same app. App Store: coming soon.
+              the beta may install as Holmdel; it’s the same app. App Store: coming soon.
             </p>
           </div>
           <div class="heroart">
@@ -674,17 +675,17 @@
         <div class="tiles">
           <article class="tile">
             <p class="tag">Search</p>
-            <h4>Find the holiday stations</h4>
+            <h3>Find the holiday stations</h3>
             <p>Search “Christmas”, “holiday” or “carols” across the Radio-Browser directory, or narrow by tag and country with search filters.</p>
           </article>
           <article class="tile">
             <p class="tag">On the road</p>
-            <h4>Radio for the long drive</h4>
+            <h3>Radio for the long drive</h3>
             <p>Keeps playing in the background with controls on the Lock Screen, and the sleep timer pauses it when everyone dozes off.</p>
           </article>
           <article class="tile">
             <p class="tag">Family gatherings</p>
-            <h4>Put it on the big speaker</h4>
+            <h3>Put it on the big speaker</h3>
             <p>Send the station to an AirPlay speaker or TV from Now Playing, and save the family’s favorites with a tap.</p>
           </article>
         </div>
@@ -732,7 +733,7 @@
           <article class="tile">
             <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
             <h3>Private by design</h3>
-            <p>No sign-up and no analytics. Favorites and recents stay on your device.</p>
+            <p>No sign-up and no analytics. Favorites and recents stay on your device, or in your own iCloud account if you sync them.</p>
           </article>
           <article class="tile">
             <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg></span>
@@ -770,7 +771,7 @@
           <div class="tiles">
             <article class="tile"><p class="tag">Discovery</p><h4>Thousands of stations, no key</h4><p>Real stations via the Radio-Browser community directory, from first launch.</p></article>
             <article class="tile"><p class="tag">Offline</p><h4>Stations without the wait</h4><p>Cached on device, so stations appear instantly, even when the network drops.</p></article>
-            <article class="tile"><p class="tag">Library</p><h4>Favorites &amp; recents</h4><p>Stored locally with SwiftData. Reorder your favorites, and find the stations you played last in Recents.</p></article>
+            <article class="tile"><p class="tag">Library</p><h4>Favorites &amp; recents</h4><p>Stored on your device and synced through your own iCloud account, unless you turn sync off. Reorder your favorites, and find the stations you played last in Recents.</p></article>
           </div>
         </div>
 
@@ -803,7 +804,7 @@
           </li>
           <li>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
-            <div><strong>Your library stays with you.</strong><p>Favorites and recents live on your device. No server, no sync service, no sign-up.</p></div>
+            <div><strong>Your library stays with you.</strong><p>Favorites and recents live on your device and, unless you turn sync off, in your own private iCloud database. Apple stores it; ShoutKit’s developer can’t read it. No ShoutKit server, no sign-up.</p></div>
           </li>
           <li>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
@@ -814,7 +815,7 @@
             <div><strong>This page, too.</strong><p>No web fonts, no analytics, no cookies. System fonts, one HTML file and a few screenshots.</p></div>
           </li>
         </ul>
-        <p class="privacy-more">The <a href="privacy/">privacy page</a> lists what the iPhone app sends and what stays on the device.</p>
+        <p class="privacy-more">The <a href="privacy/">privacy page</a> lists what the iPhone app sends, what syncs through iCloud and what stays on the device.</p>
       </div>
     </section>
 
@@ -828,7 +829,7 @@
         <ul class="stores">
           <li>
             <h3>iPhone &amp; iPad beta</h3>
-            <p>Public beta through Apple’s TestFlight app. Older beta builds install as Holmdel.</p>
+            <p>Public beta through Apple’s TestFlight app. For now it may install as Holmdel.</p>
             <a class="btn btn-solid" data-link="testflight" href="https://testflight.apple.com/join/ZBSBTbRU">Join on TestFlight</a>
           </li>
           <li>
@@ -928,12 +929,12 @@ open Holmdel.xcworkspace <span class="c"># then ⌘R</span></code></pre>
         <div class="faq">
           <details><summary>Is it really free?</summary><p>Yes. No ads, no subscription and no in-app purchases. The app is open source, and every feature works for everyone.</p></details>
           <details><summary>Why would I pay for a store version?</summary><p>You don’t have to. App Store pricing hasn’t been decided. If a store version ever costs something, you’d be paying for the convenience of installing and updating through the store, and helping fund development, not unlocking features. The source stays open, so you can always build it yourself.</p></details>
-          <details><summary>Does it track me?</summary><p>No. No ads, no analytics, no account, and the privacy manifest declares no collected data and no tracking. The app talks only to what radio needs: the station directory, the streams you play, Apple’s iTunes Search for album art (it sends the current artist and track title), and anonymous play counts that help the directory rank stations. The <a href="privacy/">privacy page</a> lists each of those requests.</p></details>
+          <details><summary>Does it track me?</summary><p>No. No ads, no analytics, no account, and the privacy manifest declares no collected data and no tracking. The app talks only to what radio needs: the station directory, the streams you play, Apple’s iTunes Search for album art (it sends the current artist and track title), and anonymous play counts that help the directory rank stations. Favorites and recents also sync through your own private iCloud database unless you turn that off; ShoutKit’s developer can’t read it. The <a href="privacy/">privacy page</a> lists each of those requests.</p></details>
           <details><summary>Which stations can I listen to?</summary><p>Thousands. Stations come from <a href="https://www.radio-browser.info">Radio-Browser</a>, a free, community-run directory that anyone can add to or correct, so no API key or account is needed.</p></details>
           <details><summary>Can I find Christmas and holiday music?</summary><p>Yes. Search for “Christmas”, “holiday” or “carols”, or use the search filters to narrow by tag and country. Stations come from <a href="https://www.radio-browser.info">Radio-Browser</a>, so what you find depends on what broadcasters and volunteers have listed.</p></details>
           <details><summary>Does radio use mobile data?</summary><p>Yes. Live streams need a connection and can use mobile data. Use Wi-Fi when you want to save your data allowance.</p></details>
           <details><summary>Which devices does it run on?</summary><p>The beta runs on iPhone and iPad with iOS or iPadOS 26 and later, and includes the Apple Watch app. The Apple TV app and the Mac Catalyst preview build from source. CarPlay is built but not available yet, because it needs an entitlement Apple hasn’t granted. On Android, see <a href="https://cascadiacollections.github.io/shoutkit-android/">ShoutKit for Android</a>.</p></details>
-          <details><summary>Why does the beta say Holmdel or Squan?</summary><p>The app is ShoutKit. TestFlight still lists it as Squan, and beta builds from before late November 2026 install on your Home Screen as Holmdel. It’s the same app.</p></details>
+          <details><summary>Why does the beta say Holmdel or Squan?</summary><p>The app is ShoutKit. TestFlight still lists it as Squan, and the beta may install on your Home Screen as Holmdel, the app’s earlier name. It’s the same app.</p></details>
           <details><summary>Can I build it myself?</summary><p>Yes. Clone it, open <code>Holmdel.xcworkspace</code> in Xcode 27, and run it. No secrets needed.</p></details>
         </div>
       </div>
@@ -1121,8 +1122,12 @@ open Holmdel.xcworkspace <span class="c"># then ⌘R</span></code></pre>
         applyPromo,
       };
 
+      // Read storage outside the call: in some privacy modes the getter itself
+      // throws, and that must not keep the banner hidden inside the window.
+      let storage = null;
+      try { storage = localStorage; } catch { /* blocked */ }
       try {
-        applyPromo(document, location, localStorage, new Date());
+        applyPromo(document, location, storage, new Date());
       } catch {
         // Stay hidden. A failure here must not disturb the rest of the page.
       }
