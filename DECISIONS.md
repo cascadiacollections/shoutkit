@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-11-27 (unplugging headphones during Connecting pauses the stream)
+
+`handleRouteLost()` paused for `.playing` and `.buffering` only. That matched
+the engine's "only when the player is active" check, and it missed the gap
+`handleInterruptionBegan` already closes: `state` stays `.loading` until the
+first stream status, while `output.start` has already run. AudioStreaming
+emits `.routeLost` as soon as its player is buffering. When that callback won
+the race with `.buffering`, the controller ignored it, the buffering status
+then moved the state forward with `playbackRequested` still set, and the
+station came out of the speaker.
+
+The loading case now does what a pause or an interruption during loading
+does: cancel the resolve, tear down a started player, and show paused. It
+also arms `resumeAfterRouteChange`, so a route coming back restarts the
+stream. A later explicit pause or stop still clears that arm. A late status
+from the torn-down player is dropped with the generation, the same boundary
+as every other teardown.
+
 ## 2026-11-27 (a fresh station snapshot still fetches genres that were never saved)
 
 Genres are non-fatal on the landing surfaces. A launch can persist
