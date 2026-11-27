@@ -13,6 +13,7 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
     var genreStationsDelayByGenre: [String: Duration] = [:]
 
     private(set) var genreStationsCallCount = 0
+    private(set) var genresCallCount = 0
     private(set) var topStationsCallCount = 0
 
     func setGenresResult(_ result: Result<[Genre], RadioDirectoryError>) {
@@ -35,8 +36,9 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
     }
 
     func genres() async throws(RadioDirectoryError) -> [Genre] {
+        genresCallCount += 1
         switch genresResult {
-        case let .success(genres): genres
+        case let .success(genres): return genres
         case let .failure(error): throw error
         }
     }
