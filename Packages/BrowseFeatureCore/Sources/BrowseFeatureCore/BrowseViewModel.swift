@@ -48,8 +48,8 @@ public enum GenreStationsPhase: Equatable, Sendable {
 /// a directory fetch.
 public enum BrowseRefreshSource: Equatable, Sendable {
     /// A surface appearing. Paints the saved snapshot first so the list is there
-    /// immediately, and skips the fetch entirely while that snapshot is inside its
-    /// stability window.
+    /// immediately, and skips the station fetch while that snapshot is inside its
+    /// stability window. A genre half that was never captured is still fetched.
     case automatic
     /// Pull-to-refresh, or a "Try Again" tap. Always reaches the directory.
     case userInitiated
@@ -94,10 +94,16 @@ public final class BrowseViewModel {
 
         // Saved stations first: a cold launch — or one where the connection is
         // about to disappear — shows the list it showed last time instead of a
-        // spinner, and a snapshot inside its stability window is the whole answer.
+        // spinner, and a snapshot inside its stability window is the station list.
         if source == .automatic {
-            let savedContentIsFresh = await presentSavedContent(generation: generation)
-            if savedContentIsFresh {
+            let saved = await presentSavedContent(generation: generation)
+            if saved.stationsAreFresh {
+                // Genres are non-fatal, so a snapshot can be fresh for stations
+                // while that half was never written. Fetching them here does not
+                // refetch the station list, which would reshuffle it.
+                if saved.needsGenres {
+                    await fillInGenres(generation: generation)
+                }
                 return
             }
         }
@@ -120,15 +126,23 @@ public final class BrowseViewModel {
         await loadLiveContent(generation: generation)
     }
 
-    /// Renders the persisted snapshot, if there is one worth rendering. Returns
-    /// whether it's fresh enough to stand alone — in which case the caller skips
-    /// the directory fetch for this pass.
-    private func presentSavedContent(generation: Int) async -> Bool {
-        guard let state = await discoveryCache.discoverySnapshotState() else { return false }
+    /// What an automatic refresh should do with a snapshot it was able to paint.
+    private struct SavedContentDecision {
+        var stationsAreFresh = false
+        /// The station list can stand in, and the genre half was never captured.
+        var needsGenres = false
+    }
+
+    /// Renders the persisted snapshot, if there is one worth rendering. A fresh
+    /// station list lets the caller skip the directory's top-stations fetch.
+    /// `needsGenres` is set when that list is fresh but the genre half is absent,
+    /// so the strip is not left empty for the rest of the stability window.
+    private func presentSavedContent(generation: Int) async -> SavedContentDecision {
+        guard let state = await discoveryCache.discoverySnapshotState() else { return SavedContentDecision() }
         let savedStations = state.snapshot.savedStations
-        guard savedStations.isEmpty == false else { return false }
+        guard savedStations.isEmpty == false else { return SavedContentDecision() }
         // A newer refresh started while the snapshot was being read.
-        guard refreshGeneration == generation else { return false }
+        guard refreshGeneration == generation else { return SavedContentDecision() }
 
         phase = .loaded(
             BrowseContent(
@@ -143,7 +157,26 @@ public final class BrowseViewModel {
         )
         genresError = nil
         refreshError = nil
-        return state.isFresh
+        return SavedContentDecision(
+            stationsAreFresh: state.isFresh,
+            needsGenres: state.isFresh && state.snapshot.genres == nil,
+        )
+    }
+
+    /// Fills the genre strip without touching the station list already on screen.
+    private func fillInGenres(generation: Int) async {
+        let (genres, error) = await Self.loadGenres(from: directory)
+        guard refreshGeneration == generation else { return }
+        genresError = error
+        guard error == nil, case let .loaded(content) = phase else { return }
+        phase = .loaded(
+            BrowseContent(
+                spotlight: content.spotlight,
+                stations: content.stations,
+                genres: genres,
+                origin: content.origin,
+            ),
+        )
     }
 
     private func loadLiveContent(generation: Int) async {

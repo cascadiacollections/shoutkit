@@ -57,6 +57,10 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
   roughly halves the Mac app's code size.
 
 ### Fixed
+- **Genre chips come back after a failed load.** When the station list was
+  saved and the genre list was not, Listen Now kept the stations and left the
+  chips empty for up to six hours. It now fetches just the chips, and leaves
+  the station list as it was.
 - **Unplugging headphones while a station is still connecting pauses it.**
   The pause already happened once audio was playing or buffering. During the
   moment before that — the screen still says Connecting, but the stream has
