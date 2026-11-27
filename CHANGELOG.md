@@ -57,6 +57,11 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
   roughly halves the Mac app's code size.
 
 ### Fixed
+- **Unplugging headphones while a station is still connecting pauses it.**
+  The pause already happened once audio was playing or buffering. During the
+  moment before that — the screen still says Connecting, but the stream has
+  started — the station kept going on the built-in speaker. It now pauses,
+  and plugging back in starts it again.
 - **A brief dropout no longer dips the volume.** Coming back from a short
   buffer underrun used to cut the audio and fade it back up, because that
   fade runs for a fresh start, a resume, and a reconnect. It now runs only

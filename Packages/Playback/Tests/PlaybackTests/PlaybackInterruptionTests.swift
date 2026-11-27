@@ -182,6 +182,45 @@ extension PlaybackTimingTests {
             #expect(output.resumeCount == 0)
         }
 
+        @Test func `route loss during loading silences a started output`() async {
+            let output = FakeAudioOutput()
+            let controller = makeController(stations: [station()], output: output)
+
+            controller.play(station())
+            await waitForStart(output)
+            // No status has landed yet, so the controller is still `.loading`
+            // even though the stream itself is already running.
+            #expect(controller.state == .loading(station()))
+
+            output.onStatusChange?(.routeLost)
+            #expect(output.stopCount == 1, "a started stream must not continue on the speaker")
+            #expect(controller.state == .paused(station()))
+
+            // A status from the torn-down player must not undo the pause.
+            output.emit(.playing)
+            #expect(controller.state == .paused(station()))
+
+            output.onStatusChange?(.routeAvailable)
+            await waitForStart(output, count: 2)
+            output.onStatusChange?(.playing)
+            #expect(controller.state == .playing(station()))
+            #expect(output.resumeCount == 0, "the player was torn down; the route return restarts it")
+        }
+
+        @Test func `pausing after route loss during loading stays paused`() async {
+            let output = FakeAudioOutput()
+            let controller = makeController(stations: [station()], output: output)
+
+            controller.play(station())
+            await waitForStart(output)
+            output.onStatusChange?(.routeLost)
+            controller.pause()
+            output.onStatusChange?(.routeAvailable)
+
+            #expect(output.startedURLs.count == 1)
+            #expect(controller.state == .paused(station()))
+        }
+
         @Test func `starting playback releases route resume claim`() async {
             let output = FakeAudioOutput()
             let controller = await playing(output: output)
