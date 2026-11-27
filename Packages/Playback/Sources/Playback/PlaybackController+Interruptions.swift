@@ -49,12 +49,48 @@ extension PlaybackController {
     func handleRouteLost() {
         switch state {
         case .playing, .buffering:
-            resumeAfterRouteChange = true
-            playbackRequested = false
-            output.pause()
+            pauseForRouteLoss()
+        case .loading:
+            // `.loading` lasts until the first stream status, but the engine
+            // reports a headphone unplug as soon as its player is buffering.
+            // The station can already be audible. Leaving this case alone let
+            // it come out of the speaker.
+            pauseLoadingForRouteLoss()
         default:
             break
         }
+    }
+
+    /// Pauses a stream the listener can already hear, and remembers to bring
+    /// it back when a route returns.
+    private func pauseForRouteLoss() {
+        resumeAfterRouteChange = true
+        playbackRequested = false
+        output.pause()
+    }
+
+    /// Silences a stream that has started — or is about to — while the
+    /// controller still says `.loading`. The player is torn down, as a pause
+    /// or an interruption during loading is, because the engine may not be in
+    /// a state `resume()` can continue. Plugging back in restarts it.
+    private func pauseLoadingForRouteLoss() {
+        guard let station = activeStation else { return }
+        resumeAfterRouteChange = true
+        playbackRequested = false
+        isReconnecting = false
+        reconnectTimer.cancel()
+        resumeWatchdogTimer.cancel()
+        resolveTask?.cancel()
+        tapToAudioTrace?.cancel()
+        tapToAudioTrace = nil
+        if outputStarted {
+            retireActiveStreamGeneration()
+            output.stop()
+            outputStarted = false
+        }
+        state = .paused(station)
+        pushNowPlaying(for: station, isPlaying: false)
+        schedulePausedRelease()
     }
 
     func handleRouteAvailable() {
