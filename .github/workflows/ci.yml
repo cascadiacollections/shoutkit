@@ -451,23 +451,25 @@ jobs:
 
       # What the runner is busy with once the simulator reports booted. Over 60
       # runs to 2026-11-27 the test step's median was 8.7 minutes, and the tests
-      # themselves are about 3 of them: in the three runs read line by line,
-      # xcodebuild took 3-4 minutes to print its first line (2 seconds in the
-      # build step above) and then 0.5-3.5 minutes on "Resolve Package Graph".
-      # A snapshot here says what is using the machine at that moment, in the
-      # log where the Checks API can reach it. A few seconds; never fatal.
+      # themselves are about 3 of them: xcodebuild took 3-4 minutes to print
+      # its first line, against 2 seconds in the build step above. The first
+      # run of this step (46055567836) gave the reason: 3 cores, 7 GB, and a
+      # one-minute load average of 528. `top` could not finish inside a minute
+      # there, so this uses `ps`, which only reads the process table. It is
+      # here to name the processes, in the log where the Checks API can reach
+      # them. Never fatal.
       - name: Runner load after boot
         continue-on-error: true
         timeout-minutes: 1
         run: |
           uptime
           sysctl -n hw.ncpu hw.memsize
-          top -l 2 -s 2 -n 12 -o cpu -stats pid,command,cpu,time,mem | tail -n 14
+          ps -Aceo pcpu,pmem,etime,comm -r | head -n 16
 
       # From the .xctestrun file that build-for-testing wrote, when there is
       # exactly one for the Holmdel plan. That is the form meant for running a
       # finished build: xcodebuild does not open the workspace or resolve the
-      # package graph again, which is the 0.5-3.5 minutes measured above. The
+      # package graph again, which took 0.5-3.5 minutes in the runs measured. The
       # file carries the plan's settings, coverage included. Anything other
       # than exactly one match falls back to the workspace form this step
       # always used, so a renamed plan or a second file cannot fail the job;
