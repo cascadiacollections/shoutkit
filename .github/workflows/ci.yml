@@ -449,23 +449,16 @@ jobs:
           xcrun simctl boot "${{ steps.toolchain.outputs.udid }}" || true
           xcrun simctl bootstatus "${{ steps.toolchain.outputs.udid }}" -b
 
-      # What the runner is busy with once the simulator reports booted. Over 60
-      # runs to 2026-11-27 the test step's median was 8.7 minutes, and the tests
-      # themselves are about 3 of them: xcodebuild took 3-4 minutes to print
-      # its first line, against 2 seconds in the build step above. The first
-      # run of this step (46055567836) gave the reason: 3 cores, 7 GB, and a
-      # one-minute load average of 528. `top` could not finish inside a minute
-      # there, so this uses `ps`, which only reads the process table. It is
-      # here to name the processes, in the log where the Checks API can reach
-      # them. Never fatal.
-      - name: Runner load after boot
-        continue-on-error: true
-        timeout-minutes: 1
-        run: |
-          uptime
-          sysctl -n hw.ncpu hw.memsize
-          ps -Aceo pcpu,pmem,etime,comm -r | head -n 16
-
+      # Why the test step is slow to start, measured so nobody has to again.
+      # Over 60 runs to 2026-11-27 its median was 8.7 minutes, and the tests
+      # are about 3 of them. This runner has 3 cores and 7 GB, and with the
+      # simulator just booted its one-minute load average was 528 and 622
+      # (runs 46055567836 and 46058008099). Starting a process is slow in that
+      # state: a step that ran `uptime`, `sysctl` and one process listing hit
+      # its one-minute limit on both runs without printing the list. So there
+      # is no diagnostic step here; it cost 90 seconds a run and could not say
+      # more than this comment does.
+      #
       # From the .xctestrun file that build-for-testing wrote, when there is
       # exactly one for the Holmdel plan. That is the form meant for running a
       # finished build: xcodebuild does not open the workspace or resolve the
