@@ -10,7 +10,7 @@ import RadioDirectory
 /// loader which of the two production sessions to use; Nuke coalesces the
 /// underlying download by URL, so the header must not be part of what the
 /// server sees.
-nonisolated final class LaneArtworkDataLoader: DataLoading, @unchecked Sendable {
+final nonisolated class LaneArtworkDataLoader: DataLoading, @unchecked Sendable {
     static let header = "X-ShoutKit-Artwork-Lane"
     static let speculative = "speculative"
 
@@ -36,7 +36,7 @@ nonisolated final class LaneArtworkDataLoader: DataLoading, @unchecked Sendable 
 
 /// Same validation as ``LaneArtworkDataLoader``, bound to one injected transport
 /// so tests (and any non-production session) do not share the app's disk cache.
-nonisolated final class TransportArtworkDataLoader: DataLoading, @unchecked Sendable {
+final nonisolated class TransportArtworkDataLoader: DataLoading, @unchecked Sendable {
     private let transport: any HTTPTransporting
 
     init(transport: any HTTPTransporting) {
@@ -99,7 +99,7 @@ nonisolated enum ArtworkDataLoad {
     }
 }
 
-private nonisolated final class TaskDataCancel: Cancellable, @unchecked Sendable {
+private final nonisolated class TaskDataCancel: Cancellable, @unchecked Sendable {
     private let task: Task<Void, Never>
 
     init(_ task: Task<Void, Never>) {

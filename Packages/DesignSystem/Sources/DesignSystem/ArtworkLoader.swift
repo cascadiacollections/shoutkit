@@ -56,13 +56,15 @@ public enum ArtworkLoader {
         _ url: URL?,
         transport: any HTTPTransporting = URLSessionHTTPTransport.artwork,
     ) async -> LoadedArtwork? {
-        guard let url else { return nil }
-        guard let image = await ArtworkImages.decoded(
-            url,
-            maxPixelSize: maxDecodePixelSize,
-            priority: .visible,
-            transport: transport,
-        ), let cgImage = image.cgImage else { return nil }
+        guard let url,
+              let image = await ArtworkImages.decoded(
+                  url,
+                  maxPixelSize: maxDecodePixelSize,
+                  priority: .visible,
+                  transport: transport,
+              ),
+              let cgImage = image.cgImage
+        else { return nil }
 
         let samples = hsbSamples(from: cgImage)
         return LoadedArtwork(

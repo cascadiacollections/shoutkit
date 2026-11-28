@@ -79,6 +79,12 @@ SPDX-FileCopyrightText = "2020-2026 Alexander Grebenyuk"
 SPDX-License-Identifier = "MIT"
 
 [[annotations]]
+path = "Packages/Features/SettingsFeature/Sources/SettingsFeature/Resources/nuke-mit.txt"
+precedence = "override"
+SPDX-FileCopyrightText = "2015-2026 Alexander Grebenyuk"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
 path = "Packages/Features/SettingsFeature/Sources/SettingsFeature/Resources/ogg-bsd.txt"
 precedence = "override"
 SPDX-FileCopyrightText = "2002 Xiph.org Foundation"
@@ -89,12 +95,6 @@ path = "Packages/Features/SettingsFeature/Sources/SettingsFeature/Resources/vorb
 precedence = "override"
 SPDX-FileCopyrightText = "2002-2020 Xiph.org Foundation"
 SPDX-License-Identifier = "BSD-3-Clause"
-
-[[annotations]]
-path = "Packages/Features/SettingsFeature/Sources/SettingsFeature/Resources/apache-2.0.txt"
-precedence = "override"
-SPDX-FileCopyrightText = "2004 The Apache Software Foundation"
-SPDX-License-Identifier = "Apache-2.0"
 
 [[annotations]]
 path = "Packages/Features/SettingsFeature/Sources/SettingsFeature/Resources/gpl-3.0.txt"

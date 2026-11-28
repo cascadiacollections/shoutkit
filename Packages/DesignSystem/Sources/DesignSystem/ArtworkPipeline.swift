@@ -1,6 +1,7 @@
 import Foundation
 import Nuke
 import RadioDirectory
+import UIKit
 
 /// How urgently a decoded bitmap is needed. Prefetch yields to a visible row
 /// or the Now Playing hero.
@@ -80,7 +81,7 @@ nonisolated enum ArtworkPipelineFactory {
 
 /// Routes production sessions onto one pipeline (so prefetch and a visible row
 /// share caches) and gives every other transport a pipeline of its own.
-nonisolated final class ArtworkPipelineStore: @unchecked Sendable {
+final nonisolated class ArtworkPipelineStore: @unchecked Sendable {
     nonisolated static let shared = ArtworkPipelineStore()
 
     private let production: ImagePipeline
@@ -119,7 +120,9 @@ nonisolated final class ArtworkPipelineStore: @unchecked Sendable {
             diskName: "com.cascadiacollections.holmdel.artwork.\(UUID().uuidString)",
         )
         let stored = custom.withLock { cache -> ImagePipeline in
-            if let winner = cache[identifier] { return winner }
+            if let winner = cache[identifier] {
+                return winner
+            }
             cache[identifier] = created
             return created
         }
@@ -141,7 +144,7 @@ nonisolated final class ArtworkPipelineStore: @unchecked Sendable {
 /// those get a one-off pipeline and do not coalesce across calls.
 nonisolated enum ArtworkTransportIdentity {
     static func identifier(of transport: any HTTPTransporting) -> ObjectIdentifier? {
-        func open<T: HTTPTransporting>(_ value: T) -> ObjectIdentifier? {
+        func open(_ value: some HTTPTransporting) -> ObjectIdentifier? {
             guard let object = value as? AnyObject else { return nil }
             return ObjectIdentifier(object)
         }

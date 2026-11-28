@@ -1,5 +1,5 @@
-import Foundation
 @testable import DesignSystem
+import Foundation
 import RadioDirectory
 import Testing
 import UIKit
@@ -195,8 +195,10 @@ private actor HoldingImageTransport: HTTPTransporting {
     }
 
     func waitUntilSending() async -> Bool {
-        for _ in 0 ..< 1_000 {
-            if sends > 0 { return true }
+        for _ in 0 ..< 1000 {
+            if sends > 0 {
+                return true
+            }
             await Task.yield()
         }
         return false
