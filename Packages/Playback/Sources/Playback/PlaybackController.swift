@@ -192,7 +192,6 @@ public final class PlaybackController {
     /// radio starting itself. Injectable like the other windows; no user setting.
     @ObservationIgnored let hintlessResumeWindow: Duration
     @ObservationIgnored let hintlessResumeWindowTimer: OneShotTimer
-    @ObservationIgnored let clock: any Clock<Duration>
 
     /// Designated initializer with every collaborator explicit — what tests use.
     /// The iOS production defaults live in the convenience initializer (in
@@ -224,7 +223,6 @@ public final class PlaybackController {
         self.resumeWatchdogTimer = OneShotTimer(clock: clock)
         self.hintlessResumeWindow = hintlessResumeWindow
         self.hintlessResumeWindowTimer = OneShotTimer(clock: clock)
-        self.clock = clock
 
         configureOutput()
         configureRemoteCommands()

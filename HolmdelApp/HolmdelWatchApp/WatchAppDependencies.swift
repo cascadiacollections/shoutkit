@@ -48,7 +48,6 @@ enum WatchAppDependencies {
             directory: directory,
             output: WatchRadioPlaybackEngine(),
             nowPlayingCenter: WatchNoopNowPlayingCenter(),
-            clock: productionClock(),
         )
         watchLastStationSync.activate()
         playbackController.onStationPlayed = { station in

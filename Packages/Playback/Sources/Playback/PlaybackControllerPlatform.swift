@@ -24,7 +24,6 @@
                 directory: directory,
                 output: Container.shared.radioPlaybackEngine(),
                 nowPlayingCenter: Self.makeSystemNowPlayingCenter(),
-                clock: productionClock(),
             )
         }
 

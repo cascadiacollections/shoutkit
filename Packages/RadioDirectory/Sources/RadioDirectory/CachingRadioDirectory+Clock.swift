@@ -2,8 +2,7 @@ import Foundation
 
 /// ``CachingRadioDirectory`` parameterized on ``ContinuousClock``, which is
 /// what every production call site and every test that does not move time
-/// constructs. The clock comes from ``productionClock()`` so Factory stays the
-/// composition root. Tests that pass a `TestClock` use the generic initializer.
+/// constructs. Tests that pass a `TestClock` use the generic initializer.
 public extension CachingRadioDirectory where C == ContinuousClock {
     init(
         base: any RadioDirectoryProviding,
@@ -20,7 +19,7 @@ public extension CachingRadioDirectory where C == ContinuousClock {
             snapshotTimeToLive: snapshotTimeToLive,
             snapshotIdentity: snapshotIdentity,
             now: now,
-            clock: productionClock(),
+            clock: ContinuousClock(),
         )
     }
 }
