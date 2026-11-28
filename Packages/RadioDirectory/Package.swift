@@ -22,6 +22,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.5.3"),
+        .package(url: "https://github.com/pointfreeco/swift-clocks", exact: "1.1.1"),
     ],
     targets: [
         .target(
@@ -34,7 +35,10 @@ let package = Package(
         ),
         .testTarget(
             name: "RadioDirectoryTests",
-            dependencies: ["RadioDirectory"],
+            dependencies: [
+                "RadioDirectory",
+                .product(name: "Clocks", package: "swift-clocks"),
+            ],
         ),
     ],
 )

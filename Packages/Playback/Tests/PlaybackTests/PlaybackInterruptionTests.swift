@@ -1,3 +1,4 @@
+import Clocks
 import Foundation
 @testable import Playback
 import RadioDirectory
@@ -24,11 +25,13 @@ extension PlaybackTimingTests {
         private func playing(
             output: FakeAudioOutput,
             hintlessResumeWindow: Duration = .seconds(90),
+            clock: any Clock<Duration> = ContinuousClock(),
         ) async -> PlaybackController {
             let controller = makeController(
                 stations: [station()],
                 output: output,
                 hintlessResumeWindow: hintlessResumeWindow,
+                clock: clock,
             )
             controller.play(station())
             await waitForStart(output)
@@ -68,11 +71,15 @@ extension PlaybackTimingTests {
 
         @Test func `hintless resume expires with its window`() async {
             let output = FakeAudioOutput()
-            let controller = await playing(output: output, hintlessResumeWindow: Self.shortWindow)
+            let clock = TestClock()
+            let controller = await playing(
+                output: output, hintlessResumeWindow: Self.shortWindow, clock: clock,
+            )
 
             output.onStatusChange?(.interruptionBegan)
             // A long interruption is a listener who moved on, not an alert.
-            await waitUntil { controller.mayResumeWithoutSystemHint == false }
+            await clock.advance(by: Self.shortWindow)
+            #expect(controller.mayResumeWithoutSystemHint == false)
             output.onStatusChange?(.interruptionEnded(shouldResume: false, otherAudioIsPlaying: false))
 
             #expect(controller.state == .paused(station()))
@@ -81,10 +88,14 @@ extension PlaybackTimingTests {
 
         @Test func `system hint resumes even after the hintless window closes`() async {
             let output = FakeAudioOutput()
-            let controller = await playing(output: output, hintlessResumeWindow: Self.shortWindow)
+            let clock = TestClock()
+            let controller = await playing(
+                output: output, hintlessResumeWindow: Self.shortWindow, clock: clock,
+            )
 
             output.onStatusChange?(.interruptionBegan)
-            await waitUntil { controller.mayResumeWithoutSystemHint == false }
+            await clock.advance(by: Self.shortWindow)
+            #expect(controller.mayResumeWithoutSystemHint == false)
             // The window bounds hintless resumes only; the system's own hint always
             // wins, however long the call ran.
             output.onStatusChange?(.interruptionEnded(shouldResume: true, otherAudioIsPlaying: false))

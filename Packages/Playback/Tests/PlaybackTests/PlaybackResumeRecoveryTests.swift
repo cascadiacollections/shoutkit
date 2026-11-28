@@ -1,3 +1,4 @@
+import Clocks
 import Foundation
 @testable import Playback
 import RadioDirectory
@@ -23,9 +24,10 @@ extension PlaybackTimingTests {
 
         @Test func `resume the output never acknowledges rejoins stream`() async {
             let output = FakeAudioOutput()
+            let clock = TestClock()
             let controller = makeController(
                 stations: [station()], output: output,
-                resumeWatchdogTimeout: Self.shortTimeout,
+                resumeWatchdogTimeout: Self.shortTimeout, clock: clock,
             )
 
             controller.play(station())
@@ -39,6 +41,7 @@ extension PlaybackTimingTests {
             controller.togglePlayPause()
             #expect(output.resumeCount == 1)
 
+            await clock.advance(by: Self.shortTimeout)
             await waitUntil { output.startedURLs.count == 2 }
             #expect(output.startedURLs.count == 2, "an unacknowledged resume must rejoin the stream")
             #expect(output.stopCount == 1, "the dead player is torn down before the rejoin")
@@ -49,9 +52,10 @@ extension PlaybackTimingTests {
 
         @Test func `acknowledged resume does not rejoin stream`() async {
             let output = FakeAudioOutput()
+            let clock = TestClock()
             let controller = makeController(
                 stations: [station()], output: output,
-                resumeWatchdogTimeout: Self.shortTimeout,
+                resumeWatchdogTimeout: Self.shortTimeout, clock: clock,
             )
 
             controller.play(station())
@@ -60,7 +64,7 @@ extension PlaybackTimingTests {
             controller.pause()
             controller.togglePlayPause()
 
-            try? await Task.sleep(for: .milliseconds(150))
+            await clock.advance(by: Self.shortTimeout)
             #expect(output.startedURLs.count == 1, "a resume that took effect must not restart the stream")
             #expect(output.stopCount == 0)
             #expect(controller.state == .playing(station()))
@@ -68,9 +72,10 @@ extension PlaybackTimingTests {
 
         @Test func `pause cancels resume watchdog`() async {
             let output = FakeAudioOutput()
+            let clock = TestClock()
             let controller = makeController(
                 stations: [station()], output: output,
-                resumeWatchdogTimeout: Self.shortTimeout,
+                resumeWatchdogTimeout: Self.shortTimeout, clock: clock,
             )
 
             controller.play(station())
@@ -82,16 +87,17 @@ extension PlaybackTimingTests {
             controller.resume() // arms the watchdog
             controller.pause() // must beat it
 
-            try? await Task.sleep(for: .milliseconds(150))
+            await clock.advance(by: Self.shortTimeout)
             #expect(output.startedURLs.count == 1, "a paused stream must not be rejoined")
             #expect(controller.state == .paused(station()))
         }
 
         @Test func `stop cancels resume watchdog`() async {
             let output = FakeAudioOutput()
+            let clock = TestClock()
             let controller = makeController(
                 stations: [station()], output: output,
-                resumeWatchdogTimeout: Self.shortTimeout,
+                resumeWatchdogTimeout: Self.shortTimeout, clock: clock,
             )
 
             controller.play(station())
@@ -103,7 +109,7 @@ extension PlaybackTimingTests {
             controller.resume()
             controller.stop()
 
-            try? await Task.sleep(for: .milliseconds(150))
+            await clock.advance(by: Self.shortTimeout)
             #expect(output.startedURLs.count == 1)
             #expect(controller.state == .idle)
         }
@@ -111,9 +117,10 @@ extension PlaybackTimingTests {
         @Test func `rejoin reuses resolved endpoint and is not A new choice`() async {
             let output = FakeAudioOutput()
             let directory = CountingRadioDirectory(stations: [station()])
+            let clock = TestClock()
             let controller = makeController(
                 directory: directory, output: output,
-                resumeWatchdogTimeout: Self.shortTimeout,
+                resumeWatchdogTimeout: Self.shortTimeout, clock: clock,
             )
             var playedCount = 0
             controller.onStationPlayed = { _ in playedCount += 1 }
@@ -126,6 +133,7 @@ extension PlaybackTimingTests {
 
             output.resumeSilentlyFails = true
             controller.resume()
+            await clock.advance(by: Self.shortTimeout)
             await waitUntil { output.startedURLs.count == 2 }
 
             #expect(output.startedURLs.count == 2)

@@ -1,3 +1,4 @@
+import Clocks
 import Foundation
 @testable import Playback
 import RadioDirectory
@@ -19,9 +20,10 @@ extension PlaybackTimingTests {
 
         @Test func `end of stream stops instead of looping by default`() async {
             let output = FakeAudioOutput()
+            let clock = TestClock()
             let controller = makeController(
                 stations: [station()], output: output,
-                maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay,
+                maxReconnectAttempts: 3, reconnectBaseDelay: Self.fastDelay, clock: clock,
             )
 
             controller.play(station())
@@ -35,7 +37,7 @@ extension PlaybackTimingTests {
 
             // The one regression this suite exists for: no restart, now or after the
             // reconnect backoff would have fired.
-            try? await Task.sleep(for: .milliseconds(60))
+            await clock.advance(by: .milliseconds(80))
             #expect(output.startedURLs.count == 1, "a finished broadcast must not replay itself")
             #expect(controller.state == .paused(station()))
         }
@@ -127,9 +129,10 @@ extension PlaybackTimingTests {
 
         @Test func `end of stream refills the reconnect budget`() async {
             let output = FakeAudioOutput()
+            let clock = TestClock()
             let controller = makeController(
                 stations: [station()], output: output,
-                maxReconnectAttempts: 2, reconnectBaseDelay: Self.fastDelay,
+                maxReconnectAttempts: 2, reconnectBaseDelay: Self.fastDelay, clock: clock,
             )
 
             controller.play(station())
@@ -147,15 +150,18 @@ extension PlaybackTimingTests {
             controller.resume()
             await waitUntil { output.startedURLs.count == 3 }
             output.onStatusChange?(.failed(.streamFailed("drop")))
+            await clock.advance(by: Self.fastDelay)
             await waitUntil { output.startedURLs.count == 4 }
             output.onStatusChange?(.failed(.streamFailed("drop")))
+            await clock.advance(by: .milliseconds(20))
             await waitUntil { output.startedURLs.count == 5 }
             #expect(output.startedURLs.count == 5)
         }
 
         @Test func `pause wins over A loop restart already underway`() async {
             let output = FakeAudioOutput()
-            let controller = makeController(stations: [station()], output: output)
+            let clock = TestClock()
+            let controller = makeController(stations: [station()], output: output, clock: clock)
             controller.isStreamLoopingEnabledProvider = { true }
 
             controller.play(station())
@@ -170,7 +176,7 @@ extension PlaybackTimingTests {
             // restarts an ending, and a pause is not one.
             controller.pause()
             #expect(controller.state == .paused(station()))
-            try? await Task.sleep(for: .milliseconds(60))
+            await clock.advance(by: .seconds(2))
             #expect(output.startedURLs.count == 2)
         }
     }

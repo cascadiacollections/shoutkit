@@ -64,6 +64,7 @@ enum TVAppDependencies {
             directory: directory,
             output: AudioStreamingPlaybackEngine(),
             nowPlayingCenter: TVNowPlayingCenter(),
+            clock: productionClock(),
         )
         playbackController.onStationPlayed = { station in
             libraryStore.logRecent(station)

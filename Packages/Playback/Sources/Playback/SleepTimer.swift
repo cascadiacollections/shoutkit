@@ -21,11 +21,16 @@ public final class SleepTimer {
     @ObservationIgnored public var onFire: (() -> Void)?
 
     @ObservationIgnored private var timerTask: Task<Void, Never>?
-    /// Injected clock so remaining-time math is testable.
-    @ObservationIgnored private let now: @Sendable () -> Date
+    /// Injected so a test can move the fire with a `TestClock`. The `Date`
+    /// clock stays separate: the countdown the UI shows is wall time.
+    @ObservationIgnored private let clock: any Clock<Duration>
 
-    public init(now: @escaping @Sendable () -> Date = { Date() }) {
+    public init(
+        now: @escaping @Sendable () -> Date = { Date() },
+        clock: any Clock<Duration> = ContinuousClock(),
+    ) {
         self.now = now
+        self.clock = clock
     }
 
     public var isActive: Bool {
@@ -36,11 +41,12 @@ public final class SleepTimer {
     public func start(duration: TimeInterval) {
         timerTask?.cancel()
 
+        let clock = self.clock
         let fireDate = now().addingTimeInterval(duration)
         self.fireDate = fireDate
 
         timerTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(duration))
+            try? await clock.sleep(for: .seconds(duration))
             guard let self, Task.isCancelled == false else { return }
             // A restart replaced this schedule while it slept.
             guard self.fireDate == fireDate else { return }

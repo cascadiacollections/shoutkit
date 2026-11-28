@@ -1,5 +1,37 @@
 # Decisions
 
+## 2026-11-28 (a clock for the minute cache and the playback timers)
+
+The one-minute discovery cache and the playback timers (`OneShotTimer`:
+reconnect backoff, the stall ceiling while a station is still connecting, the
+paused-release and resume watchdog, the hintless-interruption window) and the
+sleep timer all slept on the real clock. Tests either injected a `Date` closure
+(the cache) or waited out a shortened delay (playback). The waits were real,
+and a backoff of "not yet, then now" could not be asserted without sleeping.
+
+`Container.clock` is `any Clock<Duration>`, defaulting to `ContinuousClock`,
+which is what production already used. `productionClock()` is what the phone,
+watch, and TV composition roots pass in, so Factory stays the seam and those
+apps do not import FactoryKit to name `Container`. The cache stores the
+clock's `Instant` for the in-memory minute; the on-disk snapshot still stamps
+`Date`, because that file has to mean something after the process is gone.
+Tests that need to move time pass a `TestClock` into the initializer. They do
+not replace `Container.shared.clock`, which would leak into the next suite.
+
+swift-clocks 1.1.1 is `exact` and MIT, and it is a **test** dependency of
+RadioDirectory and Playback only. `TestClock` needs it. Production code uses
+`ContinuousClock` from the standard library, so the library is not in the app
+binary and it is not on the in-app Licenses screen. swift-concurrency-extras
+1.4.3 and swift-issue-reporting 2.1.2 come in with it, also test-only. Linking
+swift-clocks into the app so its notice could appear in Settings would spend
+binary size on a type the listener never runs; the 2026-11-07 size pass is why
+that was not done. Say if the notice should ship anyway.
+
+The sleep inside `OneShotTimer` and `SleepTimer` is `clock.sleep(for:)`.
+Nothing about the delays themselves changed: reconnect is still base, then
+double, then double again, and a stall still gives the stream 30 seconds
+before it is torn down.
+
 ## 2026-11-27 (a background wake fails only when it is cancelled)
 
 `BackgroundRefreshController.runRefresh()` returned success only when the

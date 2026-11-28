@@ -180,6 +180,7 @@ func makeController(
     reconnectBaseDelay: Duration = .seconds(2),
     resumeWatchdogTimeout: Duration = .seconds(2),
     hintlessResumeWindow: Duration = .seconds(90),
+    clock: any Clock<Duration> = ContinuousClock(),
 ) -> PlaybackController {
     PlaybackController(
         directory: directory,
@@ -189,6 +190,7 @@ func makeController(
         reconnectBaseDelay: reconnectBaseDelay,
         resumeWatchdogTimeout: resumeWatchdogTimeout,
         hintlessResumeWindow: hintlessResumeWindow,
+        clock: clock,
     )
 }
 
@@ -203,6 +205,7 @@ func makeController(
     reconnectBaseDelay: Duration = .seconds(2),
     resumeWatchdogTimeout: Duration = .seconds(2),
     hintlessResumeWindow: Duration = .seconds(90),
+    clock: any Clock<Duration> = ContinuousClock(),
 ) -> PlaybackController {
     PlaybackController(
         directory: BundledRadioDirectory(stations: stations),
@@ -214,6 +217,7 @@ func makeController(
         reconnectBaseDelay: reconnectBaseDelay,
         resumeWatchdogTimeout: resumeWatchdogTimeout,
         hintlessResumeWindow: hintlessResumeWindow,
+        clock: clock,
     )
 }
 

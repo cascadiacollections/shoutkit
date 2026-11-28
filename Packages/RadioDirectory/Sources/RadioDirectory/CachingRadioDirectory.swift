@@ -15,7 +15,9 @@ import Foundation
 ///
 /// Search, genre, and stream-endpoint calls are user-driven and distinct, so they
 /// pass straight through. Failures are never cached; the next call retries.
-public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryCaching {
+public actor CachingRadioDirectory<C: Clock>: RadioDirectoryProviding, DirectoryDiscoveryCaching
+    where C.Duration == Duration
+{
     /// Six hours: long enough that opening the app repeatedly in a day shows the
     /// same, instantly-painted list instead of a reshuffled one (top-click
     /// rankings drift constantly), short enough that a day's browsing isn't
@@ -25,7 +27,10 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
 
     private let base: any RadioDirectoryProviding
     private let timeToLive: TimeInterval
-    /// Injected clock so TTL expiry is testable.
+    /// In-memory TTL. `TestClock` in tests; production is ``ContinuousClock``.
+    private let clock: C
+    /// Wall clock for the persisted snapshot, which stores `Date`s that have to
+    /// stay meaningful after this process is gone.
     private let now: @Sendable () -> Date
 
     private let snapshotStore: any DirectorySnapshotStoring?
@@ -36,7 +41,7 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
 
     private struct GenresCache {
         let value: [Genre]
-        let fetchedAt: Date
+        let fetchedAt: C.Instant
         /// ``snapshotIdentity`` when this value was fetched. A later read under
         /// another region must not be served from it.
         let identity: String?
@@ -60,7 +65,7 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
     private struct TopStationsCache {
         let value: [Station]
         let fetchedLimit: Int
-        let fetchedAt: Date
+        let fetchedAt: C.Instant
         /// ``snapshotIdentity`` when this value was fetched.
         let identity: String?
     }
@@ -91,12 +96,14 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
         base: any RadioDirectoryProviding,
         timeToLive: TimeInterval = 60,
         snapshotStore: any DirectorySnapshotStoring? = nil,
-        snapshotTimeToLive: TimeInterval = CachingRadioDirectory.defaultSnapshotTimeToLive,
+        snapshotTimeToLive: TimeInterval = CachingRadioDirectory<C>.defaultSnapshotTimeToLive,
         snapshotIdentity: @escaping @Sendable () async -> String? = { nil },
         now: @escaping @Sendable () -> Date = { Date() },
+        clock: C,
     ) {
         self.base = base
         self.timeToLive = timeToLive
+        self.clock = clock
         self.snapshotStore = snapshotStore
         self.snapshotTimeToLive = snapshotTimeToLive
         self.snapshotIdentity = snapshotIdentity
@@ -166,7 +173,7 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
         }
 
         if case let .success(genres) = result, await snapshotIdentity() == identity {
-            genresCache = GenresCache(value: genres, fetchedAt: now(), identity: identity)
+            genresCache = GenresCache(value: genres, fetchedAt: clock.now, identity: identity)
             await persist(genres: genres)
         }
         return try result.get()
@@ -226,7 +233,7 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
         topStationsCache = TopStationsCache(
             value: stations,
             fetchedLimit: limit,
-            fetchedAt: now(),
+            fetchedAt: clock.now,
             identity: identity,
         )
         await persist(topStations: stations, limit: limit)
@@ -369,7 +376,7 @@ public actor CachingRadioDirectory: RadioDirectoryProviding, DirectoryDiscoveryC
 
     // MARK: - Helpers
 
-    private func isFresh(_ fetchedAt: Date) -> Bool {
-        now().timeIntervalSince(fetchedAt) < timeToLive
+    private func isFresh(_ fetchedAt: C.Instant) -> Bool {
+        fetchedAt.duration(to: clock.now) < .seconds(timeToLive)
     }
 }

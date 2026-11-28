@@ -71,7 +71,7 @@ extension AppDependencies {
     /// The sleep timer, which *pauses* rather than stops: the mini-player
     /// survives, so resuming in the morning is one tap rather than a re-search.
     static func makeSleepTimer(for controller: PlaybackController) -> SleepTimer {
-        let sleepTimer = SleepTimer()
+        let sleepTimer = SleepTimer(clock: productionClock())
         sleepTimer.onFire = { [weak controller] in
             controller?.pause()
         }

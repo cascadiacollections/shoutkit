@@ -150,31 +150,24 @@ public final class PlaybackController {
     /// injectable so tests can use short values; there is deliberately no
     /// user-facing setting — this is invisible housekeeping.
     @ObservationIgnored let pausedReleaseTimeout: Duration
-    @ObservationIgnored let pausedReleaseTimer = OneShotTimer()
+    @ObservationIgnored let pausedReleaseTimer: OneShotTimer
     @ObservationIgnored let stallTimeout: Duration
-    @ObservationIgnored let stallCeilingTimer = OneShotTimer()
+    @ObservationIgnored let stallCeilingTimer: OneShotTimer
 
     /// How long a resume may go unacknowledged before the stream is rejoined
     /// (see ``scheduleResumeWatchdog(for:)``). Injectable so tests don't wait
     /// seconds; no user-facing setting.
     @ObservationIgnored let resumeWatchdogTimeout: Duration
-    @ObservationIgnored let resumeWatchdogTimer = OneShotTimer()
+    @ObservationIgnored let resumeWatchdogTimer: OneShotTimer
 
-    /// Bounded automatic reconnect (see ``attemptReconnect(for:fallback:)``).
-    /// A stall or a mid-play failure retries the stream a few times on a
-    /// backed-off schedule before surfacing a terminal state — network radio
-    /// drops for transient reasons (tunnel, cell handoff) far more often than
-    /// permanent ones. Both knobs are injectable so tests can use a short delay
-    /// and small budget; there is no user-facing setting.
+    /// Bounded auto-reconnect. See ``attemptReconnect(for:fallback:)``.
     @ObservationIgnored let maxReconnectAttempts: Int
     @ObservationIgnored let reconnectBaseDelay: Duration
-    @ObservationIgnored let reconnectTimer = OneShotTimer()
+    @ObservationIgnored let reconnectTimer: OneShotTimer
     @ObservationIgnored var reconnectAttempts = 0
     @ObservationIgnored var tapToAudioTrace: TapToAudioLatencyTrace?
 
-    /// Whether `output.start` has run for the active station. False while the
-    /// stream endpoint is still resolving, or after a pause during loading —
-    /// in that case `resume()` must re-play rather than resume a nonexistent player.
+    /// False until `output.start` has run for the active station.
     @ObservationIgnored var outputStarted = false
     @ObservationIgnored var activeStreamGeneration: UInt64 = 0
     /// The listener's latest transport intent. Engine callbacks may arrive
@@ -198,7 +191,8 @@ public final class PlaybackController {
     /// that a listener who moved on to another app for a while isn't surprised by
     /// radio starting itself. Injectable like the other windows; no user setting.
     @ObservationIgnored let hintlessResumeWindow: Duration
-    @ObservationIgnored let hintlessResumeWindowTimer = OneShotTimer()
+    @ObservationIgnored let hintlessResumeWindowTimer: OneShotTimer
+    @ObservationIgnored let clock: any Clock<Duration>
 
     /// Designated initializer with every collaborator explicit — what tests use.
     /// The iOS production defaults live in the convenience initializer (in
@@ -214,16 +208,23 @@ public final class PlaybackController {
         reconnectBaseDelay: Duration = .seconds(2),
         resumeWatchdogTimeout: Duration = .seconds(2),
         hintlessResumeWindow: Duration = .seconds(90),
+        clock: any Clock<Duration> = ContinuousClock(),
     ) {
         self.directory = directory
         self.output = output
         self.nowPlayingCenter = nowPlayingCenter
         self.pausedReleaseTimeout = pausedReleaseTimeout
+        self.pausedReleaseTimer = OneShotTimer(clock: clock)
         self.stallTimeout = stallTimeout
+        self.stallCeilingTimer = OneShotTimer(clock: clock)
         self.maxReconnectAttempts = maxReconnectAttempts
         self.reconnectBaseDelay = reconnectBaseDelay
+        self.reconnectTimer = OneShotTimer(clock: clock)
         self.resumeWatchdogTimeout = resumeWatchdogTimeout
+        self.resumeWatchdogTimer = OneShotTimer(clock: clock)
         self.hintlessResumeWindow = hintlessResumeWindow
+        self.hintlessResumeWindowTimer = OneShotTimer(clock: clock)
+        self.clock = clock
 
         configureOutput()
         configureRemoteCommands()

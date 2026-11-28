@@ -43,6 +43,7 @@ let package = Package(
         .package(path: "../ImageIODownsample"),
         .package(path: "../RadioDirectory"),
         .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.5.3"),
+        .package(url: "https://github.com/pointfreeco/swift-clocks", exact: "1.1.1"),
     ],
     targets: [
         .target(
@@ -58,7 +59,11 @@ let package = Package(
         ),
         .testTarget(
             name: "PlaybackTests",
-            dependencies: ["Playback", "AudioLevels"],
+            dependencies: [
+                "Playback",
+                "AudioLevels",
+                .product(name: "Clocks", package: "swift-clocks"),
+            ],
         ),
     ],
 )
