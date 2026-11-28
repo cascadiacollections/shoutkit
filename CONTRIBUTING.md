@@ -28,7 +28,7 @@ These package suites run on the mac host — the same set CI's `host-tests` job 
 
 ```sh
 for pkg in RadioDirectory Playback Persistence ImageIODownsample FeatureFlags \
-           BrowseFeatureCore SearchFeatureCore PlayerFeatureCore \
+           ArtworkPipelineNuke BrowseFeatureCore SearchFeatureCore PlayerFeatureCore \
            LibraryFeatureCore SettingsFeatureCore; do
   (cd "Packages/$pkg" && swift test --disable-xctest)
 done

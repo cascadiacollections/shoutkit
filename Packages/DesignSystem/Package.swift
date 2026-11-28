@@ -17,10 +17,14 @@ let package = Package(
     products: [
         .library(name: "DesignSystem", targets: ["DesignSystem"]),
     ],
+    // No image-loading library here. The app's Nuke pipeline lives in the
+    // app-side `ArtworkPipelineNuke` package and is registered through
+    // `ArtworkImageSource.register(_:)` (DECISIONS.md, 2026-11-28), so this
+    // MIT package stays adoptable without Nuke.
     dependencies: [
+        .package(path: "../ImageIODownsample"),
         .package(path: "../RadioDirectory"),
         .package(path: "../Playback"),
-        .package(url: "https://github.com/kean/Nuke.git", exact: "13.2.3"),
     ],
     targets: [
         .target(
@@ -28,7 +32,7 @@ let package = Package(
             dependencies: [
                 "RadioDirectory",
                 "Playback",
-                .product(name: "Nuke", package: "Nuke"),
+                "ImageIODownsample",
             ],
             resources: [.process("Resources/Localizable.xcstrings")],
             swiftSettings: [optimizeForSize, .defaultIsolation(MainActor.self)],

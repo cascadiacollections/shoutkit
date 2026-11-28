@@ -5,14 +5,16 @@ import UIKit
 /// Decoded-thumbnail loading for station artwork in list rows, cards, and the
 /// mini-player — the small, many-instance surfaces.
 ///
-/// Decoding goes through the shared artwork pipeline: ImageIO downsamples to
-/// `maxPixelSize` off the main thread, in-flight requests for the same URL
-/// coalesce, and the decoded bitmap is reused from memory (or the encoded
+/// Decoding goes through ``ArtworkImageSource``: ImageIO downsamples to
+/// `maxPixelSize` off the main thread, so a cell only ever holds a cell-sized
+/// bitmap. With the app's pipeline registered, in-flight requests for the same
+/// URL coalesce and the decoded bitmap is reused from memory (or the encoded
 /// original from disk) instead of being fetched again on every cell reuse.
 public nonisolated enum ArtworkThumbnailLoader {
     /// Fetches and decodes artwork at `maxPixelSize`, returning a cached
     /// thumbnail when one exists. Returns `nil` on any failure — callers show
-    /// their placeholder.
+    /// their placeholder. Cancelling the caller (a row scrolled away) does not
+    /// cancel a download already under way; it completes into the cache.
     ///
     /// Defaults to `.artwork` rather than `.shared`: a row's thumbnail loads
     /// while the station is streaming, and `.artwork`'s `.background` service
@@ -24,10 +26,10 @@ public nonisolated enum ArtworkThumbnailLoader {
         transport: any HTTPTransporting = URLSessionHTTPTransport.artwork,
     ) async -> UIImage? {
         guard let url, maxPixelSize > 0 else { return nil }
-        return await ArtworkImages.decoded(
+        return await ArtworkImageSource.image(
             url,
             maxPixelSize: maxPixelSize,
-            priority: .visible,
+            isPrefetch: false,
             transport: transport,
         )
     }
@@ -61,10 +63,10 @@ public nonisolated enum ArtworkThumbnailLoader {
 
         for case let url? in urls {
             Task(priority: .utility) {
-                _ = await ArtworkImages.decoded(
+                _ = await ArtworkImageSource.image(
                     url,
                     maxPixelSize: maxPixelSize,
-                    priority: .prefetch,
+                    isPrefetch: true,
                     transport: transport,
                 )
             }

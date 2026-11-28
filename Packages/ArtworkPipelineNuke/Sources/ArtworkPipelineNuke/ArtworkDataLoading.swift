@@ -1,18 +1,28 @@
 import Foundation
+import ImageIO
 import Nuke
 import RadioDirectory
 
-/// Loads artwork bytes through the existing transports so a maintenance-page
+/// Loads artwork bytes through the production transports so a maintenance-page
 /// body is still a failed fetch (`ImagePayload`) and so prefetch keeps the
 /// speculative session's Low Data Mode / cellular refusal.
 ///
 /// The lane header is stripped before the request is sent. It only tells this
-/// loader which of the two production sessions to use; Nuke coalesces the
-/// underlying download by URL, so the header must not be part of what the
-/// server sees.
-final nonisolated class LaneArtworkDataLoader: DataLoading, @unchecked Sendable {
+/// loader which of the two sessions to use. It is not what keeps the lanes
+/// apart inside Nuke — Nuke coalesces downloads on URL, cache policy, and
+/// `allowsCellularAccess`, never on headers — so ``ArtworkLane`` also gives the
+/// speculative request its own cache policy (see ``ArtworkLane/cachePolicy``).
+final class LaneArtworkDataLoader: DataLoading, @unchecked Sendable {
     static let header = "X-ShoutKit-Artwork-Lane"
     static let speculative = "speculative"
+
+    private let visibleTransport: any HTTPTransporting
+    private let speculativeTransport: any HTTPTransporting
+
+    init(visible: any HTTPTransporting, speculative: any HTTPTransporting) {
+        visibleTransport = visible
+        speculativeTransport = speculative
+    }
 
     func loadData(
         with request: URLRequest,
@@ -22,11 +32,11 @@ final nonisolated class LaneArtworkDataLoader: DataLoading, @unchecked Sendable 
         var outbound = request
         let useSpeculative = outbound.value(forHTTPHeaderField: Self.header) == Self.speculative
         outbound.setValue(nil, forHTTPHeaderField: Self.header)
-        let transport: any HTTPTransporting = useSpeculative
-            ? URLSessionHTTPTransport.speculative
-            : URLSessionHTTPTransport.artwork
+        // Both lanes go out with the same policy; the speculative one differs
+        // only so Nuke keys its download separately.
+        outbound.cachePolicy = ArtworkLane.visible.cachePolicy
         return ArtworkDataLoad.perform(
-            transport: transport,
+            transport: useSpeculative ? speculativeTransport : visibleTransport,
             request: outbound,
             didReceiveData: didReceiveData,
             completion: completion,
@@ -34,13 +44,23 @@ final nonisolated class LaneArtworkDataLoader: DataLoading, @unchecked Sendable 
     }
 }
 
-/// Same validation as ``LaneArtworkDataLoader``, bound to one injected transport
-/// so tests (and any non-production session) do not share the app's disk cache.
-final nonisolated class TransportArtworkDataLoader: DataLoading, @unchecked Sendable {
-    private let transport: any HTTPTransporting
+/// Same validation as ``LaneArtworkDataLoader``, bound to one caller-supplied
+/// transport (tests, previews, any non-production session).
+///
+/// A class transport is held weakly: the store keeps this loader's pipeline
+/// only as long as the transport lives, and a strong reference here would keep
+/// the transport — and so the pipeline — alive for the rest of the process.
+final class TransportArtworkDataLoader: DataLoading, @unchecked Sendable {
+    private let strongTransport: any HTTPTransporting?
+    private weak var weakTransport: AnyObject?
 
-    init(transport: any HTTPTransporting) {
-        self.transport = transport
+    init(retaining transport: any HTTPTransporting) {
+        strongTransport = transport
+    }
+
+    init(weaklyReferencing transport: any HTTPTransporting & AnyObject) {
+        strongTransport = nil
+        weakTransport = transport
     }
 
     func loadData(
@@ -48,7 +68,11 @@ final nonisolated class TransportArtworkDataLoader: DataLoading, @unchecked Send
         didReceiveData: @escaping @Sendable (Data, URLResponse) -> Void,
         completion: @escaping @Sendable (Error?) -> Void,
     ) -> any Cancellable {
-        ArtworkDataLoad.perform(
+        guard let transport = strongTransport ?? (weakTransport as? any HTTPTransporting) else {
+            completion(CancellationError())
+            return NoopCancel()
+        }
+        return ArtworkDataLoad.perform(
             transport: transport,
             request: request,
             didReceiveData: didReceiveData,
@@ -57,7 +81,7 @@ final nonisolated class TransportArtworkDataLoader: DataLoading, @unchecked Send
     }
 }
 
-nonisolated enum ArtworkDataLoad {
+enum ArtworkDataLoad {
     static func perform(
         transport: any HTTPTransporting,
         request: URLRequest,
@@ -71,6 +95,15 @@ nonisolated enum ArtworkDataLoad {
                     completion(CancellationError())
                     return
                 }
+                // Nuke writes the original bytes to its disk cache *before*
+                // decoding them (`dataCachePolicy = .storeOriginalData`), and
+                // nothing revalidates a disk hit. A 200 body that passed the
+                // HTML sniff but is not an image would otherwise be served
+                // from disk, undecodable, until eviction.
+                guard isDecodableImage(data) else {
+                    completion(URLError(.cannotDecodeContentData))
+                    return
+                }
                 guard let response = httpResponse(for: request) else {
                     completion(URLError(.badURL))
                     return
@@ -82,6 +115,16 @@ nonisolated enum ArtworkDataLoad {
             }
         }
         return TaskDataCancel(task)
+    }
+
+    /// ImageIO recognizes a container and finds at least one image in it.
+    /// Cheap: it reads headers, not pixels.
+    static func isDecodableImage(_ data: Data) -> Bool {
+        let options = [kCGImageSourceShouldCache: false] as CFDictionary
+        guard let source = CGImageSourceCreateWithData(data as CFData, options),
+              CGImageSourceGetType(source) != nil
+        else { return false }
+        return CGImageSourceGetCount(source) > 0
     }
 
     /// Nuke wants a response alongside the bytes. `imageData` already rejected
@@ -99,7 +142,7 @@ nonisolated enum ArtworkDataLoad {
     }
 }
 
-private final nonisolated class TaskDataCancel: Cancellable, @unchecked Sendable {
+private final class TaskDataCancel: Cancellable, @unchecked Sendable {
     private let task: Task<Void, Never>
 
     init(_ task: Task<Void, Never>) {
@@ -109,4 +152,8 @@ private final nonisolated class TaskDataCancel: Cancellable, @unchecked Sendable
     func cancel() {
         task.cancel()
     }
+}
+
+private final class NoopCancel: Cancellable, Sendable {
+    func cancel() {}
 }

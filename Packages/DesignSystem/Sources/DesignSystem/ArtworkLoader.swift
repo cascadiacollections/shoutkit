@@ -41,12 +41,12 @@ public enum ArtworkLoader {
     /// package's main-actor default would otherwise isolate it.
     private nonisolated static let maxDecodePixelSize: CGFloat = 840
 
-    /// Loads and decodes artwork. Concurrent callers for the same URL share
-    /// one download and one decode; a later caller reuses the cached bitmap.
-    /// The Now Playing surface asks for the same artwork from several views at
-    /// once (backdrop, hero, tint) — the palette pass below is cheap next to
-    /// that, and it runs on the bitmap the pipeline already decoded off the
-    /// main thread.
+    /// Loads and decodes artwork through ``ArtworkImageSource``. With the
+    /// app's pipeline registered, concurrent callers for the same URL share
+    /// one download and one decode, and a later caller reuses the cached
+    /// bitmap. The Now Playing surface asks for the same artwork from several
+    /// views at once (backdrop, hero, tint) — the palette pass below is cheap
+    /// next to that, and it runs off the main thread on the decoded bitmap.
     ///
     /// Runs over `.artwork` rather than `.shared`: this hero art loads
     /// alongside an active audio stream, and `.artwork`'s `.background`
@@ -57,10 +57,10 @@ public enum ArtworkLoader {
         transport: any HTTPTransporting = URLSessionHTTPTransport.artwork,
     ) async -> LoadedArtwork? {
         guard let url,
-              let image = await ArtworkImages.decoded(
+              let image = await ArtworkImageSource.image(
                   url,
                   maxPixelSize: maxDecodePixelSize,
-                  priority: .visible,
+                  isPrefetch: false,
                   transport: transport,
               ),
               let cgImage = image.cgImage

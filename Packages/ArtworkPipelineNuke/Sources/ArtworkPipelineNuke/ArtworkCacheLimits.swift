@@ -9,7 +9,7 @@ import Foundation
 /// file the app already wrote). The extension numbers are what the pipeline
 /// uses if it is ever created inside an `.appex`, so a later call site cannot
 /// accidentally adopt the app's budget.
-nonisolated struct ArtworkCacheLimits: Equatable, Sendable {
+struct ArtworkCacheLimits: Equatable, Sendable {
     /// Decoded bitmaps, in bytes. Nuke enforces this as a hard LRU cap.
     var memoryCostBytes: Int
     /// How many decoded images may sit in memory at once.

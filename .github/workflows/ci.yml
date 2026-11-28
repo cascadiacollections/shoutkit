@@ -272,6 +272,25 @@ jobs:
         working-directory: Packages/ImageIODownsample
         run: swift test --disable-xctest --enable-code-coverage
 
+      # App-side (GPL-3.0) and the only manifest that declares Nuke. It does
+      # not depend on DesignSystem, which is what lets it run here.
+      - name: ArtworkPipelineNuke tests
+        working-directory: Packages/ArtworkPipelineNuke
+        run: swift test --disable-xctest --enable-code-coverage
+
+      # DesignSystem is MIT and reusable, so it must not pull Nuke back in
+      # (CLAUDE.md; DECISIONS.md 2026-11-28). Reads the manifest and lockfile
+      # rather than building, since DesignSystem does not build on the host.
+      - name: Assert DesignSystem does not depend on Nuke
+        run: |
+          set -uo pipefail
+          if grep -v '^ *//' Packages/DesignSystem/Package.swift | grep -qi 'kean/Nuke' \
+            || grep -qi '"nuke"' Packages/DesignSystem/Package.resolved; then
+            echo "::error::Packages/DesignSystem depends on Nuke again. The pipeline belongs in Packages/ArtworkPipelineNuke."
+            exit 1
+          fi
+          echo "DesignSystem declares and resolves no Nuke."
+
       # Includes the cross-platform golden vectors (docs/audio-levels-spec.md)
       # the Android client checks too.
       # `--attachments-path`: without it `swift test` discards Swift Testing
@@ -343,7 +362,7 @@ jobs:
           python3 .github/scripts/coverage_summary.py \
             Packages/RadioDirectory Packages/Playback Packages/Persistence \
             Packages/ImageIODownsample Packages/FeatureFlags Packages/AudioLevels \
-            Packages/BrowseFeatureCore Packages/SearchFeatureCore \
+            Packages/ArtworkPipelineNuke Packages/BrowseFeatureCore Packages/SearchFeatureCore \
             Packages/PlayerFeatureCore Packages/LibraryFeatureCore \
             Packages/SettingsFeatureCore \
             | tee -a "$GITHUB_STEP_SUMMARY"

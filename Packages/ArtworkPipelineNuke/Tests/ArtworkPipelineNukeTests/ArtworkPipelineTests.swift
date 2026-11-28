@@ -1,10 +1,13 @@
-@testable import DesignSystem
+@testable import ArtworkPipelineNuke
+import CoreGraphics
 import Foundation
+import Nuke
 import RadioDirectory
 import Testing
-import UIKit
 
-@MainActor
+/// Drives the production pipeline's shape — lane routing, disk cache,
+/// `.storeOriginalData` — with fake transports in place of the two
+/// production sessions, and a disk cache in a scratch directory.
 struct ArtworkPipelineTests {
     @Test func `extension cache limits are stricter than the app`() {
         let app = ArtworkCacheLimits.application
@@ -18,25 +21,28 @@ struct ArtworkPipelineTests {
     }
 
     @Test func `production artwork and speculative sessions share one pipeline`() {
-        #expect(ArtworkTransportIdentity.identifier(of: URLSessionHTTPTransport.artwork) != nil)
-        #expect(
-            ArtworkTransportIdentity.identifier(of: URLSessionHTTPTransport.artwork)
-                == ArtworkTransportIdentity.identifier(of: URLSessionHTTPTransport.artwork),
+        let store = ArtworkPipelineStore(
+            visible: URLSessionHTTPTransport.artwork,
+            speculative: URLSessionHTTPTransport.speculative,
+            limits: .application,
+            dataCache: nil,
         )
-        let store = ArtworkPipelineStore.shared
+        #expect(ArtworkTransportIdentity.identifier(of: URLSessionHTTPTransport.artwork) != nil)
         let display = store.route(for: URLSessionHTTPTransport.artwork)
         let speculative = store.route(for: URLSessionHTTPTransport.speculative)
-        #expect(display.speculative == false)
-        #expect(speculative.speculative == true)
+        #expect(display.lane == .visible)
+        #expect(speculative.lane == .speculative)
         #expect(display.pipeline === speculative.pipeline)
     }
 
     @Test func `a repeated load does not fetch again`() async throws {
         let transport = ScriptedImageTransport(body: png(side: 8))
+        let fixture = try Fixture(visible: transport)
+        defer { fixture.tearDown() }
         let url = try uniqueURL()
 
-        let first = await ArtworkThumbnailLoader.thumbnail(for: url, maxPixelSize: 32, transport: transport)
-        let second = await ArtworkThumbnailLoader.thumbnail(for: url, maxPixelSize: 32, transport: transport)
+        let first = await fixture.load(url, maxPixelSize: 32, over: transport)
+        let second = await fixture.load(url, maxPixelSize: 32, over: transport)
 
         #expect(first != nil)
         #expect(second != nil)
@@ -45,28 +51,26 @@ struct ArtworkPipelineTests {
 
     @Test func `two sizes of one url share the download`() async throws {
         let transport = ScriptedImageTransport(body: png(side: 64))
+        let fixture = try Fixture(visible: transport)
+        defer { fixture.tearDown() }
         let url = try uniqueURL()
 
-        _ = await ArtworkThumbnailLoader.thumbnail(for: url, maxPixelSize: 16, transport: transport)
-        _ = await ArtworkThumbnailLoader.thumbnail(for: url, maxPixelSize: 32, transport: transport)
+        _ = await fixture.load(url, maxPixelSize: 16, over: transport)
+        _ = await fixture.load(url, maxPixelSize: 32, over: transport)
 
         #expect(await transport.sends == 1)
     }
 
     @Test func `concurrent loads coalesce to one fetch`() async throws {
         let transport = HoldingImageTransport(body: png(side: 8))
+        let fixture = try Fixture(visible: transport)
+        defer { fixture.tearDown() }
         let url = try uniqueURL()
 
-        let first = Task {
-            await ArtworkThumbnailLoader.thumbnail(for: url, maxPixelSize: 32, transport: transport)
-        }
-        #expect(await transport.waitUntilSending())
-        let second = Task {
-            await ArtworkThumbnailLoader.thumbnail(for: url, maxPixelSize: 32, transport: transport)
-        }
-        for _ in 0 ..< 40 {
-            await Task.yield()
-        }
+        let first = Task { await fixture.load(url, maxPixelSize: 32, over: transport) }
+        #expect(await eventually { await transport.sends > 0 })
+        let second = Task { await fixture.load(url, maxPixelSize: 32, over: transport) }
+        try await Task.sleep(for: .milliseconds(50))
         #expect(await transport.sends == 1)
         await transport.release()
 
@@ -76,14 +80,39 @@ struct ArtworkPipelineTests {
         #expect(await transport.sends == 1)
     }
 
+    /// A visible request must never join a speculative download: the
+    /// speculative session refuses on cellular and in Low Data Mode, and a
+    /// visible row that inherited that refusal would keep its placeholder.
+    @Test func `a visible load does not wait on a pending speculative one`() async throws {
+        let speculative = HoldingImageTransport(body: png(side: 8), failAfterRelease: true)
+        let visible = ScriptedImageTransport(body: png(side: 8))
+        let fixture = try Fixture(visible: visible, speculative: speculative)
+        defer { fixture.tearDown() }
+        let url = try uniqueURL()
+
+        let prefetch = Task { await fixture.load(url, maxPixelSize: 32, isPrefetch: true, over: speculative) }
+        #expect(await eventually { await speculative.sends == 1 })
+
+        let onScreen = Task { await fixture.load(url, maxPixelSize: 32, over: visible) }
+        let reachedVisibleSession = await eventually { await visible.sends == 1 }
+        // Released either way so a regression fails here instead of hanging.
+        await speculative.release()
+
+        #expect(reachedVisibleSession)
+        #expect(await onScreen.value != nil)
+        #expect(await prefetch.value == nil)
+    }
+
     @Test func `a failed fetch is not cached`() async throws {
         let transport = ScriptedImageTransport(body: png(side: 8))
         await transport.setFailure(URLError(.networkConnectionLost))
+        let fixture = try Fixture(visible: transport)
+        defer { fixture.tearDown() }
         let url = try uniqueURL()
 
-        let failed = await ArtworkThumbnailLoader.thumbnail(for: url, maxPixelSize: 32, transport: transport)
+        let failed = await fixture.load(url, maxPixelSize: 32, over: transport)
         await transport.setFailure(nil)
-        let recovered = await ArtworkThumbnailLoader.thumbnail(for: url, maxPixelSize: 32, transport: transport)
+        let recovered = await fixture.load(url, maxPixelSize: 32, over: transport)
 
         #expect(failed == nil)
         #expect(recovered != nil)
@@ -93,123 +122,132 @@ struct ArtworkPipelineTests {
     @Test func `an html body is a failed fetch and is not cached`() async throws {
         let html = Data("<!doctype html><html><body>down</body></html>".utf8)
         let transport = ScriptedImageTransport(body: html, mimeType: "text/html")
+        let fixture = try Fixture(visible: transport)
+        defer { fixture.tearDown() }
         let url = try uniqueURL()
 
-        let failed = await ArtworkThumbnailLoader.thumbnail(for: url, maxPixelSize: 32, transport: transport)
-        let again = await ArtworkThumbnailLoader.thumbnail(for: url, maxPixelSize: 32, transport: transport)
+        let failed = await fixture.load(url, maxPixelSize: 32, over: transport)
+        let again = await fixture.load(url, maxPixelSize: 32, over: transport)
 
         #expect(failed == nil)
         #expect(again == nil)
         #expect(await transport.sends == 2)
     }
 
-    @Test func `oversized artwork is downsampled to the requested pixel size`() async throws {
-        let transport = ScriptedImageTransport(body: png(side: 180))
+    /// Nuke stores the original bytes before decoding them. Nuke 13.2.3 does
+    /// fall back to the network when a disk copy fails to decode, so this is
+    /// not a stuck placeholder — but bytes that are not an image should not
+    /// take disk space or cost a failed decode on every later request.
+    @Test func `an undecodable body is not stored on disk`() async throws {
+        let garbage = Data(repeating: 0x5A, count: 256)
+        let transport = ScriptedImageTransport(body: garbage, mimeType: "image/png")
+        let fixture = try Fixture(visible: transport)
+        defer { fixture.tearDown() }
         let url = try uniqueURL()
 
-        let image = await ArtworkThumbnailLoader.thumbnail(for: url, maxPixelSize: 40, transport: transport)
-        let cgImage = try #require(image?.cgImage)
+        let failed = await fixture.load(url, maxPixelSize: 32, over: transport)
+        #expect(failed == nil)
+        #expect(fixture.dataCache.cachedData(for: url.absoluteString) == nil)
 
-        #expect(cgImage.width <= 40)
-        #expect(cgImage.height <= 40)
-        #expect(cgImage.width > 0)
+        await transport.setBody(png(side: 8))
+        #expect(await fixture.load(url, maxPixelSize: 32, over: transport) != nil)
+        #expect(fixture.dataCache.cachedData(for: url.absoluteString) != nil)
+    }
+
+    @Test func `oversized artwork is downsampled to the requested pixel size`() async throws {
+        let transport = ScriptedImageTransport(body: png(side: 180))
+        let fixture = try Fixture(visible: transport)
+        defer { fixture.tearDown() }
+        let url = try uniqueURL()
+
+        let image = try #require(await fixture.load(url, maxPixelSize: 40, over: transport))
+
+        #expect(image.width <= 40)
+        #expect(image.height <= 40)
+        #expect(image.width > 0)
+    }
+
+    /// `value as AnyObject` boxes a struct, so a struct transport must not be
+    /// keyed on that box: two of them would land on whichever pipeline the
+    /// reused box address last named.
+    @Test func `two struct transports never share a pipeline`() async throws {
+        let store = ArtworkPipelineStore(
+            visible: URLSessionHTTPTransport.artwork,
+            speculative: URLSessionHTTPTransport.speculative,
+            limits: .application,
+            dataCache: nil,
+        )
+        let url = try uniqueURL()
+        let working = ValueTransport(body: png(side: 8))
+        let broken = ValueTransport(body: nil)
+
+        #expect(ArtworkTransportIdentity.object(of: working) == nil)
+        let first = await store.image(for: url, maxPixelSize: 32, isPrefetch: false, transport: working)
+        let second = await store.image(for: url, maxPixelSize: 32, isPrefetch: false, transport: broken)
+
+        #expect(first != nil)
+        #expect(second == nil)
+        #expect(working.counter.value == 1)
+        #expect(broken.counter.value == 1)
+        #expect(store.customPipelineCount == 0)
+    }
+
+    /// A non-production pipeline has no disk cache and lives only as long as
+    /// its transport.
+    @Test func `a custom transport's pipeline is memory only and released with it`() async throws {
+        let store = ArtworkPipelineStore(
+            visible: URLSessionHTTPTransport.artwork,
+            speculative: URLSessionHTTPTransport.speculative,
+            limits: .application,
+            dataCache: nil,
+        )
+        let url = try uniqueURL()
+        let released = WeakReference()
+        do {
+            let transport = ScriptedImageTransport(body: png(side: 8))
+            released.object = transport
+            #expect(store.route(for: transport).pipeline.configuration.dataCache == nil)
+            #expect(await store.image(for: url, maxPixelSize: 32, isPrefetch: false, transport: transport) != nil)
+            #expect(store.customPipelineCount == 1)
+        }
+        #expect(await eventually { released.object == nil })
+        #expect(store.customPipelineCount == 0)
     }
 
     private func uniqueURL() throws -> URL {
         try #require(URL(string: "https://example.invalid/artwork/\(UUID().uuidString).png"))
     }
-
-    private func png(side: Int) -> Data {
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format)
-        return renderer.pngData { context in
-            UIColor.systemRed.setFill()
-            context.fill(CGRect(x: 0, y: 0, width: side, height: side))
-        }
-    }
 }
 
-private actor ScriptedImageTransport: HTTPTransporting {
-    private let body: Data
-    private let mimeType: String
-    private var failure: URLError?
-    private(set) var sends = 0
+// MARK: - Fixture
 
-    init(body: Data, mimeType: String = "image/png") {
-        self.body = body
-        self.mimeType = mimeType
+private struct Fixture {
+    let store: ArtworkPipelineStore
+    let dataCache: DataCache
+    let directory: URL
+
+    init(visible: any HTTPTransporting, speculative: any HTTPTransporting = UnusedTransport()) throws {
+        directory = FileManager.default.temporaryDirectory
+            .appending(path: "ArtworkPipelineTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+        dataCache = try DataCache(path: directory)
+        store = ArtworkPipelineStore(
+            visible: visible,
+            speculative: speculative,
+            limits: .application,
+            dataCache: dataCache,
+        )
     }
 
-    func setFailure(_ failure: URLError?) {
-        self.failure = failure
+    func load(
+        _ url: URL,
+        maxPixelSize: CGFloat,
+        isPrefetch: Bool = false,
+        over transport: any HTTPTransporting,
+    ) async -> CGImage? {
+        await store.image(for: url, maxPixelSize: maxPixelSize, isPrefetch: isPrefetch, transport: transport)
     }
 
-    func send(_ request: URLRequest) async throws -> (Data, URLResponse) {
-        sends += 1
-        if let failure {
-            throw failure
-        }
-        let url = request.url ?? URL(fileURLWithPath: "/artwork")
-        guard let response = HTTPURLResponse(
-            url: url,
-            statusCode: 200,
-            httpVersion: "HTTP/1.1",
-            headerFields: ["Content-Type": mimeType],
-        ) else {
-            throw URLError(.badServerResponse)
-        }
-        return (body, response)
-    }
-}
-
-/// Blocks inside `send` so a test can observe how many fetches started before
-/// letting them finish.
-private actor HoldingImageTransport: HTTPTransporting {
-    private let body: Data
-    private var continuations: [CheckedContinuation<Void, Never>] = []
-    private var released = false
-    private(set) var sends = 0
-
-    init(body: Data) {
-        self.body = body
-    }
-
-    func send(_ request: URLRequest) async throws -> (Data, URLResponse) {
-        sends += 1
-        if released == false {
-            await withCheckedContinuation { continuation in
-                continuations.append(continuation)
-            }
-        }
-        let url = request.url ?? URL(fileURLWithPath: "/artwork")
-        guard let response = HTTPURLResponse(
-            url: url,
-            statusCode: 200,
-            httpVersion: "HTTP/1.1",
-            headerFields: ["Content-Type": "image/png"],
-        ) else {
-            throw URLError(.badServerResponse)
-        }
-        return (body, response)
-    }
-
-    func waitUntilSending() async -> Bool {
-        for _ in 0 ..< 1000 {
-            if sends > 0 {
-                return true
-            }
-            await Task.yield()
-        }
-        return false
-    }
-
-    func release() {
-        released = true
-        let pending = continuations
-        continuations.removeAll()
-        for continuation in pending {
-            continuation.resume()
-        }
+    func tearDown() {
+        try? FileManager.default.removeItem(at: directory)
     }
 }
