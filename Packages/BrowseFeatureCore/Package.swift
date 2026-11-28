@@ -22,6 +22,9 @@ let package = Package(
     dependencies: [
         .package(path: "../RadioDirectory"),
         .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.5.3"),
+        // Test-only: `withMainSerialExecutor` for the view-model tests that
+        // overlap two requests. Not linked into the library.
+        .package(url: "https://github.com/pointfreeco/swift-concurrency-extras", exact: "1.4.3"),
     ],
     targets: [
         .target(
@@ -34,7 +37,10 @@ let package = Package(
         ),
         .testTarget(
             name: "BrowseFeatureCoreTests",
-            dependencies: ["BrowseFeatureCore"],
+            dependencies: [
+                "BrowseFeatureCore",
+                .product(name: "ConcurrencyExtras", package: "swift-concurrency-extras"),
+            ],
         ),
     ],
 )

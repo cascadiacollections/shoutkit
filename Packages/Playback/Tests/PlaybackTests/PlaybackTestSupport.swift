@@ -1,4 +1,5 @@
 import Clocks
+import ConcurrencyExtras
 import Foundation
 import Observation
 @testable import Playback
@@ -228,9 +229,34 @@ func waitForStart(_ output: FakeAudioOutput, count: Int = 1) async {
     await waitUntil { output.startedURLs.count >= count }
 }
 
+/// Lets every job already queued, and the short chains they start, run before
+/// the test continues. Only deterministic inside `withMainSerialExecutor`, where
+/// every job (the main actor's and the global executor's) shares one FIFO queue;
+/// call it only from tests in a `MainSerialExecutorTests` suite.
 func drainMainQueue() async {
-    for _ in 0 ..< 50 {
-        await Task.yield()
+    await Task.megaYield()
+}
+
+/// A latch a fake can wait on until the test opens it, so a "slow" response is
+/// held for exactly as long as the test needs instead of for a guessed number
+/// of yields.
+@MainActor
+final class Gate {
+    private var isOpen = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func wait() async {
+        guard isOpen == false else { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    func open() {
+        isOpen = true
+        let resumed = waiters
+        waiters = []
+        for waiter in resumed {
+            waiter.resume()
+        }
     }
 }
 

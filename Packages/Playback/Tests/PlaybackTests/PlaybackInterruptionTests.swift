@@ -16,7 +16,7 @@ import Testing
 // holds audio now, and the interruption ended inside `hintlessResumeWindow`.
 // Short injected windows here; the production default is 90 s.
 
-extension PlaybackTimingTests {
+extension MainSerialExecutorTests {
     @MainActor
     struct PlaybackInterruptionTests {
         private static let shortWindow: Duration = .milliseconds(50)

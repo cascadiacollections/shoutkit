@@ -23,6 +23,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/hmlongco/Factory.git", exact: "3.5.3"),
         .package(url: "https://github.com/pointfreeco/swift-clocks", exact: "1.1.1"),
+        .package(url: "https://github.com/pointfreeco/swift-concurrency-extras", exact: "1.4.3"),
     ],
     targets: [
         .target(
@@ -38,6 +39,7 @@ let package = Package(
             dependencies: [
                 "RadioDirectory",
                 .product(name: "Clocks", package: "swift-clocks"),
+                .product(name: "ConcurrencyExtras", package: "swift-concurrency-extras"),
             ],
         ),
     ],

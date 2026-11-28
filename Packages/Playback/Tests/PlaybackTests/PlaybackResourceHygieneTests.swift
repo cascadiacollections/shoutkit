@@ -9,7 +9,7 @@ import Testing
 // after a timeout, and a stalled (endlessly buffering) stream must be parked
 // instead of retrying forever. The windows run on a `TestClock`.
 
-extension PlaybackTimingTests {
+extension MainSerialExecutorTests {
     @MainActor
     struct PlaybackResourceHygieneTests {
         private static let shortTimeout: Duration = .milliseconds(50)
