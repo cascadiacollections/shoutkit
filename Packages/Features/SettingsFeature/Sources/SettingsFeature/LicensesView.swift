@@ -21,8 +21,8 @@ struct LicensesView: View {
             }
 
             Section {
-                NavigationLink("swift-collections — Apache-2.0") {
-                    LicenseTextView(title: "Apache-2.0", resource: "apache-2.0")
+                NavigationLink("Nuke — MIT") {
+                    LicenseTextView(title: "MIT", resource: "nuke-mit")
                 }
                 NavigationLink("Factory — MIT") {
                     LicenseTextView(title: "MIT", resource: "factory-mit")
@@ -47,8 +47,7 @@ struct LicensesView: View {
                 Text("Third-Party")
             } footer: {
                 Text("""
-                Apple's swift-collections, \
-                Apache-2.0 with the Swift Runtime Library Exception. \
+                Nuke (kean/Nuke), MIT — station logos and Now Playing artwork. \
                 Factory (hmlongco/Factory) and AudioStreaming (dimitris-c/AudioStreaming), MIT. \
                 AudioStreaming's bundled libogg/libvorbis (sbooth's xcframework builds), BSD. \
                 Pulse (kean/Pulse), MIT — a debug-only network inspector, not included in \

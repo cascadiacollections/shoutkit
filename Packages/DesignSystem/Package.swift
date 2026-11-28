@@ -18,10 +18,9 @@ let package = Package(
         .library(name: "DesignSystem", targets: ["DesignSystem"]),
     ],
     dependencies: [
-        .package(path: "../ImageIODownsample"),
         .package(path: "../RadioDirectory"),
         .package(path: "../Playback"),
-        .package(url: "https://github.com/apple/swift-collections.git", from: "1.7.5"),
+        .package(url: "https://github.com/kean/Nuke.git", exact: "13.2.3"),
     ],
     targets: [
         .target(
@@ -29,8 +28,7 @@ let package = Package(
             dependencies: [
                 "RadioDirectory",
                 "Playback",
-                "ImageIODownsample",
-                .product(name: "OrderedCollections", package: "swift-collections"),
+                .product(name: "Nuke", package: "Nuke"),
             ],
             resources: [.process("Resources/Localizable.xcstrings")],
             swiftSettings: [optimizeForSize, .defaultIsolation(MainActor.self)],

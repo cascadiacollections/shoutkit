@@ -41,6 +41,10 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
   tinted and clear Home Screens and on the Mac desktop.
 
 ### Changed
+- **Station logos and Now Playing art stay downloaded.** Scrolling back to a
+  station, or opening Now Playing again for the same art, reuses the image
+  instead of fetching it every time. A download that fails is not remembered,
+  so the next look tries again.
 - **Stations start playing faster.** On KEXP, the time from tapping a station to hearing it
   dropped from about 3.4 seconds to about 1.8. ShoutKit used to connect to every station twice
   before playing; it now connects once.

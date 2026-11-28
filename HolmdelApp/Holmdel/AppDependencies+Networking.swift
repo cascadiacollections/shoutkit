@@ -42,10 +42,11 @@ extension AppDependencies {
     /// installed first holds the slot — it's built from the same tuned
     /// configuration, so behaviour matches Release either way).
     static func installSharedNetworking() {
-        // Size the shared URL cache for RAM-constrained devices: raw bytes
-        // (artwork, directory JSON) belong on disk — cheap, and they survive
-        // relaunch — while the in-memory tier stays small; decoded bitmaps
-        // have their own bounded caches in DesignSystem. Must be set before
+        // Size the shared URL cache for RAM-constrained devices: directory JSON
+        // belongs on disk — cheap, and it survives relaunch — while the
+        // in-memory tier stays small. Artwork bytes and decoded bitmaps are
+        // cached by the artwork pipeline in DesignSystem, not this URL cache.
+        // Must be set before
         // any URLSessionConfiguration below is *created*: a configuration
         // captures the URLCache.shared reference at creation time, so setting
         // the tuned cache afterwards would leave the shared transport (which

@@ -1,5 +1,61 @@
 # Decisions
 
+## 2026-11-28 (Nuke replaces the hand-rolled artwork caches)
+
+Station logos and Now Playing art went through two caches in DesignSystem: a
+6-entry FIFO of decoded heroes (`OrderedDictionary` from swift-collections) and
+a 16 MB `NSCache` of list thumbnails, both filled by `URLSession` plus
+`ImageIODownsample`. That was enough to coalesce a hero that several views ask
+for at once, and not enough to keep a logo across launches or to share one
+download between a list row and the hero.
+
+Nuke 13.2.3 (`exact`, MIT) now owns that path. One `ImagePipeline` does the
+fetch, the in-flight coalescing, the memory cache, the disk cache, and the
+ImageIO thumbnail decode off the main thread. Palette extraction, placeholders,
+and the album-art fallback stay where they were: Nuke does not know the
+station-versus-track policy, and `LazyImage` would have replaced it. NukeUI is
+not linked.
+
+The production loader is still `URLSessionHTTPTransport.artwork` for something
+on screen and `.speculative` for prefetch, so the background service type and
+the Low Data Mode / cellular refusal are unchanged. `imageData(for:)` still
+rejects an HTML body before the pipeline stores it, which is the 2026-11-10
+rule. Failures are not cached. A second request for another pixel size reuses
+the encoded original (`dataCachePolicy = .storeOriginalData`) instead of
+downloading again.
+
+Cache ceilings, because Nuke's defaults are a large fraction of device RAM and
+a 150 MB disk:
+
+- **App:** 24 MB decoded, 80 images, a single entry may be 40% of that so an
+  840 px hero (~2.8 MB) is eligible, 32 MB of encoded originals on disk.
+- **App extension:** 4 MB decoded, 12 images, 8 MB on disk. A widget is
+  jetsam-killed around 30 MB. The Quick Play widget does not call this pipeline
+  (it reads a file the app wrote), and DesignSystem is iOS-only, so the watch
+  and tvOS apps do not either. The extension budget is what the pipeline uses
+  if it is ever created inside an `.appex`.
+
+Two behavior changes are deliberate and worth a look:
+
+- **Disk hits do not revalidate.** The previous request policy was
+  `.reloadRevalidatingCacheData`. Nuke's data cache serves the stored bytes
+  until the size limit evicts them. Album-art URLs are effectively immutable;
+  a station logo that changes at the same URL can stay stale until then.
+- **Decoded images are dropped when the app backgrounds.** Nuke's memory cache
+  does that on its own, and also on a memory warning, which replaces the
+  dispatch source the FIFO used. The disk copy is what makes the next
+  foreground paint cheap.
+
+swift-collections leaves with the FIFO. Nothing else imported
+`OrderedCollections`. DesignSystem's `ImageDownsampler` wrapper leaves too;
+Playback still links `ImageIODownsample` for lock-screen bytes. Nuke 14.0.0
+(2026-11-22) is newer and wants the same Xcode 27 this tree already builds
+with; this prototype stays on the latest 13.x, which is 13.2.3.
+
+Binary size was not measured here. The 2026-11-07 size pass is why this is a
+prototype: Nuke is larger than `OrderedDictionary`, and the number that matters
+is the phone binary in a Release archive, which this change does not have.
+
 ## 2026-11-27 (a background wake fails only when it is cancelled)
 
 `BackgroundRefreshController.runRefresh()` returned success only when the

@@ -9,7 +9,7 @@ it ships in the binary, add its license text to the in-app Licenses screen
 
 | Name | Version | License | Used in | URL |
 | ---- | ------- | ------- | ------- | --- |
-| swift-collections | 1.7.5+ (`from: "1.7.5"`) | Apache-2.0 (with Runtime Library Exception) | DesignSystem — `OrderedDictionary` backs the Now Playing artwork store's bounded FIFO cache | <https://github.com/apple/swift-collections> |
+| Nuke | 13.2.3 (`exact: "13.2.3"`) | MIT | DesignSystem — `ImagePipeline` fetches, decodes, and caches station logos and Now Playing artwork (memory and disk) | <https://github.com/kean/Nuke> |
 | Factory | 3.5.3 (`exact: "3.5.3"` in every manifest) | MIT | RadioDirectory, Playback, PlaybackEngineAudioStreaming, Persistence, FeatureFlags, BrowseFeature, BrowseFeatureCore, SearchFeature, SearchFeatureCore — `Container`-based dependency injection | <https://github.com/hmlongco/Factory> |
 | AudioStreaming | 1.4.5 (`exact: "1.4.5"`) | MIT | PlaybackEngineAudioStreaming — `AudioStreamingPlaybackEngine`, the `AVAudioEngine`-backed production playback engine (iOS only). Its ICY metadata parsers and MIME-type table are also copied, adapted, into `PlaybackEngineAudioStreaming/Sources/…/Vendored/` with the upstream notice kept | <https://github.com/dimitris-c/AudioStreaming> |
 | ogg-binary-xcframework | 0.1.2 (transitive via AudioStreaming) | BSD (Xiph.org) | PlaybackEngineAudioStreaming — libogg, linked by AudioStreaming's Ogg Vorbis codec support | <https://github.com/sbooth/ogg-binary-xcframework> |
