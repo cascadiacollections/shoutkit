@@ -142,6 +142,7 @@ extension PlaybackTimingTests {
             // Spend one attempt on a genuine drop — and deliberately don't report
             // `.playing` for the retry, so nothing else refills the budget.
             output.onStatusChange?(.failed(.streamFailed("drop")))
+            await clock.advance(by: Self.fastDelay)
             await waitUntil { output.startedURLs.count == 2 }
             output.onStatusChange?(.endOfStream)
 
