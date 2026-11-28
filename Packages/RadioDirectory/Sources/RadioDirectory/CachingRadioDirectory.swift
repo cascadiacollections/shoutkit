@@ -16,8 +16,7 @@ import Foundation
 /// Search, genre, and stream-endpoint calls are user-driven and distinct, so they
 /// pass straight through. Failures are never cached; the next call retries.
 public actor CachingRadioDirectory<C: Clock>: RadioDirectoryProviding, DirectoryDiscoveryCaching
-    where C.Duration == Duration
-{
+    where C.Duration == Duration {
     /// Six hours: long enough that opening the app repeatedly in a day shows the
     /// same, instantly-painted list instead of a reshuffled one (top-click
     /// rankings drift constantly), short enough that a day's browsing isn't
