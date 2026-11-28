@@ -38,6 +38,8 @@ updates:
   #     - "/Packages/PlaybackEngineAudioStreaming"
   #     - "/Packages/Persistence"
   #     - "/Packages/DebugSupport"
+  #     # The only manifest that declares Nuke (DECISIONS.md, 2026-11-28).
+  #     - "/Packages/ArtworkPipelineNuke"
   #     - "/Packages/FeatureFlags"
   #     - "/Packages/BrowseFeatureCore"
   #     - "/Packages/SearchFeatureCore"

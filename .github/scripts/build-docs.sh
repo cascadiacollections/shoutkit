@@ -110,14 +110,21 @@ rm -rf "${merged}"
 # shellcheck disable=SC2046 # intentional word splitting over the archive list
 xcrun docc merge $(printf '%s\n' "${archives_dir}"/*.doccarchive) \
     --output-path "${merged}" \
-    --synthesized-landing-page-name "Holmdel"
+    --synthesized-landing-page-name "ShoutKit"
 echo "::endgroup::"
 
+# The base path is the Pages site's path, which is the repository name. It was
+# hard-coded as "holmdel/api/docs" and outlived the repo's rename to shoutkit:
+# every DocC page then loaded its scripts from /holmdel/..., got 404s and
+# rendered blank. Taking it from GITHUB_REPOSITORY keeps it right through a
+# rename; the fallback is for local runs.
+repo_name="${GITHUB_REPOSITORY:-cascadiacollections/shoutkit}"
+repo_name="${repo_name#*/}"
 echo "::group::transform-for-static-hosting"
 rm -rf site/api/docs
 xcrun docc process-archive transform-for-static-hosting "${merged}" \
     --output-path site/api/docs \
-    --hosting-base-path "holmdel/api/docs"
+    --hosting-base-path "${repo_name}/api/docs"
 echo "::endgroup::"
 
 echo "Docs built into site/api/docs"

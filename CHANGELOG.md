@@ -41,6 +41,10 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
   tinted and clear Home Screens and on the Mac desktop.
 
 ### Changed
+- **Station logos and Now Playing art stay downloaded.** Scrolling back to a
+  station, or opening Now Playing again for the same art, reuses the image
+  instead of fetching it every time. A download that fails is not remembered,
+  so the next look tries again.
 - **No change to what you hear.** The one-minute station list and the waits
   before a dropped station reconnects are unchanged. Tests can now move those
   clocks forward instead of waiting on the wall clock.
