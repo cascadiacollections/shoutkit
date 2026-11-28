@@ -1,5 +1,112 @@
 # Decisions
 
+## 2026-11-28 (Nuke replaces the hand-rolled artwork caches)
+
+Station logos and Now Playing art went through two caches in DesignSystem: a
+6-entry FIFO of decoded heroes (`OrderedDictionary` from swift-collections) and
+a 16 MB `NSCache` of list thumbnails, both filled by `URLSession` plus
+`ImageIODownsample`. That was enough to coalesce a hero that several views ask
+for at once, and not enough to keep a logo across launches or to share one
+download between a list row and the hero.
+
+Nuke 13.2.3 (`exact`, MIT) now owns that path. One `ImagePipeline` does the
+fetch, the in-flight coalescing, the memory cache, the disk cache, and the
+ImageIO thumbnail decode off the main thread. Palette extraction, placeholders,
+and the album-art fallback stay where they were: Nuke does not know the
+station-versus-track policy, and `LazyImage` would have replaced it. NukeUI is
+not linked.
+
+**Nuke lives in an app-side package, not in DesignSystem.** DesignSystem is MIT
+and reusable, and the rule (CLAUDE.md) is that a reusable package does not take
+a heavyweight or app-specific dependency — the pipeline also carries this app's
+disk-cache directory name and its speculative-lane header. So the pipeline is
+`Packages/ArtworkPipelineNuke` (GPL-3.0 like the app target, no `LICENSE`
+file), and DesignSystem exposes a seam instead: `ArtworkImageSource.register(_:)`
+takes a `@Sendable (ArtworkImageRequest) async -> CGImage?`. The app target
+registers `NukeArtworkPipeline.image(...)` in `installProcessWideServices()`,
+next to `registerProductionPlaybackEngine()`, the same shape as
+PlaybackEngineAudioStreaming. With nothing registered (previews, package tests,
+an adopter), DesignSystem fetches through the request's transport and
+downsamples with `ImageIODownsample`, uncached. A closure rather than the
+package depending on DesignSystem, because DesignSystem is iOS-only: this way
+`ArtworkPipelineNuke` builds on the mac host and its suite runs in `host-tests`.
+CI also asserts DesignSystem's manifest and lockfile name no Nuke.
+
+The production loader is still `URLSessionHTTPTransport.artwork` for something
+on screen and `.speculative` for prefetch, so the background service type and
+the Low Data Mode / cellular refusal are unchanged. `imageData(for:)` still
+rejects an HTML body before the pipeline sees it, which is the 2026-11-10
+rule. Failures are not cached. A second request for another pixel size reuses
+the encoded original (`dataCachePolicy = .storeOriginalData`) instead of
+downloading again.
+
+Review fixes, each with a test in `ArtworkPipelineNukeTests`:
+
+- **A visible load never joins a speculative download.** Nuke coalesces
+  downloads on URL, cache policy, and `allowsCellularAccess` — not headers — so
+  the lane header alone let an on-screen row join a queued prefetch and inherit
+  the speculative session's refusal on cellular, keeping its placeholder. The
+  speculative request now carries a different cache policy, used only as part
+  of Nuke's key; both lanes go out with the same one. Caches are still shared.
+- **Bytes that are not an image are not handed to Nuke.** Nuke writes the
+  original to disk before decoding it. ImageIO must recognize a container with
+  at least one image first. (Nuke 13.2.3 does re-download when a disk copy
+  fails to decode, so this was wasted disk and a failed decode per request, not
+  a stuck placeholder.)
+- **Only class transports get a cached pipeline.** `value as? AnyObject`
+  succeeds for a struct by boxing it, and a freed box's address can be reused,
+  which would route one struct transport through another's pipeline. Structs
+  now get a one-off pipeline. Pipelines for other class transports have no
+  disk cache and are dropped once their transport is (held weakly); before,
+  each one made a UUID-named directory in Caches and lived for the process.
+- **A row scrolled away does not cancel its download.** `ArtworkImageSource`
+  runs each load in an unstructured task, as `InFlightThumbnails` and
+  `ArtworkStore` did, so a fetch that has started completes into the cache and
+  the next appearance is a hit. The cost is a download nobody may look at;
+  prefetch already pays that deliberately, and the alternative re-downloads a
+  logo every time a fast scroll passes it.
+
+`.reloadIgnoringLocalCacheData` skips reading `URLCache`, not writing it.
+Artwork responses still land in `URLCache.shared`, which is kept on purpose:
+the lock screen's `nowPlayingArtwork` session reads the same URL with
+`.returnCacheDataElseLoad` and is served those bytes.
+
+Cache ceilings, because Nuke's defaults are a large fraction of device RAM and
+a 150 MB disk:
+
+- **App:** 24 MB decoded, 80 images, a single entry may be 40% of that so an
+  840 px hero (~2.8 MB) is eligible, 32 MB of encoded originals on disk.
+- **App extension:** 4 MB decoded, 12 images, 8 MB on disk. A widget is
+  jetsam-killed around 30 MB. The Quick Play widget does not call this pipeline
+  (it reads a file the app wrote), and DesignSystem is iOS-only, so the watch
+  and tvOS apps do not either. The extension budget is what the pipeline uses
+  if it is ever created inside an `.appex`.
+
+Two behavior changes are deliberate and worth a look:
+
+- **Disk hits do not revalidate.** The previous request policy was
+  `.reloadRevalidatingCacheData`. Nuke's data cache serves the stored bytes
+  until the size limit evicts them. Album-art URLs are effectively immutable;
+  a station logo that changes at the same URL can stay stale until then.
+- **Decoded images are dropped when the app backgrounds.** Nuke's memory cache
+  does that on its own, and also on a memory warning, which replaces the
+  dispatch source the FIFO used. The disk copy is what makes the next
+  foreground paint cheap.
+
+swift-collections leaves with the FIFO. Nothing else imported
+`OrderedCollections`, so its notice leaves the Licenses screen too. Nuke 14.0.0
+(2026-11-22) is newer and wants the same Xcode 27 this tree already builds
+with; this stays on the latest 13.x, which is 13.2.3.
+
+**Binary size: +105 KB on the phone binary.** Release, generic iOS,
+`XCODE_XCCONFIG_FILE=HolmdelApp/Config/Shipping.xcconfig`, Xcode 27 beta,
+symbols stripped with `strip` as an archive would: 4,027,360 bytes at
+`1d79b24` (main before this change, with swift-collections) and 4,135,320
+after (Nuke in, swift-collections and the hand-rolled caches out), +107,960
+bytes or 2.7%. `__TEXT` grew 112 KB (2,506,752 → 2,621,440). That is net of
+the code removed; it buys a disk cache and download sharing the old path did
+not have.
+
 ## 2026-11-28 (a clock for the minute cache and the playback timers)
 
 The one-minute discovery cache and the playback timers (`OneShotTimer`:

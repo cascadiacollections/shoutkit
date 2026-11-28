@@ -8,7 +8,7 @@ import UIKit
 /// Artwork loads through ``ArtworkThumbnailLoader`` rather than `AsyncImage`,
 /// so the decoded bitmap is sized to this view (`size` × display scale)
 /// instead of the source's native resolution, and repeated appearances in
-/// lazy lists hit a pressure-evicting `NSCache` instead of re-decoding.
+/// lazy lists reuse the shared image cache instead of re-decoding.
 ///
 /// Two sizings. A **fixed** one for rows and the mini-player, where the point
 /// size is known and is also the decode size. And a **flexible** one for poster

@@ -20,6 +20,15 @@
       }
     },
     {
+      "identity" : "nuke",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/kean/Nuke.git",
+      "state" : {
+        "revision" : "9e37a277bdb527bf3ae71156ded1423f495f5168",
+        "version" : "13.2.3"
+      }
+    },
+    {
       "identity" : "ogg-binary-xcframework",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sbooth/ogg-binary-xcframework",
@@ -44,15 +53,6 @@
       "state" : {
         "revision" : "82440fa0a8b1c381a6d1e8e0fc7bbba53ec63204",
         "version" : "1.1.1"
-      }
-    },
-    {
-      "identity" : "swift-collections",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-collections.git",
-      "state" : {
-        "revision" : "f96b909e1a9e469620bc5037c1e24e00153f376f",
-        "version" : "1.7.5"
       }
     },
     {

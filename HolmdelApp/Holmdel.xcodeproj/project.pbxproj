@@ -27,6 +27,7 @@
 		000000000000000000000068 /* NowPlayingActivityKit in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000058 /* NowPlayingActivityKit */; };
 		000000000000000000000069 /* NowPlayingActivityCore in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000059 /* NowPlayingActivityCore */; };
 		00000000000000000000006A /* PlaybackEngineAudioStreaming in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005C /* PlaybackEngineAudioStreaming */; };
+		00000000000000000000006B /* ArtworkPipelineNuke in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005D /* ArtworkPipelineNuke */; };
 		000000000000000000000079 /* HolmdelWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000071 /* HolmdelWidgetsBundle.swift */; };
 		00000000000000000000007F /* HolmdelWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 000000000000000000000070 /* HolmdelWidgets.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		000000000000000000000082 /* SettingsFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 00000000000000000000005A /* SettingsFeature */; };
@@ -244,6 +245,7 @@
 				000000000000000000000061 /* RadioDirectory in Frameworks */,
 				000000000000000000000062 /* Playback in Frameworks */,
 				00000000000000000000006A /* PlaybackEngineAudioStreaming in Frameworks */,
+				00000000000000000000006B /* ArtworkPipelineNuke in Frameworks */,
 				000000000000000000000063 /* Persistence in Frameworks */,
 				000000000000000000000064 /* BrowseFeature in Frameworks */,
 				000000000000000000000065 /* PlayerFeature in Frameworks */,
@@ -495,6 +497,7 @@
 				000000000000000000000051 /* RadioDirectory */,
 				000000000000000000000052 /* Playback */,
 				00000000000000000000005C /* PlaybackEngineAudioStreaming */,
+				00000000000000000000005D /* ArtworkPipelineNuke */,
 				000000000000000000000053 /* Persistence */,
 				000000000000000000000054 /* BrowseFeature */,
 				000000000000000000000055 /* PlayerFeature */,
@@ -682,6 +685,7 @@
 				000000000000000000000049 /* XCLocalSwiftPackageReference "../Packages/Features/SettingsFeature" */,
 				00000000000000000000004A /* XCLocalSwiftPackageReference "../Packages/DebugSupport" */,
 				00000000000000000000004B /* XCLocalSwiftPackageReference "../Packages/PlaybackEngineAudioStreaming" */,
+				00000000000000000000004C /* XCLocalSwiftPackageReference "../Packages/ArtworkPipelineNuke" */,
 				000000000000000000000048 /* XCLocalSwiftPackageReference "../Packages/LiveActivity" */,
 				7C0FE0000000000000000100 /* XCLocalSwiftPackageReference "../Packages/AudioLevels" */,
 			);
@@ -1400,6 +1404,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/PlaybackEngineAudioStreaming;
 		};
+		00000000000000000000004C /* XCLocalSwiftPackageReference "../Packages/ArtworkPipelineNuke" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/ArtworkPipelineNuke;
+		};
 		7C0FE0000000000000000100 /* XCLocalSwiftPackageReference "../Packages/AudioLevels" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/AudioLevels;
@@ -1471,6 +1479,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 00000000000000000000004B /* XCLocalSwiftPackageReference "../Packages/PlaybackEngineAudioStreaming" */;
 			productName = PlaybackEngineAudioStreaming;
+		};
+		00000000000000000000005D /* ArtworkPipelineNuke */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 00000000000000000000004C /* XCLocalSwiftPackageReference "../Packages/ArtworkPipelineNuke" */;
+			productName = ArtworkPipelineNuke;
 		};
 		0000000000000000000000CA /* NowPlayingActivityCore */ = {
 			isa = XCSwiftPackageProductDependency;
