@@ -116,6 +116,11 @@ SHOUTCAST_DEV_KEY = your_key_here
   iOS, Mac Catalyst, and tvOS, linked by the phone/Mac and TV app targets: AudioStreaming pulls the ogg/vorbis xcframeworks,
   which have no watchOS slice, and SwiftPM fetches binary artifacts regardless of platform
   conditions. The watch app supplies its own `AVPlayer`-backed engine.
+- `Packages/ArtworkPipelineNuke`: the app's artwork cache — a [Nuke](https://github.com/kean/Nuke)
+  `ImagePipeline` (memory and disk cache, in-flight coalescing, ImageIO thumbnail decode) that the
+  app target registers with `DesignSystem`'s `ArtworkImageSource` at launch. App-side, like
+  `DebugSupport`, so `DesignSystem` stays free of Nuke; without the registration `DesignSystem`
+  loads artwork uncached.
 - `Packages/Persistence`: SwiftData models and `LibraryStore` for favorites and recents.
 - `Packages/LiveActivity`: the App Group stores and the `NowPlayingWidgetCoordinator` behind the
   Quick Play Home Screen widget, including staging downsampled artwork into the shared container
@@ -207,9 +212,9 @@ is in [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Testing
 
-Eleven package suites run on the mac host with `swift test --disable-xctest`, one package at a
+Twelve package suites run on the mac host with `swift test --disable-xctest`, one package at a
 time: `RadioDirectory`, `Playback`, `Persistence`, `FeatureFlags`, `ImageIODownsample`,
-`AudioLevels`, and the five `*FeatureCore` packages. The iOS-only playback types are
+`AudioLevels`, `ArtworkPipelineNuke`, and the five `*FeatureCore` packages. The iOS-only playback types are
 `canImport(UIKit)`-gated so the controller tests execute against fakes anywhere. The remaining
 suites (`DesignSystem`, `PlaybackEngineAudioStreaming`, `LiveActivity`, the app and UI tests)
 run on the simulator through `HolmdelApp/Holmdel.xctestplan`. See
@@ -219,7 +224,7 @@ run on the simulator through `HolmdelApp/Holmdel.xctestplan`. See
 
 | Component | License |
 |---|---|
-| App target (`HolmdelApp`, incl. the debug-only `DebugSupport` package), feature packages (`Packages/Features/*` and their `*FeatureCore` counterparts), `Packages/LiveActivity` | [GPL-3.0](LICENSE), with an [app store permission](LICENSE-EXCEPTION.md) |
+| App target (`HolmdelApp`, incl. the debug-only `DebugSupport` package and the `ArtworkPipelineNuke` package), feature packages (`Packages/Features/*` and their `*FeatureCore` counterparts), `Packages/LiveActivity` | [GPL-3.0](LICENSE), with an [app store permission](LICENSE-EXCEPTION.md) |
 | `Packages/RadioDirectory`, `Packages/Playback`, `Packages/PlaybackEngineAudioStreaming`, `Packages/Persistence`, `Packages/DesignSystem`, `Packages/FeatureFlags`, `Packages/ImageIODownsample`, `Packages/AudioLevels` | [MIT](Packages/RadioDirectory/LICENSE) (per-package `LICENSE` files) |
 
 The rule, if you're adding a package: a per-package `LICENSE` file makes it MIT and means it

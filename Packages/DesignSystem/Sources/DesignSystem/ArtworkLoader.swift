@@ -1,4 +1,3 @@
-import OrderedCollections
 import RadioDirectory
 import SwiftUI
 import UIKit
@@ -41,12 +40,13 @@ public enum ArtworkLoader {
     /// `nonisolated`: read from the nonisolated decode pipeline, and the
     /// package's main-actor default would otherwise isolate it.
     private nonisolated static let maxDecodePixelSize: CGFloat = 840
-    private nonisolated static let requestCachePolicy: URLRequest.CachePolicy = .reloadRevalidatingCacheData
 
-    /// Loads and decodes artwork, coalescing concurrent and repeated requests
-    /// for the same URL. The Now Playing surface asks for the same artwork
-    /// from several views at once (backdrop, hero, tint) — the store hands
-    /// them one shared decode + palette pass instead of three.
+    /// Loads and decodes artwork through ``ArtworkImageSource``. With the
+    /// app's pipeline registered, concurrent callers for the same URL share
+    /// one download and one decode, and a later caller reuses the cached
+    /// bitmap. The Now Playing surface asks for the same artwork from several
+    /// views at once (backdrop, hero, tint) — the palette pass below is cheap
+    /// next to that, and it runs off the main thread on the decoded bitmap.
     ///
     /// Runs over `.artwork` rather than `.shared`: this hero art loads
     /// alongside an active audio stream, and `.artwork`'s `.background`
@@ -56,22 +56,13 @@ public enum ArtworkLoader {
         _ url: URL?,
         transport: any HTTPTransporting = URLSessionHTTPTransport.artwork,
     ) async -> LoadedArtwork? {
-        guard let url else { return nil }
-        return await ArtworkStore.shared.artwork(for: url, transport: transport)
-    }
-
-    /// The uncached fetch/decode pipeline: loads through the shared
-    /// `URLCache`, downsample-decodes to the display ceiling, and box-filters
-    /// a 3×3 palette — all off the main actor.
-    fileprivate nonisolated static func fetchAndDecode(
-        _ url: URL,
-        transport: any HTTPTransporting,
-    ) async -> LoadedArtwork? {
-        var request = URLRequest(url: url)
-        request.cachePolicy = requestCachePolicy
-
-        guard let data = try? await transport.imageData(for: request),
-              let image = ImageDownsampler.decode(data, maxPixelSize: maxDecodePixelSize),
+        guard let url,
+              let image = await ArtworkImageSource.image(
+                  url,
+                  maxPixelSize: maxDecodePixelSize,
+                  isPrefetch: false,
+                  transport: transport,
+              ),
               let cgImage = image.cgImage
         else { return nil }
 
@@ -82,77 +73,6 @@ public enum ArtworkLoader {
             paletteGrid: samples.map(ambientColor),
             accentColor: accentColor(from: samples),
         )
-    }
-
-    /// Deduplicates artwork work per URL: in-flight and completed loads share
-    /// one map entry, so a second caller awaits the first caller's task
-    /// instead of re-fetching and re-decoding. Bounded FIFO — in practice only
-    /// the current and previous track's art are ever live at once.
-    private actor ArtworkStore {
-        static let shared = ArtworkStore()
-
-        // swiftlint:disable:next nesting
-        private struct Entry {
-            let token = UUID()
-            let task: Task<LoadedArtwork?, Never>
-        }
-
-        private var entries: OrderedDictionary<URL, Entry> = [:]
-        private let capacity = 6
-
-        /// Purges the store when the system reports memory pressure, so the
-        /// worst case (six hero-sized bitmaps, ~17 MB) is always reclaimable
-        /// on constrained devices. A dispatch source rather than
-        /// `didReceiveMemoryWarning`: no UIKit plumbing, and it also fires
-        /// for pressure while backgrounded. Installed lazily on first use so
-        /// the actor's init stays trivial.
-        private var memoryPressureSource: DispatchSourceMemoryPressure?
-
-        func artwork(for url: URL, transport: any HTTPTransporting) async -> LoadedArtwork? {
-            installMemoryPressureSourceIfNeeded()
-
-            if let existing = entries[url] {
-                return await existing.task.value
-            }
-
-            let entry = Entry(task: Task { await ArtworkLoader.fetchAndDecode(url, transport: transport) })
-            entries[url] = entry
-            if entries.count > capacity {
-                entries.remove(at: 0)
-            }
-
-            let artwork = await entry.task.value
-            if artwork == nil, entries[url]?.token == entry.token {
-                // A transient failure must not pin a miss until eviction.
-                entries.removeValue(forKey: url)
-            }
-            return artwork
-        }
-
-        private func installMemoryPressureSourceIfNeeded() {
-            guard memoryPressureSource == nil else { return }
-
-            let source = DispatchSource.makeMemoryPressureSource(
-                eventMask: [.warning, .critical],
-                queue: .global(qos: .utility),
-            )
-            // Explicitly @Sendable: the handler leaves the actor and only
-            // captures a weak actor reference, which is safe to send.
-            let handler: @Sendable () -> Void = { [weak self] in
-                guard let self else { return }
-                Task { await self.purge() }
-            }
-            source.setEventHandler(handler: handler)
-            source.activate()
-            memoryPressureSource = source
-        }
-
-        /// Drops everything, including in-flight tasks — callers already
-        /// awaiting a task hold their own reference, so their loads still
-        /// complete; only the cached results are released.
-        private func purge() {
-            entries.removeAll()
-        }
     }
 
     struct HSBSample {

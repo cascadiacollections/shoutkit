@@ -9,7 +9,7 @@ it ships in the binary, add its license text to the in-app Licenses screen
 
 | Name | Version | License | Used in | URL |
 | ---- | ------- | ------- | ------- | --- |
-| swift-collections | 1.7.5+ (`from: "1.7.5"`) | Apache-2.0 (with Runtime Library Exception) | DesignSystem — `OrderedDictionary` backs the Now Playing artwork store's bounded FIFO cache | <https://github.com/apple/swift-collections> |
+| Nuke | 13.2.3 (`exact: "13.2.3"`) | MIT | ArtworkPipelineNuke (app-side; registered into DesignSystem at launch, which does not depend on it) — `ImagePipeline` fetches, decodes, and caches station logos and Now Playing artwork (memory and disk) | <https://github.com/kean/Nuke> |
 | Factory | 3.5.3 (`exact: "3.5.3"` in every manifest) | MIT | RadioDirectory, Playback, PlaybackEngineAudioStreaming, Persistence, FeatureFlags, BrowseFeature, BrowseFeatureCore, SearchFeature, SearchFeatureCore — `Container`-based dependency injection | <https://github.com/hmlongco/Factory> |
 | AudioStreaming | 1.4.5 (`exact: "1.4.5"`) | MIT | PlaybackEngineAudioStreaming — `AudioStreamingPlaybackEngine`, the `AVAudioEngine`-backed production playback engine (iOS only). Its ICY metadata parsers and MIME-type table are also copied, adapted, into `PlaybackEngineAudioStreaming/Sources/…/Vendored/` with the upstream notice kept | <https://github.com/dimitris-c/AudioStreaming> |
 | ogg-binary-xcframework | 0.1.2 (transitive via AudioStreaming) | BSD (Xiph.org) | PlaybackEngineAudioStreaming — libogg, linked by AudioStreaming's Ogg Vorbis codec support | <https://github.com/sbooth/ogg-binary-xcframework> |
@@ -23,4 +23,7 @@ Not linked into the shipped binary; listed for completeness.
 | ---- | ------- | -------- | --- |
 | SwiftLint (pinned in CI, see `ci.yml`) | MIT | Linting, `--strict` in CI | <https://github.com/realm/SwiftLint> |
 | SwiftFormat | MIT | Formatting (`.swiftformat`) | <https://github.com/nicklockwood/SwiftFormat> |
+| swift-clocks 1.1.1 (`exact: "1.1.1"`, test targets only) | MIT | RadioDirectory and Playback tests — `TestClock` moves the discovery-cache TTL and playback timers without waiting on the wall clock. Not linked into the app | <https://github.com/pointfreeco/swift-clocks> |
+| swift-concurrency-extras 1.4.3 (`exact: "1.4.3"` in RadioDirectory, Playback, and BrowseFeatureCore, test targets only; also transitive via swift-clocks) | MIT | RadioDirectory, Playback, and BrowseFeatureCore tests — `withMainSerialExecutor` runs the tests that depend on task ordering on one serial queue. Not linked into the app | <https://github.com/pointfreeco/swift-concurrency-extras> |
+| swift-issue-reporting 2.1.2 (transitive via swift-clocks, test-only) | MIT | Pulled in by swift-clocks. Not linked into the app | <https://github.com/pointfreeco/swift-issue-reporting> |
 | Pulse | MIT | DebugSupport (app-side package) — `#if DEBUG`-only network inspection (`DebugNetworkInspection.swift`); never declared by the reusable packages, a dynamic framework that Release neither loads nor embeds (CI checks this), and attributed in the in-app Licenses screen of Debug builds since testers do receive it | <https://github.com/kean/Pulse> |

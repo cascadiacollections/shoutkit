@@ -98,9 +98,10 @@ package under `Packages/`. Dependency wiring goes through Factory, so tests and 
 substitute fakes without touching production call sites.
 
 The rule worth internalizing: **reusable packages are MIT and must not acquire app-specific
-or heavyweight dependencies.** That is why Pulse lives in `DebugSupport` and the
-AudioStreaming engine lives in `PlaybackEngineAudioStreaming` — both are packages only the
-app target links, so `Playback` and friends stay adoptable. If you find yourself adding a
+or heavyweight dependencies.** That is why Pulse lives in `DebugSupport`, the
+AudioStreaming engine in `PlaybackEngineAudioStreaming`, and Nuke in `ArtworkPipelineNuke`
+(registered into `DesignSystem` through `ArtworkImageSource.register`) — all packages only
+the app target links, so `Playback`, `DesignSystem`, and friends stay adoptable. If you find yourself adding a
 dependency to a reusable package, that is the pattern to reach for.
 
 `Playback` ships no engine at all: `Container.radioPlaybackEngine` resolves to a stub until

@@ -1,20 +1,26 @@
+import Clocks
+import ConcurrencyExtras
 import Foundation
 import os
 @testable import RadioDirectory
 import Testing
 
-/// Base-directory fake that counts calls and can delay responses so tests can
-/// deterministically land a second request mid-flight.
+/// Base-directory fake that counts calls and can hold responses on a clock so
+/// tests can land a second request while the first is still in flight.
 actor CountingDirectory: RadioDirectoryProviding {
     private(set) var genresCalls = 0
     private(set) var topStationsCalls = 0
     private(set) var stationLookupCalls = 0
 
     var responseDelay: Duration = .zero
+    private var responseClock: any Clock<Duration> = ContinuousClock()
     var failNextTopStations = false
 
-    func setResponseDelay(_ delay: Duration) {
+    /// Calls made after this sleep `delay` on `clock` before answering. Pass a
+    /// `TestClock` and the call stays in flight until the test advances it.
+    func setResponseDelay(_ delay: Duration, on clock: any Clock<Duration>) {
         responseDelay = delay
+        responseClock = clock
     }
 
     func setFailNextTopStations(_ fail: Bool) {
@@ -27,13 +33,13 @@ actor CountingDirectory: RadioDirectoryProviding {
 
     func genres() async throws(RadioDirectoryError) -> [Genre] {
         genresCalls += 1
-        try? await Task.sleep(for: responseDelay)
+        try? await responseClock.sleep(for: responseDelay)
         return [Genre(name: "Test", stationCount: stations.count)]
     }
 
     func topStations(limit: Int) async throws(RadioDirectoryError) -> [Station] {
         topStationsCalls += 1
-        try? await Task.sleep(for: responseDelay)
+        try? await responseClock.sleep(for: responseDelay)
         if failNextTopStations {
             failNextTopStations = false
             throw RadioDirectoryError.transport("offline")
@@ -56,24 +62,6 @@ actor CountingDirectory: RadioDirectoryProviding {
 }
 
 struct CachingRadioDirectoryTests {
-    @Test func `concurrent top stations requests share one base fetch`() async throws {
-        let counting = CountingDirectory()
-        await counting.setResponseDelay(.milliseconds(150))
-        let cache = CachingRadioDirectory(base: counting)
-
-        let first = Task { try await cache.topStations(limit: 24) }
-        // Let the first call enter the actor and register as in-flight.
-        try? await Task.sleep(for: .milliseconds(30))
-        let second = Task { try await cache.topStations(limit: 24) }
-
-        let firstStations = try await first.value
-        let secondStations = try await second.value
-
-        #expect(firstStations.count == 24)
-        #expect(secondStations.count == 24)
-        #expect(await counting.topStationsCalls == 1, "concurrent callers must share one base fetch")
-    }
-
     @Test func `second request within TTL serves from cache`() async throws {
         let counting = CountingDirectory()
         let cache = CachingRadioDirectory(base: counting)
@@ -109,20 +97,25 @@ struct CachingRadioDirectoryTests {
         #expect(await counting.topStationsCalls == 2)
     }
 
-    @Test func `expired TTL refetches`() async throws {
-        let clock = OSAllocatedUnfairLock(initialState: Date(timeIntervalSinceReferenceDate: 0))
+    @Test func `memory cache serves until the injected clock passes the TTL`() async throws {
+        let clock = TestClock()
         let counting = CountingDirectory()
-        let cache = CachingRadioDirectory(
-            base: counting,
-            timeToLive: 60,
-            now: { clock.withLock { $0 } },
-        )
+        let cache = CachingRadioDirectory(base: counting, timeToLive: 60, clock: clock)
 
         _ = try await cache.topStations(limit: 24)
-        clock.withLock { $0 = $0.addingTimeInterval(61) }
-        _ = try await cache.topStations(limit: 24)
+        _ = try await cache.genres()
 
+        await clock.advance(by: .seconds(59))
+        _ = try await cache.topStations(limit: 24)
+        _ = try await cache.genres()
+        #expect(await counting.topStationsCalls == 1)
+        #expect(await counting.genresCalls == 1)
+
+        await clock.advance(by: .seconds(2))
+        _ = try await cache.topStations(limit: 24)
+        _ = try await cache.genres()
         #expect(await counting.topStationsCalls == 2)
+        #expect(await counting.genresCalls == 2)
     }
 
     @Test func `failures are not cached`() async throws {
@@ -177,28 +170,6 @@ struct CachingRadioDirectoryTests {
         #expect(await counting.genresCalls == 1)
     }
 
-    @Test func `an in flight fetch is not reused after the identity changes`() async throws {
-        let identity = OSAllocatedUnfairLock(initialState: "country=US")
-        let counting = CountingDirectory()
-        await counting.setResponseDelay(.milliseconds(150))
-        let cache = CachingRadioDirectory(
-            base: counting,
-            snapshotIdentity: { identity.withLock { $0 } },
-        )
-
-        let first = Task { try await cache.topStations(limit: 24) }
-        try? await Task.sleep(for: .milliseconds(30))
-        identity.withLock { $0 = "country=JP" }
-        _ = try await cache.topStations(limit: 24)
-        _ = try await first.value
-
-        #expect(await counting.topStationsCalls == 2)
-
-        // The US result finishing late must not replace the JP cache entry.
-        _ = try await cache.topStations(limit: 24)
-        #expect(await counting.topStationsCalls == 2)
-    }
-
     @Test func `station lookup passes through to base`() async throws {
         let counting = CountingDirectory()
         let cache = CachingRadioDirectory(base: counting)
@@ -209,5 +180,75 @@ struct CachingRadioDirectoryTests {
         #expect(found?.name == "Station 0")
         #expect(missing == nil)
         #expect(await counting.stationLookupCalls == 2)
+    }
+}
+
+/// Requests that must overlap. Each test runs under `withMainSerialExecutor`,
+/// so every hop between the test, the cache actor, and the fake is enqueued on
+/// one serial queue in a fixed order, and `Task.megaYield()` is enough to let
+/// a request reach the fake and park on the `TestClock`. Before this, the first
+/// request had 30 real milliseconds to get there and 150 to stay there.
+///
+/// `withMainSerialExecutor` swaps a process-wide runtime hook and restores the
+/// previous value when it returns, so two overlapping calls can restore each
+/// other's state. `.serialized` keeps these tests from overlapping, and this is
+/// the only suite in the target that uses it (DECISIONS.md, 2026-11-28).
+@MainActor
+@Suite(.serialized)
+struct CachingRadioDirectoryInFlightTests {
+    private static let hold: Duration = .seconds(1)
+
+    @Test func `concurrent top stations requests share one base fetch`() async throws {
+        try await withMainSerialExecutor {
+            let clock = TestClock()
+            let counting = CountingDirectory()
+            await counting.setResponseDelay(Self.hold, on: clock)
+            let cache = CachingRadioDirectory(base: counting)
+
+            let first = Task { try await cache.topStations(limit: 24) }
+            await Task.megaYield()
+            #expect(await counting.topStationsCalls == 1, "the first request is in flight")
+            let second = Task { try await cache.topStations(limit: 24) }
+            await Task.megaYield()
+
+            await clock.advance(by: Self.hold)
+            let firstStations = try await first.value
+            let secondStations = try await second.value
+
+            #expect(firstStations.count == 24)
+            #expect(secondStations.count == 24)
+            #expect(await counting.topStationsCalls == 1, "concurrent callers must share one base fetch")
+        }
+    }
+
+    @Test func `an in flight fetch is not reused after the identity changes`() async throws {
+        try await withMainSerialExecutor {
+            let clock = TestClock()
+            let identity = OSAllocatedUnfairLock(initialState: "country=US")
+            let counting = CountingDirectory()
+            let cache = CachingRadioDirectory(
+                base: counting,
+                snapshotIdentity: { identity.withLock { $0 } },
+            )
+
+            // The US fetch is held twice as long as the JP one, so it lands last.
+            await counting.setResponseDelay(Self.hold * 2, on: clock)
+            let first = Task { try await cache.topStations(limit: 24) }
+            await Task.megaYield()
+            identity.withLock { $0 = "country=JP" }
+            await counting.setResponseDelay(Self.hold, on: clock)
+            let second = Task { try await cache.topStations(limit: 24) }
+            await Task.megaYield()
+            #expect(await counting.topStationsCalls == 2)
+
+            await clock.advance(by: Self.hold)
+            _ = try await second.value
+            await clock.advance(by: Self.hold)
+            _ = try await first.value
+
+            // The US result finishing late must not replace the JP cache entry.
+            _ = try await cache.topStations(limit: 24)
+            #expect(await counting.topStationsCalls == 2)
+        }
     }
 }
