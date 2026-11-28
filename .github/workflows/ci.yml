@@ -467,6 +467,16 @@ jobs:
       # than exactly one match falls back to the workspace form this step
       # always used, so a renamed plan or a second file cannot fail the job;
       # the "Verify every test plan target ran" step below checks either path.
+      #
+      # A failed test runs once more (`-retry-tests-on-failure`, two iterations
+      # at most) and the job passes if the second run does. Booting first did not
+      # end the first-launch timeout described above: in run 46082696951 the
+      # simulator had been up for six and a half minutes when FirstLaunchUITests
+      # launched the app, and XCTest still gave up after 70 s with "does not have
+      # a process ID". The app never started, so nothing in it was tested. A real
+      # regression fails both times, and a test that only passed on its second
+      # run is named in a warning by the step after "Verify every test plan
+      # target ran", so a flake does not go quiet.
       - name: Test app (Debug)
         run: |
           set -o pipefail
@@ -477,6 +487,7 @@ jobs:
             xcodebuild -xctestrun "${runs[0]}" \
               -destination "platform=iOS Simulator,id=${{ steps.toolchain.outputs.udid }}" \
               -resultBundlePath TestResults.xcresult \
+              -retry-tests-on-failure -test-iterations 2 \
               test-without-building 2>&1 | tee -a build.log
           else
             echo "Expected one Holmdel .xctestrun file, found ${#runs[@]}; testing from the workspace."
@@ -486,12 +497,19 @@ jobs:
               -derivedDataPath DerivedData \
               -resultBundlePath TestResults.xcresult \
               CODE_SIGNING_ALLOWED=NO \
+              -retry-tests-on-failure -test-iterations 2 \
               test-without-building 2>&1 | tee -a build.log
           fi
 
       # Xcode can succeed while silently omitting unresolved package targets.
       - name: Verify every test plan target ran
         run: python3 .github/scripts/check-simulator-test-targets.py HolmdelApp/Holmdel.xctestplan TestResults.xcresult
+
+      # The job passed, so every failure in the log was retried and passed on
+      # its second run. Name those tests, so a flaky one is seen and fixed.
+      - name: Warn about tests that passed only on retry
+        run: |
+          grep -E "^Test Case '.*' failed" build.log | sort -u | sed 's/^/::warning::Passed only on retry: /' || true
 
       # Surface compiler errors and test failures as check annotations. Raw job
       # logs live on Azure blob storage, which repo-scoped tokens (and remote
