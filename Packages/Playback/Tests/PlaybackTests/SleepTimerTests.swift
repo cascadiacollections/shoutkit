@@ -1,3 +1,5 @@
+import Clocks
+import ConcurrencyExtras
 import Foundation
 @testable import Playback
 import Testing
@@ -5,59 +7,67 @@ import Testing
 extension PlaybackTimingTests {
     @MainActor
     struct SleepTimerTests {
-        /// Polls until the timer fires or the deadline passes.
-        private func waitUntilFired(_ fired: () -> Bool, upTo timeout: Duration = .seconds(30)) async {
-            // The simulator can starve the main actor for several seconds while
-            // parallel suites start. This checks completion, not scheduler speed.
-            let clock = ContinuousClock()
-            let deadline = clock.now.advanced(by: timeout)
-            while fired() == false, clock.now < deadline {
-                try? await Task.sleep(for: .milliseconds(10))
+        @Test func `fires once after duration and deactivates`() async {
+            await withMainSerialExecutor {
+                let clock = TestClock()
+                let timer = SleepTimer(clock: clock)
+                var fireCount = 0
+                timer.onFire = { fireCount += 1 }
+
+                timer.start(duration: 60)
+                #expect(timer.isActive)
+                #expect(timer.fireDate != nil)
+
+                await clock.advance(by: .seconds(59))
+                await expectSleeping(on: clock)
+                #expect(fireCount == 0)
+                await clock.advance(by: .seconds(1))
+                await waitUntil { fireCount == 1 }
+                #expect(fireCount == 1)
+                #expect(timer.isActive == false)
+                #expect(timer.fireDate == nil)
+
+                await clock.advance(by: .seconds(60))
+                #expect(fireCount == 1)
             }
         }
 
-        @Test func `fires once after duration and deactivates`() async {
-            let timer = SleepTimer()
-            var fireCount = 0
-            timer.onFire = { fireCount += 1 }
-
-            timer.start(duration: 0.05)
-            #expect(timer.isActive)
-            #expect(timer.fireDate != nil)
-
-            await waitUntilFired { fireCount > 0 }
-            #expect(fireCount == 1)
-            #expect(timer.isActive == false)
-            #expect(timer.fireDate == nil)
-        }
-
         @Test func `cancel prevents firing`() async {
-            let timer = SleepTimer()
-            var fired = false
-            timer.onFire = { fired = true }
+            await withMainSerialExecutor {
+                let clock = TestClock()
+                let timer = SleepTimer(clock: clock)
+                var fired = false
+                timer.onFire = { fired = true }
 
-            timer.start(duration: 0.05)
-            timer.cancel()
-            #expect(timer.isActive == false)
+                timer.start(duration: 5)
+                await expectSleeping(on: clock)
+                timer.cancel()
+                #expect(timer.isActive == false)
 
-            try? await Task.sleep(for: .milliseconds(150))
-            #expect(fired == false)
+                await clock.advance(by: .seconds(5))
+                #expect(fired == false)
+            }
         }
 
         @Test func `restart replaces the previous schedule`() async {
-            let timer = SleepTimer()
-            var fireCount = 0
-            timer.onFire = { fireCount += 1 }
+            await withMainSerialExecutor {
+                let clock = TestClock()
+                let timer = SleepTimer(clock: clock)
+                var fireCount = 0
+                timer.onFire = { fireCount += 1 }
 
-            // A long timer replaced by a short one must fire exactly once (the
-            // short one); the cancelled schedule must not fire later.
-            timer.start(duration: 60)
-            timer.start(duration: 0.05)
+                // A long timer replaced by a short one must fire exactly once (the
+                // short one); the cancelled schedule must not fire later.
+                timer.start(duration: 60)
+                timer.start(duration: 5)
 
-            await waitUntilFired { fireCount > 0 }
-            try? await Task.sleep(for: .milliseconds(100))
-            #expect(fireCount == 1)
-            #expect(timer.fireDate == nil)
+                await clock.advance(by: .seconds(5))
+                await waitUntil { fireCount == 1 }
+                #expect(fireCount == 1)
+                await clock.advance(by: .seconds(60))
+                #expect(fireCount == 1)
+                #expect(timer.fireDate == nil)
+            }
         }
 
         @Test func `remaining is derived from injected clock`() {

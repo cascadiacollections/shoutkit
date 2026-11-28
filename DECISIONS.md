@@ -107,6 +107,47 @@ bytes or 2.7%. `__TEXT` grew 112 KB (2,506,752 → 2,621,440). That is net of
 the code removed; it buys a disk cache and download sharing the old path did
 not have.
 
+## 2026-11-28 (a clock for the minute cache and the playback timers)
+
+The one-minute discovery cache and the playback timers (`OneShotTimer`:
+reconnect backoff, the stall ceiling while a station is still connecting, the
+paused-release and resume watchdog, the hintless-interruption window) and the
+sleep timer all slept on the real clock. Tests either injected a `Date` closure
+(the cache) or waited out a shortened delay (playback). The waits were real,
+and a backoff of "not yet, then now" could not be asserted without sleeping.
+
+The seam is an initializer parameter, not a Factory registration.
+`PlaybackController` and `SleepTimer` take `any Clock<Duration>`, and
+`CachingRadioDirectory` is generic over its clock; every default is
+`ContinuousClock`, which is what production already used, and the composition
+roots pass nothing. A first draft also registered `Container.clock`, but the
+cache's concrete clock type meant the registration was read and then dropped,
+and nothing else resolved it. A registration that cannot take effect is worse
+than none, so it went. Tests that need to move time pass a `TestClock` into the
+initializer, which also keeps one suite's clock out of the next. The cache
+stores the clock's `Instant` for the in-memory minute; the on-disk snapshot
+still stamps `Date`, because that file has to mean something after the
+process is gone.
+
+swift-clocks 1.1.1 is `exact` and MIT, and it is a **test** dependency of
+RadioDirectory and Playback only. `TestClock` needs it. Production code uses
+`ContinuousClock` from the standard library, so the library is not in the app
+binary and it is not on the in-app Licenses screen. swift-concurrency-extras
+1.4.3 and swift-issue-reporting 2.1.2 come in with it, also test-only. Linking
+swift-clocks into the app so its notice could appear in Settings would spend
+binary size on a type the listener never runs; the 2026-11-07 size pass is why
+that was not done. Say if the notice should ship anyway.
+
+`OneShotTimer` and `SleepTimer` take their deadline when the timer is
+scheduled and sleep until it inside the task (`sleeper(on:for:)`). Taking it
+inside the task, as `sleep(for:)` does, added the task's start-up delay to the
+timeout, and a test that advanced a `TestClock` before the task ran moved time
+before the deadline existed. Timer tests wait until the sleep is registered
+on the clock before they move it or assert that nothing has fired yet.
+Nothing about the delays themselves changed: reconnect is still base, then
+double, then double again, and a stall still gives the stream 30 seconds
+before it is torn down.
+
 ## 2026-11-27 (a background wake fails only when it is cancelled)
 
 `BackgroundRefreshController.runRefresh()` returned success only when the

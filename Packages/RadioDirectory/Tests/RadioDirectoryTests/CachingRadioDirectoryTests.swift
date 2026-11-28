@@ -1,3 +1,4 @@
+import Clocks
 import Foundation
 import os
 @testable import RadioDirectory
@@ -109,20 +110,25 @@ struct CachingRadioDirectoryTests {
         #expect(await counting.topStationsCalls == 2)
     }
 
-    @Test func `expired TTL refetches`() async throws {
-        let clock = OSAllocatedUnfairLock(initialState: Date(timeIntervalSinceReferenceDate: 0))
+    @Test func `memory cache serves until the injected clock passes the TTL`() async throws {
+        let clock = TestClock()
         let counting = CountingDirectory()
-        let cache = CachingRadioDirectory(
-            base: counting,
-            timeToLive: 60,
-            now: { clock.withLock { $0 } },
-        )
+        let cache = CachingRadioDirectory(base: counting, timeToLive: 60, clock: clock)
 
         _ = try await cache.topStations(limit: 24)
-        clock.withLock { $0 = $0.addingTimeInterval(61) }
-        _ = try await cache.topStations(limit: 24)
+        _ = try await cache.genres()
 
+        await clock.advance(by: .seconds(59))
+        _ = try await cache.topStations(limit: 24)
+        _ = try await cache.genres()
+        #expect(await counting.topStationsCalls == 1)
+        #expect(await counting.genresCalls == 1)
+
+        await clock.advance(by: .seconds(2))
+        _ = try await cache.topStations(limit: 24)
+        _ = try await cache.genres()
         #expect(await counting.topStationsCalls == 2)
+        #expect(await counting.genresCalls == 2)
     }
 
     @Test func `failures are not cached`() async throws {

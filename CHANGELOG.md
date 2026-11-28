@@ -45,6 +45,9 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
   station, or opening Now Playing again for the same art, reuses the image
   instead of fetching it every time. A download that fails is not remembered,
   so the next look tries again.
+- **No change to what you hear.** The one-minute station list and the waits
+  before a dropped station reconnects are unchanged. Tests can now move those
+  clocks forward instead of waiting on the wall clock.
 - **Stations start playing faster.** On KEXP, the time from tapping a station to hearing it
   dropped from about 3.4 seconds to about 1.8. ShoutKit used to connect to every station twice
   before playing; it now connects once.
