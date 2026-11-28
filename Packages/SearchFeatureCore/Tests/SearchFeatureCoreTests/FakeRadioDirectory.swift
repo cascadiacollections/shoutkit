@@ -90,7 +90,7 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
 }
 
 extension Station {
-    static func fixture(id: String, name: String, genre: String = "Test", listenerCount: Int = 0) -> Station {
+    static func fixture(id: Station.ID, name: String, genre: String = "Test", listenerCount: Int = 0) -> Station {
         Station(id: id, name: name, genre: genre, listenerCount: listenerCount)
     }
 }

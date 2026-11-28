@@ -116,7 +116,7 @@
         var artworkFetches: [URL: Task<Void, Never>] = [:]
 
         var presentedArtworkURL: URL?
-        private var presentedStationID: String?
+        private var presentedStationID: Station.ID?
         var lastPush: Push?
         private var appliedContent: AppliedContent?
 
@@ -232,8 +232,8 @@
                 // "#r" only for a URL that failed before it succeeded: the framework
                 // latched that failure against the plain id, so the identity has to
                 // move for it to pull the bytes we now hold.
-                "\(push.station.id)#\(url.absoluteString)\(recoveredArtwork.contains(url) ? "#r" : "")"
-            } ?? push.station.id
+                "\(push.station.id.rawValue)#\(url.absoluteString)\(recoveredArtwork.contains(url) ? "#r" : "")"
+            } ?? push.station.id.rawValue
             let genre = push.station.genre.isEmpty ? nil : push.station.genre
             let applied = AppliedContent(
                 contentID: contentID,

@@ -13,7 +13,7 @@ private func makeStoreAndContext() -> (LibraryStore, ModelContext) {
     return (LibraryStore(context: context), context)
 }
 
-private func station(_ id: String) -> Station {
+private func station(_ id: Station.ID) -> Station {
     Station(id: id, name: "Station \(id)", genre: "Test", listenerCount: 10)
 }
 
@@ -25,7 +25,7 @@ struct LibraryStoreRankingTests {
         )
     }
 
-    private func streamableStation(_ id: String) -> Station {
+    private func streamableStation(_ id: Station.ID) -> Station {
         Station(
             id: id,
             name: "Station \(id)",
@@ -83,7 +83,7 @@ struct LibraryStoreRankingTests {
     @Test func `prewarm UR ls are capped at limit and deduplicated`() {
         let (store, _) = makeStoreAndContext()
         for index in 0 ..< 10 {
-            store.logRecent(streamableStation("s\(index)"))
+            store.logRecent(streamableStation(Station.ID("s\(index)")))
         }
 
         let urls = store.prewarmStreamURLs(limit: 3)
@@ -101,7 +101,7 @@ struct LibraryStoreRankingTests {
 
     @Test func `favorite stations respect manual ordering`() throws {
         let (store, context) = makeStoreAndContext()
-        for id in ["a", "b", "c"] {
+        for id: Station.ID in ["a", "b", "c"] {
             store.addFavorite(streamableStation(id))
         }
 
@@ -113,7 +113,7 @@ struct LibraryStoreRankingTests {
     @Test func `ranked stations stop after the limit instead of later favorites`() {
         let (store, _) = makeStoreAndContext()
         for index in 0 ..< 30 {
-            store.addFavorite(streamableStation("fav-\(index)"))
+            store.addFavorite(streamableStation(Station.ID("fav-\(index)")))
         }
         store.logRecent(streamableStation("recent"))
         store.logRecent(streamableStation("recent"))
@@ -146,7 +146,7 @@ struct LibraryStoreRankingTests {
     @Test func `prewarm UR ls keep walking past favorites with no snapshot`() {
         let (store, _) = makeStoreAndContext()
         for index in 0 ..< 6 {
-            store.addFavorite(station("no-url-\(index)"))
+            store.addFavorite(station(Station.ID("no-url-\(index)")))
         }
         store.addFavorite(streamableStation("has-url"))
         store.logRecent(streamableStation("recent-url"))
@@ -162,7 +162,7 @@ struct LibraryStoreRankingTests {
     @Test func `prewarm UR ls collapse stations that share a snapshot URL`() throws {
         let (store, _) = makeStoreAndContext()
         let shared = try #require(URL(string: "https://example.com/shared.aac"))
-        let station = { (id: String) in
+        let station = { (id: Station.ID) in
             Station(
                 id: id,
                 name: "Station \(id)",

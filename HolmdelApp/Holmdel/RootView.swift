@@ -115,7 +115,7 @@ struct RootView: View {
                 let userInfo = link.handoffUserInfo
                 activity.title = "Resume \(link.station.name)"
                 activity.isEligibleForHandoff = true
-                activity.targetContentIdentifier = link.station.id
+                activity.targetContentIdentifier = link.station.id.rawValue
                 activity.requiredUserInfoKeys = Set(userInfo.keys)
                 activity.userInfo = userInfo
             }

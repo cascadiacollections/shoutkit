@@ -19,7 +19,7 @@ public protocol RadioDirectoryProviding: Sendable {
     ) async throws(RadioDirectoryError) -> [Station]
     /// Looks up a station by identifier for consumers (like App Intents) that
     /// need to rehydrate a previously saved entity id.
-    func station(id: String) async throws(RadioDirectoryError) -> Station?
+    func station(id: Station.ID) async throws(RadioDirectoryError) -> Station?
     func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint
 }
 
@@ -68,7 +68,7 @@ public extension RadioDirectoryProviding {
     ///   and no thrown error to signal it — `nil` is also the correct answer
     ///   for "not found." An implementation backed by a real directory should
     ///   override this rather than inherit it.
-    func station(id _: String) async throws(RadioDirectoryError) -> Station? {
+    func station(id _: Station.ID) async throws(RadioDirectoryError) -> Station? {
         nil
     }
 }
@@ -186,7 +186,7 @@ public struct PreferredRadioDirectory: RadioDirectoryProviding {
         return Array((preferredMatches + stations).uniqued { $0.name.lowercased() }.prefix(limit))
     }
 
-    public func station(id: String) async throws(RadioDirectoryError) -> Station? {
+    public func station(id: Station.ID) async throws(RadioDirectoryError) -> Station? {
         if let preferredStation = preferredStations.first(where: { $0.id == id }) {
             return preferredStation
         }
@@ -250,7 +250,7 @@ public struct BundledRadioDirectory: RadioDirectoryProviding {
         )
     }
 
-    public func station(id: String) async throws(RadioDirectoryError) -> Station? {
+    public func station(id: Station.ID) async throws(RadioDirectoryError) -> Station? {
         stations.first(where: { $0.id == id })
     }
 }
@@ -280,12 +280,12 @@ public struct PreviewRadioDirectory: RadioDirectoryProviding {
         }.prefix(limit))
     }
 
-    public func station(id: String) async throws(RadioDirectoryError) -> Station? {
+    public func station(id: Station.ID) async throws(RadioDirectoryError) -> Station? {
         Self.sampleStations.first(where: { $0.id == id })
     }
 
     public func streamEndpoint(for station: Station) async throws(RadioDirectoryError) -> StreamEndpoint {
-        let fallbackURL = URL(string: "https://example.com/\(station.id).m3u8")
+        let fallbackURL = URL(string: "https://example.com/\(station.id.rawValue).m3u8")
 
         return StreamEndpoint(
             stationID: station.id,

@@ -153,7 +153,7 @@
 
         private func topStationItems(
             for topStations: TopStationsState,
-            excluding libraryStationIDs: Set<String>,
+            excluding libraryStationIDs: Set<Station.ID>,
             services: AppServices,
         ) -> [CPListItem] {
             switch topStations {

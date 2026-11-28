@@ -59,7 +59,7 @@ public protocol NowPlayingPresenting: AnyObject {
         private var cachedArtwork: MPMediaItemArtwork?
         /// The station whose artwork `artworkCacheURL` belongs to, so a `.resolving`
         /// push can only hold artwork that is actually this station's.
-        private var presentedStationID: String?
+        private var presentedStationID: Station.ID?
         private let transport: any HTTPTransporting
 
         /// Whether a station is currently active. Written on the main actor, read from

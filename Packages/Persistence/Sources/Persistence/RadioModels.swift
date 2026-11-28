@@ -40,7 +40,7 @@ public final class FavoriteStation {
 
     public var station: Station {
         Station(
-            id: stationID,
+            id: typedStationID,
             name: name,
             genre: genre,
             listenerCount: 0,
@@ -114,7 +114,7 @@ public final class RecentStation {
 
     public var station: Station {
         Station(
-            id: stationID,
+            id: typedStationID,
             name: name,
             genre: genre,
             tags: Station.tags(fromCSV: tagsCSV),
@@ -161,5 +161,27 @@ public final class RecentlyHeardTrack {
         self.heardAt = heardAt
         self.appleMusicURLString = appleMusicURLString
         self.artworkURLString = artworkURLString
+    }
+}
+
+// `stationID` stays a `String`: it is a stored SwiftData property, and CloudKit
+// never lets a deployed field change type (docs/RELEASING.md, "iCloud sync").
+// These accessors convert at that boundary.
+
+public extension FavoriteStation {
+    var typedStationID: Station.ID {
+        Station.ID(rawValue: stationID)
+    }
+}
+
+public extension RecentStation {
+    var typedStationID: Station.ID {
+        Station.ID(rawValue: stationID)
+    }
+}
+
+public extension RecentlyHeardTrack {
+    var typedStationID: Station.ID {
+        Station.ID(rawValue: stationID)
     }
 }

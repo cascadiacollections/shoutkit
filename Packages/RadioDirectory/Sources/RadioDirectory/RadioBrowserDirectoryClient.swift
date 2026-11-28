@@ -4,7 +4,7 @@ import OSLog
 /// Reports that a station was actually played, so a community directory can count
 /// popularity. Fire-and-forget: failures must never affect playback.
 public protocol StationPlayReporting: Sendable {
-    func reportPlay(stationID: String) async
+    func reportPlay(stationID: Station.ID) async
 }
 
 /// Directory client for Radio-Browser (radio-browser.info) — a free, open-source,
@@ -191,11 +191,11 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         return Array(normalizedFilters.apply(to: stations).prefix(limit))
     }
 
-    public func station(id: String) async throws(RadioDirectoryError) -> Station? {
-        guard id.isEmpty == false else { return nil }
+    public func station(id: Station.ID) async throws(RadioDirectoryError) -> Station? {
+        guard id.rawValue.isEmpty == false else { return nil }
         let data = try await request(
             path: "/json/stations/byuuid",
-            queryItems: [URLQueryItem(name: "uuids", value: id)],
+            queryItems: [URLQueryItem(name: "uuids", value: id.rawValue)],
         )
         let stations = try decode([RadioBrowserStation].self, from: data)
         return stations.compactMap(Self.station(from:)).first
@@ -214,7 +214,7 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
         // still be re-resolved by UUID.
         let data = try await request(
             path: "/json/stations/byuuid",
-            queryItems: [URLQueryItem(name: "uuids", value: station.id)],
+            queryItems: [URLQueryItem(name: "uuids", value: station.id.rawValue)],
         )
 
         let stations = try decode([RadioBrowserStation].self, from: data)
@@ -237,9 +237,9 @@ public actor RadioBrowserDirectoryClient: RadioDirectoryProviding, StationPlayRe
     /// actually played, so the community directory can rank popularity. Only
     /// stations sourced from Radio-Browser have UUID identifiers — bundled or
     /// SHOUTcast stations are skipped rather than sending garbage requests.
-    public func reportPlay(stationID: String) async {
-        guard UUID(uuidString: stationID) != nil else { return }
-        _ = try? await request(path: "/json/url/\(stationID)", queryItems: [])
+    public func reportPlay(stationID: Station.ID) async {
+        guard UUID(uuidString: stationID.rawValue) != nil else { return }
+        _ = try? await request(path: "/json/url/\(stationID.rawValue)", queryItems: [])
     }
 
     // MARK: - Transport

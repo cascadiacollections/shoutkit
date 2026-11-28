@@ -11,7 +11,7 @@ private func makeTransferStoreAndContext() -> (LibraryStore, ModelContext) {
     return (LibraryStore(context: context), context)
 }
 
-private func transferStation(_ id: String) -> Station {
+private func transferStation(_ id: Station.ID) -> Station {
     Station(id: id, name: "Station \(id)", genre: "Test", listenerCount: 10)
 }
 

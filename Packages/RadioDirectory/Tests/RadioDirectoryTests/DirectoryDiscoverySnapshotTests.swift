@@ -36,7 +36,7 @@ private func seededSnapshot(
     DirectoryDiscoverySnapshot(
         topStations: DirectoryDiscoverySnapshot.TopStations(
             stations: (0 ..< stationCount).map {
-                Station(id: "saved\($0)", name: "Saved \($0)", genre: "Test", listenerCount: 0)
+                Station(id: Station.ID("saved\($0)"), name: "Saved \($0)", genre: "Test", listenerCount: 0)
             },
             limit: limit,
             capturedAt: capturedAt,

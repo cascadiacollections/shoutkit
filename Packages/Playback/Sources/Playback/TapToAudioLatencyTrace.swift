@@ -1,12 +1,13 @@
 import Foundation
 import os
+import RadioDirectory
 
 @MainActor
 final class TapToAudioLatencyTrace {
     private nonisolated static let logger = Logger(subsystem: "ShoutKit.Playback", category: "TapToAudio")
     private nonisolated static let signposter = OSSignposter(subsystem: "ShoutKit.Playback", category: "TapToAudio")
 
-    private let stationID: String
+    private let stationID: Station.ID
     private let startedAt = Date()
     private let signpostID: OSSignpostID
     private let interval: OSSignpostIntervalState
@@ -15,7 +16,7 @@ final class TapToAudioLatencyTrace {
     private var outputStartedAt: Date?
     private var completed = false
 
-    init(stationID: String) {
+    init(stationID: Station.ID) {
         self.stationID = stationID
         signpostID = Self.signposter.makeSignpostID()
         interval = Self.signposter.beginInterval("Tap to audio", id: signpostID)
@@ -33,7 +34,7 @@ final class TapToAudioLatencyTrace {
         Self.signposter.emitEvent("Resolve complete", id: signpostID)
         Self.logger.notice(
             """
-            TapToAudio resolved station=\(self.stationID, privacy: .public) \
+            TapToAudio resolved station=\(self.stationID.rawValue, privacy: .public) \
             host=\(url.host ?? "unknown", privacy: .public)
             """,
         )
@@ -56,7 +57,7 @@ final class TapToAudioLatencyTrace {
 
         Self.logger.notice(
             """
-            TapToAudio complete station=\(self.stationID, privacy: .public) \
+            TapToAudio complete station=\(self.stationID.rawValue, privacy: .public) \
             resolveMs=\(Self.describe(resolveMilliseconds), privacy: .public) \
             outputStartMs=\(Self.describe(outputStartMilliseconds), privacy: .public) \
             firstPlayingMs=\(Self.describe(firstPlayingMilliseconds), privacy: .public)

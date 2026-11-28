@@ -98,7 +98,7 @@ final class NowPlayingPresenterSpy: NowPlayingPresenting {
     var onToggle: (() -> Void)?
 
     enum Event: Equatable {
-        case update(stationID: String, trackTitle: String?, isPlaying: Bool, artwork: NowPlayingArtwork)
+        case update(stationID: Station.ID, trackTitle: String?, isPlaying: Bool, artwork: NowPlayingArtwork)
         case clear
     }
 
@@ -131,7 +131,7 @@ final class NowPlayingPresenterSpy: NowPlayingPresenting {
     }
 }
 
-func station(_ id: String = "kexp") -> Station {
+func station(_ id: Station.ID = "kexp") -> Station {
     Station(
         id: id,
         name: "Station \(id)",

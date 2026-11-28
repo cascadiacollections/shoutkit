@@ -1,4 +1,5 @@
 import Foundation
+import RadioDirectory
 
 /// The station IDs shown in a bounded "Recently Played" teaser (e.g. Listen Now),
 /// deliberately decoupled from a live `prefix(capacity)` over the full history.
@@ -7,9 +8,9 @@ import Foundation
 /// play into its slot; a slot only refills when a genuinely new play lands at
 /// the top of the source history.
 public struct RecentlyPlayedTeaserState: Equatable, Sendable {
-    public private(set) var displayedIDs: [String]
+    public private(set) var displayedIDs: [Station.ID]
     public let capacity: Int
-    private var lastSyncedTopID: String?
+    private var lastSyncedTopID: Station.ID?
 
     public init(capacity: Int = 5) {
         precondition(capacity > 0, "capacity must be positive")
@@ -26,7 +27,7 @@ public struct RecentlyPlayedTeaserState: Equatable, Sendable {
     /// - Otherwise only reacts to a *new* top entry: promotes it to the front
     ///   and trims the oldest entry if that pushes the list over capacity.
     ///   Removing entries never triggers a backfill from `visibleIDsNewestFirst`.
-    public mutating func sync(withVisibleIDsNewestFirst visibleIDsNewestFirst: [String]) {
+    public mutating func sync(withVisibleIDsNewestFirst visibleIDsNewestFirst: [Station.ID]) {
         guard let latestID = visibleIDsNewestFirst.first else {
             displayedIDs = []
             lastSyncedTopID = nil
@@ -45,14 +46,14 @@ public struct RecentlyPlayedTeaserState: Equatable, Sendable {
     }
 
     /// Dismisses an entry from the teaser. Does not backfill.
-    public mutating func remove(_ id: String) {
+    public mutating func remove(_ id: Station.ID) {
         displayedIDs.removeAll { $0 == id }
     }
 
     /// Reinserts a previously `remove`d entry at a given index — the "Undo"
     /// half of a dismiss. Re-clips to `capacity` from the end afterward, in
     /// case a new play was promoted to the front while the entry was gone.
-    public mutating func restore(_ id: String, at index: Int) {
+    public mutating func restore(_ id: Station.ID, at index: Int) {
         guard displayedIDs.contains(id) == false else { return }
         let clampedIndex = min(max(index, 0), displayedIDs.count)
         displayedIDs.insert(id, at: clampedIndex)

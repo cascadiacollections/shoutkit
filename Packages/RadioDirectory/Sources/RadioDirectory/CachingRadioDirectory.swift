@@ -367,7 +367,7 @@ public actor CachingRadioDirectory<C: Clock>: RadioDirectoryProviding, Directory
         try await base.stations(inGenre: genre, limit: limit, filters: filters)
     }
 
-    public func station(id: String) async throws(RadioDirectoryError) -> Station? {
+    public func station(id: Station.ID) async throws(RadioDirectoryError) -> Station? {
         try await base.station(id: id)
     }
 

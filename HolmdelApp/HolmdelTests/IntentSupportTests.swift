@@ -18,7 +18,7 @@ struct IntentSupportTests {
     }
 
     private func makeStation(
-        id: String = "station-1",
+        id: Station.ID = "station-1",
         name: String = "KEXP",
         genre: String = "Alternative",
         artwork: String? = "https://example.com/art.png",
@@ -123,7 +123,7 @@ struct IntentSupportTests {
         let defaults = try makeDefaults()
         // Remembered entries are prepended, so the batch we just added is at the
         // front regardless of what was already in this cache.
-        let batch = (0 ..< 3).map { StationEntity(station: makeStation(id: "fresh-\($0)", name: "S\($0)")) }
+        let batch = (0 ..< 3).map { StationEntity(station: makeStation(id: Station.ID("fresh-\($0)"), name: "S\($0)")) }
         IntentStationCache.remember(batch, defaults: defaults)
 
         let loaded = IntentStationCache.load(defaults: defaults)
@@ -138,7 +138,7 @@ struct IntentSupportTests {
 
     @Test func `intent cache is bounded to its capacity`() throws {
         let defaults = try makeDefaults()
-        let many = (0 ..< 80).map { StationEntity(station: makeStation(id: "cap-\($0)")) }
+        let many = (0 ..< 80).map { StationEntity(station: makeStation(id: Station.ID("cap-\($0)"))) }
         IntentStationCache.remember(many, defaults: defaults)
 
         // Capacity is 50; the cache never grows unbounded no matter how many

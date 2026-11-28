@@ -179,7 +179,7 @@ final class BackgroundRefreshController {
             } catch {
                 logger.debug(
                     """
-                    Background refresh skipped station \(favorite.id, privacy: .public): \
+                    Background refresh skipped station \(favorite.id.rawValue, privacy: .public): \
                     \(String(describing: error), privacy: .public)
                     """,
                 )
@@ -213,7 +213,7 @@ final class BackgroundRefreshController {
         // path so a rotated upstream stream URL can be refreshed. Non-UUID IDs
         // (curated stations, SHOUTcast) either aren't re-resolvable that way or
         // already ignore the snapshot in their stream-endpoint implementation.
-        guard station.preferredStreamURL != nil, UUID(uuidString: station.id) != nil else {
+        guard station.preferredStreamURL != nil, UUID(uuidString: station.id.rawValue) != nil else {
             return station
         }
 

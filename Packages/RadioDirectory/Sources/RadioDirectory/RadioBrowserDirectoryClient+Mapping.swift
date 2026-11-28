@@ -30,7 +30,7 @@ extension RadioBrowserDirectoryClient {
         }
 
         return Station(
-            id: dto.stationuuid,
+            id: Station.ID(dto.stationuuid),
             name: normalizedName,
             genre: genre(from: dto),
             tags: tags(from: dto),

@@ -26,7 +26,7 @@ enum QuickPlayWidgetPublisher {
         let snapshots = stations.prefix(capacity).map { station -> QuickPlayStationSnapshot in
             let link = StationLink(station: station, autoPlay: true, presentNowPlaying: true)
             return QuickPlayStationSnapshot(
-                id: station.id,
+                id: station.id.rawValue,
                 name: station.name,
                 genre: station.genre,
                 deepLinkURLString: link.url().absoluteString,

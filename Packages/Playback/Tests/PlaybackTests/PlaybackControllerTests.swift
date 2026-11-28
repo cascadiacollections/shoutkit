@@ -183,7 +183,7 @@ extension MainSerialExecutorTests {
             let output = FakeAudioOutput()
             let controller = makeController(stations: [station("a"), station("b")], output: output)
 
-            var played: [String] = []
+            var played: [Station.ID] = []
             controller.onStationPlayed = { played.append($0.id) }
 
             controller.play(station("a"))
