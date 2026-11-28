@@ -124,25 +124,41 @@ final class BackgroundRefreshController {
         // the existing dependency graph, while a background-only launch rebuilds
         // the same single set of services the app would normally construct.
         let services = AppDependencies.bootstrap()
-        let favoriteStations = services.libraryStore.favoriteStations()
-
-        let didRefreshFavoriteSnapshots = await refreshFavoriteStreamURLSnapshots(
-            favoriteStations,
+        return await refresh(
             store: services.libraryStore,
             directory: services.directory,
+            discoveryCache: services.directoryDiscoveryCache,
+        )
+    }
+
+    /// Runs one wake's work and returns the flag for `setTaskCompleted(success:)`.
+    ///
+    /// Every step is best effort, and a directory error in one of them is not
+    /// a failed wake: the favorites and the widget may still have been
+    /// refreshed. iOS reads the flag when deciding how often to wake the app,
+    /// so only cancellation reports failure (DECISIONS.md 2026-11-27).
+    func refresh(
+        store: LibraryStore,
+        directory: any RadioDirectoryProviding,
+        discoveryCache: any DirectoryDiscoveryCaching,
+    ) async -> Bool {
+        let didRefreshFavoriteSnapshots = await refreshFavoriteStreamURLSnapshots(
+            store.favoriteStations(),
+            store: store,
+            directory: directory,
         )
         if didRefreshFavoriteSnapshots {
-            QuickPlayWidgetPublisher.publishStations(services.libraryStore.favoriteStations())
+            QuickPlayWidgetPublisher.publishStations(store.favoriteStations())
         }
         // A foreground process that's still alive can have a warm in-memory
         // window; this wake exists to put *new* content on disk, so start by
         // dropping it. The warm calls below then persist what they fetch, which
         // is what the next launch paints from.
-        await services.directoryDiscoveryCache.invalidateMemoryCache()
-        let didWarmTopStations = await warmTopStationsCache(using: services.directory)
-        await warmGenresCache(using: services.directory)
+        await discoveryCache.invalidateMemoryCache()
+        await warmTopStationsCache(using: directory)
+        await warmGenresCache(using: directory)
 
-        return Task.isCancelled == false && didWarmTopStations
+        return Task.isCancelled == false
     }
 
     private func refreshFavoriteStreamURLSnapshots(
@@ -173,15 +189,13 @@ final class BackgroundRefreshController {
         return didRefreshAnySnapshot
     }
 
-    private func warmTopStationsCache(using directory: any RadioDirectoryProviding) async -> Bool {
+    private func warmTopStationsCache(using directory: any RadioDirectoryProviding) async {
         do {
             _ = try await directory.topStations(limit: Self.topStationsLimit)
-            return true
         } catch {
             logger.debug(
                 "Background refresh failed to warm top stations: \(String(describing: error), privacy: .public)",
             )
-            return false
         }
     }
 

@@ -61,6 +61,11 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
   roughly halves the Mac app's code size.
 
 ### Fixed
+- **Background refresh is not reported as failed when only the station list fails.**
+  A directory error while fetching popular stations marked the whole background wake as
+  failed, even when your favorites and the Quick Play widget had refreshed. iOS uses that
+  result to decide how often to give ShoutKit background time. A wake now reports failure
+  only when iOS stopped it early. (#283)
 - **Siri and Shortcuts suggest your favorites in your order.** After you reordered
   favorites, Siri, Shortcuts and Spotlight still offered them newest-added first. They now
   follow the order on the Favorites screen. (#281)
