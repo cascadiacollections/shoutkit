@@ -61,6 +61,10 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
   roughly halves the Mac app's code size.
 
 ### Fixed
+- **Listen Now no longer crashes on a station played on two devices.** With iCloud sync
+  on, the same station can briefly have two Recently Played entries until ShoutKit
+  merges them. Listen Now crashed if it drew in that moment. It now shows the most
+  recent play, and playing the station again merges the two entries. (#282)
 - **Genre chips come back after a failed load.** When the station list was
   saved and the genre list was not, Listen Now kept the stations and left the
   chips empty for up to six hours. It now fetches just the chips, and leaves

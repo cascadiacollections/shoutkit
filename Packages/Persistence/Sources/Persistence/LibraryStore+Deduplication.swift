@@ -58,3 +58,28 @@ public extension LibraryStore {
         return deleted
     }
 }
+
+extension LibraryStore {
+    /// Collapses the rows for one station into the most recently played,
+    /// adding the others' play counts to it, and returns that row. Deletes the
+    /// others without saving. Nil when `recents` is empty.
+    func collapseRecents(_ recents: [RecentStation]) -> RecentStation? {
+        guard let keeper = recents.max(by: { $0.playedAt < $1.playedAt }) else { return nil }
+        for recent in recents where recent !== keeper {
+            keeper.playCount += recent.playCount
+            context.delete(recent)
+        }
+        return keeper
+    }
+}
+
+public extension RecentStation {
+    /// One row per station: the most recently played, so a station that
+    /// briefly has two rows (from sync, before ``LibraryStore/mergeDuplicateStations()``
+    /// runs) never traps a `Dictionary(uniqueKeysWithValues:)`.
+    static func latestByStationID(_ recents: some Sequence<RecentStation>) -> [String: RecentStation] {
+        Dictionary(recents.map { ($0.stationID, $0) }) { first, second in
+            first.playedAt >= second.playedAt ? first : second
+        }
+    }
+}

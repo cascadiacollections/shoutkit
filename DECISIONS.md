@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-11-27 (Listen Now and `logRecent` tolerate two recents for one station)
+
+Schema version 2 dropped the unique constraint on `stationID` (2026-11-22), and
+`mergeDuplicateStations()` runs at store creation and after a remote change. Between
+an import landing and that merge, two `RecentStation` rows can share an id while
+Listen Now is on screen. `displayedRecentStations` built its lookup with
+`Dictionary(uniqueKeysWithValues:)`, which traps on that, and `logRecent` updated
+`matches.first` and left the other row.
+
+`RecentStation.latestByStationID(_:)` now builds the lookup and keeps the latest
+`playedAt` per station, the same survivor the merge picks, so the view shows what it
+will show after the merge. `logRecent` collapses its matches the same way before it
+updates the row: the latest play survives and the others' play counts are added to
+it. The merge still runs as before; this only removes the window in which a
+duplicate could crash the screen or survive a new play.
+
+The lookup lives in `Persistence`, not the view, because `BrowseFeature` depends on
+`DesignSystem` and cannot be tested on the mac host. Only the one-line call site in
+`ListenNowView` is untested.
+
 ## 2026-11-27 (the in-memory discovery cache follows the region)
 
 The on-disk snapshot is checked against `snapshotIdentity` on every read, and
