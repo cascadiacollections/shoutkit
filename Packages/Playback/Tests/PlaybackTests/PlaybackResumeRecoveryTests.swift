@@ -16,7 +16,7 @@ import Testing
 // acknowledges rejoins the stream instead of leaving playback stuck. Short
 // injected watchdog windows; the production default is 2 s.
 
-extension PlaybackTimingTests {
+extension MainSerialExecutorTests {
     @MainActor
     struct PlaybackResumeRecoveryTests {
         private static let shortTimeout: Duration = .milliseconds(50)

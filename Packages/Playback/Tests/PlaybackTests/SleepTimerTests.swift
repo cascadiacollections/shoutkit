@@ -4,7 +4,7 @@ import Foundation
 @testable import Playback
 import Testing
 
-extension PlaybackTimingTests {
+extension MainSerialExecutorTests {
     @MainActor
     struct SleepTimerTests {
         @Test func `fires once after duration and deactivates`() async {

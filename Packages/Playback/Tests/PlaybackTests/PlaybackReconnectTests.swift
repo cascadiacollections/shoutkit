@@ -10,7 +10,7 @@ import Testing
 // user pause must always win over a pending retry. The delays run on a
 // `TestClock`, so the suite does not wait them out.
 
-extension PlaybackTimingTests {
+extension MainSerialExecutorTests {
     @MainActor
     struct PlaybackReconnectTests {
         private static let fastDelay: Duration = .milliseconds(10)

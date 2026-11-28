@@ -1,5 +1,6 @@
 import AudioLevels
 import AVFoundation
+import ConcurrencyExtras
 import Foundation
 @testable import Playback
 import RadioDirectory
@@ -42,65 +43,69 @@ private func toneBuffer() throws -> AVAudioPCMBuffer {
     return buffer
 }
 
-@MainActor
-struct AudioLevelsCapabilityTests {
-    @Test func `plain audio output reports no metering and an empty stream`() async {
-        let controller = makeController(stations: [station()], output: FakeAudioOutput())
-        #expect(controller.supportsAudioLevels == false)
-        var received = 0
-        for await _ in controller.audioLevels() {
-            received += 1
-        }
-        #expect(received == 0)
-    }
-
-    @Test func `the stub engine does not take taps`() {
-        #expect(StubRadioPlaybackEngine().supportsAudioTaps == false)
-    }
-
-    @Test func `a meter is attached, fed, and detached when its stream ends`() async throws {
-        let engine = TappingEngine()
-        let controller = PlaybackController(
-            directory: BundledRadioDirectory(stations: [station()]),
-            output: engine,
-            nowPlayingCenter: NowPlayingPresenterSpy(),
-        )
-        #expect(controller.supportsAudioLevels)
-
-        var stream: AsyncStream<AudioLevels>? = controller.audioLevels()
-        #expect(engine.plugins.count == 1)
-        let plugin = try #require(engine.plugins.first)
-        try plugin.process(toneBuffer(), at: nil)
-
-        // The consumer owns the only reference, and leaves the loop after one
-        // frame without being cancelled — the case that used to leak the tap.
-        let consumer = Task { [stream] () -> AudioLevels? in
-            guard let stream else { return nil }
-            for await levels in stream {
-                return levels
+extension MainSerialExecutorTests {
+    @MainActor
+    struct AudioLevelsCapabilityTests {
+        @Test func `plain audio output reports no metering and an empty stream`() async {
+            let controller = makeController(stations: [station()], output: FakeAudioOutput())
+            #expect(controller.supportsAudioLevels == false)
+            var received = 0
+            for await _ in controller.audioLevels() {
+                received += 1
             }
-            return nil
+            #expect(received == 0)
         }
-        stream = nil
-        let first = try #require(await consumer.value)
-        #expect((first.bands.max() ?? 0) > 0.3)
 
-        // Dropping the stream ends it; detaching hops to the main actor.
-        for _ in 0 ..< 50 where engine.plugins.isEmpty == false {
-            await Task.yield()
+        @Test func `the stub engine does not take taps`() {
+            #expect(StubRadioPlaybackEngine().supportsAudioTaps == false)
         }
-        #expect(engine.plugins.isEmpty)
-    }
 
-    @Test func `two consumers get two meters`() {
-        let engine = TappingEngine()
-        let controller = PlaybackController(
-            directory: BundledRadioDirectory(stations: [station()]),
-            output: engine,
-            nowPlayingCenter: NowPlayingPresenterSpy(),
-        )
-        _ = controller.audioLevels()
-        _ = controller.audioLevels(bandCount: 5)
-        #expect(engine.plugins.count == 2)
+        @Test func `a meter is attached, fed, and detached when its stream ends`() async throws {
+            try await withMainSerialExecutor {
+                let engine = TappingEngine()
+                let controller = PlaybackController(
+                    directory: BundledRadioDirectory(stations: [station()]),
+                    output: engine,
+                    nowPlayingCenter: NowPlayingPresenterSpy(),
+                )
+                #expect(controller.supportsAudioLevels)
+
+                var stream: AsyncStream<AudioLevels>? = controller.audioLevels()
+                #expect(engine.plugins.count == 1)
+                let plugin = try #require(engine.plugins.first)
+                try plugin.process(toneBuffer(), at: nil)
+
+                // The consumer owns the only reference, and leaves the loop after one
+                // frame without being cancelled — the case that used to leak the tap.
+                let consumer = Task { [stream] () -> AudioLevels? in
+                    guard let stream else { return nil }
+                    for await levels in stream {
+                        return levels
+                    }
+                    return nil
+                }
+                stream = nil
+                let first = try #require(await consumer.value)
+                #expect((first.bands.max() ?? 0) > 0.3)
+
+                // Dropping the stream ends it; detaching hops to the main actor.
+                // On the serial executor that hop is already queued ahead of
+                // this test by the time the consumer's value is returned.
+                await Task.yield()
+                #expect(engine.plugins.isEmpty)
+            }
+        }
+
+        @Test func `two consumers get two meters`() {
+            let engine = TappingEngine()
+            let controller = PlaybackController(
+                directory: BundledRadioDirectory(stations: [station()]),
+                output: engine,
+                nowPlayingCenter: NowPlayingPresenterSpy(),
+            )
+            _ = controller.audioLevels()
+            _ = controller.audioLevels(bandCount: 5)
+            #expect(engine.plugins.count == 2)
+        }
     }
 }

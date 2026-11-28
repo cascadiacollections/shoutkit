@@ -1,9 +1,20 @@
 @testable import BrowseFeatureCore
+import ConcurrencyExtras
 import RadioDirectory
 import Testing
 
+/// The first top-stations call is held until ``releaseFirstCall()`` and then
+/// fails; every later call succeeds at once.
 private actor SequencedTopStationsDirectory: RadioDirectoryProviding {
-    private var topStationsCalls = 0
+    private(set) var topStationsCalls = 0
+    private var firstCallWaiter: CheckedContinuation<Void, Never>?
+    private var firstCallReleased = false
+
+    func releaseFirstCall() {
+        firstCallReleased = true
+        firstCallWaiter?.resume()
+        firstCallWaiter = nil
+    }
 
     func genres() async throws(RadioDirectoryError) -> [Genre] {
         [Genre(name: "Jazz")]
@@ -12,7 +23,9 @@ private actor SequencedTopStationsDirectory: RadioDirectoryProviding {
     func topStations(limit _: Int) async throws(RadioDirectoryError) -> [Station] {
         topStationsCalls += 1
         if topStationsCalls == 1 {
-            try? await Task.sleep(for: .milliseconds(200))
+            if firstCallReleased == false {
+                await withCheckedContinuation { firstCallWaiter = $0 }
+            }
             throw .transport("offline")
         }
         return [.fixture(id: "b", name: "Station B")]
@@ -31,7 +44,15 @@ private actor SequencedTopStationsDirectory: RadioDirectoryProviding {
     }
 }
 
+/// Tests that overlap requests, or wait for a genre load, run inside
+/// `withMainSerialExecutor`: the view model's tasks and the fake directory's
+/// actor hops then share one FIFO queue, and `Task.megaYield()` lets them run
+/// to completion in the same order every time. That replaces a 2-second
+/// polling helper and a pair of real 200 ms holds. The hook it sets is
+/// process-wide and restored on return, so this suite is `.serialized`, and it
+/// is the only one in the target that uses it (DECISIONS.md, 2026-11-28).
 @MainActor
+@Suite(.serialized)
 struct BrowseViewModelTests {
     @Test func `refresh loads spotlight stations and genres`() async {
         let directory = FakeRadioDirectory()
@@ -88,88 +109,101 @@ struct BrowseViewModelTests {
     }
 
     @Test func `toggle genre filter loads stations for that genre`() async {
-        let directory = FakeRadioDirectory()
-        let jazzStations: [Station] = [.fixture(id: "j1", name: "Jazz One", genre: "Jazz")]
-        await directory.setGenreStations(.success(jazzStations), forGenre: "Jazz")
-        let viewModel = BrowseViewModel(directory: directory)
+        await withMainSerialExecutor {
+            let directory = FakeRadioDirectory()
+            let jazzStations: [Station] = [.fixture(id: "j1", name: "Jazz One", genre: "Jazz")]
+            await directory.setGenreStations(.success(jazzStations), forGenre: "Jazz")
+            let viewModel = BrowseViewModel(directory: directory)
 
-        viewModel.toggleGenreFilter("Jazz")
-        #expect(viewModel.selectedGenre == "Jazz")
-        #expect(viewModel.genrePhase == .loading)
+            viewModel.toggleGenreFilter("Jazz")
+            #expect(viewModel.selectedGenre == "Jazz")
+            #expect(viewModel.genrePhase == .loading)
 
-        await waitUntil { viewModel.genrePhase != .loading }
+            await Task.megaYield()
 
-        #expect(viewModel.genrePhase == .loaded(jazzStations))
+            #expect(viewModel.genrePhase == .loaded(jazzStations))
+        }
     }
 
     @Test func `toggling same genre twice clears the filter`() async {
-        let directory = FakeRadioDirectory()
-        await directory.setGenreStations(.success([.fixture(id: "j1", name: "Jazz One")]), forGenre: "Jazz")
-        let viewModel = BrowseViewModel(directory: directory)
+        await withMainSerialExecutor {
+            let directory = FakeRadioDirectory()
+            await directory.setGenreStations(.success([.fixture(id: "j1", name: "Jazz One")]), forGenre: "Jazz")
+            let viewModel = BrowseViewModel(directory: directory)
 
-        viewModel.toggleGenreFilter("Jazz")
-        await waitUntil { viewModel.genrePhase != .loading }
-        viewModel.toggleGenreFilter("Jazz")
+            viewModel.toggleGenreFilter("Jazz")
+            await Task.megaYield()
+            #expect(viewModel.genrePhase != .loading)
+            viewModel.toggleGenreFilter("Jazz")
 
-        #expect(viewModel.selectedGenre == nil)
-        #expect(viewModel.genrePhase == nil)
+            #expect(viewModel.selectedGenre == nil)
+            #expect(viewModel.genrePhase == nil)
+        }
     }
 
     @Test func `stale prior genre response is discarded after switching selection`() async {
-        let directory = FakeRadioDirectory()
-        // "Jazz" resolves slowly; by the time it does, the user has already
-        // switched to "Rock" (which resolves immediately). The guard in
-        // toggleGenreFilter should keep Rock's result from being clobbered.
-        await directory.setGenreStations(
-            .success([.fixture(id: "j1", name: "Jazz One")]),
-            forGenre: "Jazz",
-            delay: .milliseconds(200),
-        )
-        await directory.setGenreStations(.success([.fixture(id: "r1", name: "Rock One")]), forGenre: "Rock")
-        let viewModel = BrowseViewModel(directory: directory)
+        await withMainSerialExecutor {
+            let directory = FakeRadioDirectory()
+            // "Jazz" is held until after the user has switched to "Rock" (which
+            // resolves immediately). The guard in toggleGenreFilter should keep
+            // Rock's result from being clobbered when Jazz finally answers.
+            let rockStations: [Station] = [.fixture(id: "r1", name: "Rock One")]
+            await directory.setGenreStations(.success([.fixture(id: "j1", name: "Jazz One")]), forGenre: "Jazz")
+            await directory.holdGenreStations(forGenre: "Jazz")
+            await directory.setGenreStations(.success(rockStations), forGenre: "Rock")
+            let viewModel = BrowseViewModel(directory: directory)
 
-        viewModel.toggleGenreFilter("Jazz")
-        viewModel.toggleGenreFilter("Rock")
+            viewModel.toggleGenreFilter("Jazz")
+            viewModel.toggleGenreFilter("Rock")
+            await Task.megaYield()
+            #expect(await directory.genreStationsCallCount == 2, "both lookups reached the directory")
+            #expect(viewModel.genrePhase == .loaded(rockStations))
 
-        await waitUntil { viewModel.genrePhase != .loading }
-        // Give the slow "Jazz" response a chance to land, if it were going to.
-        try? await Task.sleep(for: .milliseconds(300))
+            await directory.releaseGenreStations(forGenre: "Jazz")
+            await Task.megaYield()
 
-        #expect(viewModel.selectedGenre == "Rock")
-        #expect(viewModel.genrePhase == .loaded([.fixture(id: "r1", name: "Rock One")]))
+            #expect(viewModel.selectedGenre == "Rock")
+            #expect(viewModel.genrePhase == .loaded(rockStations))
+        }
     }
 
     @Test func `reloading the selected genre fetches again without clearing it`() async {
-        let directory = FakeRadioDirectory()
-        let jazzStations: [Station] = [.fixture(id: "j1", name: "Jazz One", genre: "Jazz")]
-        await directory.setGenreStations(.success(jazzStations), forGenre: "Jazz")
-        let viewModel = BrowseViewModel(directory: directory)
+        await withMainSerialExecutor {
+            let directory = FakeRadioDirectory()
+            let jazzStations: [Station] = [.fixture(id: "j1", name: "Jazz One", genre: "Jazz")]
+            await directory.setGenreStations(.success(jazzStations), forGenre: "Jazz")
+            let viewModel = BrowseViewModel(directory: directory)
 
-        viewModel.toggleGenreFilter("Jazz")
-        await waitUntil { viewModel.genrePhase != .loading }
-        viewModel.reloadGenreFilter()
+            viewModel.toggleGenreFilter("Jazz")
+            await Task.megaYield()
+            viewModel.reloadGenreFilter()
 
-        #expect(viewModel.selectedGenre == "Jazz")
-        #expect(viewModel.genrePhase == .loading)
+            #expect(viewModel.selectedGenre == "Jazz")
+            #expect(viewModel.genrePhase == .loading)
 
-        await waitUntil { viewModel.genrePhase != .loading }
-        #expect(viewModel.genrePhase == .loaded(jazzStations))
-        #expect(await directory.genreStationsCallCount == 2)
+            await Task.megaYield()
+            #expect(viewModel.genrePhase == .loaded(jazzStations))
+            #expect(await directory.genreStationsCallCount == 2)
+        }
     }
 
     @Test func `older refresh failure does not override newer loaded result`() async {
-        let directory = SequencedTopStationsDirectory()
-        let viewModel = BrowseViewModel(directory: directory)
+        await withMainSerialExecutor {
+            let directory = SequencedTopStationsDirectory()
+            let viewModel = BrowseViewModel(directory: directory)
 
-        let first = Task { await viewModel.refresh() }
-        try? await Task.sleep(for: .milliseconds(20))
-        await viewModel.refresh()
-        await first.value
+            let first = Task { await viewModel.refresh() }
+            await Task.megaYield()
+            #expect(await directory.topStationsCalls == 1, "the first refresh is in flight")
+            await viewModel.refresh()
+            await directory.releaseFirstCall()
+            await first.value
 
-        guard case let .loaded(content) = viewModel.phase else {
-            Issue.record("Expected .loaded after newer refresh, got \(viewModel.phase)")
-            return
+            guard case let .loaded(content) = viewModel.phase else {
+                Issue.record("Expected .loaded after newer refresh, got \(viewModel.phase)")
+                return
+            }
+            #expect(content.stations.map(\.id) == ["b"])
         }
-        #expect(content.stations.map(\.id) == ["b"])
     }
 }

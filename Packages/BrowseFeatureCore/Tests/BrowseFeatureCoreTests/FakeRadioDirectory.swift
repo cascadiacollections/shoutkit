@@ -2,15 +2,15 @@ import Foundation
 import RadioDirectory
 
 /// Scriptable `RadioDirectoryProviding` double. Each call site configures the
-/// result it wants and, for the genre lookup, an optional per-genre delay so
-/// tests can force a specific interleaving (e.g. an older request resolving
-/// after a newer one).
+/// result it wants and, for the genre lookup, can hold one genre's answer until
+/// the test releases it, to force an older request to resolve after a newer one.
 actor FakeRadioDirectory: RadioDirectoryProviding {
     var genresResult: Result<[Genre], RadioDirectoryError> = .success([])
     var topStationsResult: Result<[Station], RadioDirectoryError> = .success([])
     var searchStationsResult: Result<[Station], RadioDirectoryError> = .success([])
     var genreStationsResultsByGenre: [String: Result<[Station], RadioDirectoryError>] = [:]
-    var genreStationsDelayByGenre: [String: Duration] = [:]
+    private var heldGenres: Set<String> = []
+    private var genreWaiters: [String: [CheckedContinuation<Void, Never>]] = [:]
 
     private(set) var genreStationsCallCount = 0
     private(set) var genresCallCount = 0
@@ -24,14 +24,19 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
         topStationsResult = result
     }
 
-    func setGenreStations(
-        _ result: Result<[Station], RadioDirectoryError>,
-        forGenre genre: String,
-        delay: Duration? = nil,
-    ) {
+    func setGenreStations(_ result: Result<[Station], RadioDirectoryError>, forGenre genre: String) {
         genreStationsResultsByGenre[genre] = result
-        if let delay {
-            genreStationsDelayByGenre[genre] = delay
+    }
+
+    /// Lookups for `genre` wait until ``releaseGenreStations(forGenre:)``.
+    func holdGenreStations(forGenre genre: String) {
+        heldGenres.insert(genre)
+    }
+
+    func releaseGenreStations(forGenre genre: String) {
+        heldGenres.remove(genre)
+        for waiter in genreWaiters.removeValue(forKey: genre) ?? [] {
+            waiter.resume()
         }
     }
 
@@ -60,8 +65,8 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
 
     func stations(inGenre genre: String, limit _: Int) async throws(RadioDirectoryError) -> [Station] {
         genreStationsCallCount += 1
-        if let delay = genreStationsDelayByGenre[genre] {
-            try? await Task.sleep(for: delay)
+        if heldGenres.contains(genre) {
+            await withCheckedContinuation { genreWaiters[genre, default: []].append($0) }
         }
         switch genreStationsResultsByGenre[genre] ?? .success([]) {
         case let .success(stations): return stations
@@ -77,14 +82,5 @@ actor FakeRadioDirectory: RadioDirectoryProviding {
 extension Station {
     static func fixture(id: String, name: String, genre: String = "Test", listenerCount: Int = 0) -> Station {
         Station(id: id, name: name, genre: genre, listenerCount: listenerCount)
-    }
-}
-
-/// Polls until `condition` holds or the deadline passes.
-@MainActor
-func waitUntil(_ condition: () -> Bool, upTo seconds: TimeInterval = 2) async {
-    let deadline = Date().addingTimeInterval(seconds)
-    while condition() == false, Date() < deadline {
-        try? await Task.sleep(for: .milliseconds(10))
     }
 }

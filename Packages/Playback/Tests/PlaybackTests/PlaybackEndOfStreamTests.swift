@@ -14,7 +14,7 @@ import Testing
 // Default: play once, then park as `.paused` with a play button that replays it.
 // Opted in: start over, as an internal restart rather than a new listening choice.
 
-extension PlaybackTimingTests {
+extension MainSerialExecutorTests {
     @MainActor
     struct PlaybackEndOfStreamTests {
         private static let fastDelay: Duration = .milliseconds(10)

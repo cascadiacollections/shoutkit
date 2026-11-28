@@ -1,5 +1,50 @@
 # Decisions
 
+## 2026-11-28 (tests that depend on task order run on one serial queue)
+
+After the clock change, the tests that still leaned on scheduling luck were
+about task order, not time: 50 bare `Task.yield()`s (`drainMainQueue`) before
+asserting that a cancelled start never happened, album-art lookups that
+"outlasted" a track change by yielding 200 or 400 times, a meter detach
+polled for 50 yields, and directory fakes that held a request open for a real
+150 or 200 ms while the test slept 20 or 30 ms to land a second one beside it.
+Several of those were negative checks, so a slow hop made them pass without
+testing anything.
+
+Those tests now run inside swift-concurrency-extras' `withMainSerialExecutor`,
+which sends every global-executor job to the main queue for its duration.
+With one FIFO queue, `Task.megaYield()` runs everything already queued and
+what that queues in turn, in the same order every time. The magic yield
+counts became gates the test opens (`Gate` in Playback, a held genre lookup
+in BrowseFeatureCore) or a `TestClock` sleep (the RadioDirectory fake).
+
+The hook is process-wide, and `withMainSerialExecutor` restores the previous
+value when it returns, so two overlapping calls can undo each other. Swift
+Testing runs suites in parallel, and `.serialized` only orders tests within
+the suite it is on. So each test target has exactly one `.serialized` suite
+that uses it: `MainSerialExecutorTests` in Playback (the timer suites and the
+controller suites are nested under it; it replaces `PlaybackTimingTests`),
+`CachingRadioDirectoryInFlightTests` in RadioDirectory, and
+`BrowseViewModelTests` in BrowseFeatureCore. Other suites keep running in
+parallel. While the hook is on, their jobs also run on the main queue, which
+is slower but not different, because none of them block the main thread
+waiting for another task. The library's documentation gives no Swift Testing
+guidance beyond its warnings about that global; this is the narrowest setup
+that keeps two scopes from overlapping.
+
+swift-concurrency-extras 1.4.3 is `exact`, MIT, and a test-only dependency of
+RadioDirectory, Playback, and BrowseFeatureCore. It is not linked into the app.
+
+Left alone: SearchFeatureCore's debounce tests (the time is the behavior under
+test, and the view model has no clock seam yet), Persistence's
+`DiagnosticsService` and remote-change tests (they wait on an `Observations`
+hop and a `NotificationCenter` post on the main dispatch queue, which the hook
+does not reorder), PlaybackEngineAudioStreaming's `eventually` (stream
+callbacks from Foundation's own threads), DesignSystem's coalescing test
+(iOS-only, so it cannot be run on the host to check a change), and
+`waitForStart`'s bounded poll, which only waits for a condition with a
+30-second failure deadline.
+
 ## 2026-11-28 (Nuke replaces the hand-rolled artwork caches)
 
 Station logos and Now Playing art went through two caches in DesignSystem: a
