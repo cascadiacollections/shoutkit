@@ -21,8 +21,10 @@ public final class SleepTimer {
     @ObservationIgnored public var onFire: (() -> Void)?
 
     @ObservationIgnored private var timerTask: Task<Void, Never>?
-    /// Injected so a test can move the fire with a `TestClock`. The `Date`
-    /// clock stays separate: the countdown the UI shows is wall time.
+    /// Wall clock for the countdown the UI shows. Separate from ``clock``,
+    /// which only decides when `onFire` runs.
+    @ObservationIgnored private let now: @Sendable () -> Date
+    /// Injected so a test can move the fire with a `TestClock`.
     @ObservationIgnored private let clock: any Clock<Duration>
 
     public init(
