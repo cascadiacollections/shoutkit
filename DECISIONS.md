@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-11-27 (a background wake fails only when it is cancelled)
+
+`BackgroundRefreshController.runRefresh()` returned success only when the
+`topStations` warm-up succeeded. The favorite stream-URL refresh, the Quick Play
+publish and the genres warm-up could all have worked, but a directory error on that
+one fetch completed the `BGAppRefreshTask` with `success: false`. iOS uses that flag
+when deciding how often to offer background time, so a run of directory outages could
+push the widget and favorite-URL refreshes further apart.
+
+Every step of the wake is best effort and already logs its own failure. The wake now
+reports success when it was not cancelled, and failure when it was: either before any
+work ran, or by the expiration handler, which still completes the task with `false`.
+A directory that is down for every request still counts as a successful wake. Treating
+that as failure would only make iOS wake the app less often, which does not help it
+reach the directory sooner.
+
+The work moved to `refresh(store:directory:discoveryCache:)` so a test can drive it
+with a failing directory. Whether iOS actually wakes the app more often as a result
+needs a device and is not checked.
+
 ## 2026-11-27 (Siri and Shortcuts suggest favorites in the listener's order)
 
 `StationEntityQuery.knownStations()` fetched favorites by `createdAt` descending, an
