@@ -135,7 +135,9 @@ Still to do in App Store Connect, by hand:
   (`site/privacy/index.html`). The home page still has a short privacy section. The page
   lists directory queries, streams, play reports, and album-art lookups, which send artist
   and title to the iTunes Search API when Settings → Privacy → Fetch Album Artwork is on
-  (the default). Draft answers for the privacy questionnaire are in
+  (the default). Since 2026-11-27 it also describes iCloud sync: favorites, recents and
+  recently heard tracks in the listener's private iCloud database, on by default, with a
+  switch per device. Draft answers for the privacy questionnaire are in
   `docs/APP_STORE_LISTING.md`.
 - **Support URL.** GitHub issues will do. Set it on the version.
 - **Age rating, subtitle, description, keywords, and the Mac availability checkbox.** Drafts
@@ -150,9 +152,9 @@ Still to do in App Store Connect, by hand:
   descriptions need reverting by hand (see `DECISIONS.md`, 2026-11-12). The Black Friday
   banner is separate: it shows itself from 2026-11-27 00:00 through 2026-12-01 23:59
   America/Los_Angeles and then stops, so it does not need a follow-up change
-  (`DECISIONS.md`, 2026-11-23). README's
-  capabilities section still describes the Live Activity as part of the shipping app. Fix
-  that copy before the listing quotes it. The release notes do not claim those features.
+  (`DECISIONS.md`, 2026-11-23). README's capabilities section no longer describes the Live
+  Activity (removed in #246) and calls CarPlay not reachable. The release notes do not claim
+  either feature.
 - **Settings copy.** Privacy footnotes mention geo-stations and Share diagnostics. Both
   controls are inert in Release unless an internal flag is forced on. Fine for TestFlight;
   confusing on a first store page if a reviewer opens Settings.

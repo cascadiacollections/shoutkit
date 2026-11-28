@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Privacy · ShoutKit</title>
-  <meta name="description" content="ShoutKit for iPhone does not collect your data. No account, no ads, no analytics. What the app sends, and what stays on the device." />
+  <meta name="description" content="ShoutKit for iPhone does not collect your data. No account, no ads, no analytics. What the app sends, what syncs through your own iCloud account, and what stays on the device." />
   <link rel="canonical" href="https://cascadiacollections.github.io/shoutkit/privacy/" />
   <meta name="robots" content="index, follow" />
   <meta name="color-scheme" content="light dark" />
@@ -157,20 +157,24 @@
       <p class="kicker">Privacy</p>
       <h1>ShoutKit does not collect your data.</h1>
       <p class="lead">There is no account, no ads, and no analytics. The app’s privacy manifest declares nothing collected and nothing tracked. ShoutKit has no server of its own.</p>
-      <p>This page is about the iPhone and iPad app, including the Apple Watch app that ships with it. It describes the public source as of 26 November 2026.</p>
+      <p>This page is about the iPhone and iPad app, including the Apple Watch app that ships with it. It describes the public source as of 27 November 2026.</p>
 
       <h2>What stays on the device</h2>
-      <p>Favorites, recently played stations, recently heard tracks, and your settings are stored on the device. So is a snapshot of the station lists Listen Now last loaded, which lets those screens open before the network answers. The Home Screen widget reads the same on-device favorites. Siri, Shortcuts, and Spotlight use stations stored on the device.</p>
+      <p>Favorites, recently played stations, recently heard tracks, and your settings are stored on the device. Unless you turn iCloud sync off, the first three are also copied to your own iCloud account, as described below. Your settings are not. So is a snapshot of the station lists Listen Now last loaded, which lets those screens open before the network answers. The Home Screen widget reads the same on-device favorites. Siri, Shortcuts, and Spotlight use stations stored on the device.</p>
       <p>You can export favorites as a JSON file and import one back. That file is one you save or open yourself. Recents and recently heard tracks are left out of it.</p>
-      <p>Favorites are not synced through iCloud. While a station is playing, the app publishes it through Apple’s Handoff so you can resume that station on another of your devices. The activity carries the station you are playing. If the Apple Watch app is installed, the phone also sends that last station to the paired watch. Both stay between your devices.</p>
+      <p>While a station is playing, the app publishes it through Apple’s Handoff so you can resume that station on another of your devices. The activity carries the station you are playing. If the Apple Watch app is installed, the phone also sends that last station to the paired watch. Both stay between your devices.</p>
       <p>Spatial Audio is off until you turn it on in Settings. It uses your headphones’ motion sensors on the device to place a stereo image. The app does not send that motion anywhere.</p>
+
+      <h2>iCloud sync</h2>
+      <p>Favorites, recently played stations, and recently heard tracks sync through your own iCloud account, so they match on your iPhone, iPad, Mac, Apple Watch, and Apple TV. They are kept in the private database of your iCloud account. Apple stores and transfers them. ShoutKit’s developer cannot read them and does not collect them, so the privacy manifest is unchanged. Your settings and the cached station lists are not synced.</p>
+      <p>Sync is on by default when the device is signed in to iCloud. Settings → iCloud → Sync with iCloud turns it off on iPhone, iPad, and Mac. On Apple Watch and Apple TV the switch is at the bottom of the main screen. Each device has its own switch, and a change takes effect the next time you open the app. Turning sync off leaves what has already synced in your iCloud account.</p>
 
       <h2>What the app contacts</h2>
       <p>The requests below go straight to the service named. ShoutKit does not receive them. Each of those servers sees the IP address of the connection, the way any server does. The requests do not include an account or an advertising identifier.</p>
 
       <h3>Radio-Browser</h3>
       <p>Stations come from <a href="https://www.radio-browser.info">Radio-Browser</a>, a public community directory. A search sends the text you type, and any filters you set, such as a tag, a country, or a bitrate. Choosing a genre sends that genre name. Listen Now asks for popular stations in the country from your device’s region setting, then for popular stations worldwide. The app reads that country from the region setting. It does not ask for location access.</p>
-      <p>Directory requests name the app with the User-Agent <code>Holmdel/0.1</code>. That is the app’s name on the request, shared by everyone who uses this build. It is not an id for your device. Holmdel is the app’s earlier name; TestFlight builds from before late November 2026 still install under it.</p>
+      <p>Directory requests name the app with the User-Agent <code>Holmdel/0.1</code>. That is the app’s name on the request, shared by everyone who uses this build. It is not an id for your device. Holmdel is the app’s earlier name, and the TestFlight beta may still install under it.</p>
       <p>When you play a station that came from Radio-Browser, the app tells the directory that station’s public id, so the directory can rank popularity. That report is on by default. Settings → Privacy → Report Plays to Radio-Browser turns it off. Stations that did not come from Radio-Browser are not reported.</p>
       <p>iOS will not run a background refresh more often than every four hours. When it does, the app asks the directory again for popular stations, for genres, and for a current stream address for each favorite. Those are the same kinds of directory requests.</p>
 
@@ -183,7 +187,7 @@
       <h2>What is not in the app</h2>
       <p>The app does not include an analytics SDK, an advertising SDK, or a crash-reporting SDK. A debug build can include a network inspector for development. That inspector is not in TestFlight or App Store builds. The TestFlight beta is delivered by Apple, and this app does not add a reporter of its own.</p>
       <p>Developer builds can keep Apple’s MetricKit performance reports on the device. That path is off unless an internal flag is turned on, it is not shown in Settings in the app you install, and nothing in it is uploaded.</p>
-      <p>The Apple Watch app plays the streams you start. That asks Radio-Browser for the station’s stream address, then connects to the station. It does not send play reports or album-art lookups. The Apple TV app is not in the TestFlight beta. Built from source, it loads station lists from Radio-Browser and plays streams, and it does not send play reports or album-art lookups.</p>
+      <p>The Apple Watch app plays the streams you start. That asks Radio-Browser for the station’s stream address, then connects to the station. It does not send play reports or album-art lookups. Like the phone, it syncs its library through iCloud unless its own switch is off. The Apple TV app is not in the TestFlight beta. Built from source, it loads station lists from Radio-Browser and plays streams, and it does not send play reports or album-art lookups. It syncs through iCloud the same way.</p>
 
       <h2>This website</h2>
       <p>These pages are static files. They load no analytics and no web fonts, and they do not set cookies. If you dismiss the seasonal notice on the home page, the browser stores that choice in its own local storage. This page stores nothing.</p>
