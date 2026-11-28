@@ -8,191 +8,239 @@
   <link rel="canonical" href="https://cascadiacollections.github.io/shoutkit/api/" />
   <meta name="robots" content="index, follow" />
   <meta name="color-scheme" content="light dark" />
-  <meta name="theme-color" content="#FFF3E4" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#150F0C" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
 
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23F0532B'/%3E%3Ccircle cx='50' cy='50' r='19' fill='%23FFC24B'/%3E%3Cg fill='none' stroke='%23FFF3E4' stroke-width='6' stroke-linecap='round'%3E%3Cpath d='M50 10v8'/%3E%3Cpath d='M50 82v8'/%3E%3Cpath d='M10 50h8'/%3E%3Cpath d='M82 50h8'/%3E%3Cpath d='M22 22l6 6'/%3E%3Cpath d='M72 72l6 6'/%3E%3Cpath d='M78 22l-6 6'/%3E%3Cpath d='M28 72l-6 6'/%3E%3C/g%3E%3C/svg%3E" />
+  <link rel="icon" href="../assets/app-icon-64.png" type="image/png" />
+  <link rel="apple-touch-icon" href="../assets/app-icon-256.png" />
 
   <style>
     :root {
-      --sand:        #FFF3E4;
-      --surface:     #FFFBF4;
-      --border:      #F0D8BC;
-      --border-firm: #E3C29E;
-      --ink:         #2B1A12;
-      --muted:       #7A6355;
-      --sunset:      #D6431E;
-      --sea:         #0F6F77;
-      --shadow:      0 1px 2px rgba(74, 38, 18, 0.05), 0 8px 24px -12px rgba(74, 38, 18, 0.22);
-
-      --font-display: ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN",
-                      "Segoe UI Variable Display", system-ui, sans-serif;
-      --font-body:    ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
-                      Roboto, Helvetica, Arial, sans-serif;
-      --font-mono:    ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas,
-                      "Liberation Mono", monospace;
-
-      --wrap: 880px;
-      --radius: 18px;
+      --bg: #f7f9fc;
+      --bg-alt: #eef3f8;
+      --tile: #ffffff;
+      --text: #14181f;
+      --muted: #5c6470;
+      --line: rgba(10, 30, 60, 0.09);
+      --accent: #0670a8;
+      --accent-hover: #055d8c;
+      --accent-ink: #ffffff;
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+      --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+      --wrap: 1040px;
+      --shadow: 0 1px 2px rgba(10, 30, 60, 0.04), 0 10px 30px rgba(10, 30, 60, 0.07);
+      --radius: 22px;
     }
-
     @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        --sand:        #150F0C;
-        --surface:     #211812;
-        --border:      #382720;
-        --border-firm: #4C352A;
-        --ink:         #F8EADB;
-        --muted:       #B49C89;
-        --sunset:      #FF8155;
-        --sea:         #5BD3DB;
-        --shadow:      0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+      :root {
+        --bg: #070b12;
+        --bg-alt: #0d131d;
+        --tile: #131b27;
+        --text: #f3f5f8;
+        --muted: #a3acb9;
+        --line: rgba(255, 255, 255, 0.10);
+        --accent: #4cb2ea;
+        --accent-hover: #74c4f0;
+        --accent-ink: #00141f;
+        --shadow: none;
       }
     }
-
-    :root[data-theme="dark"] {
-      --sand:        #150F0C;
-      --surface:     #211812;
-      --border:      #382720;
-      --border-firm: #4C352A;
-      --ink:         #F8EADB;
-      --muted:       #B49C89;
-      --sunset:      #FF8155;
-      --sea:         #5BD3DB;
-      --shadow:      0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
-    }
-
     *, *::before, *::after { box-sizing: border-box; }
-
+    html { -webkit-text-size-adjust: 100%; }
     body {
       margin: 0;
-      background: var(--sand);
-      color: var(--ink);
-      font-family: var(--font-body);
-      line-height: 1.6;
+      background: var(--bg);
+      color: var(--text);
+      font: 17px/1.55 var(--font);
+      letter-spacing: -0.01em;
       -webkit-font-smoothing: antialiased;
     }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+    code { font-family: var(--mono); font-size: 0.9em; }
+    .skip { position: absolute; left: -9999px; }
+    .skip:focus { left: 16px; top: 12px; z-index: 10; background: var(--tile); padding: 8px 12px; border-radius: 10px; }
+    .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 22px; }
 
-    h1, h2 { font-family: var(--font-display); letter-spacing: -0.02em; }
-
-    a { color: var(--sea); text-underline-offset: 3px; }
-    :focus-visible { outline: 2px solid var(--sunset); outline-offset: 3px; border-radius: 6px; }
-
-    .wrap { max-width: var(--wrap); margin-inline: auto; padding: 48px 24px 64px; }
-
-    .kicker {
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin: 0 0 8px;
+    .site-header {
+      position: sticky; top: 0; z-index: 5;
+      background: color-mix(in srgb, var(--bg) 80%, transparent);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav { display: flex; align-items: center; justify-content: space-between; height: 52px; }
+    .brand { display: flex; align-items: center; gap: 9px; color: var(--text); font-weight: 600; font-size: 17px; }
+    .brand:hover { text-decoration: none; }
+    .brand img { width: 26px; height: 26px; border-radius: 6px; }
+    .nav-links { display: flex; align-items: center; gap: 24px; font-size: 13px; }
+    .nav-links a { color: var(--text); opacity: 0.8; }
+    .nav-links a:hover { opacity: 1; text-decoration: none; }
+    .nav-links .nav-cta {
+      opacity: 1; background: var(--accent); color: var(--accent-ink);
+      padding: 5px 12px; border-radius: 980px; font-weight: 500;
+    }
+    .nav-links .nav-cta:hover { background: var(--accent-hover); }
+    @media (max-width: 640px) {
+      .nav-links .opt { display: none; }
+      .wrap { padding: 0 16px; }
     }
 
-    header p { color: var(--muted); max-width: 60ch; }
-    header a.back { display: inline-block; margin-top: 4px; font-size: 0.94rem; }
+
+    .page { padding: 48px 22px 72px; }
+    .kicker { margin: 0 0 8px; font-size: 17px; font-weight: 600; color: var(--accent); }
+    h1 {
+      margin: 0;
+      font-size: clamp(34px, 5vw, 48px);
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      font-weight: 700;
+    }
+    .lead { margin: 18px 0 0; max-width: 42em; font-size: 19px; line-height: 1.45; color: var(--muted); }
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
       gap: 16px;
-      margin-top: 32px;
+      margin: 36px 0 0;
       padding: 0;
       list-style: none;
     }
-
     .card {
-      display: block;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
-      text-decoration: none;
-      color: var(--ink);
-      box-shadow: var(--shadow);
-      transition: border-color 0.15s ease, transform 0.15s ease;
+      display: block; height: 100%;
+      background: var(--tile); border-radius: var(--radius); padding: 22px 22px 24px;
+      box-shadow: var(--shadow); border: 1px solid var(--line);
+      color: var(--text);
+      transition: transform 0.2s, box-shadow 0.2s;
     }
-    .card:hover, .card:focus-visible { border-color: var(--border-firm); transform: translateY(-2px); }
-    .card h2 { margin: 0 0 6px; font-size: 1.08rem; }
-    .card p { margin: 0; color: var(--muted); font-size: 0.92rem; }
-    .card code { font-family: var(--font-mono); font-size: 0.82em; }
+    .card:hover { text-decoration: none; transform: translateY(-3px); box-shadow: 0 2px 4px rgba(10, 30, 60, 0.05), 0 18px 40px rgba(10, 30, 60, 0.10); }
+    .card h2 { margin: 0 0 6px; font-size: 19px; line-height: 1.25; letter-spacing: -0.015em; font-weight: 600; }
+    .card p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+    @media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } }
 
-    footer { margin-top: 48px; color: var(--muted); font-size: 0.88rem; }
-    footer a { color: inherit; }
+    .about { margin: 40px 0 0; max-width: 42em; font-size: 15px; color: var(--muted); }
+
+    footer { border-top: 1px solid var(--line); padding: 26px 0 40px; font-size: 12px; color: var(--muted); }
+    .footer-inner { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; align-items: center; }
+    .footer-links { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+    .footer-links a { color: var(--muted); }
+    .footnote { margin-top: 14px; max-width: 70em; line-height: 1.5; }
+    .footnote a { color: var(--muted); text-decoration: underline; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <p class="kicker">ShoutKit &middot; API reference</p>
-      <h1>The ShoutKit SDK surface</h1>
-      <p>
-        DocC-generated reference for the MIT-licensed packages — the parts of ShoutKit built to be
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap nav">
+      <a class="brand" href="../">
+        <img src="../assets/app-icon-64.png" alt="" width="26" height="26" />
+        ShoutKit
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a class="opt" href="../#features">Features</a>
+        <a class="opt" href="../privacy/">Privacy</a>
+        <a class="opt" href="../#source">Source</a>
+        <a class="opt" href="../#faq">FAQ</a>
+        <a class="nav-cta" href="../#get">Get the beta</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="wrap page">
+    <p class="kicker">API reference</p>
+    <h1>The ShoutKit SDK surface</h1>
+    <p class="lead">
+      DocC-generated reference for the MIT-licensed packages — the parts of ShoutKit built to be
         adopted outside this app. Feature code, the app target, and GPL-licensed packages
         (<code>Packages/Features/*</code>, <code>Packages/LiveActivity</code>) aren't part of this
         surface; see the Licensing table in
         <a href="https://github.com/cascadiacollections/shoutkit#licensing">README.md</a>.
-      </p>
-      <a class="back" href="../">&larr; Back to ShoutKit</a>
-    </header>
+    </p>
 
-    <ul class="grid">
-      <li>
-        <a class="card" href="docs/documentation/designsystem/">
-          <h2>DesignSystem</h2>
-          <p>Liquid Glass-aware SwiftUI surfaces and design tokens — station rows/cards/carousel, artwork, playing indicator.</p>
-        </a>
-      </li>
-      <li>
-        <a class="card" href="docs/documentation/radiodirectory/">
-          <h2>RadioDirectory</h2>
-          <p>Domain models, the <code>RadioDirectoryProviding</code> boundary, the Radio-Browser and SHOUTcast clients, curated/bundled directories.</p>
-        </a>
-      </li>
-      <li>
-        <a class="card" href="docs/documentation/playback/">
-          <h2>Playback</h2>
-          <p><code>PlaybackController</code>, the <code>RadioPlaybackEngine</code> seam, ICY metadata parsing, the sleep timer, and now-playing bridging.</p>
-        </a>
-      </li>
-      <li>
-        <a class="card" href="docs/documentation/playbackengineaudiostreaming/">
-          <h2>PlaybackEngineAudioStreaming</h2>
-          <p>The production <code>RadioPlaybackEngine</code>, AVAudioEngine-backed via the AudioStreaming library.</p>
-        </a>
-      </li>
-      <li>
-        <a class="card" href="docs/documentation/persistence/">
-          <h2>Persistence</h2>
-          <p>SwiftData models and <code>LibraryStore</code> for favorites and recents.</p>
-        </a>
-      </li>
-      <li>
-        <a class="card" href="docs/documentation/featureflags/">
-          <h2>FeatureFlags</h2>
-          <p>The feature-flagging seam used to gate work in progress across the app.</p>
-        </a>
-      </li>
-      <li>
-        <a class="card" href="docs/documentation/imageiodownsample/">
-          <h2>ImageIODownsample</h2>
-          <p>A leaf module wrapping ImageIO thumbnail decoding, so images never decode larger than the surface that draws them.</p>
-        </a>
-      </li>
-      <li>
-        <a class="card" href="docs/documentation/audiolevels/">
-          <h2>AudioLevels</h2>
-          <p>Live per-band audio levels from PCM, the tap plug-in protocol engines feed them through, and a SwiftUI meter.</p>
-        </a>
-      </li>
-    </ul>
+      <ul class="grid">
+        <li>
+          <a class="card" href="docs/documentation/designsystem/">
+            <h2>DesignSystem</h2>
+            <p>Liquid Glass-aware SwiftUI surfaces and design tokens — station rows/cards/carousel, artwork, playing indicator.</p>
+          </a>
+        </li>
+        <li>
+          <a class="card" href="docs/documentation/radiodirectory/">
+            <h2>RadioDirectory</h2>
+            <p>Domain models, the <code>RadioDirectoryProviding</code> boundary, the Radio-Browser and SHOUTcast clients, curated/bundled directories.</p>
+          </a>
+        </li>
+        <li>
+          <a class="card" href="docs/documentation/playback/">
+            <h2>Playback</h2>
+            <p><code>PlaybackController</code>, the <code>RadioPlaybackEngine</code> seam, ICY metadata parsing, the sleep timer, and now-playing bridging.</p>
+          </a>
+        </li>
+        <li>
+          <a class="card" href="docs/documentation/playbackengineaudiostreaming/">
+            <h2>PlaybackEngineAudioStreaming</h2>
+            <p>The production <code>RadioPlaybackEngine</code>, AVAudioEngine-backed via the AudioStreaming library.</p>
+          </a>
+        </li>
+        <li>
+          <a class="card" href="docs/documentation/persistence/">
+            <h2>Persistence</h2>
+            <p>SwiftData models and <code>LibraryStore</code> for favorites and recents.</p>
+          </a>
+        </li>
+        <li>
+          <a class="card" href="docs/documentation/featureflags/">
+            <h2>FeatureFlags</h2>
+            <p>The feature-flagging seam used to gate work in progress across the app.</p>
+          </a>
+        </li>
+        <li>
+          <a class="card" href="docs/documentation/imageiodownsample/">
+            <h2>ImageIODownsample</h2>
+            <p>A leaf module wrapping ImageIO thumbnail decoding, so images never decode larger than the surface that draws them.</p>
+          </a>
+        </li>
+        <li>
+          <a class="card" href="docs/documentation/audiolevels/">
+            <h2>AudioLevels</h2>
+            <p>Live per-band audio levels from PCM, the tap plug-in protocol engines feed them through, and a SwiftUI meter.</p>
+          </a>
+        </li>
+      </ul>
 
-    <footer>
+    <p class="about">
       Generated with <a href="https://www.swift.org/documentation/docc/">DocC</a> from each
       package's public API and merged into one cross-linked archive, so symbol references resolve
       across package boundaries. Rebuilt on every push that touches one of these packages — see
       <a href="https://github.com/cascadiacollections/shoutkit/blob/main/.github/scripts/build-docs.sh">build-docs.sh</a>.
-    </footer>
-  </div>
+    </p>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="footer-inner">
+        <p>© <span id="year">2026</span> Cascadia Collections · ShoutKit</p>
+        <nav class="footer-links" aria-label="Footer">
+          <a href="https://github.com/cascadiacollections/shoutkit">Source</a>
+          <a href="../privacy/">Privacy</a>
+          <a href="https://cascadiacollections.github.io/shoutkit-android/">ShoutKit for Android</a>
+          <a href="./" aria-current="page">API reference</a>
+          <a href="https://github.com/cascadiacollections/shoutkit/blob/main/CHANGELOG.md">Changelog</a>
+          <a href="https://github.com/cascadiacollections/shoutkit/blob/main/LICENSE">Licence</a>
+          <a href="https://github.com/cascadiacollections/shoutkit/blob/main/SECURITY.md">Security</a>
+        </nav>
+      </div>
+      <p class="footnote">
+        ShoutKit is not affiliated with or endorsed by Apple or Radio-Browser.
+        iPhone, iPad, Apple Watch, Apple TV and TestFlight are trademarks of Apple Inc.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>
