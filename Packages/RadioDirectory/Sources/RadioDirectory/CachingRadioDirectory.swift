@@ -22,7 +22,7 @@ public actor CachingRadioDirectory<C: Clock>: RadioDirectoryProviding, Directory
     /// rankings drift constantly), short enough that a day's browsing isn't
     /// spent on yesterday's directory. Pull-to-refresh and the 4-hourly
     /// background refresh both bypass it.
-    public static let defaultSnapshotTimeToLive: TimeInterval = 6 * 60 * 60
+    public static var defaultSnapshotTimeToLive: TimeInterval { 6 * 60 * 60 }
 
     private let base: any RadioDirectoryProviding
     private let timeToLive: TimeInterval
