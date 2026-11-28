@@ -23,4 +23,7 @@ Not linked into the shipped binary; listed for completeness.
 | ---- | ------- | -------- | --- |
 | SwiftLint (pinned in CI, see `ci.yml`) | MIT | Linting, `--strict` in CI | <https://github.com/realm/SwiftLint> |
 | SwiftFormat | MIT | Formatting (`.swiftformat`) | <https://github.com/nicklockwood/SwiftFormat> |
+| swift-clocks 1.1.1 (`exact: "1.1.1"`, test targets only) | MIT | RadioDirectory and Playback tests — `TestClock` moves the discovery-cache TTL and playback timers without waiting on the wall clock. Not linked into the app | <https://github.com/pointfreeco/swift-clocks> |
+| swift-concurrency-extras 1.4.3 (`exact: "1.4.3"` in Playback, test targets only; also transitive via swift-clocks) | MIT | Playback tests — `withMainSerialExecutor` runs the `TestClock` timer suites on one serial queue. Not linked into the app | <https://github.com/pointfreeco/swift-concurrency-extras> |
+| swift-issue-reporting 2.1.2 (transitive via swift-clocks, test-only) | MIT | Pulled in by swift-clocks. Not linked into the app | <https://github.com/pointfreeco/swift-issue-reporting> |
 | Pulse | MIT | DebugSupport (app-side package) — `#if DEBUG`-only network inspection (`DebugNetworkInspection.swift`); never declared by the reusable packages, a dynamic framework that Release neither loads nor embeds (CI checks this), and attributed in the in-app Licenses screen of Debug builds since testers do receive it | <https://github.com/kean/Pulse> |
