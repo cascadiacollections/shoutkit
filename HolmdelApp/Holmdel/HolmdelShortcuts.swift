@@ -153,17 +153,25 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
         return entities
     }
 
-    /// Favorites first (most intentional), then curated, then recents, then the
-    /// shortcut cache — deduplicated by id, order-preserving.
     @MainActor
     private func knownStations() -> [StationEntity] {
-        let services = AppDependencies.bootstrap()
-        let context = services.container.mainContext
+        Self.knownStations(in: AppDependencies.bootstrap().container.mainContext)
+    }
 
+    /// Favorites first (most intentional), then curated, then recents, then the
+    /// shortcut cache — deduplicated by id, order-preserving.
+    ///
+    /// Favorites are in the listener's order (`sortIndex` ascending), the same
+    /// order as the Favorites tab and `LibraryStore.orderedFavorites()`.
+    @MainActor
+    static func knownStations(
+        in context: ModelContext,
+        cached: [StationEntity] = IntentStationCache.load(),
+    ) -> [StationEntity] {
         // Best effort: shortcuts can still resolve curated/cache stations when a
         // store read fails.
         let favorites = (try? context.fetch(
-            FetchDescriptor<FavoriteStation>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)]),
+            FetchDescriptor<FavoriteStation>(sortBy: [SortDescriptor(\.sortIndex, order: .forward)]),
         )) ?? []
         let recents = (try? context.fetch(
             FetchDescriptor<RecentStation>(sortBy: [SortDescriptor(\.playedAt, order: .reverse)]),
@@ -172,7 +180,7 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
         let candidates = favorites.map { StationEntity(station: $0.station) }
             + PreferredStations.all.map(StationEntity.init(station:))
             + recents.map { StationEntity(station: $0.station) }
-            + IntentStationCache.load()
+            + cached
 
         var seen = Set<String>()
         return candidates.filter { seen.insert($0.id).inserted }

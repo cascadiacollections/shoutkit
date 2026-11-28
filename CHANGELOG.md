@@ -61,6 +61,9 @@ All notable changes to ShoutKit (this app; it was named Holmdel between 2026-08-
   roughly halves the Mac app's code size.
 
 ### Fixed
+- **Siri and Shortcuts suggest your favorites in your order.** After you reordered
+  favorites, Siri, Shortcuts and Spotlight still offered them newest-added first. They now
+  follow the order on the Favorites screen. (#281)
 - **Listen Now no longer crashes on a station played on two devices.** With iCloud sync
   on, the same station can briefly have two Recently Played entries until ShoutKit
   merges them. Listen Now crashed if it drew in that moment. It now shows the most
