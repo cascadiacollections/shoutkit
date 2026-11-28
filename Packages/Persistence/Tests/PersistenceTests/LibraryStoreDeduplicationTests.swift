@@ -1,6 +1,7 @@
 import CoreData
 import Foundation
 @testable import Persistence
+import RadioDirectory
 import SwiftData
 import Testing
 
@@ -51,6 +52,39 @@ struct LibraryStoreDeduplicationTests {
         #expect(recents.map(\.name) == ["Watch", "WFMU"])
         #expect(recents.map(\.playCount) == [5, 5])
         #expect(store.mergeDuplicateStations() == 0)
+    }
+
+    @Test func `logging a play collapses duplicate recents into the latest row`() throws {
+        let context = ModelContext(container)
+        let store = LibraryStore(context: context)
+        // Arrive after the store merged at creation, as a sync import would.
+        context.insert(RecentStation(
+            stationID: "kexp", name: "Older", genre: "", playedAt: Date(timeIntervalSince1970: 1000), playCount: 3,
+        ))
+        context.insert(RecentStation(
+            stationID: "kexp", name: "Newer", genre: "", playedAt: Date(timeIntervalSince1970: 2000), playCount: 2,
+        ))
+        try context.save()
+
+        store.logRecent(Station(id: "kexp", name: "KEXP", genre: "Eclectic", listenerCount: 0))
+
+        let recents = try context.fetch(FetchDescriptor<RecentStation>())
+        #expect(recents.count == 1)
+        #expect(recents.first?.name == "KEXP")
+        #expect(recents.first?.playCount == 6)
+    }
+
+    @Test func `recents keyed by station keep the latest play`() {
+        let older = RecentStation(stationID: "kexp", name: "Old", genre: "", playedAt: .init(timeIntervalSince1970: 1))
+        let newer = RecentStation(stationID: "kexp", name: "New", genre: "", playedAt: .init(timeIntervalSince1970: 2))
+        let other = RecentStation(stationID: "wfmu", name: "WFMU", genre: "")
+
+        for order in [[older, newer, other], [newer, other, older]] {
+            let byID = RecentStation.latestByStationID(order)
+            #expect(byID.count == 2)
+            #expect(byID["kexp"]?.name == "New")
+            #expect(byID["wfmu"]?.name == "WFMU")
+        }
     }
 
     @Test func `merging reports how many rows it removed`() throws {

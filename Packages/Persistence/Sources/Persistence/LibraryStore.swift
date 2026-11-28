@@ -157,6 +157,10 @@ public final class LibraryStore {
     // MARK: - Recents
 
     /// Records a play. De-duplicates by station and trims to `recentsLimit`.
+    ///
+    /// Rows already duplicated for this station (from sync, see
+    /// ``mergeDuplicateStations()``) collapse into the most recently played one
+    /// before it is updated.
     public func logRecent(_ station: Station) {
         let stationID = station.id
         let predicate = #Predicate<RecentStation> { $0.stationID == stationID }
@@ -166,7 +170,7 @@ public final class LibraryStore {
             return
         }
 
-        if let existing = matches.first {
+        if let existing = collapseRecents(matches) {
             existing.playedAt = .now
             existing.playCount += 1
             // A genuine new play un-hides it from Listen Now even if it was

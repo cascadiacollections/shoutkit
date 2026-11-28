@@ -109,7 +109,9 @@ public struct ListenNowView: View {
     }
 
     private var displayedRecentStations: [RecentStation] {
-        let byID = Dictionary(uniqueKeysWithValues: recents.map { ($0.stationID, $0) })
+        // Not `uniqueKeysWithValues`: since schema version 2 two rows can
+        // share a station until they are merged (DECISIONS.md 2026-11-22).
+        let byID = RecentStation.latestByStationID(recents)
         return recentlyPlayedTeaser.displayedIDs.compactMap { byID[$0] }
     }
 
