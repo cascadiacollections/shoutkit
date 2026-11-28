@@ -1,6 +1,8 @@
 import Foundation
 @testable import Holmdel
+import Persistence
 import RadioDirectory
+import SwiftData
 import Testing
 
 /// Unit coverage for the pure logic backing the Siri/Shortcuts intents — the
@@ -30,6 +32,26 @@ struct IntentSupportTests {
             artworkURL: artwork.flatMap(URL.init(string:)),
             preferredStreamURL: stream.flatMap(URL.init(string:)),
         )
+    }
+
+    // MARK: - Suggested stations
+
+    /// Siri, Shortcuts and the Spotlight index list favorites first, in the
+    /// order the listener arranged them, not the order they were added (#281).
+    @MainActor
+    @Test func `known stations list favorites in the listener's order`() throws {
+        let container = ShoutKitModelContainer.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let added = { (seconds: TimeInterval) in Date(timeIntervalSince1970: seconds) }
+        // Newest-added first, the order this used to produce, would be third, first, second.
+        context.insert(FavoriteStation(stationID: "second", name: "B", genre: "", createdAt: added(1), sortIndex: 1))
+        context.insert(FavoriteStation(stationID: "third", name: "C", genre: "", createdAt: added(3), sortIndex: 2))
+        context.insert(FavoriteStation(stationID: "first", name: "A", genre: "", createdAt: added(2), sortIndex: 0))
+        try context.save()
+
+        let known = StationEntityQuery.knownStations(in: context, cached: [])
+
+        #expect(known.prefix(3).map(\.id) == ["first", "second", "third"])
     }
 
     // MARK: - StationEntity round-trip

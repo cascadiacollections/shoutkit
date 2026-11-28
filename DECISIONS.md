@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-11-27 (Siri and Shortcuts suggest favorites in the listener's order)
+
+`StationEntityQuery.knownStations()` fetched favorites by `createdAt` descending, an
+order from before favorites could be reordered. The Favorites tab, the Quick Play
+widget and `LibraryStore.orderedFavorites()` all use `sortIndex` ascending, so after a
+reorder the station Siri, Shortcuts and the Spotlight index offered first was not the
+one at the top of the listener's list. It now sorts by `sortIndex` too. Playback by id
+was never affected; only the order of suggestions was.
+
+The body moved to `static knownStations(in:cached:)` so a test can pass an in-memory
+context and an empty Shortcuts cache. The instance method still bootstraps the app's
+dependencies, as before.
+
 ## 2026-11-27 (Listen Now and `logRecent` tolerate two recents for one station)
 
 Schema version 2 dropped the unique constraint on `stationID` (2026-11-22), and
