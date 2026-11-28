@@ -1,5 +1,57 @@
 # Decisions
 
+## 2026-11-27 (a station id is `Station.ID`, a hand-rolled type, not `Tagged`)
+
+`Station.id` was a `String`, and so was every parameter that carried one:
+`reportPlay(stationID:)`, `station(id:)`, `LibraryStore.removeFavorite(stationID:)`,
+`favoriteIDs` and about thirty more. Nothing stopped a station name, a stream URL or
+an App Intents identifier being passed in its place. It is now `Station.ID`, a struct
+of about 20 lines in `RadioDirectoryModels.swift`, and the Swift APIs that pass a
+station id around take it.
+
+`pointfreeco/swift-tagged` would give the same type with less code. It was not used:
+
+- `RadioDirectory` is MIT and meant to be adopted outside the app. `Tagged` would sit in
+  its public API, so every adopter would take the dependency and see `Tagged<Station,
+  String>` in signatures.
+- The repo prefers a few lines of its own over a small dependency (2026-11-07, where
+  swift-algorithms and swift-async-algorithms were replaced by 10 to 15 lines each).
+- It would not remove any conversion. What is stored or synced stays `String` either
+  way: a deployed CloudKit field cannot change type (docs/RELEASING.md, "iCloud sync").
+
+Worth revisiting only if several id types of this kind appear.
+
+The encoding has not changed. `Station.ID` encodes as a bare string, so Radio-Browser
+and SHOUTcast decoding, the discovery snapshot on disk, Handoff, the watch sync payload
+and anything else that encodes a `Station` produce the same bytes as before. A test
+compares an encoded `Station` with a literal JSON string.
+
+`String` stays, with an explicit `rawValue` / `init(rawValue:)` at the boundary, in:
+
+- SwiftData models (`FavoriteStation`, `RecentStation`, `RecentlyHeardTrack` and the
+  frozen `ShoutKitSchemaV1` copies). No model property or schema version changed. Each
+  live model gains a computed `typedStationID`. `#Predicate` compares the stored
+  `String`, so callers convert first.
+- App Intents identifiers (`StationEntity`, `LiveRadioStationEntity`) and the
+  `IntentStationCache` defaults entry, which Shortcuts and older installs have
+  persisted.
+- `NowPlayingActivityCore` (`NowPlayingWidgetSnapshot`, `QuickPlayStationSnapshot`).
+  The widget extension links that target with no dependencies, and adding
+  `RadioDirectory` to it was not worth a type on two App Group payloads.
+- `LibraryFeatureCore`, for the same reason: it has no dependencies.
+- System APIs that take a string or `Any`: Handoff `userInfo` and
+  `targetContentIdentifier`, URL query items, MediaSession content ids, log messages.
+  Handoff is the one place a wrong type would still compile, since `userInfo` is
+  `[String: Any]`; its existing round-trip test fails if the id is not a `String`.
+
+The type does not prevent duplicate rows for one station, as in #282. Those were two
+rows with the same id, which a distinct type allows just as a `String` did.
+
+`ExpressibleByStringLiteral` is there for tests and previews, where ids are literals.
+It takes only literals, so a string read at runtime still needs `init(rawValue:)`.
+Interpolated test ids are converted explicitly. The struct is named `ID` because
+`Identifiable` calls it that, which needs a `swiftlint:disable:this type_name`.
+
 ## 2026-11-27 (a background wake fails only when it is cancelled)
 
 `BackgroundRefreshController.runRefresh()` returned success only when the

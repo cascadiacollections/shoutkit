@@ -178,7 +178,7 @@ public struct LibraryView: View {
             offsets: offsets,
         )
         for stationID in stationIDs {
-            library?.removeRecent(stationID: stationID)
+            library?.removeRecent(stationID: Station.ID(rawValue: stationID))
         }
     }
 
@@ -188,7 +188,7 @@ public struct LibraryView: View {
             offsets: offsets,
         )
         for stationID in stationIDs {
-            library?.removeFavorite(stationID: stationID)
+            library?.removeFavorite(stationID: Station.ID(rawValue: stationID))
         }
     }
 

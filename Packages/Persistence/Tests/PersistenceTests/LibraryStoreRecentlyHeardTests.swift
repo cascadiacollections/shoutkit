@@ -12,7 +12,7 @@ struct LibraryStoreRecentlyHeardTests {
         return (LibraryStore(context: context), context)
     }
 
-    private func station(_ id: String) -> Station {
+    private func station(_ id: Station.ID) -> Station {
         Station(id: id, name: "Station \(id)", genre: "Test", listenerCount: 10)
     }
 
@@ -95,7 +95,7 @@ struct LibraryStoreRecentlyHeardTests {
 
         for index in 0 ..< (LibraryStore.recentlyHeardLimit + 20) {
             store.logRecentlyHeardTrack(
-                station: station("s\(index)"),
+                station: station(Station.ID("s\(index)")),
                 title: "Song \(index)",
                 artist: "Band",
             )

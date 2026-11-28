@@ -32,7 +32,7 @@ final class TVNowPlayingCenter: NowPlayingPresenting {
     private var cachedArtwork: MPMediaItemArtwork?
     /// The station `artworkCacheURL` belongs to, so a `.resolving` push can only
     /// hold artwork that is actually this station's.
-    private var presentedStationID: String?
+    private var presentedStationID: Station.ID?
 
     init() {
         configureRemoteCommands()

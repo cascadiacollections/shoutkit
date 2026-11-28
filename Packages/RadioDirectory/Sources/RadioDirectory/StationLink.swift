@@ -53,7 +53,7 @@ public struct StationLink: Equatable, Sendable {
         }
 
         station = Station(
-            id: stationID,
+            id: Station.ID(stationID),
             name: name,
             genre: Self.value(in: items, named: "genre") ?? "",
             tags: Station.tags(fromCSV: Self.value(in: items, named: "tags")),
@@ -91,7 +91,7 @@ public struct StationLink: Equatable, Sendable {
 
     public var handoffUserInfo: [String: Any] {
         var userInfo: [String: Any] = [
-            HandoffKey.stationID: station.id,
+            HandoffKey.stationID: station.id.rawValue,
             HandoffKey.autoPlay: autoPlay,
             HandoffKey.presentNowPlaying: presentNowPlaying,
         ]
@@ -115,7 +115,7 @@ public struct StationLink: Equatable, Sendable {
         guard let stationID = userInfo[HandoffKey.stationID] as? String,
               let stationSnapshot = userInfo[HandoffKey.stationSnapshot] as? Data,
               let station = try? JSONDecoder().decode(Station.self, from: stationSnapshot),
-              station.id == stationID
+              station.id.rawValue == stationID
         else {
             return nil
         }
@@ -129,7 +129,7 @@ public struct StationLink: Equatable, Sendable {
 
     public var queryItems: [URLQueryItem] {
         var items = [
-            URLQueryItem(name: "id", value: station.id),
+            URLQueryItem(name: "id", value: station.id.rawValue),
             URLQueryItem(name: "name", value: station.name),
             URLQueryItem(name: "genre", value: station.genre),
             URLQueryItem(name: "listenerCount", value: String(station.listenerCount)),

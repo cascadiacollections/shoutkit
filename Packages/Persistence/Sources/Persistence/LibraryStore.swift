@@ -27,7 +27,7 @@ public final class LibraryStore {
 
     /// Station IDs the user has favorited. Kept in sync with the persistent store so
     /// SwiftUI views observing this store update immediately on toggle.
-    public private(set) var favoriteIDs: Set<String> = []
+    public private(set) var favoriteIDs: Set<Station.ID> = []
     public private(set) var lastErrorMessage: String?
 
     // `context` and the fetch/save/log helpers below are module-internal (not
@@ -49,7 +49,7 @@ public final class LibraryStore {
         favoriteIDs.contains(station.id)
     }
 
-    public func isFavorite(stationID: String) -> Bool {
+    public func isFavorite(stationID: Station.ID) -> Bool {
         favoriteIDs.contains(stationID)
     }
 
@@ -68,7 +68,7 @@ public final class LibraryStore {
         guard favoriteIDs.contains(station.id) == false else { return }
 
         let favorite = FavoriteStation(
-            stationID: station.id,
+            stationID: station.id.rawValue,
             name: station.name,
             genre: station.genre,
             artworkURLString: station.artworkURL?.absoluteString,
@@ -139,8 +139,9 @@ public final class LibraryStore {
         return (maxIndex ?? -1) + 1
     }
 
-    public func removeFavorite(stationID: String) {
-        let predicate = #Predicate<FavoriteStation> { $0.stationID == stationID }
+    public func removeFavorite(stationID: Station.ID) {
+        let rawStationID = stationID.rawValue
+        let predicate = #Predicate<FavoriteStation> { $0.stationID == rawStationID }
         let descriptor = FetchDescriptor<FavoriteStation>(predicate: predicate)
 
         guard let matches = fetch(descriptor, operation: "remove favorite \(sanitizedForLogs(stationID))") else {
@@ -163,7 +164,8 @@ public final class LibraryStore {
     /// before it is updated.
     public func logRecent(_ station: Station) {
         let stationID = station.id
-        let predicate = #Predicate<RecentStation> { $0.stationID == stationID }
+        let rawStationID = stationID.rawValue
+        let predicate = #Predicate<RecentStation> { $0.stationID == rawStationID }
         let descriptor = FetchDescriptor<RecentStation>(predicate: predicate)
 
         guard let matches = fetch(descriptor, operation: "log recent \(sanitizedForLogs(stationID))") else {
@@ -189,7 +191,7 @@ public final class LibraryStore {
             existing.streamURLString = station.preferredStreamURL?.absoluteString
         } else {
             let recent = RecentStation(
-                stationID: station.id,
+                stationID: station.id.rawValue,
                 name: station.name,
                 genre: station.genre,
                 tagsCSV: Station.tagsCSV(from: station.tags),
@@ -210,8 +212,9 @@ public final class LibraryStore {
     }
 
     /// Removes a single entry from the recently played history by station ID.
-    public func removeRecent(stationID: String) {
-        let predicate = #Predicate<RecentStation> { $0.stationID == stationID }
+    public func removeRecent(stationID: Station.ID) {
+        let rawStationID = stationID.rawValue
+        let predicate = #Predicate<RecentStation> { $0.stationID == rawStationID }
         let descriptor = FetchDescriptor<RecentStation>(predicate: predicate)
 
         guard let matches = fetch(descriptor, operation: "remove recent \(sanitizedForLogs(stationID))") else {
@@ -227,18 +230,19 @@ public final class LibraryStore {
     /// Dismisses a single entry from the Listen Now "Recently Played" teaser
     /// without deleting its play record, so recommendation scoring (which
     /// reads the full, unfiltered history) is unaffected.
-    public func hideFromListenNow(stationID: String) {
+    public func hideFromListenNow(stationID: Station.ID) {
         setHiddenFromListenNow(true, stationID: stationID)
     }
 
     /// Reverses `hideFromListenNow` — powers the "Undo" action on a Listen Now
     /// dismiss.
-    public func unhideFromListenNow(stationID: String) {
+    public func unhideFromListenNow(stationID: Station.ID) {
         setHiddenFromListenNow(false, stationID: stationID)
     }
 
-    private func setHiddenFromListenNow(_ isHidden: Bool, stationID: String) {
-        let predicate = #Predicate<RecentStation> { $0.stationID == stationID }
+    private func setHiddenFromListenNow(_ isHidden: Bool, stationID: Station.ID) {
+        let rawStationID = stationID.rawValue
+        let predicate = #Predicate<RecentStation> { $0.stationID == rawStationID }
         let descriptor = FetchDescriptor<RecentStation>(predicate: predicate)
         let operation = "\(isHidden ? "hide from" : "unhide from") listen now \(sanitizedForLogs(stationID))"
 
@@ -290,7 +294,7 @@ extension LibraryStore {
             return
         }
 
-        favoriteIDs = Set(favorites.map(\.stationID))
+        favoriteIDs = Set(favorites.map(\.typedStationID))
     }
 
     /// One-time repair after the `sortIndex` migration: pre-existing rows all migrate
@@ -354,6 +358,10 @@ extension LibraryStore {
             \(localizedMessage, privacy: .public) [\(debugDescription, privacy: .public)]
             """,
         )
+    }
+
+    func sanitizedForLogs(_ stationID: Station.ID) -> String {
+        sanitizedForLogs(stationID.rawValue)
     }
 
     func sanitizedForLogs(_ value: String) -> String {

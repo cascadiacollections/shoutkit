@@ -12,7 +12,7 @@ private func makeStoreAndContext() -> (LibraryStore, ModelContext) {
     return (LibraryStore(context: context), context)
 }
 
-private func station(_ id: String) -> Station {
+private func station(_ id: Station.ID) -> Station {
     Station(id: id, name: "Station \(id)", genre: "Test", listenerCount: 10)
 }
 
@@ -63,7 +63,7 @@ struct LibraryStoreTests {
 
     @Test func `move favorite down reorders and rewrites contiguously`() throws {
         let (store, context) = makeStoreAndContext()
-        for id in ["a", "b", "c", "d"] {
+        for id: Station.ID in ["a", "b", "c", "d"] {
             store.addFavorite(station(id))
         }
 
@@ -77,7 +77,7 @@ struct LibraryStoreTests {
 
     @Test func `move favorite up reorders and rewrites contiguously`() throws {
         let (store, context) = makeStoreAndContext()
-        for id in ["a", "b", "c", "d"] {
+        for id: Station.ID in ["a", "b", "c", "d"] {
             store.addFavorite(station(id))
         }
 
@@ -91,7 +91,7 @@ struct LibraryStoreTests {
 
     @Test func `move favorite with out of range indices is no op`() throws {
         let (store, context) = makeStoreAndContext()
-        for id in ["a", "b", "c"] {
+        for id: Station.ID in ["a", "b", "c"] {
             store.addFavorite(station(id))
         }
         let favorites = try favoritesBySortIndex(context)
@@ -105,7 +105,7 @@ struct LibraryStoreTests {
 
     @Test func `move favorites with subset is no op`() throws {
         let (store, context) = makeStoreAndContext()
-        for id in ["a", "b", "c", "d"] {
+        for id: Station.ID in ["a", "b", "c", "d"] {
             store.addFavorite(station(id))
         }
 
@@ -173,7 +173,7 @@ struct LibraryStoreTests {
 
     @Test func `backfill is no op when indices already distinct`() throws {
         let (store, context) = makeStoreAndContext()
-        for id in ["a", "b", "c"] {
+        for id: Station.ID in ["a", "b", "c"] {
             store.addFavorite(station(id))
         }
 
@@ -189,7 +189,7 @@ struct LibraryStoreTests {
 
     @Test func `deleting favorite keeps remaining order stable`() throws {
         let (store, context) = makeStoreAndContext()
-        for id in ["a", "b", "c"] {
+        for id: Station.ID in ["a", "b", "c"] {
             store.addFavorite(station(id))
         }
 
@@ -337,7 +337,7 @@ struct LibraryStoreTests {
         let (store, context) = makeStoreAndContext()
 
         for index in 0 ..< (LibraryStore.recentsLimit + 10) {
-            store.logRecent(station("s\(index)"))
+            store.logRecent(station(Station.ID("s\(index)")))
         }
 
         let count = try context.fetch(FetchDescriptor<RecentStation>()).count
@@ -350,7 +350,7 @@ struct LibraryStoreTests {
         let total = LibraryStore.recentsLimit + overflow
 
         for index in 0 ..< total {
-            store.logRecent(station("s\(index)"))
+            store.logRecent(station(Station.ID("s\(index)")))
         }
 
         let descriptor = FetchDescriptor<RecentStation>(

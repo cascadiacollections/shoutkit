@@ -28,11 +28,12 @@ public extension LibraryStore {
 
     /// Refreshes the persisted stream-URL snapshot for a station everywhere it is
     /// stored so playback/prewarm can use the newer endpoint on the next launch.
-    func refreshStreamURLSnapshot(stationID: String, streamURL: URL) {
+    func refreshStreamURLSnapshot(stationID: Station.ID, streamURL: URL) {
         let streamURLString = streamURL.absoluteString
+        let rawStationID = stationID.rawValue
         var didChange = false
 
-        let favoritePredicate = #Predicate<FavoriteStation> { $0.stationID == stationID }
+        let favoritePredicate = #Predicate<FavoriteStation> { $0.stationID == rawStationID }
         let favoriteDescriptor = FetchDescriptor<FavoriteStation>(predicate: favoritePredicate)
         for favorite in fetch(
             favoriteDescriptor,
@@ -42,7 +43,7 @@ public extension LibraryStore {
             didChange = true
         }
 
-        let recentPredicate = #Predicate<RecentStation> { $0.stationID == stationID }
+        let recentPredicate = #Predicate<RecentStation> { $0.stationID == rawStationID }
         let recentDescriptor = FetchDescriptor<RecentStation>(predicate: recentPredicate)
         for recent in fetch(
             recentDescriptor,
@@ -89,7 +90,7 @@ extension LibraryStore {
     /// not end the walk. Ranked stations count every new station id, URL or not.
     private func collectRankedStations(limit: Int, requireStreamURL: Bool) -> [Station] {
         var accepted: [Station] = []
-        var seenStationIDs = Set<String>()
+        var seenStationIDs = Set<Station.ID>()
         var seenURLs = Set<String>()
 
         func accept(_ station: Station) -> Bool {

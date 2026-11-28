@@ -53,7 +53,8 @@ struct StationEntity: AppEntity, Sendable {
     }
 
     init(station: Station) {
-        id = station.id
+        // App Intents identifiers are strings that Shortcuts persists.
+        id = station.id.rawValue
         name = station.name
         genre = station.genre
         artworkURLString = station.artworkURL?.absoluteString
@@ -76,7 +77,7 @@ struct StationEntity: AppEntity, Sendable {
 
     var station: Station {
         Station(
-            id: id,
+            id: Station.ID(rawValue: id),
             name: name,
             genre: genre,
             listenerCount: 0,
@@ -126,7 +127,7 @@ struct StationEntityQuery: EntityQuery, EntityStringQuery {
 
             // Best effort: unresolved IDs are skipped so one directory failure
             // doesn't block other valid entities in the same request.
-            guard let station = try? await services.directory.station(id: id) else { continue }
+            guard let station = try? await services.directory.station(id: Station.ID(rawValue: id)) else { continue }
             let fallback = StationEntity(station: station)
             IntentStationCache.remember([fallback])
             resolved.append(fallback)

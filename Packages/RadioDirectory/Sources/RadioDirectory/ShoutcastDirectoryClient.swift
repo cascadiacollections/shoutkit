@@ -191,7 +191,7 @@ public struct ShoutcastEndpoints: Sendable {
     public func tuneInURL(stationID: Station.ID) -> URL {
         var components = URLComponents(url: tuneInBaseURL, resolvingAgainstBaseURL: false)
         components?.queryItems = [
-            URLQueryItem(name: "id", value: stationID),
+            URLQueryItem(name: "id", value: stationID.rawValue),
         ]
 
         return components?.url ?? tuneInBaseURL
@@ -351,7 +351,7 @@ private final class StationParserDelegate: NSObject, XMLParserDelegate {
 
         stations.append(
             Station(
-                id: id,
+                id: Station.ID(id),
                 name: StationNameFormatter.normalize(name),
                 genre: genre,
                 listenerCount: listeners,

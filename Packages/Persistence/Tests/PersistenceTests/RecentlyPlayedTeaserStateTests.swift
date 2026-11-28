@@ -1,4 +1,5 @@
 @testable import Persistence
+import RadioDirectory
 import Testing
 
 struct RecentlyPlayedTeaserStateTests {
@@ -37,7 +38,7 @@ struct RecentlyPlayedTeaserStateTests {
         var teaser = RecentlyPlayedTeaserState(capacity: 5)
         teaser.sync(withVisibleIDsNewestFirst: ["a", "b", "c", "d", "e", "f"])
 
-        for id in ["a", "b", "c", "d", "e"] {
+        for id: Station.ID in ["a", "b", "c", "d", "e"] {
             teaser.remove(id)
         }
         #expect(teaser.displayedIDs.isEmpty)

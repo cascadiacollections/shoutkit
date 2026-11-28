@@ -143,7 +143,7 @@ public final class NowPlayingWidgetCoordinator {
         let track = metadata?.stationID == station.id ? metadata : nil
         let link = StationLink(station: station, autoPlay: true, presentNowPlaying: true)
         let snapshot = NowPlayingWidgetSnapshot(
-            stationID: station.id,
+            stationID: station.id.rawValue,
             stationName: station.name,
             trackTitle: track?.title,
             artist: track?.artist,

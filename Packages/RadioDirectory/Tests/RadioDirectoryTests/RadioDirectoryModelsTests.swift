@@ -66,6 +66,55 @@ struct StationCodingTests {
 
         #expect(decoded == station)
     }
+
+    /// `Station.id` was a `String` until it became `Station.ID`. The snapshot on
+    /// disk, App Group payloads and directory responses were all written with the
+    /// id as a bare JSON string, so the encoding must not have changed.
+    @Test
+    func `station ID encodes as a bare string`() throws {
+        let station = Station(
+            id: Station.ID("9617a958-0601-11e8-ae97-52543be04c81"),
+            name: "KEXP",
+            genre: "Eclectic",
+            listenerCount: 3,
+            bitrate: 128,
+            preferredStreamURL: URL(string: "https://kexp.streamguys1.com/kexp160.aac"),
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        let expected = #"{"bitrate":128,"genre":"Eclectic","id":"9617a958-0601-11e8-ae97-52543be04c81","#
+            + #""listenerCount":3,"name":"KEXP","preferredStreamURL":"https://kexp.streamguys1.com/kexp160.aac"}"#
+
+        let json = try #require(try String(bytes: encoder.encode(station), encoding: .utf8))
+
+        #expect(json == expected)
+        #expect(try JSONDecoder().decode(Station.self, from: Data(expected.utf8)) == station)
+    }
+
+    @Test
+    func `stream endpoint station ID encodes as a bare string`() throws {
+        let endpoint = try StreamEndpoint(
+            stationID: "abc",
+            url: #require(URL(string: "https://example.com/live.mp3")),
+            format: .mp3,
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+
+        let json = try #require(try String(bytes: encoder.encode(endpoint), encoding: .utf8))
+
+        #expect(json == #"{"format":"mp3","stationID":"abc","url":"https://example.com/live.mp3"}"#)
+    }
+
+    @Test
+    func `station ID reads as its raw value`() {
+        let id = Station.ID(rawValue: "s1")
+
+        #expect(id.rawValue == "s1")
+        #expect(id.description == "s1")
+        #expect("\(id)" == "s1")
+        #expect(id == "s1")
+    }
 }
 
 struct StreamFormatTests {

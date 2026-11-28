@@ -1,7 +1,27 @@
 import Foundation
 
 public struct Station: Codable, Equatable, Hashable, Identifiable, Sendable {
-    public let id: String
+    /// A station's identifier in the directory it came from.
+    ///
+    /// A distinct type so a station id can't be passed where some other string is
+    /// expected, or the reverse. It encodes as a bare JSON string, exactly as the
+    /// `String` it replaced did, so directory payloads, the discovery snapshot and
+    /// App Group payloads read the same bytes. Storage that has its own schema —
+    /// SwiftData models, App Intents identifiers, defaults keys — keeps `String` and
+    /// converts with `rawValue` / `init(rawValue:)` at that boundary.
+    public struct ID: RawRepresentable, Hashable, Sendable { // swiftlint:disable:this type_name
+        public let rawValue: String
+
+        public init(rawValue: String) {
+            self.rawValue = rawValue
+        }
+
+        public init(_ rawValue: String) {
+            self.rawValue = rawValue
+        }
+    }
+
+    public let id: ID
     public let name: String
     public let genre: String
     public let tags: [String]?
@@ -16,7 +36,7 @@ public struct Station: Codable, Equatable, Hashable, Identifiable, Sendable {
     public let preferredStreamURL: URL?
 
     public init(
-        id: String,
+        id: ID,
         name: String,
         genre: String,
         tags: [String]? = nil,
@@ -63,6 +83,33 @@ public struct Station: Codable, Equatable, Hashable, Identifiable, Sendable {
             .filter { $0.isEmpty == false }
         guard !normalized.isEmpty else { return nil }
         return normalized.joined(separator: ",")
+    }
+}
+
+extension Station.ID: Codable {
+    /// A single string, not `{"rawValue": ...}`: every stored and transmitted
+    /// form of a station id predates this type.
+    public init(from decoder: any Decoder) throws {
+        rawValue = try decoder.singleValueContainer().decode(String.self)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+}
+
+extension Station.ID: CustomStringConvertible {
+    public var description: String {
+        rawValue
+    }
+}
+
+/// For tests and previews. It accepts only literals, so a `String` read at
+/// runtime still has to be converted on purpose with `init(rawValue:)`.
+extension Station.ID: ExpressibleByStringLiteral {
+    public init(stringLiteral value: String) {
+        rawValue = value
     }
 }
 

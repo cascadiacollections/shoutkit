@@ -22,7 +22,7 @@ actor CountingDirectory: RadioDirectoryProviding {
     }
 
     private let stations = (0 ..< 30).map { index in
-        Station(id: "s\(index)", name: "Station \(index)", genre: "Test", listenerCount: 0)
+        Station(id: Station.ID("s\(index)"), name: "Station \(index)", genre: "Test", listenerCount: 0)
     }
 
     func genres() async throws(RadioDirectoryError) -> [Genre] {
@@ -45,7 +45,7 @@ actor CountingDirectory: RadioDirectoryProviding {
         []
     }
 
-    func station(id: String) async throws(RadioDirectoryError) -> Station? {
+    func station(id: Station.ID) async throws(RadioDirectoryError) -> Station? {
         stationLookupCalls += 1
         return stations.first(where: { $0.id == id })
     }

@@ -26,7 +26,7 @@ public extension LibraryStore {
                singleTrackDescriptor,
                operation: "fetch latest recently heard track \(sanitizedForLogs(station.id))",
            )?.first,
-           latest.stationID == station.id,
+           latest.typedStationID == station.id,
            latest.title == title,
            latest.artist == artist {
             // Consecutive dedupe keeps one row but refreshes its timestamp so it
@@ -44,7 +44,7 @@ public extension LibraryStore {
             }
         } else {
             let track = RecentlyHeardTrack(
-                stationID: station.id,
+                stationID: station.id.rawValue,
                 stationName: station.name,
                 title: title,
                 artist: artist,

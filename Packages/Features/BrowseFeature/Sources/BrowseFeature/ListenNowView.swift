@@ -25,7 +25,7 @@ public struct ListenNowView: View {
     @State private var dismissUndoExpiryTask: Task<Void, Never>?
 
     private struct DismissUndo {
-        let stationID: String
+        let stationID: Station.ID
         let stationName: String
         let restoreIndex: Int
     }
@@ -55,7 +55,7 @@ public struct ListenNowView: View {
         .task { await viewModel.refresh() }
         .refreshable { await viewModel.refresh(source: .userInitiated) }
         .onChange(of: recents.map(\.stationID), initial: true) { _, _ in
-            recentlyPlayedTeaser.sync(withVisibleIDsNewestFirst: visibleRecents.map(\.stationID))
+            recentlyPlayedTeaser.sync(withVisibleIDsNewestFirst: visibleRecents.map(\.typedStationID))
         }
         // A safe-area inset rather than an overlay: as an overlay the banner
         // rendered *under* the tab bar's mini-player accessory, which is exactly
@@ -209,7 +209,7 @@ public struct ListenNowView: View {
     /// Resolves the station back to its position in the displayed shelf, so an
     /// undo can put it back where it was rather than at the front.
     private func dismissRecent(station: Station, in displayed: [RecentStation]) {
-        guard let index = displayed.firstIndex(where: { $0.stationID == station.id }) else { return }
+        guard let index = displayed.firstIndex(where: { $0.typedStationID == station.id }) else { return }
         dismissRecent(
             stationID: station.id,
             stationName: displayed[index].name,
@@ -217,7 +217,7 @@ public struct ListenNowView: View {
         )
     }
 
-    private func dismissRecent(stationID: String, stationName: String, at index: Int) {
+    private func dismissRecent(stationID: Station.ID, stationName: String, at index: Int) {
         // A soft hide, not `removeRecent` — dismissing a card from this teaser
         // is not "forget I played this". The play record stays intact for the
         // Library's Recently Played list and for `rankedStations`, which feeds
@@ -229,7 +229,7 @@ public struct ListenNowView: View {
         presentDismissUndo(stationID: stationID, stationName: stationName, restoreIndex: index)
     }
 
-    private func presentDismissUndo(stationID: String, stationName: String, restoreIndex: Int) {
+    private func presentDismissUndo(stationID: Station.ID, stationName: String, restoreIndex: Int) {
         dismissUndo = DismissUndo(stationID: stationID, stationName: stationName, restoreIndex: restoreIndex)
         // Cancel-and-replace rather than matching on stationID at expiry: a
         // dismiss → undo → re-dismiss of the *same* station within the window

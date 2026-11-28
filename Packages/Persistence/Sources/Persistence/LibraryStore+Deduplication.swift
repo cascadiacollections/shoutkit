@@ -1,4 +1,5 @@
 import Foundation
+import RadioDirectory
 import SwiftData
 
 public extension LibraryStore {
@@ -77,8 +78,8 @@ public extension RecentStation {
     /// One row per station: the most recently played, so a station that
     /// briefly has two rows (from sync, before ``LibraryStore/mergeDuplicateStations()``
     /// runs) never traps a `Dictionary(uniqueKeysWithValues:)`.
-    static func latestByStationID(_ recents: some Sequence<RecentStation>) -> [String: RecentStation] {
-        Dictionary(recents.map { ($0.stationID, $0) }) { first, second in
+    static func latestByStationID(_ recents: some Sequence<RecentStation>) -> [Station.ID: RecentStation] {
+        Dictionary(recents.map { ($0.typedStationID, $0) }) { first, second in
             first.playedAt >= second.playedAt ? first : second
         }
     }
