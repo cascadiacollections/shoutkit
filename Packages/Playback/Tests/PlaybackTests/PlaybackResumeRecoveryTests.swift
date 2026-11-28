@@ -1,4 +1,5 @@
 import Clocks
+import ConcurrencyExtras
 import Foundation
 @testable import Playback
 import RadioDirectory
@@ -23,123 +24,135 @@ extension PlaybackTimingTests {
         // MARK: - Resume watchdog
 
         @Test func `resume the output never acknowledges rejoins stream`() async {
-            let output = FakeAudioOutput()
-            let clock = TestClock()
-            let controller = makeController(
-                stations: [station()], output: output,
-                resumeWatchdogTimeout: Self.shortTimeout, clock: clock,
-            )
+            await withMainSerialExecutor {
+                let output = FakeAudioOutput()
+                let clock = TestClock()
+                let controller = makeController(
+                    stations: [station()], output: output,
+                    resumeWatchdogTimeout: Self.shortTimeout, clock: clock,
+                )
 
-            controller.play(station())
-            await waitForStart(output)
-            output.onStatusChange?(.playing)
-            controller.pause()
-            #expect(controller.state == .paused(station()))
+                controller.play(station())
+                await waitForStart(output)
+                output.onStatusChange?(.playing)
+                controller.pause()
+                #expect(controller.state == .paused(station()))
 
-            // The engine's player is past resuming, and says nothing about it.
-            output.resumeSilentlyFails = true
-            controller.togglePlayPause()
-            #expect(output.resumeCount == 1)
+                // The engine's player is past resuming, and says nothing about it.
+                output.resumeSilentlyFails = true
+                controller.togglePlayPause()
+                #expect(output.resumeCount == 1)
 
-            await clock.advance(by: Self.shortTimeout)
-            await waitUntil { output.startedURLs.count == 2 }
-            #expect(output.startedURLs.count == 2, "an unacknowledged resume must rejoin the stream")
-            #expect(output.stopCount == 1, "the dead player is torn down before the rejoin")
+                await clock.advance(by: Self.shortTimeout)
+                await waitUntil { output.startedURLs.count == 2 }
+                #expect(output.startedURLs.count == 2, "an unacknowledged resume must rejoin the stream")
+                #expect(output.stopCount == 1, "the dead player is torn down before the rejoin")
 
-            output.onStatusChange?(.playing)
-            #expect(controller.state == .playing(station()))
+                output.onStatusChange?(.playing)
+                #expect(controller.state == .playing(station()))
+            }
         }
 
         @Test func `acknowledged resume does not rejoin stream`() async {
-            let output = FakeAudioOutput()
-            let clock = TestClock()
-            let controller = makeController(
-                stations: [station()], output: output,
-                resumeWatchdogTimeout: Self.shortTimeout, clock: clock,
-            )
+            await withMainSerialExecutor {
+                let output = FakeAudioOutput()
+                let clock = TestClock()
+                let controller = makeController(
+                    stations: [station()], output: output,
+                    resumeWatchdogTimeout: Self.shortTimeout, clock: clock,
+                )
 
-            controller.play(station())
-            await waitForStart(output)
-            output.onStatusChange?(.playing)
-            controller.pause()
-            controller.togglePlayPause()
+                controller.play(station())
+                await waitForStart(output)
+                output.onStatusChange?(.playing)
+                controller.pause()
+                controller.togglePlayPause()
 
-            await clock.advance(by: Self.shortTimeout)
-            #expect(output.startedURLs.count == 1, "a resume that took effect must not restart the stream")
-            #expect(output.stopCount == 0)
-            #expect(controller.state == .playing(station()))
+                await clock.advance(by: Self.shortTimeout)
+                #expect(output.startedURLs.count == 1, "a resume that took effect must not restart the stream")
+                #expect(output.stopCount == 0)
+                #expect(controller.state == .playing(station()))
+            }
         }
 
         @Test func `pause cancels resume watchdog`() async {
-            let output = FakeAudioOutput()
-            let clock = TestClock()
-            let controller = makeController(
-                stations: [station()], output: output,
-                resumeWatchdogTimeout: Self.shortTimeout, clock: clock,
-            )
+            await withMainSerialExecutor {
+                let output = FakeAudioOutput()
+                let clock = TestClock()
+                let controller = makeController(
+                    stations: [station()], output: output,
+                    resumeWatchdogTimeout: Self.shortTimeout, clock: clock,
+                )
 
-            controller.play(station())
-            await waitForStart(output)
-            output.onStatusChange?(.playing)
-            controller.pause()
+                controller.play(station())
+                await waitForStart(output)
+                output.onStatusChange?(.playing)
+                controller.pause()
 
-            output.resumeSilentlyFails = true
-            controller.resume() // arms the watchdog
-            controller.pause() // must beat it
+                output.resumeSilentlyFails = true
+                controller.resume() // arms the watchdog
+                await expectSleeping(on: clock)
+                controller.pause() // must beat it
 
-            await clock.advance(by: Self.shortTimeout)
-            #expect(output.startedURLs.count == 1, "a paused stream must not be rejoined")
-            #expect(controller.state == .paused(station()))
+                await clock.advance(by: Self.shortTimeout)
+                #expect(output.startedURLs.count == 1, "a paused stream must not be rejoined")
+                #expect(controller.state == .paused(station()))
+            }
         }
 
         @Test func `stop cancels resume watchdog`() async {
-            let output = FakeAudioOutput()
-            let clock = TestClock()
-            let controller = makeController(
-                stations: [station()], output: output,
-                resumeWatchdogTimeout: Self.shortTimeout, clock: clock,
-            )
+            await withMainSerialExecutor {
+                let output = FakeAudioOutput()
+                let clock = TestClock()
+                let controller = makeController(
+                    stations: [station()], output: output,
+                    resumeWatchdogTimeout: Self.shortTimeout, clock: clock,
+                )
 
-            controller.play(station())
-            await waitForStart(output)
-            output.onStatusChange?(.playing)
-            controller.pause()
+                controller.play(station())
+                await waitForStart(output)
+                output.onStatusChange?(.playing)
+                controller.pause()
 
-            output.resumeSilentlyFails = true
-            controller.resume()
-            controller.stop()
+                output.resumeSilentlyFails = true
+                controller.resume()
+                await expectSleeping(on: clock)
+                controller.stop()
 
-            await clock.advance(by: Self.shortTimeout)
-            #expect(output.startedURLs.count == 1)
-            #expect(controller.state == .idle)
+                await clock.advance(by: Self.shortTimeout)
+                #expect(output.startedURLs.count == 1)
+                #expect(controller.state == .idle)
+            }
         }
 
         @Test func `rejoin reuses resolved endpoint and is not A new choice`() async {
-            let output = FakeAudioOutput()
-            let directory = CountingRadioDirectory(stations: [station()])
-            let clock = TestClock()
-            let controller = makeController(
-                directory: directory, output: output,
-                resumeWatchdogTimeout: Self.shortTimeout, clock: clock,
-            )
-            var playedCount = 0
-            controller.onStationPlayed = { _ in playedCount += 1 }
+            await withMainSerialExecutor {
+                let output = FakeAudioOutput()
+                let directory = CountingRadioDirectory(stations: [station()])
+                let clock = TestClock()
+                let controller = makeController(
+                    directory: directory, output: output,
+                    resumeWatchdogTimeout: Self.shortTimeout, clock: clock,
+                )
+                var playedCount = 0
+                controller.onStationPlayed = { _ in playedCount += 1 }
 
-            controller.play(station())
-            await waitForStart(output)
-            output.onStatusChange?(.playing)
-            output.emitTrackInfo("Song", "Band")
-            controller.pause()
+                controller.play(station())
+                await waitForStart(output)
+                output.onStatusChange?(.playing)
+                output.emitTrackInfo("Song", "Band")
+                controller.pause()
 
-            output.resumeSilentlyFails = true
-            controller.resume()
-            await clock.advance(by: Self.shortTimeout)
-            await waitUntil { output.startedURLs.count == 2 }
+                output.resumeSilentlyFails = true
+                controller.resume()
+                await clock.advance(by: Self.shortTimeout)
+                await waitUntil { output.startedURLs.count == 2 }
 
-            #expect(output.startedURLs.count == 2)
-            #expect(await directory.streamEndpointCallCount == 1, "a rejoin must reuse the cached endpoint")
-            #expect(playedCount == 1, "a rejoin is not a new listening choice")
-            #expect(controller.nowPlaying?.title == "Song", "the last-known track stays put while re-buffering")
+                #expect(output.startedURLs.count == 2)
+                #expect(await directory.streamEndpointCallCount == 1, "a rejoin must reuse the cached endpoint")
+                #expect(playedCount == 1, "a rejoin is not a new listening choice")
+                #expect(controller.nowPlaying?.title == "Song", "the last-known track stays put while re-buffering")
+            }
         }
 
         // MARK: - Keeping the output's state in step

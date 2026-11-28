@@ -17,9 +17,9 @@ final class OneShotTimer {
     /// Schedules `fire` after `timeout`, replacing any pending schedule.
     func schedule(after timeout: Duration, fire: @escaping @MainActor () -> Void) {
         task?.cancel()
-        let clock = self.clock
+        let sleep = sleeper(on: clock, for: timeout)
         task = Task {
-            try? await clock.sleep(for: timeout)
+            try? await sleep()
             guard Task.isCancelled == false else { return }
             fire()
         }
@@ -29,4 +29,23 @@ final class OneShotTimer {
         task?.cancel()
         task = nil
     }
+}
+
+/// A sleep whose deadline is `duration` from now — from when this is called,
+/// not from when the returned closure first runs.
+///
+/// A timer task can start some time after it is scheduled. With the deadline
+/// taken inside the task, that start-up delay was added to every timeout, and a
+/// test that advanced a `TestClock` straight after scheduling could move time
+/// before the deadline existed, so the timer never fired. Taking the deadline
+/// on the caller makes the timeout mean the same thing wherever the task runs.
+func sleeper(
+    on clock: any Clock<Duration>,
+    for duration: Duration,
+) -> @Sendable () async throws -> Void {
+    func deadlineSleep(on clock: some Clock<Duration>) -> @Sendable () async throws -> Void {
+        let deadline = clock.now.advanced(by: duration)
+        return { try await clock.sleep(until: deadline, tolerance: nil) }
+    }
+    return deadlineSleep(on: clock)
 }

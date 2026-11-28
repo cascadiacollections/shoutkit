@@ -1,7 +1,9 @@
+import Clocks
 import Foundation
 import Observation
 @testable import Playback
 import RadioDirectory
+import Testing
 
 // Shared doubles and builders for the PlaybackController test suites.
 
@@ -229,6 +231,18 @@ func waitForStart(_ output: FakeAudioOutput, count: Int = 1) async {
 func drainMainQueue() async {
     for _ in 0 ..< 50 {
         await Task.yield()
+    }
+}
+
+/// Fails unless something is sleeping on `clock`. Timer tests call this before
+/// asserting that a timer has not fired yet, and before cancelling one, so the
+/// check cannot pass only because the timer never armed.
+func expectSleeping(
+    on clock: TestClock<Duration>,
+    sourceLocation: SourceLocation = #_sourceLocation,
+) async {
+    await #expect(throws: (any Error).self, "nothing is sleeping on the clock", sourceLocation: sourceLocation) {
+        try await clock.checkSuspension()
     }
 }
 

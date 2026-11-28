@@ -1,4 +1,5 @@
 import Clocks
+import ConcurrencyExtras
 import Foundation
 @testable import Playback
 import RadioDirectory
@@ -70,37 +71,43 @@ extension PlaybackTimingTests {
         }
 
         @Test func `hintless resume expires with its window`() async {
-            let output = FakeAudioOutput()
-            let clock = TestClock()
-            let controller = await playing(
-                output: output, hintlessResumeWindow: Self.shortWindow, clock: clock,
-            )
+            await withMainSerialExecutor {
+                let output = FakeAudioOutput()
+                let clock = TestClock()
+                let controller = await playing(
+                    output: output, hintlessResumeWindow: Self.shortWindow, clock: clock,
+                )
 
-            output.onStatusChange?(.interruptionBegan)
-            // A long interruption is a listener who moved on, not an alert.
-            await clock.advance(by: Self.shortWindow)
-            #expect(controller.mayResumeWithoutSystemHint == false)
-            output.onStatusChange?(.interruptionEnded(shouldResume: false, otherAudioIsPlaying: false))
+                output.onStatusChange?(.interruptionBegan)
+                // A long interruption is a listener who moved on, not an alert.
+                await clock.advance(by: Self.shortWindow)
+                await waitUntil { controller.mayResumeWithoutSystemHint == false }
+                #expect(controller.mayResumeWithoutSystemHint == false)
+                output.onStatusChange?(.interruptionEnded(shouldResume: false, otherAudioIsPlaying: false))
 
-            #expect(controller.state == .paused(station()))
-            #expect(output.resumeCount == 0)
+                #expect(controller.state == .paused(station()))
+                #expect(output.resumeCount == 0)
+            }
         }
 
         @Test func `system hint resumes even after the hintless window closes`() async {
-            let output = FakeAudioOutput()
-            let clock = TestClock()
-            let controller = await playing(
-                output: output, hintlessResumeWindow: Self.shortWindow, clock: clock,
-            )
+            await withMainSerialExecutor {
+                let output = FakeAudioOutput()
+                let clock = TestClock()
+                let controller = await playing(
+                    output: output, hintlessResumeWindow: Self.shortWindow, clock: clock,
+                )
 
-            output.onStatusChange?(.interruptionBegan)
-            await clock.advance(by: Self.shortWindow)
-            #expect(controller.mayResumeWithoutSystemHint == false)
-            // The window bounds hintless resumes only; the system's own hint always
-            // wins, however long the call ran.
-            output.onStatusChange?(.interruptionEnded(shouldResume: true, otherAudioIsPlaying: false))
+                output.onStatusChange?(.interruptionBegan)
+                await clock.advance(by: Self.shortWindow)
+                await waitUntil { controller.mayResumeWithoutSystemHint == false }
+                #expect(controller.mayResumeWithoutSystemHint == false)
+                // The window bounds hintless resumes only; the system's own hint always
+                // wins, however long the call ran.
+                output.onStatusChange?(.interruptionEnded(shouldResume: true, otherAudioIsPlaying: false))
 
-            #expect(controller.state == .playing(station()))
+                #expect(controller.state == .playing(station()))
+            }
         }
 
         // MARK: - Arming

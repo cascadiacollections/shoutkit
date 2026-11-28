@@ -43,12 +43,12 @@ public final class SleepTimer {
     public func start(duration: TimeInterval) {
         timerTask?.cancel()
 
-        let clock = self.clock
+        let sleep = sleeper(on: clock, for: .seconds(duration))
         let fireDate = now().addingTimeInterval(duration)
         self.fireDate = fireDate
 
         timerTask = Task { [weak self] in
-            try? await clock.sleep(for: .seconds(duration))
+            try? await sleep()
             guard let self, Task.isCancelled == false else { return }
             // A restart replaced this schedule while it slept.
             guard self.fireDate == fireDate else { return }

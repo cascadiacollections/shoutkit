@@ -9,14 +9,18 @@ sleep timer all slept on the real clock. Tests either injected a `Date` closure
 (the cache) or waited out a shortened delay (playback). The waits were real,
 and a backoff of "not yet, then now" could not be asserted without sleeping.
 
-`Container.clock` is `any Clock<Duration>`, defaulting to `ContinuousClock`,
-which is what production already used. `productionClock()` is what the phone,
-watch, and TV composition roots pass in, so Factory stays the seam and those
-apps do not import FactoryKit to name `Container`. The cache stores the
-clock's `Instant` for the in-memory minute; the on-disk snapshot still stamps
-`Date`, because that file has to mean something after the process is gone.
-Tests that need to move time pass a `TestClock` into the initializer. They do
-not replace `Container.shared.clock`, which would leak into the next suite.
+The seam is an initializer parameter, not a Factory registration.
+`PlaybackController` and `SleepTimer` take `any Clock<Duration>`, and
+`CachingRadioDirectory` is generic over its clock; every default is
+`ContinuousClock`, which is what production already used, and the composition
+roots pass nothing. A first draft also registered `Container.clock`, but the
+cache's concrete clock type meant the registration was read and then dropped,
+and nothing else resolved it. A registration that cannot take effect is worse
+than none, so it went. Tests that need to move time pass a `TestClock` into the
+initializer, which also keeps one suite's clock out of the next. The cache
+stores the clock's `Instant` for the in-memory minute; the on-disk snapshot
+still stamps `Date`, because that file has to mean something after the
+process is gone.
 
 swift-clocks 1.1.1 is `exact` and MIT, and it is a **test** dependency of
 RadioDirectory and Playback only. `TestClock` needs it. Production code uses
@@ -27,7 +31,12 @@ swift-clocks into the app so its notice could appear in Settings would spend
 binary size on a type the listener never runs; the 2026-11-07 size pass is why
 that was not done. Say if the notice should ship anyway.
 
-The sleep inside `OneShotTimer` and `SleepTimer` is `clock.sleep(for:)`.
+`OneShotTimer` and `SleepTimer` take their deadline when the timer is
+scheduled and sleep until it inside the task (`sleeper(on:for:)`). Taking it
+inside the task, as `sleep(for:)` does, added the task's start-up delay to the
+timeout, and a test that advanced a `TestClock` before the task ran moved time
+before the deadline existed. Timer tests wait until the sleep is registered
+on the clock before they move it or assert that nothing has fired yet.
 Nothing about the delays themselves changed: reconnect is still base, then
 double, then double again, and a stall still gives the stream 30 seconds
 before it is torn down.
